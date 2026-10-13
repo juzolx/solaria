@@ -171,6 +171,49 @@ class Scene:
             canvas.alpha_composite(im, (x, y))
 
 
+def contact(scene, im, x, y, cast=6, alpha=70):
+    """A grounded shadow from the sprite's own outline: a soft band along its base and a
+    short cast to the right (the light comes from the upper left). Nothing hovers."""
+    a = im.getchannel("A")
+    w, h = im.size
+    bb = im.getbbox()
+    if not bb:
+        return
+    sh = Image.new("RGBA", (w + cast + 2, h + 6))
+    sp = sh.load()
+    ap = a.load()
+    top = bb[1] + int((bb[3] - bb[1]) * 0.45)
+    for xx in range(w):
+        low = -1
+        for yy in range(h - 1, -1, -1):
+            if ap[xx, yy] > 0:
+                low = yy
+                break
+        if low < 0:
+            continue
+        for k in range(0, 5):  # contact band just under the base
+            yy = low + 1 + k - 2
+            if 0 <= yy < h + 6 and (yy >= h or ap[xx, yy] == 0):
+                sp[xx, yy] = (10, 8, 20, int(alpha * 1.6 * (1.0 - k / 5.0)))
+    for yy in range(top, h):
+        right = -1
+        for xx in range(w - 1, -1, -1):
+            if ap[xx, yy] > 0:
+                right = xx
+                break
+        if right < 0:
+            continue
+        for k in range(1, cast + 1):
+            if right + k < w + cast + 2:
+                sp[right + k, yy] = (10, 8, 20, int(alpha * 1.1 * (1.0 - 0.6 * k / (cast + 1.0))))
+    scene.put(sh, x, y, base=-1)
+
+
+def prop(scene, im, x, y):
+    contact(scene, im, x, y, 3, 60)
+    scene.put(im, x, y)
+
+
 def shadow(scene, x, y, w, h, alpha=70):
     sh = Image.new("RGBA", (w, h))
     ImageDraw.Draw(sh).ellipse((0, 0, w - 1, h - 1), fill=(10, 8, 20, alpha))
@@ -201,7 +244,7 @@ def house(scene, art, im, x, y, door, door_at, sign_icon=None, sign_at=None, sid
     if sign_icon is not None:
         im.alpha_composite(sign(art, sign_icon), sign_at)
     bb = im.getbbox()
-    shadow(scene, x + bb[0] + 6, y + bb[3] - 10, bb[2] - bb[0] - 4, 16, 60)
+    contact(scene, im, x, y, 12, 85)
     scene.put(im, x, y)
     scene.spots.append({"id": sid, "label": label, "rect": [x + bb[0], y + bb[1], bb[2] - bb[0], bb[3] - bb[1]],
                         "door": [x + door_at[0] + 16, y + door_at[1] + door.height]})
@@ -231,7 +274,7 @@ def board(scene, x, y):
             d.line((px + 1, ly, px + w - 4, ly), fill=ink)
         d.rectangle((px + w // 2 - 1, py - 1, px + w // 2, py), fill=pin)
     d.rectangle((44, 14, 58, 18), fill=(176, 40, 44, 255))  # a WANTED header
-    shadow(scene, x + 4, y + 60, 64, 14)
+    contact(scene, im, x, y, 4, 70)
     scene.put(im, x, y)
     scene.spots.append({"id": "bounty", "label": "Bounty Board", "rect": [x - 4, y - 4, 80, 78], "door": [x + 36, y + 70]})
 
@@ -252,6 +295,13 @@ def build(season, seed=11):
     dirt(2, 12, 2, 18)
     dirt(19, 12, 19, 18)
     dirt(9, 21, 12, ROWS - 1)  # the road out of town
+
+    def grass(x0, y0, x1, y1):
+        for yy in range(y0, y1 + 1):
+            for xx in range(x0, x1 + 1):
+                grid[yy][xx] = "g"
+    grass(2, 12, 6, 16)       # the shop stands on its own lawn
+    grass(15, 11, 19, 16)     # and so does the smithy
     dirt(6, 21, 8, 22)
     dirt(13, 21, 15, 23)
     paint_terrain(canvas, art, grid, rng)
@@ -261,14 +311,14 @@ def build(season, seed=11):
     lamp = trim(art.lamp.crop((0, 0, 32, 96)))
 
     def lamp_at(x, y):
-        sc.put(lamp, x, y)
+        prop(sc, lamp, x, y)
         sc.lights.append([x + lamp.width // 2, y + 8])
     lamp_at(CAVE_X - 22, 3 * T + 8)
     lamp_at(CAVE_X + 3 * T + 6, 3 * T + 8)
     sc.spots.append({"id": "gate", "label": "Into the Dungeon", "rect": [CAVE_X, 2 * T, 3 * T, 3 * T], "door": [CAVE_X + 48, 5 * T]})
     banner = trim(art.city.crop((20 * T, 3 * T, 21 * T, 5 * T)))
-    sc.put(banner, CAVE_X - 44, 2 * T + 30)
-    sc.put(banner.transpose(Image.FLIP_LEFT_RIGHT), CAVE_X + 3 * T + 30, 2 * T + 30)
+    prop(sc, banner, CAVE_X - 44, 2 * T + 30)
+    prop(sc, banner.transpose(Image.FLIP_LEFT_RIGHT), CAVE_X + 3 * T + 30, 2 * T + 30)
 
     # ---- the buildings (2 tiles of scenery on each side: phones crop the edges)
     guild = recolor(art.house_a, [(cool, 1.0 + 352 / 360, 2.6, 0.9), (warm, 0.0, 0.10, 1.25)])   # grey stone, deep red roof
@@ -283,51 +333,48 @@ def build(season, seed=11):
 
     # ---- the square
     fx, fy = 320, 13 * T
-    shadow(sc, fx + 4, fy + 80, 56, 16)
-    sc.put(art.fountain, fx, fy)
+    prop(sc, art.fountain, fx, fy)
     board(sc, 410, 12 * T + 10)
-    sc.put(trim(art.city.crop((128, 480, 256, 576))), 6 * T + 4, 16 * T + 8)
-    sc.put(trim(art.city.crop((0, 384, 128, 448))), 6 * T + 4, 16 * T - 26)
-    sc.put(trim(art.anvil.crop((64, 0, 128, 32))), 14 * T + 16, 17 * T + 20)
-    sc.put(trim(art.anvil.crop((0, 0, 32, 32))), 16 * T + 4, 18 * T + 6)
-    sc.put(trim(art.coal.crop((0, 0, 32, 32))), 18 * T + 12, 17 * T + 22)
+    prop(sc, trim(art.city.crop((128, 480, 256, 576))), 6 * T + 4, 16 * T + 8)
+    prop(sc, trim(art.city.crop((0, 384, 128, 448))), 6 * T + 4, 16 * T - 26)
+    prop(sc, trim(art.anvil.crop((64, 0, 128, 32))), 14 * T + 16, 17 * T + 20)
+    prop(sc, trim(art.anvil.crop((0, 0, 32, 32))), 16 * T + 4, 18 * T + 6)
+    prop(sc, trim(art.coal.crop((0, 0, 32, 32))), 18 * T + 12, 17 * T + 22)
     well = trim(art.city.crop((21 * T, 7 * T, 23 * T, 10 * T)))
-    shadow(sc, 15 * T + 2, 20 * T + 6, 60, 14)
-    sc.put(well, 15 * T, 18 * T - 4 + 16)
+    prop(sc, well, 15 * T, 18 * T + 12)
     barrel = trim(art.barrel.crop((0, 0, 32, 64)))
     for bx, by in [(12 * T + 14, 10 * T + 4), (7 * T, 24 * T), (7 * T + 20, 24 * T + 10), (5 * T + 8, 11 * T + 12)]:
-        sc.put(barrel, bx, by)
+        prop(sc, barrel, bx, by)
     crate = trim(art.crate.crop((0, 0, 32, 32)))
     for cx2, cy2 in [(14 * T + 4, 25 * T + 10), (14 * T + 8, 24 * T + 14), (5 * T + 20, 17 * T + 14)]:
-        sc.put(crate, cx2, cy2)
-    sc.put(trim(art.chest.crop((0, 0, 32, 32))), 19 * T + 12, 26 * T + 14)
+        prop(sc, crate, cx2, cy2)
+    prop(sc, trim(art.chest.crop((0, 0, 32, 32))), 19 * T + 12, 26 * T + 14)
     for lx, ly in [(3 * T, 10 * T + 4), (18 * T + 6, 10 * T + 4), (8 * T + 4, 19 * T + 18), (13 * T - 4, 19 * T + 18)]:
         lamp_at(lx, ly)
     planter = trim(art.city.crop((14 * T, 12 * T, 15 * T, 13 * T)))
     planter2 = trim(art.city.crop((15 * T, 12 * T, 16 * T, 13 * T)))
     for px2, py2, pl in [(2 * T + 30, 10 * T + 20, planter2), (13 * T + 10, 10 * T + 14, planter2), (5 * T + 10, 16 * T + 12, planter),
                          (19 * T + 6, 16 * T + 4, planter2), (15 * T + 10, 26 * T + 10, planter)]:
-        sc.put(pl, px2, py2)
+        prop(sc, pl, px2, py2)
 
     # ---- below the town: a small fenced graveyard and the gardens
     fence = trim(art.fence.crop((0, 64, 96, 96)))
     for fxx in range(2 * T, 8 * T, fence.width - 6):
-        sc.put(fence, fxx, 28 * T)
+        prop(sc, fence, fxx, 28 * T)
     for fxx in range(2 * T, 8 * T, fence.width - 6):
-        sc.put(fence, fxx, 33 * T + 4)
+        prop(sc, fence, fxx, 33 * T + 4)
     graves = [trim(art.graves.crop(b)) for b in [(448, 676, 480, 724), (480, 676, 512, 724), (512, 676, 544, 724)]]
     for i, (gx, gy) in enumerate([(2 * T + 14, 29 * T + 8), (4 * T + 2, 29 * T + 2), (5 * T + 22, 29 * T + 10),
                                    (3 * T + 6, 31 * T + 4), (5 * T + 2, 31 * T + 8), (6 * T + 26, 31 * T)]):
         g = graves[(i + seed) % 3]
-        shadow(sc, gx - 2, gy + g.height - 6, g.width + 4, 8, 60)
-        sc.put(g, gx, gy)
+        prop(sc, g, gx, gy)
     bare = trim(art.trees.crop((0, 256, 96, 400)))
-    sc.put(bare, 6 * T + 10, 28 * T + 4)
+    prop(sc, bare, 6 * T + 10, 28 * T + 4)
     soil = art.tilled.crop((0, 0, 96, 96))
     for sx2, sy2 in [(14 * T, 28 * T + 8), (17 * T - 8, 28 * T + 8), (14 * T, 31 * T), (17 * T - 8, 31 * T)]:
         canvas.alpha_composite(soil, (sx2, sy2))
     hay = trim(art.hay.crop((0, 0, 64, 96)))
-    sc.put(hay, 19 * T + 22, 29 * T)
+    prop(sc, hay, 19 * T + 22, 29 * T)
 
     # ---- greenery: cliff-top pines, trees down the edges (cropped on phones), bushes, flowers
     for x, k in [(-30, "pine"), (60, "pine2"), (150, "pine3"), (470, "pine"), (560, "pine2"), (640, "pine3")]:
@@ -339,7 +386,7 @@ def build(season, seed=11):
     bushes = [trim(art.plants.crop((i * 32, 0, i * 32 + 32, 32))) for i in range(3)]
     for bx, by in [(8 * T, 5 * T + 8), (12 * T + 30, 5 * T + 12), (3 * T, 20 * T + 6), (17 * T + 4, 21 * T + 4),
                    (8 * T + 6, 27 * T + 20), (13 * T + 4, 27 * T + 10), (2 * T, 26 * T + 30), (18 * T, 27 * T + 20)]:
-        sc.put(rng.choice(bushes), bx, by)
+        prop(sc, rng.choice(bushes), bx, by)
     fl = art.flowers
     for _ in range(60):
         fx2, fy2 = rng.randrange(0, W - 16), rng.randrange(5 * T, H - 16)
