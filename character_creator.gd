@@ -9,7 +9,8 @@ var race_text: RichTextLabel
 var on_done: Callable
 var lock_race := false
 var preview_looks := {}  # gear shown on the preview (your current gear when changing your look)
-var rows := {}  # field -> Array of buttons, to highlight the picked one
+var rows := {}
+var row_parts := {}  # field -> [label, flow], to hide a whole row (Beastkin have fur, not skin or hair)  # field -> Array of buttons, to highlight the picked one
 var name_edit: LineEdit  # only when making a new hero
 const NAMES := ["Aldric", "Brenna", "Corvin", "Dagny", "Eira", "Fenn", "Garrick", "Hilde", "Isolde", "Jory", "Kael", "Liora",
 	"Maren", "Nyx", "Orrin", "Perrin", "Quill", "Rowan", "Saga", "Talia", "Ulric", "Vesna", "Wren", "Yara", "Zeph"]
@@ -67,6 +68,7 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 			all_hair.append(x)
 	_text_row(right, "Hair and horns", "hair", all_hair)
 	_swatch_row(right, "Hair color", "hair_color", Sprites.swatches("hair"))
+	_swatch_row(right, "Fur color", "fur", Lpc.FUR.map(func(f): return Color(f[1][1])))
 	_swatch_row(right, "Eyes", "eyes", Sprites.swatches("eyes"))
 
 	var done_button := UI.primary("Done", _finish, UI.GOLD)
@@ -75,8 +77,10 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	_update()
 
 func _text_row(parent: Control, label_text: String, field: String, values: Array, names: Array = []) -> void:
-	parent.add_child(UI.label(label_text.to_upper(), 11, UI.DIM))
+	var lbl := UI.label(label_text.to_upper(), 11, UI.DIM)
+	parent.add_child(lbl)
 	var flow := HFlowContainer.new()
+	row_parts[field] = [lbl, flow]
 	flow.add_theme_constant_override("h_separation", 6)
 	flow.add_theme_constant_override("v_separation", 6)
 	parent.add_child(flow)
@@ -90,8 +94,10 @@ func _text_row(parent: Control, label_text: String, field: String, values: Array
 	rows[field] = list
 
 func _swatch_row(parent: Control, label_text: String, field: String, colors: Array) -> void:
-	parent.add_child(UI.label(label_text.to_upper(), 11, UI.DIM))
+	var lbl := UI.label(label_text.to_upper(), 11, UI.DIM)
+	parent.add_child(lbl)
 	var flow := HFlowContainer.new()
+	row_parts[field] = [lbl, flow]
 	flow.add_theme_constant_override("h_separation", 6)
 	flow.add_theme_constant_override("v_separation", 6)
 	parent.add_child(flow)
@@ -111,6 +117,8 @@ func _pick(field: String, value) -> void:
 		var ok := Races.skins(String(value))
 		if not int(app.get("skin", 1)) in ok:
 			app["skin"] = ok[0]
+		if String(value) == "Beastkin" and not app.has("fur"):
+			app["fur"] = 5
 		var styles := Lpc.hair_styles(String(value))
 		if not str(app.get("hair", "")) in styles:
 			app["hair"] = styles[0]
@@ -124,6 +132,7 @@ func _randomize() -> void:
 	app["hair"] = Lpc.hair_styles(app.get("race", "Human")).pick_random()
 	app["hair_color"] = randi() % Sprites.hair_colors().size()
 	app["eyes"] = randi() % Sprites.eye_colors().size()
+	app["fur"] = randi() % Lpc.FUR.size()
 	_update()
 
 func _update() -> void:
@@ -133,6 +142,12 @@ func _update() -> void:
 	race_text.text = "[color=#e8b14a][b]%s[/b][/color]\n%s\n%s" % [race, info["text"], race_preview(race)]
 	if lock_race:
 		race_text.text += "\n[color=%s](Your race was picked when this hero was made.)[/color]" % UI.hex(UI.DIM)
+	# Beastkin: fur color instead of skin, hair and hair color
+	var furry := race == "Beastkin"
+	for field in row_parts:
+		var show: bool = (field == "fur") == furry if field in ["skin", "hair", "hair_color", "fur"] else true
+		for c in row_parts[field]:
+			(c as Control).visible = show
 	for field in rows:
 		for entry in rows[field]:
 			var b: Button = entry[0]

@@ -315,9 +315,30 @@ const CREST_ORDER := ["Frills", "Back Horns", "Curled Horns", "Frills and Horns"
 ## Golems are living stone: only short, cropped or tied styles read well on the troll skull.
 const GOLEM_HAIR := ["Bald", "Mohawk", "Short Mohawk", "Spiky", "Porcupine", "Back Horns", "Curled Horns"]
 
+## Beastkin fur (light to dark, 5 colors each); the creator's "Fur color" row picks one (app["fur"]).
+const FUR := [
+	["Snow", ["#f4f1ea", "#d9d3c7", "#aaa294", "#7a7266", "#45403a"]],
+	["Cream", ["#f2e2c0", "#d8bf92", "#ad9166", "#7c6444", "#463624"]],
+	["Golden", ["#f1cf7a", "#d6a64a", "#a77a2c", "#74511c", "#3e2a10"]],
+	["Fox", ["#f4a35a", "#d9762f", "#a8521c", "#743412", "#3e1a0a"]],
+	["Tan", ["#d8b48a", "#b48a5e", "#88633e", "#5c4128", "#332216"]],
+	["Brown", ["#c8a070", "#9a7048", "#6e4a30", "#4a2e20", "#2a1a14"]],
+	["Chocolate", ["#9a6a4a", "#76482e", "#54301e", "#381e14", "#1e100a"]],
+	["Grey", ["#c6c8cc", "#9ca0a8", "#72767e", "#4c4f56", "#2a2c31"]],
+	["Silver", ["#e2e6ee", "#b8c0ce", "#8a94a6", "#5e687a", "#343a46"]],
+	["Charcoal", ["#7c7884", "#5a5662", "#3e3b46", "#28262e", "#141218"]],
+	["Black", ["#6a6476", "#4a4456", "#302c3a", "#1e1a26", "#0e0b14"]],
+	["Ember", ["#e8806a", "#c0503e", "#8e3228", "#5e1e18", "#30100c"]],
+]
+
+static func fur_ramp(app: Dictionary) -> Array:
+	return ramp6(FUR[clampi(int(app.get("fur", 5)), 0, FUR.size() - 1)][1])
+
 ## The hair choices a race offers in the hero creator.
 static func hair_styles(race: String) -> Array:
 	match race:
+		"Beastkin":
+			return ["Bald"]
 		"Dragonkin":
 			return CREST_ORDER
 		"Golem":
@@ -374,6 +395,10 @@ static func spec(app: Dictionary, looks: Dictionary) -> Dictionary:
 	var hairs := Sprites.hair_colors()
 	var skin := ramp6(skins[clampi(int(a.get("skin", 1)), 0, skins.size() - 1)])
 	var hair := ramp6(hairs[clampi(int(a.get("hair_color", 1)), 0, hairs.size() - 1)])
+	# Beastkin are fur all over (no hair): body, head, brows and tail share one fur color
+	if race == "Beastkin":
+		skin = fur_ramp(app)
+		hair = skin
 	var eye_c: Color = Color(a["eye_color"]) if a.has("eye_color") else Color(Sprites.eye_colors()[clampi(int(a.get("eyes", 0)), 0, Sprites.eye_colors().size() - 1)])
 	var eyes := eye_ramp(eye_c)
 	var r: Array = RACES.get(race, RACES["Human"])
@@ -409,7 +434,7 @@ static func spec(app: Dictionary, looks: Dictionary) -> Dictionary:
 		parts.append({"id": "brows_thin", "ramp": hair})
 	var helmet: Dictionary = looks.get("Helmet", {})
 	var hide_hair: bool = not helmet.is_empty() and helmet.get("type", "") in HIDES_HAIR
-	var hair_name := str(app.get("hair", "Short"))
+	var hair_name := str(app.get("hair", "Short")) if race != "Beastkin" else "Bald"
 	if race == "Dragonkin":
 		for x in crest(hair_name):
 			if not (hide_hair and x.begins_with("horns")):
