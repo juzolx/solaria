@@ -221,7 +221,7 @@ func _hero_line(meta: Dictionary) -> Control:
 	var pic := TextureRect.new()
 	pic.texture = Sprites.portrait(meta.get("appearance", {}))
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(48, 48)
+	pic.custom_minimum_size = Vector2(64, 64)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	row.add_child(pic)
@@ -250,7 +250,7 @@ func _fill_side() -> void:
 		var up := UI.panel(Color("#2a1a2e"), Color("#e8b14a"), 8, 10, 2)
 		side_box.add_child(up)
 		var ut := UI.rich(13)
-		ut.text = "[color=#e8b14a][b]EVOLUTION[/b][/color]  [color=%s]v%s[/color]\n8 stats, signature skills, elements and combos, companions, milestones and new 64x64 heroes." % [UI.hex(UI.DIM), PatchNotes.VERSION]
+		ut.text = "[color=#e8b14a][b]EVOLUTION[/b][/color]  [color=%s]v%s[/color]\n8 stats, signature skills, elements and combos, companions, and new animated dark fantasy heroes and monsters." % [UI.hex(UI.DIM), PatchNotes.VERSION]
 		up.add_child(ut)
 		var pulse := up.create_tween().set_loops()
 		pulse.tween_property(up, "modulate", Color(1.15, 1.1, 0.95), 0.9)

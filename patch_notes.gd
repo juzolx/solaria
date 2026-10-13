@@ -14,7 +14,8 @@ const NOTES := [
 		"Loot: upgrade arrows with a percent, gear sets for every class tree, and living legendaries that awaken as they kill.",
 		"World: floor hazards, events between fights, milestone floors with Champions and checkpoints, opt-in curses, bestiary mastery bonuses, companions that evolve, achievement rewards and a Next goal line under the fight.",
 		"God trials rotate every week. Unique classes get a cape and God rank an aura.",
-		"Art: every hero is redrawn at native 64x64 with 13 hair styles, 18 hair colors and all 12 races redone. Pixel-perfect scaling so the art stays crisp, and the game now scales to fit your window.",
+		"New dark fantasy art: heroes and 32 monsters are built from the LPC character parts, with real attack animations (slash, thrust, cast, shoot), 37 hairstyles, 18 hair colors and all 12 races. Hit and spell effects, and the game now scales to fit your window.",
+		"Phones: a bottom bar (Fight, Hero, Items, Town, Codex, Online) and the fight fills the screen. Art credits are in Settings.",
 		"A faster first 10 minutes, hit impact, new sounds and a balance pass.",
 	]},
 	{"version": "0.10", "name": "Family Trees", "lines": [

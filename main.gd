@@ -76,6 +76,11 @@ var event_pill: PanelContainer
 var path_panel: PanelContainer
 var path_count_label: Label
 var body: BoxContainer
+var nav_bar: PanelContainer   # phone layout: the bottom navigation (Fight, Hero, Items, Town, Codex, Online)
+var nav_buttons: Array[Button] = []
+var nav_page := 0              # 0 = the fight, 1.. = a tab group (1 + its index)
+var is_tall := false
+const NAV := [["Fight", "sword"], ["Hero", "person"], ["Items", "bag"], ["Town", "house"], ["Codex", "book"], ["Online", "globe"]]
 var left_panel: VBoxContainer
 var title_label: Label
 var online: Online
@@ -450,6 +455,7 @@ func _build_ui() -> void:
 	tabs.size_flags_stretch_ratio = 1.2
 	tabs.tab_changed.connect(func(_i): sfx.play("click"); refresh())
 	body.add_child(tabs)
+	_build_nav(main_v)
 	char_tabs = _group("Character")
 	item_tabs = _group("Items")
 	town_tabs = _group("Town")
@@ -503,6 +509,8 @@ func _fit_layout() -> void:
 		get_tree().root.content_scale_size = want
 		_fit_root.call_deferred()
 	body.vertical = tall
+	is_tall = tall
+	_apply_nav()
 	left_panel.size_flags_stretch_ratio = 0.9 if tall else 1.0
 	tabs.size_flags_stretch_ratio = 1.1 if tall else 1.2
 	title_label.visible = not tall
@@ -736,7 +744,7 @@ func _show_class_picker() -> void:
 			looks[slot] = Sprites.gear_look({"slot": slot, "type": info["look"][slot], "rarity": 1})
 		pic.texture = Sprites.portrait(state.appearance, looks)
 		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		pic.custom_minimum_size = Vector2(56, 56)
+		pic.custom_minimum_size = Vector2(64, 64)
 		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		head.add_child(pic)
@@ -836,6 +844,8 @@ func _on_battle_tapped(pos: Vector2) -> void:
 
 ## Jump to a tab: group 0 Character, 1 Items, 2 Town, 3 Codex, 4 Online.
 func show_tab(group: int, sub: int) -> void:
+	nav_page = group + 1
+	_apply_nav()
 	tabs.current_tab = group
 	(_groups()[group] as TabContainer).current_tab = sub
 
@@ -1036,6 +1046,88 @@ func _refresh_fight() -> void:
 		escape_button.tooltip_text = why
 	spare_button.visible = Lineage.can_spare(state)
 
+# =====================================================================
+# Phone layout: bottom navigation
+# =====================================================================
+
+## Tall (phone) screens get a bottom bar: one big button per section, and the
+## fight or the chosen section fills the screen. Wide screens keep both side by side.
+func _build_nav(parent: Control) -> void:
+	nav_bar = UI.panel(Color("#111829"), UI.BORDER, 10, 4, 1)
+	parent.add_child(nav_bar)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 4)
+	nav_bar.add_child(row)
+	for i in NAV.size():
+		var b := Button.new()
+		b.text = NAV[i][0]
+		b.icon = _nav_icon(NAV[i][1])
+		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		b.expand_icon = false
+		b.custom_minimum_size = Vector2(0, 58)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.add_theme_font_size_override("font_size", 12)
+		for st in ["normal", "hover", "pressed", "focus"]:
+			var sb := UI.style(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 8, 2, 0)
+			if st == "focus":
+				sb = UI.style(Color(0, 0, 0, 0), Color("#f6d88f"), 8, 2, 2)
+				sb.draw_center = false
+			b.add_theme_stylebox_override(st, sb)
+		b.pressed.connect(func():
+			sfx.play("click")
+			nav_page = i
+			_apply_nav()
+			refresh())
+		row.add_child(b)
+		nav_buttons.append(b)
+
+func _apply_nav() -> void:
+	if nav_bar == null:
+		return
+	nav_bar.visible = is_tall
+	tabs.tabs_visible = not is_tall
+	if not is_tall:
+		left_panel.visible = true
+		tabs.visible = true
+		return
+	if nav_page > 0 and tabs.is_tab_hidden(nav_page - 1):
+		nav_page = 0
+	left_panel.visible = nav_page == 0
+	tabs.visible = nav_page != 0
+	if nav_page > 0 and tabs.current_tab != nav_page - 1:
+		tabs.current_tab = nav_page - 1
+	for i in nav_buttons.size():
+		var on := i == nav_page
+		nav_buttons[i].add_theme_color_override("font_color", UI.GOLD if on else UI.DIM)
+		nav_buttons[i].add_theme_color_override("font_hover_color", UI.GOLD if on else UI.TEXT)
+		nav_buttons[i].modulate = Color.WHITE
+		nav_buttons[i].self_modulate = Color(1, 1, 1, 1)
+		nav_buttons[i].add_theme_color_override("icon_normal_color", UI.GOLD if on else UI.DIM)
+		nav_buttons[i].add_theme_color_override("icon_hover_color", UI.GOLD if on else UI.TEXT)
+		nav_buttons[i].add_theme_color_override("icon_pressed_color", UI.GOLD)
+		nav_buttons[i].add_theme_color_override("icon_focus_color", UI.GOLD if on else UI.DIM)
+
+## Small pixel icons for the bottom bar (white; tinted by the button).
+const NAV_ICONS := {
+	"sword": ["..........XX", ".........XXX", "........XXX.", ".......XXX..", "......XXX...", ".X...XXX....", "..X.XXX.....", "...XXX......", "...XX.......", "..X.XX......", ".X....X.....", "X..........."],
+	"person": ["....XXXX....", "...XXXXXX...", "...XXXXXX...", "...XXXXXX...", "....XXXX....", "............", "..XXXXXXXX..", ".XXXXXXXXXX.", ".XXXXXXXXXX.", ".XXXXXXXXXX.", ".XXXXXXXXXX.", ".XXXXXXXXXX."],
+	"bag": ["....XXXX....", "...X....X...", "...X....X...", ".XXXXXXXXXX.", ".XXXXXXXXXX.", "XXXXXXXXXXXX", "XXXXX..XXXXX", "XXXXX..XXXXX", "XXXXXXXXXXXX", "XXXXXXXXXXXX", ".XXXXXXXXXX.", "..XXXXXXXX.."],
+	"house": [".....XX.....", "....XXXX....", "...XXXXXX...", "..XXXXXXXX..", ".XXXXXXXXXX.", "XXXXXXXXXXXX", ".XXXXXXXXXX.", ".XXXX..XXXX.", ".XXXX..XXXX.", ".XXXX..XXXX.", ".XXXX..XXXX.", ".XXXX..XXXX."],
+	"book": ["XXXXX..XXXXX", "XXXXXX.XXXXX", "X...XX.X...X", "XXXXXX.XXXXX", "X...XX.X...X", "XXXXXX.XXXXX", "X...XX.X...X", "XXXXXX.XXXXX", "XXXXXX.XXXXX", "XXXXXX.XXXXX", ".XXXXXXXXXX.", "....XXXX...."],
+	"globe": ["....XXXX....", "..XX.XX.XX..", ".X..X..X..X.", ".XXXXXXXXXX.", "X...X..X...X", "X...X..X...X", "XXXXXXXXXXXX", "X...X..X...X", ".X..X..X..X.", ".XXXXXXXXXX.", "..XX.XX.XX..", "....XXXX...."],
+}
+
+static func _nav_icon(icon_name: String) -> ImageTexture:
+	var rows: Array = NAV_ICONS.get(icon_name, NAV_ICONS["book"])
+	var img := Image.create(12, 12, false, Image.FORMAT_RGBA8)
+	for y in rows.size():
+		for x in String(rows[y]).length():
+			if String(rows[y])[x] == "X":
+				img.set_pixel(x, y, Color.WHITE)
+	img.resize(24, 24, Image.INTERPOLATE_NEAREST)
+	return ImageTexture.create_from_image(img)
+
 func _refresh_tabs() -> void:
 	# Town (and its Craft page) unlock as you go deeper
 	tabs.set_tab_hidden(2, not state.shop_unlocked())
@@ -1059,6 +1151,11 @@ func _refresh_tabs() -> void:
 	item_tabs.set_tab_hidden(2, state.hardcore)
 	var ready := codex.bounties_ready()
 	tabs.set_tab_title(3, "Codex (%d)" % ready if ready > 0 else "Codex")
+	if nav_buttons.size() == NAV.size():
+		var counts := [0, pts + sk, ups, 0, ready, 0]
+		for i in NAV.size():
+			nav_buttons[i].text = NAV[i][0] + (" %d" % counts[i] if counts[i] > 0 else "")
+		nav_buttons[3].visible = not tabs.is_tab_hidden(2)
 	codex_tabs.set_tab_title(3, "Bounties (%d)" % ready if ready > 0 else "Bounties")
 
 	# Only the page you're looking at needs updating

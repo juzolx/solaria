@@ -520,9 +520,9 @@ func _later(delay: float, fn: Callable) -> void:
 func _fx(fx_name: String, pos: Vector2, scale_mult := 1.0, flip := false) -> void:
 	if not _fx_tex.has(fx_name):
 		if _fx_frames.is_empty():
-			var f := FileAccess.open("res://art/fx/fx.json", FileAccess.READ)
-			if f:
-				_fx_frames = JSON.parse_string(f.get_as_text())
+			var j := load("res://art/fx/fx.json") as JSON
+			if j:
+				_fx_frames = j.data
 		var path := "res://art/fx/%s.png" % fx_name
 		_fx_tex[fx_name] = load(path) if ResourceLoader.exists(path) else null
 	if _fx_tex[fx_name] == null:

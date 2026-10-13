@@ -23,12 +23,13 @@ static var _built := {}    # spec key -> result
 
 static func manifest() -> Dictionary:
 	if _manifest.is_empty():
-		var f := FileAccess.open(DIR + "manifest.json", FileAccess.READ)
-		if f:
-			_manifest = JSON.parse_string(f.get_as_text())
-		f = FileAccess.open(DIR + "palettes.json", FileAccess.READ)
-		if f:
-			_palettes = JSON.parse_string(f.get_as_text())
+		# Loaded as resources (not FileAccess) so exported games include them
+		var m := load(DIR + "manifest.json") as JSON
+		if m:
+			_manifest = m.data
+		var p := load(DIR + "palettes.json") as JSON
+		if p:
+			_palettes = p.data
 	return _manifest
 
 static func available() -> bool:

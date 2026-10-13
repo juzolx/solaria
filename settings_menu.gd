@@ -80,6 +80,15 @@ func show_for(m) -> void:
 		arow.add_child(b)
 		a11y_buttons[key] = b
 
+	content.add_child(UI.heading("Credits"))
+	var cr := UI.button("Art credits", func():
+		var o := Overlay.new().open(main, "Art credits", 640.0, UI.GOLD)
+		var t := UI.rich(12)
+		t.text = Credits.TEXT
+		o.content.add_child(t))
+	cr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(cr)
+
 	content.add_child(UI.heading("Cloud backup"))
 	var crow := UI.hbox(8)
 	content.add_child(crow)

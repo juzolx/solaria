@@ -79,7 +79,7 @@ func _pic(app: Dictionary, looks := {}) -> TextureRect:
 	var pic := TextureRect.new()
 	pic.texture = Sprites.portrait(app, looks)
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(56, 56)
+	pic.custom_minimum_size = Vector2(64, 64)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	return pic
@@ -145,7 +145,7 @@ func _pet_card() -> void:
 	var pic := TextureRect.new()
 	pic.texture = Pets.portrait(state)
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(56, 56)
+	pic.custom_minimum_size = Vector2(64, 64)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	h.add_child(pic)

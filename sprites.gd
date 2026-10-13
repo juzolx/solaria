@@ -21,8 +21,8 @@ const OUTLINE_ALPHA := 201     # layer outlines: drawn on empty space, only dark
 const BODIES := ["masc", "fem"]
 const BODY_NAMES := ["Build A", "Build B"]
 const USE_LPC := true  # heroes from the LPC parts (lpc.gd); false = the older drawn heroes
-const PORTRAIT_CROP := Rect2i(4, 4, 88, 88)  # the part of the canvas menus show
-const PORTRAIT := 88  # its size: show portraits at 88 or 176 to keep pixels crisp
+const PORTRAIT_CROP := Rect2i(16, 24, 64, 64)  # the part of the canvas menus show: the hero's own frame
+const PORTRAIT := 64  # its size: show portraits at 64, 128 or 192 to keep pixels crisp
 const HAIR_STYLES := Lpc.HAIR_ORDER  # 37 styles; the 13 older names are kept so saves look the same
 
 const TYPE_MATERIAL := {
