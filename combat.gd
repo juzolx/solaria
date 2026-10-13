@@ -255,7 +255,12 @@ const MECHANICS := {
 	"enrage": {"name": "Enrage", "color": "#ef4444", "text": "After %d turns it enrages and hits harder every turn."},
 	"minions": {"name": "Minions", "color": "#a3a3a3", "text": "It calls minions that soak your damage and bite you each turn."},
 	"breath": {"name": "Breath", "color": "#fb923c", "text": "Every few turns it breathes poison, fire or frost on you (Wisdom helps)."},
+	"crush": {"name": "Crushing Blow", "color": "#f59e0b", "text": "Every few turns it winds up a blow that hits 3x as hard. Hit it with a skill while it winds up to stagger it."},
+	"windup": {"name": "Winding Up", "color": "#f59e0b", "text": "Use a skill now to stagger it!"},
+	"stagger": {"name": "Staggered", "color": "#4ade80", "text": "You broke its crushing blow."},
 }
+const CRUSH_EVERY := 5     # turns between crushing blows
+const CRUSH_MULT := 3.0
 const ENRAGE_TURNS := 18
 const ENRAGE_STEP := 0.12   # +12% Attack every turn after it enrages
 const SHIELD_PART := 0.25   # shield = 25% of its max HP
@@ -263,8 +268,23 @@ const MINION_HP := 0.08     # each minion: 8% of the boss's max HP
 const MINION_BITE := 0.25   # each minion hits for 25% of the boss's Attack
 
 ## Picks a boss's mechanics: mid bosses get 1, zone bosses and trials get 2.
+## Each named boss fights its own way (the rest roll from the pool).
+const BOSS_MECHANICS := {
+	"Black Annis": ["minions", "crush"], "Grendel": ["crush", "enrage"], "The Dullahan": ["crush", "minions"],
+	"Hel, Queen of the Dead": ["minions", "breath"], "Scylla": ["minions", "crush"], "Charybdis": ["breath", "shield"],
+	"Fafnir": ["breath", "crush"], "Surtr the Fire Giant": ["breath", "enrage"], "Echidna": ["minions", "breath"],
+	"Typhon, Father of Monsters": ["crush", "breath"], "The Weeping Warden": ["shield", "crush"], "The Withered Queen": ["minions", "shield"],
+	"The Jester of Thorns": ["breath", "minions"], "The Fairy Queen": ["shield", "minions"], "Forgemaster Brann": ["crush", "shield"],
+	"High King Thrandor": ["crush", "enrage"], "Archon Valeth": ["shield", "breath"], "Seraphiel, the First Light": ["shield", "enrage"],
+	"Duke Malgrath": ["crush", "minions"], "Azgaroth, Lord of the Abyss": ["breath", "crush"],
+}
+
 static func roll_mechanics(g: GameState) -> Array:
-	var pool := ["shield", "enrage", "minions", "breath"]
+	if BOSS_MECHANICS.has(g.enemy_species):
+		var own: Array = BOSS_MECHANICS[g.enemy_species]
+		# mid bosses use their first mechanic, zone bosses and trials both
+		return own.duplicate() if g.enemy_boss_kind in ["zone", "trial"] else [own[0]]
+	var pool := ["shield", "enrage", "minions", "breath", "crush"]
 	var h := absi(hash(g.enemy_species))
 	var first: String = pool[h % pool.size()]
 	var out: Array = [first]
@@ -313,6 +333,12 @@ static func boss_turn(g: GameState) -> String:
 				note_damage(g, "minions", bite)
 				g.events.append({"type": "enemy_hit", "dmg": bite, "minion": true})
 				line += ". The minions bite you for %d" % bite
+	if "crush" in g.boss_mechanics and not ph.get("windup", false):
+		var tc := int(g.cfight.get("turns", 0))
+		if tc > 0 and tc % CRUSH_EVERY == CRUSH_EVERY - 1:
+			ph["windup"] = true
+			g.events.append({"type": "boss_mechanic", "id": "windup", "name": "%s winds up a crushing blow!" % g.enemy_name, "color": MECHANICS["crush"]["color"]})
+			line += ". [color=#f59e0b]%s winds up a crushing blow! Use a skill to stagger it.[/color]" % g.enemy_name
 	if "enrage" in g.boss_mechanics:
 		var t := int(g.cfight.get("turns", 0))
 		if t == ENRAGE_TURNS:
@@ -320,6 +346,22 @@ static func boss_turn(g: GameState) -> String:
 			line += ". [color=#ef4444]%s is enraged![/color]" % g.enemy_name
 	g.boss_phase = ph
 	return line
+
+## A winding-up boss's next hit lands 3x (then the wind-up is spent).
+static func crush_mult(g: GameState) -> float:
+	if not g.enemy_is_boss or not g.boss_phase.get("windup", false):
+		return 1.0
+	g.boss_phase.erase("windup")
+	g.events.append({"type": "boss_mechanic", "id": "crush", "name": "CRUSHING BLOW!", "color": MECHANICS["crush"]["color"]})
+	return CRUSH_MULT
+
+## Any skill hit during the wind-up staggers the boss. Returns a log line.
+static func try_stagger(g: GameState) -> String:
+	if not g.enemy_is_boss or not g.boss_phase.get("windup", false):
+		return ""
+	g.boss_phase.erase("windup")
+	g.events.append({"type": "boss_mechanic", "id": "stagger", "name": "STAGGERED!", "color": MECHANICS["stagger"]["color"]})
+	return ". [color=#4ade80]You stagger it and break its crushing blow![/color]"
 
 ## The boss's attack multiplier from enrage.
 static func enrage_mult(g: GameState) -> float:

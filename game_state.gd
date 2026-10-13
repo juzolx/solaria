@@ -945,6 +945,8 @@ func use_skill(id: String) -> bool:
 		total = _damage_enemy(total, tags)
 		crit_hit = crit_any
 		parts.append("%d damage%s" % [total, " (crit!)" if crit_any else ""])
+		if Combat.try_stagger(self) != "":
+			parts.append("[color=#4ade80]staggered its crushing blow[/color]")
 	events.append({"type": "ability", "name": s["name"], "dmg": total, "class": hero_class, "tag": tags[0] if not tags.is_empty() else "",
 		"color": Classes.tag_color(tags[0] if not tags.is_empty() else "")})
 	var heal := int(maxhp * float(s.get("heal", 0)) * rk / 100.0 * heal_mult()) + int(total * float(s.get("drain", 0)) / 100.0)
@@ -1502,7 +1504,7 @@ func take_turn() -> void:
 			if Realms.misses(self):
 				line += ". The %s swings blind in the mist" % enemy_name
 				continue
-			var damage := int(damage_taken() * Combat.enrage_mult(self) * World.pet_guard(self))
+			var damage := int(damage_taken() * Combat.enrage_mult(self) * World.pet_guard(self) * Combat.crush_mult(self))
 			if enemy_weaken_turns > 0:
 				damage = maxi(1, int(damage * enemy_weaken))
 			if enemy_curse > 0:

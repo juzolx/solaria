@@ -10,7 +10,7 @@ const NOTES := [
 		"The Family Tree is now the Evolution Tree. Classes you haven't reached show as ???, and every evolution has a big moment and teaches a signature skill for a new 4th skill slot.",
 		"8 stats: STR, VIT, AGI, DEX, INT, WIS, LUK and CHA, at 5 points a level. Your old points were converted. Suggested builds, Auto-spend, respec tomes and 3 saved builds (stats, skills and gear).",
 		"Special stats now grow from what you do, not from points. Weapon mastery grows with each weapon type you use.",
-		"Combat: elemental weaknesses and resistances, status combos (freeze, shatter, conduct, toxic), new elite modifiers, boss mechanics, auto-battle settings and a death recap with tips.",
+		"Combat: elemental weaknesses and resistances, status combos (freeze, shatter, conduct, toxic), new elite modifiers, boss mechanics (each boss its own, including a crushing blow you can stagger with a skill), auto-battle settings and a death recap with tips.",
 		"Loot: upgrade arrows with a percent, gear sets for every class tree, and living legendaries that awaken as they kill.",
 		"World: floor hazards, events between fights, milestone floors with Champions and checkpoints, opt-in curses, bestiary mastery bonuses, companions that evolve, achievement rewards and a Next goal line under the fight.",
 		"God trials rotate every week. Unique classes get a cape and God rank an aura.",

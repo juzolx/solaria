@@ -441,7 +441,14 @@ func play(events: Array[Dictionary]) -> void:
 				_later(delay, func(): _float("RESISTED", _hero_center() + Vector2(0, -36), Color("#2dd4bf"), 14))
 			"boss_mechanic":
 				_later(delay + 0.2, func():
-					_sfx("enrage" if e["id"] == "enrage" else "boss_intro", 1.0 if e["id"] == "enrage" else 1.3)
+					var mid := String(e["id"])
+					_sfx({"enrage": "enrage", "windup": "enrage", "crush": "crit", "stagger": "shatter"}.get(mid, "boss_intro"), 1.0 if mid != "shield" and mid != "minions" else 1.3)
+					if mid == "crush":
+						shake = 14.0
+						_hit_stop(0.12)
+						_fx("impact_red", _hero_center(), 1.8)
+					elif mid == "stagger":
+						_fx("shatter", _enemy_center(), 1.6)
 					banner_text = String(e["name"]).to_upper()
 					banner_sub = String(Combat.MECHANICS[e["id"]]["text"]).replace("%d", str(Combat.ENRAGE_TURNS))
 					banner_color = Color(e["color"])
@@ -1633,6 +1640,8 @@ func _draw_enemy_info(r: Rect2, font: Font) -> void:
 		st.append(["Cursed", Color("#a78bfa")])
 	if state.enemy_stun > 0:
 		st.append(["Stunned", Color("#fde68a")])
+	if state.boss_phase.get("windup", false):
+		st.append(["WINDING UP! Use a skill", Color("#f59e0b")])
 	var el := Combat.enrage_left(state)
 	if el > 0:
 		st.append(["Enrage in %d" % el, Color("#ef4444")])
