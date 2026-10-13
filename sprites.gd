@@ -20,7 +20,7 @@ const OUTLINE_ALPHA := 201     # layer outlines: drawn on empty space, only dark
 # ---------- Character creator choices ----------
 const BODIES := ["masc", "fem"]
 const BODY_NAMES := ["Build A", "Build B"]
-const HAIR_STYLES := ["Short", "Spiky", "Long", "Ponytail", "Bun", "Mohawk", "Bald"]
+const HAIR_STYLES := ["Short", "Spiky", "Side Swept", "Shaggy", "Mohawk", "Buzz", "Bald", "Long", "Ponytail", "Bob", "Bun", "Braid", "Pixie"]
 
 const TYPE_MATERIAL := {
 	"sword": "steel", "dagger": "steel", "axe": "steel", "mace": "iron", "spear": "steel", "bow": "wood", "staff": "wood",
@@ -308,6 +308,12 @@ static func hero(app: Dictionary, looks: Dictionary) -> Dictionary:
 	if looks.has("Cape"):
 		var ck: Dictionary = looks["Cape"]
 		_stack(canvas, _layer("gear/cape.png", _gear_map(ck, cmap)), o)
+	# Long hair, ponytails, buns and braids hang behind the body too
+	var hair_file: String = str(app.get("hair", "Short")).to_lower().replace(" ", "_")
+	var helmet_now: Dictionary = looks.get("Helmet", {})
+	var hood_hides: bool = not helmet_now.is_empty() and ArtInfo.DATA["helmets"].get(helmet_now["type"], {}).get("hides_hair", false)
+	if not hood_hides and ResourceLoader.exists(ART + "hero/hair_%s_back.png" % hair_file):
+		_stack(canvas, _layer("hero/hair_%s_back.png" % hair_file, cmap), o)
 	_stack(canvas, _layer("hero/body_%s.png" % body, cmap), o)
 	for slot in ["Legs", "Feet", "Chest"]:
 		if looks.has(slot):
@@ -318,8 +324,7 @@ static func hero(app: Dictionary, looks: Dictionary) -> Dictionary:
 	if not helmet.is_empty():
 		hides = ArtInfo.DATA["helmets"].get(helmet["type"], {}).get("hides_hair", false)
 	if not hides:
-		var style: String = str(app.get("hair", "Short")).to_lower()
-		_stack(canvas, _layer("hero/hair_%s.png" % style, cmap), o)
+		_stack(canvas, _layer("hero/hair_%s.png" % hair_file, cmap), o)
 	var front: Array = race_layers["front"]
 	for layer in front:
 		if layer in UNDER_HELMET:
@@ -332,7 +337,7 @@ static func hero(app: Dictionary, looks: Dictionary) -> Dictionary:
 
 	var out := {"body_img": canvas, "body": ImageTexture.create_from_image(canvas), "body_white": ImageTexture.create_from_image(_silhouette(canvas)),
 		"weapon": null, "weapon_white": null, "weapon_type": "", "pivot": Vector2.ZERO, "glow": Color(0, 0, 0, 0)}
-	var hand: Array = ArtInfo.DATA["hand"]
+	var hand: Array = ArtInfo.DATA.get("hand_fem", ArtInfo.DATA["hand"]) if body == "fem" else ArtInfo.DATA["hand"]
 	out["hand"] = Vector2(o) + Vector2(float(hand[0]), float(hand[1])) + Vector2(0.5, 0.5) * HD
 	if looks.has("Weapon"):
 		var lk: Dictionary = looks["Weapon"]

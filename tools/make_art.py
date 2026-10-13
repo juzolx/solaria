@@ -67,7 +67,8 @@ SKINS = [
     ['#ffffff', '#eef0f4', '#d2d4de', '#a8a8ba', '#5e5a72'],   # 12 vampire pale
     ['#e8f4ff', '#c0d8ee', '#8fb0d2', '#5f7ea8', '#34466e'],   # 13 lich
 ]
-HAIR_BASES = ['#3a2f3a', '#6b3e2a', '#9a5530', '#e0b45a', '#ece4cf', '#a9b4c6', '#c23b2e', '#3c6fd0', '#d870ac', '#3fa266']
+HAIR_BASES = ['#3a2f3a', '#6b3e2a', '#9a5530', '#e0b45a', '#ece4cf', '#a9b4c6', '#c23b2e', '#3c6fd0', '#d870ac', '#3fa266',
+              '#1f1b26', '#4a2c22', '#c4703a', '#f0d58c', '#8a5ad0', '#2fa8a0', '#f2f2f6', '#e8732a']
 HAIRS = [['#%02x%02x%02x' % c for c in ps.ramp_from(b, 0.05, 1.0)] for b in HAIR_BASES]
 EYES = ['#2f5bb8', '#2f8a48', '#6b3e2a', '#181425', '#b8263a', '#8a4fc8', '#d9961a']
 MATERIALS = {
@@ -146,42 +147,49 @@ def main():
             "skins": SKINS, "hairs": HAIRS, "eyes": EYES, "materials": MATERIALS,
             "hair_styles": ["Short", "Spiky", "Long", "Ponytail", "Bun", "Mohawk", "Bald"]}
 
-    # ---- body (skin and eyes recolored; the plain clothes are final colors)
-    body_mats = dict(art_body.MATS)
-    body_mats["s"] = SKIN_KEYS
-    body_mats["e"] = EYE_KEY
-    for name, rows in (("masc", art_body.MASC), ("fem", art_body.FEM)):
-        save(face_detail(shade(rows, body_mats, art_body.ALIASES, 32, 32)), "hero", "body_%s.png" % name)
-
-    # ---- hair
-    hair_mats = {"h": HAIR_KEYS}
-    for style in info["hair_styles"]:
-        rows = getattr(art_hair, style.upper())
-        save(shade(rows, hair_mats, art_hair.ALIASES, 32, 32), "hero", "hair_%s.png" % style.lower())
-
+    # ---- v0.11: the hero is drawn natively at 64x64 (art_hero_native.py)
+    import art_hero_native as hn
+    import art_native as an
+    info["hd"] = HD
+    info["hand"] = list(hn.HAND["masc"])
+    info["hand_fem"] = list(hn.HAND["fem"])
+    info["off_hand"] = list(hn.OFF_HAND["masc"])
+    info["hair_styles"] = hn.HAIR_ORDER
+    info["hair_back"] = []
+    eye = EYE_KEY
+    body_r = {"s": SKIN_KEYS, "c": hn.SHIRT, "p": hn.PANTS, "l": hn.SHOES, "k": hn.BELT, "g": ['#fff4a3', '#fee761', '#feae34', '#f77622', '#be4a2f'],
+              "e": eye, "x": hn.DARK, "w": hn.WHITE, "y": "#ffffff", "q": hn.LIPS, "h": HAIR_KEYS}
+    for kind in ("masc", "fem"):
+        save(hn.body(kind).render(body_r, tone_fn=hn.clean_head, shadow_under=("c", "p", "l")), "hero", "body_%s.png" % kind)
+    for style in hn.HAIR_ORDER:
+        f, bk = hn.hair_layers(style)
+        rr = {"h": HAIR_KEYS, "t": "#c23b2e"}
+        empty = an.Canvas().render(rr)
+        save(f.render(rr, soft=1.2) if f else empty, "hero", "hair_%s.png" % style.lower().replace(" ", "_"))
+        if bk:
+            save(bk.render(rr, soft=1.2), "hero", "hair_%s_back.png" % style.lower().replace(" ", "_"))
+            info["hair_back"].append(style)
     # ---- race features
-    race_mats = dict(art_races.MATS)
-    race_mats["s"] = SKIN_KEYS
-    race_mats["h"] = HAIR_KEYS
-    for key, rows in art_races.LAYERS.items():
-        save(shade(rows, race_mats, art_races.ALIASES, 32, 32), "hero", "race_%s.png" % key)
+    for key in hn.RACE_KEYS:
+        cv, rr = hn.race_layer(key)
+        rr = {k: v for k, v in rr.items() if v is not None}
+        rr["s"] = SKIN_KEYS
+        rr["h"] = HAIR_KEYS
+        save(cv.render(rr), "hero", "race_%s.png" % key)
     info["races"] = {k: {"back": v[0], "front": v[1]} for k, v in art_races.RACES.items()}
     info["race_back"] = sorted(art_races.BACK)
     info["forms"] = art_races.FORMS
     info["race_looks"] = art_races.LOOKS
     info["race_eyes"] = art_races.EYES
-
-    # ---- armor (body-shaped pieces; both builds share them)
-    gear_mats = {"m": MAT_KEYS, "r": TRIM_KEYS, "x": FIXED_STRAP, "k": "#262b44", "s": SKIN_KEYS}
-    for kind in ("tunic", "plate", "robe", "pants", "greaves", "leggings", "boots", "sandals", "sabatons"):
-        im = shade(getattr(art_gear, kind.upper()), gear_mats, art_gear.ALIASES, 32, 32)
-        for body in ("masc", "fem"):
-            save(im, "gear", "%s_%s.png" % (kind, body))
-    # The unique-class cape (behind the body): m = class color, r = rank color
-    save(shade(art_gear.CAPE, gear_mats, art_gear.ALIASES, 32, 32), "gear", "cape.png")
+    # ---- armor, fitted to each build
+    gear_r = {"m": MAT_KEYS, "r": TRIM_KEYS, "k": FIXED_STRAP}
+    for piece in ("tunic", "plate", "robe", "pants", "greaves", "leggings", "boots", "sandals", "sabatons"):
+        for kind in ("masc", "fem"):
+            save(hn.armor(kind, piece).render(gear_r), "gear", "%s_%s.png" % (piece, kind))
+    save(hn.cape().render(gear_r), "gear", "cape.png")
     hides = {"cap": False, "helm": True, "hood": True, "crown": False}
     for kind in ("cap", "helm", "hood", "crown"):
-        save(shade(getattr(art_gear, kind.upper()), gear_mats, art_gear.ALIASES, 32, 32), "gear", "%s.png" % kind)
+        save(hn.helmet(kind).render(gear_r), "gear", "%s.png" % kind)
         info["helmets"][kind] = {"hides_hair": hides[kind]}
 
     # ---- weapons and off-hands (P in the drawing = where the hand holds it)
