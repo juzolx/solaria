@@ -208,6 +208,11 @@ static func gear_look(item: Dictionary) -> Dictionary:
 			mat = cd["mat"]
 			trim = Color(cd["trim"])
 			glow = true
+	elif item.get("set", "") != "" and GameData.EVO_SETS.has(item["set"]):
+		var es: Dictionary = GameData.EVO_SETS[item["set"]]
+		mat = es["mat"]
+		trim = Color(es["trim"])
+		glow = true
 	elif item.get("set", "") != "":
 		mat = SET_STYLES.get(item["set"], mat)
 	elif r == 0:

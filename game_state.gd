@@ -280,7 +280,7 @@ func crit_mult() -> float:
 
 ## Heals, potions and songs are this much stronger (Wisdom).
 func heal_mult() -> float:
-	return 1.0 + dim("WIS", GameData.WIS_HEAL) / 100.0
+	return 1.0 + (dim("WIS", GameData.WIS_HEAL) + _flat("heal")) / 100.0
 
 ## Burns, poison, chill and curses on you do this much (Wisdom lowers it).
 func status_mult() -> float:
@@ -308,7 +308,7 @@ func sell_price(item: Dictionary) -> int:
 
 ## Chance (%) a monster is charmed and skips its attack (Charisma and charm classes).
 func charm_total() -> float:
-	return dim("CHA", GameData.CHA_CHARM) + ClassTree.charm_chance(self)
+	return dim("CHA", GameData.CHA_CHARM) + ClassTree.charm_chance(self) + _flat("charm")
 
 ## Companions hit this much harder (Charisma).
 func party_mult() -> float:
@@ -437,6 +437,8 @@ func _flat(key: String) -> float:
 		for slot in equipped:
 			if equipped[slot].get("effect", "") == key:
 				t += float(equipped[slot]["effect_value"])
+			if equipped[slot].get("effect2", "") == key:
+				t += float(equipped[slot].get("effect2_value", 0))
 	return t
 
 ## Extra power for a skill from its tags: class affinity, spec/evolution, passive skills.
@@ -452,6 +454,10 @@ func tag_power(tags: Array) -> float:
 			break
 	if "Song" in tags:
 		p += dim("CHA", GameData.CHA_SONG) / 100.0
+	for b in set_bonuses():
+		var tg: Dictionary = b.get("tag", {})
+		for t in tags:
+			p += float(tg.get(t, 0.0))
 	p += ClassTree.tag_power(self, tags)
 	for i in passive_slot_count():
 		var id: String = passive_slots[i]
@@ -476,7 +482,9 @@ func set_bonuses() -> Array:
 	var out := []
 	var counts := set_counts()
 	for set_name in counts:
-		var info: Dictionary = GameData.SETS[set_name]
+		var info: Dictionary = GameData.set_info(set_name)
+		if info.is_empty():
+			continue
 		if counts[set_name] >= 2:
 			out.append(info["bonus2"])
 		if counts[set_name] >= 3:
@@ -723,6 +731,8 @@ func effect_value(effect: String) -> float:
 		var item: Dictionary = equipped[slot]
 		if item["effect"] == effect:
 			total += float(item["effect_value"])
+		if item.get("effect2", "") == effect:
+			total += float(item.get("effect2_value", 0))
 	if effect == "dodge":
 		total += float(class_info().get("dodge", 0))
 		total += dim("AGI", GameData.AGI_DODGE)
@@ -1605,6 +1615,9 @@ func _enemy_defeated() -> void:
 	ClassTree.on_kill(self, was_boss, tier, was_goblin)
 	if not was_goblin:
 		Mastery.on_kill(self)
+		_feed_souls(was_boss)
+		if hero_class != "" and level >= Classes.SPEC_LEVEL and randf() * 100.0 < (GameData.EVO_SET_BOSS_CHANCE if was_boss else (GameData.EVO_SET_ELITE_CHANCE if tier >= Monsters.EPIC else 0.0)):
+			_give_item(_roll_evo_piece())
 	burn_turns = 0
 	enemy_stun = 0
 	enemy_weaken_turns = 0
@@ -1716,6 +1729,52 @@ func _enemy_defeated() -> void:
 	spawn_enemy()
 	_check_codex()
 	save_game()
+
+## Living items: kills while worn fill their soul (bosses count 5).
+func _feed_souls(boss: bool) -> void:
+	for slot in equipped:
+		var it: Dictionary = equipped[slot]
+		if not GameData.is_living(it):
+			continue
+		var before := GameData.soul_level(it)
+		it["soul"] = int(it.get("soul", 0)) + (5 if boss else 1)
+		var after := GameData.soul_level(it)
+		if after > before:
+			bag_version += 1
+			if after >= GameData.SOUL_MAX and String(it.get("effect2", "")) == "":
+				var pool := GameData.LEGENDARY_EFFECTS.filter(func(fx): return fx["effect"] != it.get("effect", ""))
+				var fx: Dictionary = pool.pick_random()
+				it["effect2"] = fx["effect"]
+				it["effect2_value"] = maxi(1, int(round(float(fx["value"]) * 0.6)))
+				say("[color=#fde047]*** %s AWAKENS! ***[/color] Hidden effect: %s" % [it["name"], GameData.effect_text(it["effect2"], int(it["effect2_value"]))])
+				events.append({"type": "mini_event", "kind": "awaken_item", "title": "%s AWAKENS!" % String(it["name"]).to_upper(), "sub": GameData.effect_text(it["effect2"], int(it["effect2_value"]))})
+			else:
+				say("[color=#fbbf24]%s grows stronger: soul level %d (+%d%% power).[/color]" % [it["name"], after, int(after * GameData.SOUL_POWER * 100)])
+				events.append({"type": "mastery", "name": "%s: soul level %d" % [it["name"], after]})
+
+## An evolution set piece, usually from a set that fits your class.
+func _roll_evo_piece() -> Dictionary:
+	var mine: Array = []
+	var tags: Array = class_info().get("tags", [])
+	for n in ClassTree.path_nodes(self):
+		tags.append_array(n.get("tags", []))
+	for sn in GameData.EVO_SET_ORDER:
+		for t in GameData.EVO_SETS[sn]["tags"]:
+			if t in tags and not sn in mine:
+				mine.append(sn)
+	var set_name: String = mine.pick_random() if (not mine.is_empty() and randf() < GameData.EVO_SET_FIT) else GameData.EVO_SET_ORDER.pick_random()
+	var slot: String = (GameData.EVO_SETS[set_name]["pieces"] as Dictionary).keys().pick_random()
+	tip("evo_sets", "An evolution set piece! Wear 2 or 3 pieces of the same set for big bonuses. Each set fits a family of classes.")
+	return GameData.make_evo_piece(set_name, slot, floor_num, _new_id())
+
+## How much stronger (+) or weaker (-) your build gets with this item on, in %.
+func compare_pct(item: Dictionary) -> float:
+	if not equipped.has(item["slot"]) and item.has("slot"):
+		return 100.0
+	var base := build_score()
+	if base <= 0.0:
+		return 0.0
+	return (score_with(item) / base - 1.0) * 100.0
 
 func _give_signature(monster: String) -> void:
 	var item := GameData.make_signature(monster, floor_num, _new_id())
@@ -1932,7 +1991,7 @@ func _give_item(item: Dictionary) -> void:
 	codex.found_item(item)
 	var r := int(item["rarity"])
 	codex.bounty_progress("item", {"rarity": r})
-	events.append({"type": "loot", "name": GameData.display_name(item), "rarity": r})
+	events.append({"type": "loot", "name": GameData.display_name(item), "rarity": r, "up": compare_pct(item)})
 	_page("gear")
 	var keep := r in [GameData.UNIQUE, GameData.SIGNATURE]
 	if not keep and filter_salvages(item):

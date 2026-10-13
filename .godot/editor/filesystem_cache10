@@ -1,9 +1,9 @@
 78098b89c88a74ebe8c20117b8754620
-::res://::1791867844
+::res://::1791868198
 achievements_tab.gd::GDScript::225817628144516105::1791830271::0::1::::AchievementsTab<>VBoxContainer<><>0<>0<><>::
 art_info.gd::GDScript::2121761137587333428::1791857120::0::1::::ArtInfo<>RefCounted<><>0<>0<><>::
 bag_tab.gd::GDScript::7963412957330005317::1791866958::0::1::::BagTab<>VBoxContainer<><>0<>0<><>::
-battle_view.gd::GDScript::1321114398721736239::1791868008::0::1::::BattleView<>Control<><>0<>0<><>::
+battle_view.gd::GDScript::1321114398721736239::1791868196::0::1::::BattleView<>Control<><>0<>0<><>::
 bestiary_tab.gd::GDScript::3473921906557743363::1791830215::0::1::::BestiaryTab<>HBoxContainer<><>0<>0<><>::
 bounty_tab.gd::GDScript::6266114143799082059::1791830295::0::1::::BountyTab<>ScrollContainer<><>0<>0<><>::
 character_creator.gd::GDScript::5800014703699665626::1791846920::0::1::::CharacterCreator<>Overlay<><>0<>0<><>::
@@ -12,11 +12,11 @@ class_tab.gd::GDScript::2242816760745440118::1791867859::0::1::::ClassTab<>Scrol
 class_tree.gd::GDScript::144847341442138040::1791867859::0::1::::ClassTree<>RefCounted<><>0<>0<><>::
 codex.gd::GDScript::8699120073566472490::1791857807::0::1::::Codex<>RefCounted<><>0<>0<><>::
 collection_tab.gd::GDScript::3273171438237057211::1791830271::0::1::::CollectionTab<>ScrollContainer<><>0<>0<><>::
-combat.gd::GDScript::5978949549637127472::1791867188::0::1::::Combat<>RefCounted<><>0<>0<><>::
+combat.gd::GDScript::5978949549637127472::1791868092::0::1::::Combat<>RefCounted<><>0<>0<><>::
 craft_tab.gd::GDScript::6139851508629389909::1791793606::0::1::::CraftTab<>ScrollContainer<><>0<>0<><>::
 floor_picker.gd::GDScript::5370141465407826933::1791829678::0::1::::FloorPicker<>Overlay<><>0<>0<><>::
-game_data.gd::GDScript::560847022751701286::1791866821::0::1::::GameData<>RefCounted<><>0<>0<><>::
-game_state.gd::GDScript::1935207822301543411::1791867936::0::1::::GameState<>RefCounted<><>0<>0<><>::
+game_data.gd::GDScript::560847022751701286::1791868177::0::1::::GameData<>RefCounted<><>0<>0<><>::
+game_state.gd::GDScript::1935207822301543411::1791868177::0::1::::GameState<>RefCounted<><>0<>0<><>::
 gear_tab.gd::GDScript::452513172291051429::1791849978::0::1::::GearTab<>VBoxContainer<><>0<>0<><>::
 guide.gd::GDScript::3980021912403035507::1791857807::0::1::::Guide<>RefCounted<><>0<>0<><>::
 guide_book.gd::GDScript::6387689471949660813::1791829909::0::1::::GuideBook<>Overlay<><>0<>0<><>::
@@ -27,7 +27,7 @@ hero_tab.gd::GDScript::1597247945663405098::1791867517::0::1::::HeroTab<>ScrollC
 hidden.gd::GDScript::1256150158193937454::1791867463::0::1::::Hidden<>RefCounted<><>0<>0<><>::
 item_pool.gd::GDScript::1307026090172593099::1791848238::0::1::::ItemPool<>RefCounted<><>0<>0<><>::
 item_popup.gd::GDScript::3668128301122309331::1791830089::0::1::::ItemPopup<>Overlay<><>0<>0<><>::
-item_text.gd::GDScript::2398908125098692267::1791830119::0::1::::ItemText<>RefCounted<><>0<>0<><>::
+item_text.gd::GDScript::2398908125098692267::1791868207::0::1::::ItemText<>RefCounted<><>0<>0<><>::
 leaderboard_tab.gd::GDScript::1617438135933824662::1791820411::0::1::::LeaderboardTab<>ScrollContainer<><>0<>0<><>::
 lineage.gd::GDScript::6923793308184476175::1791856112::0::1::::Lineage<>RefCounted<><>0<>0<><>::
 loot_filter.gd::GDScript::7538193561330219473::1791830151::0::1::::LootFilter<>Overlay<><>0<>0<><>::
@@ -57,7 +57,7 @@ shop_tab.gd::GDScript::6518725852383496533::1791866958::0::1::::ShopTab<>ScrollC
 signatures.gd::GDScript::5473582297840230887::1791867701::0::1::::Signatures<>RefCounted<><>0<>0<><>::
 skills_tab.gd::GDScript::5838519330532651803::1791867964::0::1::::SkillsTab<>VBoxContainer<><>0<>0<><>::
 skill_data.gd::GDScript::1490639940074352852::1791867720::0::1::::SkillData<>RefCounted<><>0<>0<><>::
-sprites.gd::GDScript::7097386362148170550::1791857101::0::1::::Sprites<>RefCounted<><>0<>0<><>::
+sprites.gd::GDScript::7097386362148170550::1791868196::0::1::::Sprites<>RefCounted<><>0<>0<><>::
 stash_tab.gd::GDScript::3246610137660904356::1791830151::0::1::::StashTab<>VBoxContainer<><>0<>0<><>::
 stats_tab.gd::GDScript::5226249994653909891::1791830271::0::1::::StatsTab<>ScrollContainer<><>0<>0<><>::
 title_screen.gd::GDScript::3075163210149101760::1791857823::0::1::::TitleScreen<>Control<><>0<>0<><>::

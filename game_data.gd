@@ -290,6 +290,85 @@ const SET_TYPES := {
 }
 const SET_ORDER := ["Grendel's Kin", "Hel's Shroud", "Tidecaller", "Muspel Forge", "Titanborn",
 	"Last Light of the Elves", "Court of Glamour", "Undermountain Oath", "Choir of Dawn", "Pact of the Abyss"]
+# ---------- Evolution sets (v0.11) ----------
+# One set for each family of classes. They drop from bosses and elite
+# monsters (more often the ones that fit your class), never from crafting.
+# "tag" bonuses make skills of those tags stronger.
+const EVO_SETS := {
+	"Crimson Covenant": {"tags": ["Blood"], "pieces": {"Weapon": "Covenant Bloodblade", "Chest": "Covenant Hauberk", "Legs": "Covenant Greaves"},
+		"types": {"Weapon": "axe", "Chest": "plate", "Legs": "greaves"}, "mat": "dark", "trim": "#e43b44",
+		"bonus2": {"lifesteal": 6}, "bonus3": {"tag": {"Blood": 0.2}, "rage": 15},
+		"text": "2 pieces: +6% lifesteal. 3 pieces: Blood skills +20%, up to +15% damage when hurt."},
+	"Dawnward Vestments": {"tags": ["Holy"], "pieces": {"Helmet": "Dawnward Circlet", "Chest": "Dawnward Robe", "Off Hand": "Dawnward Aegis"},
+		"types": {"Helmet": "crown", "Chest": "robe", "Off Hand": "shield"}, "mat": "gold", "trim": "#fde68a",
+		"bonus2": {"regen": 1}, "bonus3": {"tag": {"Holy": 0.2}, "heal": 15},
+		"text": "2 pieces: +1% regen. 3 pieces: Holy skills +20%, heals +15%."},
+	"Umbral Regalia": {"tags": ["Shadow"], "pieces": {"Helmet": "Umbral Cowl", "Legs": "Umbral Leggings", "Feet": "Umbral Treads"},
+		"types": {"Helmet": "hood", "Legs": "leggings", "Feet": "boots"}, "mat": "dark", "trim": "#8b5cf6",
+		"bonus2": {"dodge": 6}, "bonus3": {"tag": {"Shadow": 0.2}, "execute": 20},
+		"text": "2 pieces: +6% dodge. 3 pieces: Shadow skills +20%, +20% damage to monsters under 30% HP."},
+	"Elemental Concord": {"tags": ["Fire", "Frost", "Storm", "Arcane"], "pieces": {"Weapon": "Concord Staff", "Off Hand": "Concord Orb", "Helmet": "Concord Hood"},
+		"types": {"Weapon": "staff", "Off Hand": "orb", "Helmet": "hood"}, "mat": "crystal", "trim": "#c084fc",
+		"bonus2": {"skill": 1.08}, "bonus3": {"weakness": 25, "tag": {"Fire": 0.1, "Frost": 0.1, "Storm": 0.1, "Arcane": 0.1}},
+		"text": "2 pieces: +8% skill damage. 3 pieces: hits on a weakness do 25% more, elemental skills +10%."},
+	"Wildheart Garb": {"tags": ["Nature"], "pieces": {"Weapon": "Wildheart Bow", "Chest": "Wildheart Tunic", "Feet": "Wildheart Boots"},
+		"types": {"Weapon": "bow", "Chest": "tunic", "Feet": "boots"}, "mat": "leather", "trim": "#63c74d",
+		"bonus2": {"hp": 1.1}, "bonus3": {"tag": {"Nature": 0.2}, "regen": 1},
+		"text": "2 pieces: +10% HP. 3 pieces: Nature skills +20%, +1% regen."},
+	"Bladesworn Steel": {"tags": ["Blade", "Fist"], "pieces": {"Weapon": "Bladesworn Edge", "Helmet": "Bladesworn Helm", "Legs": "Bladesworn Greaves"},
+		"types": {"Weapon": "sword", "Helmet": "helm", "Legs": "greaves"}, "mat": "steel", "trim": "#c0cbdc",
+		"bonus2": {"crit": 6}, "bonus3": {"crit_dmg": 25, "tag": {"Blade": 0.15, "Fist": 0.15}},
+		"text": "2 pieces: +6% crit. 3 pieces: +25% crit damage, Blade and Fist skills +15%."},
+	"Minstrel's Finery": {"tags": ["Song", "Trick"], "pieces": {"Off Hand": "Finery Songbook", "Chest": "Finery Doublet", "Helmet": "Finery Cap"},
+		"types": {"Off Hand": "tome", "Chest": "tunic", "Helmet": "cap"}, "mat": "cloth", "trim": "#f472b6",
+		"bonus2": {"gold_find": 15}, "bonus3": {"tag": {"Song": 0.2, "Trick": 0.2}, "charm": 5},
+		"text": "2 pieces: +15% gold. 3 pieces: Song and Trick skills +20%, +5% charm."},
+	"Bulwark of Ages": {"tags": ["Holy", "Blade"], "pieces": {"Off Hand": "Ageless Bulwark", "Chest": "Ageless Plate", "Feet": "Ageless Sabatons"},
+		"types": {"Off Hand": "tower", "Chest": "plate", "Feet": "sabatons"}, "mat": "iron", "trim": "#94a3b8",
+		"bonus2": {"def": 1.1}, "bonus3": {"thorns": 15, "hp": 1.1},
+		"text": "2 pieces: +10% Defense. 3 pieces: reflect 15% of damage, +10% HP."},
+}
+const EVO_SET_ORDER := ["Crimson Covenant", "Dawnward Vestments", "Umbral Regalia", "Elemental Concord", "Wildheart Garb", "Bladesworn Steel", "Minstrel's Finery", "Bulwark of Ages"]
+const EVO_SET_BOSS_CHANCE := 25.0   # % a boss drops an evolution set piece
+const EVO_SET_ELITE_CHANCE := 4.0   # % an Epic-or-better monster does
+const EVO_SET_FIT := 0.7            # how often it's a set that fits your class's tags
+
+## Set info for any set (crafted or evolution).
+static func set_info(set_name: String) -> Dictionary:
+	if SETS.has(set_name):
+		return SETS[set_name]
+	return EVO_SETS.get(set_name, {})
+
+## Makes an evolution set piece.
+static func make_evo_piece(set_name: String, slot: String, floor_num: int, id: int) -> Dictionary:
+	var info: Dictionary = EVO_SETS[set_name]
+	var piece: String = info["pieces"][slot]
+	return {
+		"id": id, "base_name": piece, "name": piece, "type": info["types"][slot], "slot": slot, "stat": SLOT_INFO[slot]["stat"],
+		"rarity": SET_RARITY, "bonus": maxi(1, int(base_bonus(slot, floor_num) * float(RARITY_MULTS[SET_RARITY]) * 1.05)),
+		"level": 0, "floor": floor_num, "effect": "", "effect_value": 0, "set": set_name,
+		"flavor": "Part of the %s. %s" % [set_name, info["text"]],
+	}
+
+# ---------- Living items (v0.11) ----------
+# Legendary, Unique and Signature gear grows with you: kills while it's worn
+# fill its soul. Each soul level adds 4% to its power; at level 5 it awakens
+# a second, hidden effect.
+const SOUL_KILLS := [100, 300, 700, 1500, 3000]
+const SOUL_POWER := 0.04
+const SOUL_MAX := 5
+
+static func is_living(item: Dictionary) -> bool:
+	return int(item.get("rarity", 0)) in [LEGENDARY, UNIQUE, SIGNATURE]
+
+static func soul_level(item: Dictionary) -> int:
+	var k := int(item.get("soul", 0))
+	var lv := 0
+	for need in SOUL_KILLS:
+		if k >= int(need):
+			lv += 1
+	return lv
+
 # Crafting a bigger bag: any boss materials + scrap, cost grows with bag level
 const BAG_CRAFT_MATERIALS := 5
 const BAG_CRAFT_SCRAP := 30
@@ -561,13 +640,21 @@ static func make_signature(monster: String, floor_num: int, id: int) -> Dictiona
 static func item_power(item: Dictionary) -> int:
 	var b := int(item["bonus"])
 	var lvl := int(item["level"])
-	return b + maxi(1, int(ceil(b * 0.1))) * lvl
+	var p := b + maxi(1, int(ceil(b * 0.1))) * lvl
+	var sl := soul_level(item)
+	return int(p * (1.0 + SOUL_POWER * sl)) if sl > 0 else p
 
 static func display_name(item: Dictionary) -> String:
 	var lvl := int(item["level"])
+	var n: String = item["name"]
 	if lvl > 0:
-		return "%s +%d" % [item["name"], lvl]
-	return item["name"]
+		n = "%s +%d" % [n, lvl]
+	var sl := soul_level(item)
+	if sl >= SOUL_MAX:
+		n += " (Awakened)"
+	elif sl > 0:
+		n += " (Soul %d)" % sl
+	return n
 
 static func sell_value(item: Dictionary) -> int:
 	var r := int(item["rarity"])

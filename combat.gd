@@ -65,6 +65,8 @@ static func profile(g: GameState) -> Dictionary:
 	# Bosses and trials are never weak to more than one thing
 	if g.enemy_is_boss and weak.size() > 1:
 		weak = weak.slice(0, 1)
+	elif weak.size() > 2:
+		weak = weak.slice(0, 2)
 	return {"weak": weak, "resist": resist}
 
 ## The elements a hit carries: skill tags that are elements, or Physical.

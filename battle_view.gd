@@ -642,6 +642,12 @@ func _loot_pop(e: Dictionary) -> void:
 		var lp := _lane_for(pos, 14 + mini(r, 5) * 2, true)
 		floaters.append({"text": e["name"], "pos": lp[0], "base": lp[0], "t": 0.0, "lane": lp[1], "color": color, "size": 14 + mini(r, 5) * 2, "life": 1.8, "keep": true})
 	_burst(pos, color, 8 + r * 6, 140.0 + r * 50.0)
+	# Better than what you wear? Say so right away, whatever the rarity
+	var up := float(e.get("up", 0.0))
+	if up >= 0.5:
+		var txt := "UPGRADE!" if up >= 99.0 else "UPGRADE +%d%%" % maxi(1, int(round(up)))
+		var hp := _hero_center() + Vector2(0, -52)
+		floaters.append({"text": txt, "pos": hp, "base": hp, "t": 0.0, "lane": 0, "color": Color("#4ade80"), "size": 15, "life": 1.6, "keep": true})
 	if r >= GameData.LEGENDARY and r != GameData.SIGNATURE and r != GameData.SET_RARITY:
 		shake = 9.0
 		banner_color = Color("#fbbf24")
