@@ -19,6 +19,9 @@ const PINK := Color("#f472b6")
 const PURPLE := Color("#a78bfa")
 
 static var sfx: Sfx  # set by main, used for button clicks
+static var tip_layer: CanvasLayer  # set by main: where tap-tips appear
+static var _tip: Control
+const TAP := 40  # smallest comfortable tap target on a phone (pixels at the design size)
 
 static func hex(c: Color) -> String:
 	return "#" + c.to_html(false)
@@ -119,6 +122,117 @@ static func pill(text_color: Color) -> Array:
 static func have_need(have: int, need: int) -> String:
 	var c := GREEN if have >= need else RED
 	return "[color=%s]%d[/color][color=%s] / %d[/color]" % [hex(c), have, hex(DIM), need]
+
+## A label that wraps onto more lines instead of stretching the screen.
+static func wrap(text: String, font_size := 13, color := TEXT) -> Label:
+	var l := label(text, font_size, color)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return l
+
+## A rounded card with a colored edge on the left. Returns [card, inner vbox].
+static func card(accent := BORDER, bg := INSET, sep := 6) -> Array:
+	var p := PanelContainer.new()
+	var st := style(bg, Color(accent, 0.55), 10, 12, 1)
+	st.border_width_left = 4
+	st.border_color = accent
+	p.add_theme_stylebox_override("panel", st)
+	var v := vbox(sep)
+	p.add_child(v)
+	return [p, v]
+
+## A section title with an optional one-line explanation under it.
+static func section(parent: Control, title: String, note := "") -> void:
+	var h := hbox(8)
+	parent.add_child(h)
+	var t := label(title.to_upper(), 13, GOLD)
+	h.add_child(t)
+	var line := ColorRect.new()
+	line.color = Color(GOLD, 0.25)
+	line.custom_minimum_size = Vector2(0, 1)
+	line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(line)
+	if note != "":
+		parent.add_child(wrap(note, 12, DIM))
+
+## A small rounded tag ("SUGGESTED", "WEAK: Fire").
+static func chip(text: String, color: Color, font_size := 11) -> PanelContainer:
+	var p := panel(Color(color, 0.14), Color(color, 0.6), 9, 0, 1)
+	var sb: StyleBoxFlat = p.get_theme_stylebox("panel")
+	sb.content_margin_left = 7
+	sb.content_margin_right = 7
+	sb.content_margin_top = 1
+	sb.content_margin_bottom = 1
+	p.add_child(label(text, font_size, color.lightened(0.25)))
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return p
+
+## Explains something on hover (mouse) AND on tap (phones have no hover).
+static func tip(c: Control, text: String) -> void:
+	c.tooltip_text = text
+	if c.mouse_filter == Control.MOUSE_FILTER_IGNORE:
+		c.mouse_filter = Control.MOUSE_FILTER_PASS
+	if c is BaseButton:
+		return  # buttons do their job on tap; the hover text is enough
+	c.gui_input.connect(func(ev: InputEvent):
+		if (ev is InputEventScreenTouch and ev.pressed) or (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT and DisplayServer.is_touchscreen_available()):
+			show_tip(c, c.tooltip_text))
+
+## Pops a small explanation next to a control; it fades by itself.
+static func show_tip(near: Control, text: String) -> void:
+	if tip_layer == null or text == "":
+		return
+	if is_instance_valid(_tip):
+		_tip.queue_free()
+	var p := panel(INSET, GOLD, 8, 10, 1)
+	var r := rich(13)
+	r.text = text
+	r.custom_minimum_size = Vector2(260, 0)
+	p.add_child(r)
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tip_layer.add_child(p)
+	_tip = p
+	var vp := near.get_viewport_rect().size
+	p.reset_size()
+	await p.get_tree().process_frame
+	if not is_instance_valid(p) or not is_instance_valid(near):
+		return
+	var at := near.get_global_rect()
+	var pos := Vector2(at.position.x, at.end.y + 6)
+	if pos.y + p.size.y > vp.y - 8:
+		pos.y = at.position.y - p.size.y - 6
+	pos.x = clampf(pos.x, 8, vp.x - p.size.x - 8)
+	p.position = pos
+	var tw := p.create_tween()
+	tw.tween_interval(3.5)
+	tw.tween_property(p, "modulate:a", 0.0, 0.4)
+	tw.tween_callback(p.queue_free)
+
+## A big, phone-friendly button with a title and a small line under it.
+static func big_button(title: String, sub: String, on_press: Callable, color := GOLD) -> Button:
+	var b := button("", on_press)
+	b.custom_minimum_size = Vector2(0, 54)
+	b.add_theme_stylebox_override("normal", style(Color(color, 0.12), Color(color, 0.7), 8, 8, 1))
+	b.add_theme_stylebox_override("hover", style(Color(color, 0.2), color, 8, 8, 1))
+	b.add_theme_stylebox_override("pressed", style(Color(color, 0.32), color.lightened(0.2), 8, 8, 2))
+	var v := vbox(0)
+	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(v)
+	var t := label(title, 15, color.lightened(0.4))
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(t)
+	if sub != "":
+		var s := label(sub, 11, DIM)
+		s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		s.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		s.name = "Sub"
+		v.add_child(s)
+	t.name = "Title"
+	return b
 
 static func make_theme() -> Theme:
 	var t := Theme.new()

@@ -35,6 +35,11 @@ const MODS := {
 	"Enraged": {"kind": "nasty", "color": "#ef4444", "text": "Hits 40% harder below half health"},
 	"Teleporting": {"kind": "tricky", "color": "#c084fc", "text": "Blinks away from 20% of your attacks"},
 	"Shielded": {"kind": "tricky", "color": "#60a5fa", "text": "A shield soaks up the first 25% of its health"},
+	"Venomous": {"kind": "nasty", "color": "#a3e635", "text": "Its hits can poison you (Wisdom resists)"},
+	"Frigid": {"kind": "nasty", "color": "#7fd0f0", "text": "Its hits can chill you: -25% Attack for a while (Wisdom resists)"},
+	"Explosive": {"kind": "nasty", "color": "#fb923c", "text": "Explodes when it dies, for 12% of your max HP (dodge it)"},
+	"Regenerating": {"kind": "stat", "color": "#4ade80", "text": "Heals 3% of its health every turn"},
+	"Elemental": {"kind": "tricky", "color": "#c084fc", "text": "Resists one more element than usual"},
 }
 
 # ---------- Signature items ----------

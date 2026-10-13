@@ -275,6 +275,18 @@ static func bonus_sources(g: GameState) -> Array:
 	out.append(d)
 	return out
 
+## What your hidden class's special stat gives now, and what grows it.
+static func stat_text(g: GameState) -> String:
+	if g.hidden_class == "":
+		return ""
+	var c := info(g.hidden_class)
+	var b := bonus_sources(g)
+	var gives := Classes.bonus_text(b[b.size() - 1]) if not b.is_empty() else ""
+	var acts: Array = []
+	for k in (c.get("grow", {}) as Dictionary):
+		acts.append(String(k).replace("_", " "))
+	return "Gives %s\nGrows from: %s." % [gives.trim_suffix("."), ", ".join(acts)]
+
 ## Your hidden class's special stat grows from an action.
 static func gain(g: GameState, action: String, amount := 1.0) -> void:
 	if g.hidden_class == "":

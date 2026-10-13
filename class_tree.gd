@@ -27,7 +27,29 @@ const TIER_SCALE := [1.0, 1.5]          # level 15 and level 35 classes
 const POWER := 1.4                      # one "scale" of fighting bonus, in units (tuned with tests/balance_races.gd)
 const TAG_UNIT := 0.12                   # skill tag power per unit of scale
 const STAT_PER_POINT := 0.005            # special stat: units of the main bonus per point (x rank)
-const STAT_GROW := {"kill": 0.02, "rare": 0.25, "boss": 1.0}
+const STAT_GROW := {"kill": 0.005, "rare": 0.25, "boss": 1.0}
+# Special stats grow mostly from the one thing the class is about.
+# action -> [growth per action, what to tell the player]
+const GROW_ACTIONS := {
+	"crit": [0.012, "land critical hits"],
+	"double": [0.015, "land double strikes"],
+	"big_hit": [0.06, "land huge hits (3x your Attack or more)"],
+	"dodge": [0.018, "dodge attacks"],
+	"hit_taken": [0.01, "take hits and block"],
+	"heal": [0.004, "heal (every 1% of your max HP healed)"],
+	"skill": [0.025, "use your skills"],
+	"song": [0.06, "sing songs"],
+	"gold": [0.02, "earn gold"],
+	"charm": [0.1, "charm and confuse monsters"],
+	"floor": [0.3, "explore new floors"],
+	"craft": [0.04, "salvage, craft and upgrade"],
+	"kill": [0.03, "defeat monsters"],
+}
+# The class's main bonus -> what grows its special stat
+const GROW_BY_KEY := {"atk": "big_hit", "crit": "crit", "double_strike": "double", "def": "hit_taken", "thorns": "hit_taken",
+	"hp": "hit_taken", "dodge": "dodge", "lifesteal": "heal", "regen": "heal", "skill": "skill", "execute": "big_hit", "rage": "big_hit",
+	"boss": "big_hit", "gold_find": "gold", "charm": "charm", "scout": "floor", "escape": "floor", "xp": "kill", "scrap": "craft",
+	"stone_find": "craft", "potion": "heal"}
 const ALIGN_NAMES := {"G": "Good", "N": "Neutral", "E": "Evil"}
 const ALIGN_COLORS := {"G": "#86efac", "N": "#cbd5e1", "E": "#f87171"}
 
@@ -926,6 +948,26 @@ static func _grow_stat(g: GameState, amount: float) -> void:
 	if s != "":
 		g.unique[s] = float(g.unique.get(s, 0.0)) + amount
 
+## Which action grows a unique class's special stat.
+static func grow_action(n: Dictionary) -> String:
+	if n.is_empty():
+		return ""
+	if "Song" in (n.get("tags", []) as Array):
+		return "song"
+	return String(GROW_BY_KEY.get(_main_key(n), "kill"))
+
+## "land critical hits" for the class you are now ("" if you aren't a unique class).
+static func grow_text(g: GameState) -> String:
+	var a := grow_action(unique_class(g))
+	return String(GROW_ACTIONS[a][1]) if a != "" else ""
+
+## Something happened: if it's what your special stat feeds on, it grows.
+static func grow(g: GameState, action: String, amount := 1.0) -> void:
+	var u := unique_class(g)
+	if u.is_empty() or grow_action(u) != action:
+		return
+	_grow_stat(g, float(GROW_ACTIONS[action][0]) * amount)
+
 ## A new monster: reset the fight's notes.
 static func on_fight_start(g: GameState) -> void:
 	g.cfight = {"turns": 0, "min_hp": 1.0, "potion": false, "taken": 0, "enemy_acted": false, "hits": 0, "tags": {}, "song": false,
@@ -947,11 +989,18 @@ static func _note_hp(g: GameState) -> void:
 static func on_hero_hit(g: GameState, crit: bool, double: bool) -> void:
 	if crit:
 		count(g, "crits")
+		grow(g, "crit")
 	if double:
 		count(g, "double_strikes")
+		grow(g, "double")
 	g.cfight["hits"] = int(g.cfight.get("hits", 0)) + 1
 
 static func on_skill(g: GameState, id: String, tags: Array, s: Dictionary) -> void:
+	grow(g, "skill")
+	if s.has("song") or ("Song" in tags and s.has("buff")):
+		grow(g, "song")
+	if s.has("confuse"):
+		grow(g, "charm")
 	for t in tags:
 		count(g, "use_tag:" + String(t))
 		if s.has("power"):
@@ -983,6 +1032,7 @@ static func on_skill(g: GameState, id: String, tags: Array, s: Dictionary) -> vo
 
 static func on_dodge(g: GameState) -> void:
 	count(g, "dodges")
+	grow(g, "dodge")
 	g.ctrack["dodge_run"] = int(g.ctrack.get("dodge_run", 0)) + 1
 	at_least(g, "dodge_streak", float(g.ctrack["dodge_run"]))
 	if (g.cfight.get("tags", {}) as Dictionary).has("Storm"):
@@ -990,6 +1040,7 @@ static func on_dodge(g: GameState) -> void:
 	g.cfight["enemy_acted"] = true
 
 static func on_hit_taken(g: GameState, dmg: int, shielded: bool) -> void:
+	grow(g, "hit_taken")
 	g.ctrack["dodge_run"] = 0
 	g.cfight["enemy_acted"] = true
 	g.cfight["taken"] = int(g.cfight.get("taken", 0)) + dmg
@@ -1005,6 +1056,7 @@ static func on_heal(g: GameState, kind: String, amount: int) -> void:
 	if amount <= 0:
 		return
 	count(g, "healed", amount)
+	grow(g, "heal", amount * 100.0 / maxf(1.0, g.get_max_hp()))
 	if kind == "lifesteal":
 		count(g, "lifesteal_hp", amount)
 
@@ -1022,6 +1074,7 @@ static func on_kill(g: GameState, boss: bool, tier: int, goblin: bool) -> void:
 	var tags: Array = fl.get("last_tags", []) if lh == "skill" else []
 	count(g, "kills")
 	_grow_stat(g, STAT_GROW["kill"])
+	grow(g, "kill")
 	var w: Dictionary = g.equipped.get("Weapon", {})
 	var wt := GameData.item_type(w) if not w.is_empty() else ""
 	if wt == "":
@@ -1104,6 +1157,8 @@ static func on_kill(g: GameState, boss: bool, tier: int, goblin: bool) -> void:
 	_check_branches(g)
 
 static func on_big_hit(g: GameState, dealt: int, crit: bool) -> void:
+	if dealt >= g.get_attack() * 3:
+		grow(g, "big_hit")
 	if g.enemy_is_boss and dealt >= g.enemy_max_hp * 0.5:
 		at_least(g, "boss_half_hit", 1)
 	if crit and dealt >= g.get_attack() * 3 and g.enemy_hp <= 0:
@@ -1142,6 +1197,7 @@ static func family(g: GameState) -> String:
 	return ""
 
 static func on_floor(g: GameState) -> void:
+	grow(g, "floor")
 	count(g, "clean_floors")
 	count(g, "no_retreat_run")
 	at_least(g, "no_retreat_streak", float(g.ctrack.get("no_retreat_run", 0)))

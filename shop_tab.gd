@@ -178,7 +178,7 @@ func _gear_card(item: Dictionary, index: int) -> void:
 	var fill := Control.new()
 	fill.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	cv.add_child(fill)
-	var price := GameData.shop_price(item)
+	var price := state.shop_cost(item)
 	var b := UI.primary("%d gold" % price, func():
 		if state.buy_shop(index):
 			main.sfx.play("buy")
@@ -232,24 +232,24 @@ func refresh() -> void:
 		var b: Button = entry[0]
 		b.disabled = state.gold < int(entry[2]) or state.bag_full()
 		b.text = "Bag full" if state.bag_full() else "%d gold" % int(entry[2])
-	restock_button.text = "Restock (%d gold)" % GameData.SHOP_RESTOCK_GOLD
-	restock_button.disabled = state.gold < GameData.SHOP_RESTOCK_GOLD
+	restock_button.text = "Restock (%d gold)" % state.restock_cost()
+	restock_button.disabled = state.gold < state.restock_cost()
 
 	# Supplies
 	var potion: Array = supplies["potion"]
-	(potion[0] as Button).text = "Buy  -  %d gold   (you have %d)" % [GameData.POTION_GOLD, state.potions]
-	(potion[0] as Button).disabled = state.gold < GameData.POTION_GOLD
+	(potion[0] as Button).text = "Buy  -  %d gold   (you have %d)" % [state.potion_cost(), state.potions]
+	(potion[0] as Button).disabled = state.gold < state.potion_cost()
 	var greater: Array = supplies["greater"]
-	(greater[0] as Button).text = "Buy & drink  -  %d gold" % GameData.GREATER_POTION_GOLD
-	(greater[0] as Button).disabled = state.gold < GameData.GREATER_POTION_GOLD or state.hero_hp >= state.get_max_hp()
+	(greater[0] as Button).text = "Buy & drink  -  %d gold" % state.greater_potion_cost()
+	(greater[0] as Button).disabled = state.gold < state.greater_potion_cost() or state.hero_hp >= state.get_max_hp()
 	for id in GameData.ELIXIR_ORDER:
 		var info: Dictionary = GameData.ELIXIRS[id]
 		var entry: Array = supplies[id]
 		var active := int(state.elixirs.get(id, 0))
 		(entry[1] as RichTextLabel).text = "[color=%s]%s[/color]%s" % [UI.hex(UI.DIM), entry[2],
 			("\n[color=#c4b5fd]Active: %d turns left[/color]" % active) if active > 0 else ""]
-		(entry[0] as Button).text = ("Refresh  -  %d gold" if active > 0 else "Buy  -  %d gold") % int(info["gold"])
-		(entry[0] as Button).disabled = state.gold < int(info["gold"])
+		(entry[0] as Button).text = ("Refresh  -  %d gold" if active > 0 else "Buy  -  %d gold") % state.elixir_cost(id)
+		(entry[0] as Button).disabled = state.gold < state.elixir_cost(id)
 
 	# Bag
 	if state.bag_level >= GameData.BAG_MAX_LEVEL:
@@ -269,7 +269,7 @@ func refresh() -> void:
 		var total := 0
 		for item in state.bag:
 			if int(item["rarity"]) == r and not item.get("locked", false) and not state.is_upgrade(item):
-				total += GameData.sell_value(item)
+				total += state.sell_price(item)
 		var b: Button = quick_sell[r]
 		b.text = "%s (%d)  +%d gold" % [GameData.RARITY_NAMES[r], n, total]
 		b.disabled = n == 0

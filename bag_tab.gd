@@ -114,7 +114,7 @@ func _popup(id: int) -> void:
 		acts.append(["Equip", func(): state.equip(id); main.sfx.play("equip"); main.refresh(), UI.GREEN])
 		if not item.get("locked", false):
 			acts.append(["Salvage (%d scrap)" % GameData.scrap_value(item), func(): _act("salvage"), UI.BLUE])
-			acts.append(["Sell (%d gold)" % GameData.sell_value(item), func(): _act("sell"), UI.GOLD])
+			acts.append(["Sell (%d gold)" % state.sell_price(item), func(): _act("sell"), UI.GOLD])
 	ItemPopup.show_item(main, item, acts)
 
 func _act(action: String) -> void:
@@ -140,7 +140,7 @@ func _act(action: String) -> void:
 				selected_id = -1
 				main.refresh()
 			if ItemText.is_precious(item):
-				main.confirm("Sell %s?" % GameData.display_name(item), "This is a %s item. You'll get %d gold, but it's gone for good." % [GameData.RARITY_NAMES[int(item["rarity"])], GameData.sell_value(item)], "Sell it", do_sell)
+				main.confirm("Sell %s?" % GameData.display_name(item), "This is a %s item. You'll get %d gold, but it's gone for good." % [GameData.RARITY_NAMES[int(item["rarity"])], state.sell_price(item)], "Sell it", do_sell)
 				return
 			do_sell.call()
 			return
@@ -233,7 +233,7 @@ func _refresh_details() -> void:
 	var locked: bool = item.get("locked", false)
 	var text := ItemText.describe(state, item)
 	text += "\n" + (ItemText.compare(state, item) if in_bag else "[color=%s]You're wearing this.[/color]" % UI.hex(UI.DIM))
-	text += "\n[color=%s]Sell %d gold  -  Salvage %d scrap[/color]" % [UI.hex(UI.DIM), GameData.sell_value(item), GameData.scrap_value(item)]
+	text += "\n[color=%s]Sell %d gold  -  Salvage %d scrap[/color]" % [UI.hex(UI.DIM), state.sell_price(item), GameData.scrap_value(item)]
 	details.text = text
 
 	equip_button.text = "Equip" if in_bag else "Unequip"

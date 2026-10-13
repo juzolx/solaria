@@ -187,24 +187,47 @@ const BURN_POWER := 0.4  # burn damage per turn, as a share of Attack
 
 # ---------- Stats ----------
 # You get STAT_POINTS_PER_LEVEL points each level to put into these.
-const STAT_ORDER := ["STR", "VIT", "AGI", "INT"]
-const STAT_POINTS_PER_LEVEL := 3
+# Eight stats, one job each. You get 5 points a level (the old game gave 3
+# points for 4 stats; the per-point numbers were scaled by 3/5 so a hero who
+# puts everything into one stat is exactly as strong as before).
+const STAT_ORDER := ["STR", "VIT", "AGI", "DEX", "INT", "WIS", "LUK", "CHA"]
+const STAT_POINTS_PER_LEVEL := 5
+const OLD_STAT_POINTS := 3      # per level before v0.11 (for converting saves)
+const STAT_SCALE := 5.0 / 3.0   # old points -> new points
 const STAT_INFO := {
-	"STR": {"name": "Strength", "color": "#f87171", "text": "+2 Attack and +4 HP per point"},
-	"VIT": {"name": "Vitality", "color": "#4ade80", "text": "+10 HP and +0.6 Defense per point"},
-	"AGI": {"name": "Agility", "color": "#60a5fa", "text": "Crit, dodge and double strike chance (slows down as it gets high)"},
-	"INT": {"name": "Intelligence", "color": "#c084fc", "text": "+2.5% ability damage per point and faster ability cooldowns"},
+	"STR": {"name": "Strength", "short": "Attack", "color": "#f87171", "text": "+1.2 Attack and +2.4 HP per point."},
+	"VIT": {"name": "Vitality", "short": "HP and Defense", "color": "#4ade80", "text": "+6 HP and +0.36 Defense per point."},
+	"AGI": {"name": "Agility", "short": "Dodge and speed", "color": "#60a5fa", "text": "Dodge, a chance to strike first when a fight starts, and a chance at an extra attack each turn."},
+	"DEX": {"name": "Dexterity", "short": "Crits and double hits", "color": "#38bdf8", "text": "Crit chance and double strike chance."},
+	"INT": {"name": "Intelligence", "short": "Skills", "color": "#c084fc", "text": "+1.5% skill damage per point and shorter skill cooldowns."},
+	"WIS": {"name": "Wisdom", "short": "Healing and resistance", "color": "#2dd4bf", "text": "Stronger heals and potions, HP regen, and resistance to burns, poison, chill and curses."},
+	"LUK": {"name": "Luck", "short": "Loot and fortune", "color": "#fbbf24", "text": "Better loot, more gold, harder crits, and better odds on events and signature drops."},
+	"CHA": {"name": "Charisma", "short": "People and songs", "color": "#f472b6", "text": "Lower shop prices, better sell prices, charmed enemies, stronger companions and Song skills."},
 }
-const STR_ATTACK := 2.0
-const STR_HP := 4.0
-const VIT_HP := 10.0
-const VIT_DEFENSE := 0.6
-const INT_ABILITY_DMG := 0.025
+const STR_ATTACK := 1.2
+const STR_HP := 2.4
+const VIT_HP := 6.0
+const VIT_DEFENSE := 0.36
+const INT_ABILITY_DMG := 0.015
 # Percent stats use diminishing returns: cap * (1 - e^(-points / softness))
-const AGI_CRIT := [35.0, 70.0]      # [max %, softness]
-const AGI_DODGE := [25.0, 90.0]
-const AGI_DOUBLE := [25.0, 90.0]
-const INT_COOLDOWN := [40.0, 100.0]  # max % cooldown reduction
+const DEX_CRIT := [35.0, 117.0]      # [max %, softness]
+const DEX_DOUBLE := [25.0, 150.0]
+const AGI_DODGE := [25.0, 150.0]
+const AGI_HASTE := [20.0, 200.0]     # chance of an extra attack each turn
+const AGI_FIRST := [60.0, 120.0]     # chance to strike first when a fight starts
+const INT_COOLDOWN := [40.0, 167.0]  # max % cooldown reduction
+const WIS_HEAL := [60.0, 170.0]      # % stronger heals, potions and song regen
+const WIS_REGEN := [1.5, 200.0]      # % of max HP healed every turn
+const WIS_RESIST := [60.0, 170.0]    # % less from burns, poison, chill and curses
+const LUK_LOOT := [25.0, 170.0]      # rarity bonus on drops
+const LUK_GOLD := [60.0, 170.0]      # % more gold
+const LUK_CRIT_DMG := [60.0, 170.0]  # % more crit damage (crits do 2x + this)
+const LUK_EVENTS := [60.0, 170.0]    # % better odds of events, encounters and signature drops
+const CHA_DISCOUNT := [35.0, 170.0]  # % off shop and merchant prices
+const CHA_SELL := [50.0, 170.0]      # % more gold when selling
+const CHA_CHARM := [15.0, 200.0]     # % chance a monster is charmed and skips its attack
+const CHA_PARTY := [40.0, 170.0]     # % more companion damage
+const CHA_SONG := [40.0, 170.0]      # % more Song skill power
 const CRIT_CAP := 75   # nobody crits more than this %
 const DODGE_CAP := 60  # or dodges more than this %
 

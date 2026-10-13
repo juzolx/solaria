@@ -744,11 +744,11 @@ static func _make_camp_merchant(g: GameState, race: String) -> void:
 	for _i in 2:
 		var r := GameData.LEGENDARY if randf() * 100.0 < GameData.MERCHANT_LEGENDARY_CHANCE * 2.0 else 3
 		var item := GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, g.best_floor, g._new_id())
-		g.merchant.append({"kind": "item", "item": item, "price": int(GameData.shop_price(item) * GameData.MERCHANT_PRICE_MULT * discount), "sold": false})
+		g.merchant.append({"kind": "item", "item": item, "price": g.price(int(GameData.shop_price(item) * GameData.MERCHANT_PRICE_MULT * discount)), "sold": false})
 	if idx >= 4:
 		for def in Races.gear_for(race):
 			var item := Races.make_race_gear(def, g.best_floor, g._new_id())
-			g.merchant.append({"kind": "item", "item": item, "price": int(GameData.shop_price(item) * 2.0 * discount), "sold": false})
+			g.merchant.append({"kind": "item", "item": item, "price": g.price(int(GameData.shop_price(item) * 2.0 * discount)), "sold": false})
 	g.merchant.append({"kind": "scroll", "id": "box", "price": int(g._gold_scale() * 8 * discount), "sold": false})
 
 # ---------- The quest board ----------

@@ -131,12 +131,12 @@ func act(leader: GameState) -> String:
 		var total := 0
 		var crit := false
 		for _h in hits:
-			var d := g.get_attack()
+			var d := float(g.get_attack()) * leader.party_mult()
 			if randf() * 100.0 < g.effect_value("crit"):
-				d *= 2
+				d *= g.crit_mult()
 				crit = true
-			total += d
-		total = leader._damage_enemy(total)
+			total += int(d)
+		total = leader._damage_enemy(total, ["Physical"])
 		leader.events.append({"type": "party_attack", "slot": m.slot, "dmg": total, "crit": crit})
 		var steal := int(total * g.effect_value("lifesteal") / 100.0)
 		m.hp = mini(m.max_hp(), m.hp + steal)
@@ -167,16 +167,16 @@ func _use_a_skill(leader: GameState, m: Member) -> String:
 		if s.has("power"):
 			var total := 0
 			for _i in int(s.get("hits", 1)):
-				var d := g.get_attack() * float(s["power"]) * mult + g.get_defense() * float(s.get("def_scale", 0.0)) * rk
+				var d := (g.get_attack() * float(s["power"]) * mult + g.get_defense() * float(s.get("def_scale", 0.0)) * rk) * leader.party_mult()
 				if s.get("always_crit", false) or randf() * 100.0 < g.effect_value("crit"):
-					d *= 2.0
+					d *= g.crit_mult()
 				total += int(d)
-			total = leader._damage_enemy(total)
+			total = leader._damage_enemy(total, s.get("tags", []))
 			bits.append("%d damage" % total)
 			if s.has("drain"):
 				m.hp = mini(m.max_hp(), m.hp + int(total * float(s["drain"]) / 100.0))
 		if heals:
-			var pct := (float(s.get("heal", 0)) + float(s.get("song", {}).get("regen", 0)) * 3.0) * rk
+			var pct := (float(s.get("heal", 0)) + float(s.get("song", {}).get("regen", 0)) * 3.0) * rk * g.heal_mult()
 			_heal(leader, lowest[0], pct)
 			bits.append("heals %s" % ("you" if lowest[0] == null else lowest[0].name))
 		if s.has("shield"):
@@ -237,13 +237,9 @@ func on_kill(xp: int) -> void:
 			m.hp = mini(m.max_hp(), m.hp + int(m.max_hp() * 0.3))
 			auto_spend(g)
 
-## Companions put their stat points where their class wants them (2 main : 1 VIT).
+## Companions put their stat points into their class's recommended build.
 static func auto_spend(g: GameState) -> void:
-	var order: Array = g.class_info().get("stats", GameData.STAT_ORDER)
-	var main_stat: String = order[0]
-	var side := "STR" if main_stat == "VIT" else "VIT"
-	while g.stat_points > 0:
-		g.spend_point(main_stat if g.stat(main_stat) <= g.stat(side) * 2 else side, 1)
+	g.auto_spend()
 
 ## New floor: knocked-out companions get back up.
 func on_floor() -> void:

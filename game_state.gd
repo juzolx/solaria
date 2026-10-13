@@ -14,6 +14,8 @@ const SLOT_BACKUP := "user://hero_%d.bak"
 const SLOT_TEMP := "user://hero_%d.tmp"
 const BASE_ATTACK := 10
 const BASE_HP := 100
+const UNIQUE_CAP := 300.0   # special stats from actions: they slow down near this
+const UNIQUE_SOFT := 300.0
 
 # ---------- Mode ----------
 var hardcore := false   # Hardcore hero: separate save, deleted when it dies
@@ -34,9 +36,13 @@ var xp := 0
 var auto_ability := true
 var burn_turns := 0     # Mage Fireball burn
 var burn_dmg := 0
+var burn_tag := "Fire"  # the element the burn carries (Blood skills make it bleed)
 var pierce_carry := 0   # Archer Piercing Shot overkill, hits the next enemy
-var stats := {"STR": 0, "VIT": 0, "AGI": 0, "INT": 0}
+var stats := {"STR": 0, "VIT": 0, "AGI": 0, "DEX": 0, "INT": 0, "WIS": 0, "LUK": 0, "CHA": 0}
 var stat_points := 0    # unspent points
+var auto_stats := false # spend new points on your class's recommended build by itself
+var respec_tomes := 0   # Tomes of Forgetting: a free respec each
+var builds: Array = [{}, {}, {}]  # saved builds: stats, skills and gear
 # ---------- Skills (ability stones) ----------
 var skill_book := {}    # skill id -> rank (1-5): every skill you own
 var dust := 0           # from stones of maxed skills; crafts any skill
@@ -63,7 +69,6 @@ var class_told := -1    # the last pick tier we told you about
 var ctrack := {}        # what you've done, for branch-offs (counters)
 var cfight := {}        # notes about the current fight
 var unique := {}        # special stats from actions (unique and hidden classes)
-var unique_points := {} # level-up points put into special stats (worth 0.1 each)
 var trial_active := false
 var trial_return := 1   # floor to go back to after a trial
 var kill_streak := 0    # kills without drinking a potion
@@ -153,6 +158,22 @@ var enemy_goblin := false   # the treasure goblin: doesn't fight back, runs away
 var enemy_people := ""      # the race this monster belongs to (realm natives), or ""
 var enemy_illusion := false # Glimmer Court: only an illusion
 var last_hit := ""          # what dealt the last blow: "hit", "skill", "burn"
+var enemy_weak: Array = []    # elements it takes extra damage from (combat.gd)
+var enemy_resist: Array = []  # elements it shrugs off
+var enemy_chill := 0          # status effects on the monster (turns left)
+var enemy_frozen := 0
+var enemy_curse := 0
+var enemy_poison_turns := 0
+var enemy_poison_dmg := 0
+var boss_mechanics: Array = []  # "shield", "enrage", "minions", "breath"
+var boss_phase := {}
+var boss_minions := 0
+var minion_hp := 0
+var hero_status := {}         # statuses on you: "poison" / "burn" / "chill" -> turns left
+var last_death := {}          # the death recap (combat.gd)
+var auto_potion_at := 0.3     # auto-potion when HP drops below this
+var skill_priority: Array = []  # active skills in the order Auto should use them
+var skill_auto_off := {}      # active skills Auto never uses (you press them yourself)
 var goblin_turns := 0
 
 # ---------- Zones, events and the codex ----------
@@ -208,7 +229,8 @@ func _buff(key: String, default: float) -> float:
 
 func get_attack() -> int:
 	var base := BASE_ATTACK + (level - 1) * GameData.LEVEL_ATTACK + stat("STR") * GameData.STR_ATTACK + stat_total("Attack")
-	return int(base * _class_mult("atk") * _mult("atk") * _buff("atk", 1.0) * _elixir("atk", 1.0) * _mastery())
+	var chill := Combat.HERO_CHILL_ATK if hero_status.has("chill") else 1.0
+	return int(base * _class_mult("atk") * _mult("atk") * _buff("atk", 1.0) * _elixir("atk", 1.0) * _mastery() * chill)
 
 func get_defense() -> int:
 	var base := (level - 1) * GameData.LEVEL_DEFENSE + stat("VIT") * GameData.VIT_DEFENSE + stat_total("Defense")
@@ -234,11 +256,62 @@ func _elixir(key: String, default: float) -> float:
 			v = v * float(info[key]) if default == 1.0 else v + float(info[key])
 	return v
 
+## A stat's total: your points, plus your race and form.
 func stat(stat_name: String) -> int:
-	var v := int(stats.get(stat_name, 0)) + int(race_info()["stats"].get(stat_name, 0))
+	return int(stats.get(stat_name, 0)) + bonus_stat(stat_name)
+
+## The part of a stat that comes from your race and form (not from points).
+func bonus_stat(stat_name: String) -> int:
+	var v := int(race_info()["stats"].get(stat_name, 0))
 	if form != "":
 		v += int(Races.FORMS[form].get("stats", {}).get(stat_name, 0))
 	return v
+
+## A stat's diminishing-returns value (see GameData.diminishing).
+func dim(stat_name: String, curve: Array) -> float:
+	return GameData.diminishing(stat(stat_name), curve)
+
+# ---------- What the stats do ----------
+
+## Crits do 2x, plus Luck and any crit damage bonuses.
+func crit_mult() -> float:
+	return 2.0 + dim("LUK", GameData.LUK_CRIT_DMG) / 100.0 + _flat("crit_dmg") / 100.0
+
+## Heals, potions and songs are this much stronger (Wisdom).
+func heal_mult() -> float:
+	return 1.0 + dim("WIS", GameData.WIS_HEAL) / 100.0
+
+## Burns, poison, chill and curses on you do this much (Wisdom lowers it).
+func status_mult() -> float:
+	return clampf(1.0 - (dim("WIS", GameData.WIS_RESIST) + _flat("resist")) / 100.0, 0.2, 1.0)
+
+## Chance (%) of an extra attack each turn (Agility).
+func haste_chance() -> float:
+	return dim("AGI", GameData.AGI_HASTE) + _flat("haste")
+
+## Chance (%) to strike first when a fight starts (Agility).
+func first_strike_chance() -> float:
+	return dim("AGI", GameData.AGI_FIRST)
+
+## Extra odds (%) of events, encounters and signature drops (Luck).
+func luck_odds() -> float:
+	return dim("LUK", GameData.LUK_EVENTS)
+
+## Shop and merchant price after your Charisma discount.
+func price(base: int) -> int:
+	return maxi(1, int(round(base * (1.0 - dim("CHA", GameData.CHA_DISCOUNT) / 100.0))))
+
+## What an item sells for (Charisma gets better prices).
+func sell_price(item: Dictionary) -> int:
+	return int(GameData.sell_value(item) * (1.0 + dim("CHA", GameData.CHA_SELL) / 100.0))
+
+## Chance (%) a monster is charmed and skips its attack (Charisma and charm classes).
+func charm_total() -> float:
+	return dim("CHA", GameData.CHA_CHARM) + ClassTree.charm_chance(self)
+
+## Companions hit this much harder (Charisma).
+func party_mult() -> float:
+	return 1.0 + dim("CHA", GameData.CHA_PARTY) / 100.0
 
 func race() -> String:
 	var r: String = appearance.get("race", "Human")
@@ -251,7 +324,7 @@ func race_info() -> Dictionary:
 func spec_stat() -> String:
 	if hero_class == "":
 		return ""
-	var order: Array = class_info().get("stats", GameData.STAT_ORDER)
+	var order: Array = Classes.stat_order(hero_class)
 	var best: String = order[0]
 	for st in order:
 		if stat(st) > stat(best):
@@ -271,18 +344,11 @@ func unique_stats() -> Array:
 		out.append(h)
 	return out
 
+## A special stat's strength. It only grows from actions, and slows down as it gets
+## high (UNIQUE_SOFT points is about 63% of the way to the cap).
 func unique_value(n: String) -> float:
-	return float(unique.get(n, 0.0)) + float(unique_points.get(n, 0)) * Classes.UNIQUE_POINT
-
-## Puts level-up points into a special stat (each point is worth 0.1).
-func spend_unique(n: String, amount := 1) -> void:
-	amount = mini(amount, stat_points)
-	if amount <= 0 or not n in unique_stats():
-		return
-	unique_points[n] = int(unique_points.get(n, 0)) + amount
-	stat_points -= amount
-	_check_spec()
-	save_game()
+	var raw := float(unique.get(n, 0.0))
+	return UNIQUE_CAP * (1.0 - exp(-raw / UNIQUE_SOFT))
 
 func _grow_unique(n: String, amount: float) -> void:
 	if not n in unique_stats() or amount <= 0.0:
@@ -380,6 +446,8 @@ func tag_power(tags: Array) -> float:
 		if t in cls_tags:
 			p += Classes.AFFINITY_POWER
 			break
+	if "Song" in tags:
+		p += dim("CHA", GameData.CHA_SONG) / 100.0
 	p += ClassTree.tag_power(self, tags)
 	for i in passive_slot_count():
 		var id: String = passive_slots[i]
@@ -541,17 +609,44 @@ func skill_ready(id: String) -> bool:
 
 func spend_point(stat_name: String, amount := 1) -> void:
 	amount = mini(amount, stat_points)
-	if amount <= 0:
+	if amount <= 0 or not stat_name in GameData.STAT_ORDER:
 		return
-	stats[stat_name] = stat(stat_name) + amount
+	stats[stat_name] = int(stats.get(stat_name, 0)) + amount
 	stat_points -= amount
 	_check_spec()
 	save_game()
 
-func respec_cost() -> int:
-	return 25 * level
+## Spends every unspent point on your class's recommended build, keeping the
+## spread as close to it as possible.
+func auto_spend() -> void:
+	if stat_points <= 0 or hero_class == "":
+		return
+	var b := Classes.build(hero_class)
+	var total_w := 0.0
+	for st in b:
+		total_w += float(b[st])
+	while stat_points > 0:
+		# The stat furthest below its share of the points you've put in
+		var spent := 1.0
+		for st in b:
+			spent += float(stats.get(st, 0))
+		var pick := ""
+		var worst := INF
+		for st in Classes.stat_order(hero_class):
+			if not b.has(st):
+				continue
+			var share := float(stats.get(st, 0)) / spent - float(b[st]) / total_w
+			if share < worst:
+				worst = share
+				pick = st
+		stats[pick] = int(stats.get(pick, 0)) + 1
+		stat_points -= 1
+	_check_spec()
 
-## Gives back every stat point for gold, so you can try a different build.
+func respec_cost() -> int:
+	return 0 if respec_tomes > 0 else 25 * level
+
+## Gives back every stat point for gold (or a Tome of Forgetting), so you can try a different build.
 func respec() -> void:
 	var cost := respec_cost()
 	if gold < cost:
@@ -559,9 +654,12 @@ func respec() -> void:
 		return
 	var total := 0
 	for st in GameData.STAT_ORDER:
-		total += stat(st)
+		total += int(stats.get(st, 0))
 		stats[st] = 0
-	gold -= cost
+	if respec_tomes > 0:
+		respec_tomes -= 1
+	else:
+		gold -= cost
 	stat_points += total
 	hero_hp = mini(hero_hp, get_max_hp())
 	say("Stats reset! You have %d points to spend." % stat_points)
@@ -613,15 +711,18 @@ func effect_value(effect: String) -> float:
 			total += float(item["effect_value"])
 	if effect == "dodge":
 		total += float(class_info().get("dodge", 0))
-		total += GameData.diminishing(stat("AGI"), GameData.AGI_DODGE)
+		total += dim("AGI", GameData.AGI_DODGE)
 		total += _buff("dodge", 0.0)
 	elif effect == "crit":
-		total += GameData.diminishing(stat("AGI"), GameData.AGI_CRIT)
+		total += dim("DEX", GameData.DEX_CRIT)
 		total += _buff("crit", 0.0)
 	elif effect == "double_strike":
-		total += GameData.diminishing(stat("AGI"), GameData.AGI_DOUBLE)
+		total += dim("DEX", GameData.DEX_DOUBLE)
 	elif effect == "gold_find":
 		total += _elixir("gold_find", 0.0)
+		total += dim("LUK", GameData.LUK_GOLD)
+	elif effect == "regen":
+		total += dim("WIS", GameData.WIS_REGEN)
 	total += _flat(effect)
 	if effect == "regen" and form == "Vampire":
 		total = minf(total, 0.0)
@@ -792,28 +893,31 @@ func use_skill(id: String) -> bool:
 	var crit_hit := false
 	if s.has("power"):
 		var crit_any := false
+		var combo_mult := Combat.before_skill(self, tags, true)
 		for _i in int(s.get("hits", 1)):
-			var d := get_attack() * float(s["power"]) * mult + get_defense() * float(s.get("def_scale", 0.0)) * rk
-			if s.get("always_crit", false) or randf() * 100.0 < effect_value("crit"):
-				d *= 2.0
+			var d := (get_attack() * float(s["power"]) * mult + get_defense() * float(s.get("def_scale", 0.0)) * rk) * combo_mult
+			if s.get("always_crit", false) or randf() * 100.0 < effect_value("crit") or _frozen_crit():
+				d *= crit_mult()
 				crit_any = true
 			total += int(d)
 		if s.has("execute") and enemy_hp < enemy_max_hp * 0.3:
 			total = int(total * (1.0 + float(s["execute"])))
 		last_hit = "skill"
-		total = _damage_enemy(total)
+		total = _damage_enemy(total, tags)
 		crit_hit = crit_any
 		parts.append("%d damage%s" % [total, " (crit!)" if crit_any else ""])
 	events.append({"type": "ability", "name": s["name"], "dmg": total, "class": hero_class, "tag": tags[0] if not tags.is_empty() else "",
 		"color": Classes.tag_color(tags[0] if not tags.is_empty() else "")})
-	var heal := int(maxhp * float(s.get("heal", 0)) * rk / 100.0) + int(total * float(s.get("drain", 0)) / 100.0)
+	var heal := int(maxhp * float(s.get("heal", 0)) * rk / 100.0 * heal_mult()) + int(total * float(s.get("drain", 0)) / 100.0)
 	if heal > 0:
 		hero_hp = mini(hero_hp + heal, maxhp)
 		events.append({"type": "heal", "amount": heal})
 		parts.append("+%d HP" % heal)
-	if float(s.get("burn", 0.0)) > 0.0:
+	if float(s.get("burn", 0.0)) > 0.0 and not ("Nature" in tags or "Shadow" in tags):
 		burn_turns = GameData.BURN_TURNS
 		burn_dmg = maxi(1, int(get_attack() * float(s["burn"]) * mult))
+		burn_tag = "Blood" if "Blood" in tags else "Fire"
+	Combat.after_skill(self, tags, s, mult)
 	if s.get("carry", false) and enemy_hp < 0:
 		pierce_carry = -enemy_hp
 	if s.has("stun"):
@@ -844,7 +948,7 @@ func use_skill(id: String) -> bool:
 	if s.has("song"):
 		var sg: Dictionary = s["song"]
 		song_turns = int(sg["turns"]) + ClassTree.extra(self, "buff_turns")
-		song_regen = float(sg["regen"]) * rk
+		song_regen = float(sg["regen"]) * rk * heal_mult()
 		events.append({"type": "buff", "name": s["name"]})
 	if s.has("confuse"):
 		confuse_turns = int(s["confuse"]) + ClassTree.extra(self, "confuse")
@@ -915,8 +1019,8 @@ func _auto_skill() -> void:
 	var maxhp := get_max_hp()
 	var best := ""
 	var best_cd := -1
-	for id in equipped_actives():
-		if not skill_ready(id):
+	for id in auto_order():
+		if not skill_ready(id) or skill_auto_off.has(id):
 			continue
 		var s := SkillData.info(id)
 		var useful := true
@@ -932,11 +1036,52 @@ func _auto_skill() -> void:
 			useful = false
 		if s.has("stun") and not s.has("power") and enemy_stun > 0:
 			useful = false
-		if useful and int(s["cd"]) > best_cd:
+		if s.has("power") and not s.has("heal") and Combat.element_mult(self, s.get("tags", []))[1] == "resist":
+			# Don't waste a big skill on a monster that resists it if something else is ready
+			if auto_order().any(func(o): return o != id and skill_ready(o) and not skill_auto_off.has(o) and Combat.element_mult(self, SkillData.info(o).get("tags", []))[1] != "resist" and SkillData.info(o).has("power")):
+				useful = false
+		if useful and (not skill_priority.is_empty() or int(s["cd"]) > best_cd):
 			best = id
 			best_cd = int(s["cd"])
+			if not skill_priority.is_empty():
+				break
 	if best != "":
 		use_skill(best)
+
+## Equipped active skills in the order Auto tries them: your priority list
+## first, then the rest (biggest cooldown first).
+func auto_order() -> Array:
+	var acts := equipped_actives()
+	acts.sort_custom(func(a, b):
+		var ia := skill_priority.find(a)
+		var ib := skill_priority.find(b)
+		if ia < 0:
+			ia = 99
+		if ib < 0:
+			ib = 99
+		if ia != ib:
+			return ia < ib
+		return int(SkillData.info(a).get("cd", 0)) > int(SkillData.info(b).get("cd", 0)))
+	return acts
+
+## Moves a skill up (-1) or down (+1) in Auto's order.
+func move_priority(id: String, dir: int) -> void:
+	var order := auto_order()
+	var i := order.find(id)
+	var j := i + dir
+	if i < 0 or j < 0 or j >= order.size():
+		return
+	order[i] = order[j]
+	order[j] = id
+	skill_priority = order
+	save_game()
+
+func toggle_skill_auto(id: String) -> void:
+	if skill_auto_off.has(id):
+		skill_auto_off.erase(id)
+	else:
+		skill_auto_off[id] = true
+	save_game()
 
 func gain_xp(amount: int) -> void:
 	xp += int(amount * float(race_info().get("xp", 1.0)) * (1.0 + _flat("xp") / 100.0))
@@ -947,7 +1092,10 @@ func gain_xp(amount: int) -> void:
 		hero_hp = get_max_hp()
 		events.append({"type": "level_up", "level": level})
 		say("[color=#fbbf24]LEVEL UP! You're now level %d.[/color] +%d stat points" % [level, GameData.STAT_POINTS_PER_LEVEL])
-		tip("level", "Level up! You got %d stat points. Spend them in the Hero tab." % GameData.STAT_POINTS_PER_LEVEL)
+		if auto_stats:
+			auto_spend()
+		else:
+			tip("level", "Level up! You got %d stat points. Spend them in Character > Hero, or turn on Auto to follow your class's build." % GameData.STAT_POINTS_PER_LEVEL)
 		if level in SkillData.ACTIVE_SLOTS_AT or level in SkillData.PASSIVE_SLOTS_AT:
 			var kind := "active" if level in SkillData.ACTIVE_SLOTS_AT else "passive"
 			say("[color=#c4b5fd]A new %s skill slot is open![/color]" % kind)
@@ -989,8 +1137,15 @@ func tap_attack() -> bool:
 
 ## Deals damage to the monster after its modifiers and your Bestiary bonus.
 ## Returns how much actually hit its health.
-func _damage_enemy(dmg: int) -> int:
+func _damage_enemy(dmg: int, tags: Array = []) -> int:
 	var d := float(dmg) * (1.0 + Monsters.milestone_bonus(codex.kills(enemy_species)) / 100.0)
+	if not tags.is_empty():
+		var em := Combat.element_mult(self, tags)
+		d *= float(em[0])
+		if em[1] != "" and dmg > 0:
+			events.append({"type": "element", "kind": em[1], "element": Combat.elements_of(tags)[0]})
+			if em[1] == "weak":
+				ClassTree.count(self, "weak_hits")
 	if enemy_hp < enemy_max_hp * 0.3:
 		d *= 1.0 + _flat("execute") / 100.0
 	if enemy_is_boss:
@@ -1001,6 +1156,10 @@ func _damage_enemy(dmg: int) -> int:
 	if "Armored" in enemy_mods:
 		d *= 0.75
 	var dealt := maxi(1, int(d))
+	if boss_minions > 0:
+		dealt = Combat.soak_minions(self, dealt)
+		if dealt <= 0:
+			return 0
 	if enemy_shield > 0:
 		var soak := mini(enemy_shield, dealt)
 		enemy_shield -= soak
@@ -1015,6 +1174,10 @@ func _damage_enemy(dmg: int) -> int:
 
 func has_mod(mod: String) -> bool:
 	return mod in enemy_mods
+
+## Frozen monsters take a crit from every hit.
+func _frozen_crit() -> bool:
+	return enemy_frozen > 0
 
 func spawn_enemy() -> void:
 	enemy_boss_kind = GameData.boss_kind(floor_num)
@@ -1082,12 +1245,29 @@ func spawn_enemy() -> void:
 	if enemy_tier >= 1:
 		_page("monster_tiers")
 	ClassTree.on_fight_start(self)
+	_setup_fight()
 	if pierce_carry > 0:
 		var carried := mini(pierce_carry, enemy_hp - 1)
 		enemy_hp -= carried
 		pierce_carry = 0
 		if carried > 0:
 			events.append({"type": "pierce", "dmg": carried})
+
+## A new monster: clear the old one's statuses, read its elements, wake up boss mechanics.
+func _setup_fight() -> void:
+	enemy_chill = 0
+	enemy_frozen = 0
+	enemy_curse = 0
+	enemy_poison_turns = 0
+	enemy_poison_dmg = 0
+	boss_mechanics = []
+	boss_phase = {}
+	boss_minions = 0
+	var p := Combat.profile(self)
+	enemy_weak = p["weak"]
+	enemy_resist = p["resist"]
+	if enemy_is_boss:
+		Combat.start_boss(self)
 
 ## Makes the current monster a tier: tougher, with modifiers. Call right after spawning.
 func _apply_tier(tier: int) -> void:
@@ -1127,9 +1307,9 @@ func take_turn() -> void:
 		return
 	codex.add("turns")
 	ClassTree.on_turn(self)
-	if auto_potion and potions > 0 and hero_hp < get_max_hp() * GameData.AUTO_POTION_AT:
+	if auto_potion and potions > 0 and hero_hp < get_max_hp() * auto_potion_at and not (trial_active and trial_data.get("no_potions", false)):
 		use_potion()
-	elif potions == 0 and hero_hp < get_max_hp() * GameData.AUTO_POTION_AT and shop_unlocked():
+	elif potions == 0 and hero_hp < get_max_hp() * auto_potion_at and shop_unlocked():
 		tip("potions", "Low on health! Potions from the Shop heal you automatically when HP gets low.")
 
 	# Abilities: count down, then Auto fires the best one that's ready
@@ -1141,61 +1321,38 @@ func take_turn() -> void:
 	if enemy_hp <= 0 or hero_hp <= 0:
 		return
 
-	# Fireball burn
-	if burn_turns > 0 and enemy_hp > 0:
-		burn_turns -= 1
+	# Burns and poison on the monster
+	if (burn_turns > 0 or enemy_poison_turns > 0) and enemy_hp > 0:
 		last_hit = "burn"
-		enemy_hp -= burn_dmg
-		events.append({"type": "burn", "dmg": burn_dmg})
+		Combat.tick_enemy(self)
 		if enemy_hp <= 0:
 			say("The %s burns away!" % enemy_name)
 			_enemy_defeated()
 			return
-
-	# Hero attacks
-	var line := ""
-	if has_mod("Teleporting") and randf() < 0.2:
-		line = "The %s blinks away from your attack" % enemy_name
-		events.append({"type": "blink"})
-	elif Realms.misses(self):
-		line = "Your attack is lost in the mist"
-		events.append({"type": "blink"})
 	else:
-		var hits := 2 if randf() * 100.0 < effect_total("double_strike") else 1
-		var total_dmg := 0
-		var crit := false
-		for _h in hits:
-			var dmg := get_attack()
-			if randf() * 100.0 < effect_total("crit"):
-				dmg *= 2
-				crit = true
-				Lineage.gain(self, "crit")
-			total_dmg += dmg
-		last_hit = "hit"
-		total_dmg = _damage_enemy(total_dmg)
-		ClassTree.on_hero_hit(self, crit, hits > 1)
-		ClassTree.on_big_hit(self, total_dmg, crit)
-		events.append({"type": "hero_hit", "dmg": total_dmg, "crit": crit, "double": hits > 1})
-		if enemy_illusion:
-			say("[color=#f9a8d4]Your blow passes right through the %s. It was only an illusion![/color]" % enemy_name)
-			ClassTree.count(self, "illusions")
-			events.append({"type": "illusion"})
-			Lineage._move_on(self)
+		Combat.tick_enemy(self)
+	if has_mod("Regenerating") and enemy_hp > 0:
+		enemy_hp = mini(enemy_max_hp, enemy_hp + int(enemy_max_hp * 0.03))
+
+	# Hero attacks (Agility: sometimes first, sometimes twice)
+	var line := ""
+	var my_swings := 1
+	if bool(cfight.get("first", false)) and int(cfight.get("turns", 0)) <= 1 and randf() * 100.0 < first_strike_chance():
+		my_swings += 1
+		events.append({"type": "first_strike"})
+		line = "You strike first! "
+	elif randf() * 100.0 < haste_chance():
+		my_swings += 1
+		events.append({"type": "haste"})
+	for sw in my_swings:
+		if enemy_hp <= 0:
+			break
+		var r := _basic_attack()
+		line += String(r["line"])
+		if r.get("illusion", false):
 			return
-		var steal := int(total_dmg * effect_total("lifesteal") / 100.0 * Realms.lifesteal_mult(self))
-		if steal > 0:
-			hero_hp = mini(hero_hp + steal, get_max_hp())
-			ClassTree.on_heal(self, "lifesteal", steal)
-			events.append({"type": "heal", "amount": steal})
-		if has_mod("Thorny"):
-			var back := maxi(1, int(total_dmg * 0.1))
-			hero_hp = maxi(1, hero_hp - back)
-			events.append({"type": "enemy_hit", "dmg": back, "thorny": true})
-		line = "You hit for %d" % total_dmg
-		if hits > 1:
-			line += " (double strike)"
-		if crit:
-			line += " (crit!)"
+		if sw < my_swings - 1:
+			line += ", then "
 
 	for id in buffs.keys():
 		buffs[id]["turns"] = int(buffs[id]["turns"]) - 1
@@ -1249,13 +1406,20 @@ func take_turn() -> void:
 		say(line + ". The goblin scurries around (%d turns left)." % goblin_turns)
 		return
 
+	# Bosses: shields, minions, the enrage clock
+	line += Combat.boss_turn(self)
 	# Enemy attacks
-	if enemy_stun > 0:
+	if enemy_frozen > 0:
+		enemy_frozen -= 1
+		line += ". The %s is frozen solid!" % enemy_name
+		events.append({"type": "stunned"})
+	elif enemy_stun > 0:
 		enemy_stun -= 1
 		line += ". The %s is stunned!" % enemy_name
 		events.append({"type": "stunned"})
-	elif ClassTree.charm_chance(self) > 0.0 and randf() * 100.0 < ClassTree.charm_chance(self):
+	elif charm_total() > 0.0 and randf() * 100.0 < charm_total():
 		line += ". The %s is charmed and forgets to attack" % enemy_name
+		ClassTree.grow(self, "charm")
 		events.append({"type": "stunned"})
 	elif confuse_turns > 0:
 		confuse_turns -= 1
@@ -1280,9 +1444,11 @@ func take_turn() -> void:
 			if Realms.misses(self):
 				line += ". The %s swings blind in the mist" % enemy_name
 				continue
-			var damage := damage_taken()
+			var damage := int(damage_taken() * Combat.enrage_mult(self))
 			if enemy_weaken_turns > 0:
 				damage = maxi(1, int(damage * enemy_weaken))
+			if enemy_curse > 0:
+				damage = maxi(1, int(damage * 0.85))
 			if has_mod("Enraged") and enemy_hp * 2 < enemy_max_hp:
 				damage = int(damage * 1.4)
 			var shielded := shield_hp > 0 or buffs.has("frozen_armor")
@@ -1293,6 +1459,8 @@ func take_turn() -> void:
 				if soak > 0:
 					events.append({"type": "shield_soak", "dmg": soak})
 			hero_hp -= damage
+			Combat.note_damage(self, "hits", damage)
+			Combat.on_enemy_hit(self, damage)
 			ClassTree.on_hit_taken(self, damage, shielded)
 			line += ". The %s hits you for %d" % [enemy_name, damage]
 			events.append({"type": "enemy_hit", "dmg": damage})
@@ -1307,10 +1475,13 @@ func take_turn() -> void:
 			enemy_weaken_turns -= 1
 		line += "."
 	if has_mod("Burning"):
-		var burn := maxi(1, int(get_max_hp() * 0.02))
+		var burn := maxi(1, int(get_max_hp() * 0.02 * status_mult()))
 		hero_hp -= burn
+		Combat.note_damage(self, "burning", burn)
 		events.append({"type": "enemy_hit", "dmg": burn, "burning": true})
 
+	# Poison, burns and chill on you
+	Combat.tick_hero(self)
 	# The realm itself (forge heat, hellfire, the angels' judgement)
 	line += Realms.on_turn(self)
 	# Regeneration (gear, skills, songs)
@@ -1332,9 +1503,55 @@ func take_turn() -> void:
 	elif enemy_hp <= 0:
 		_enemy_defeated()
 
+## One basic attack: double strike, crits, lifesteal, the monster's tricks.
+## Returns {"line", "dealt", "illusion"}.
+func _basic_attack() -> Dictionary:
+	if has_mod("Teleporting") and randf() < 0.2:
+		events.append({"type": "blink"})
+		return {"line": "The %s blinks away from your attack" % enemy_name, "dealt": 0}
+	if Realms.misses(self):
+		events.append({"type": "blink"})
+		return {"line": "Your attack is lost in the mist", "dealt": 0}
+	var hits := 2 if randf() * 100.0 < effect_total("double_strike") else 1
+	var total_dmg := 0
+	var crit := false
+	for _h in hits:
+		var dmg := float(get_attack())
+		if randf() * 100.0 < effect_total("crit") or _frozen_crit():
+			dmg *= crit_mult()
+			crit = true
+			Lineage.gain(self, "crit")
+		total_dmg += int(dmg)
+	last_hit = "hit"
+	total_dmg = _damage_enemy(total_dmg, ["Physical"])
+	ClassTree.on_hero_hit(self, crit, hits > 1)
+	ClassTree.on_big_hit(self, total_dmg, crit)
+	events.append({"type": "hero_hit", "dmg": total_dmg, "crit": crit, "double": hits > 1})
+	if enemy_illusion:
+		say("[color=#f9a8d4]Your blow passes right through the %s. It was only an illusion![/color]" % enemy_name)
+		ClassTree.count(self, "illusions")
+		events.append({"type": "illusion"})
+		Lineage._move_on(self)
+		return {"line": "", "dealt": total_dmg, "illusion": true}
+	var steal := int(total_dmg * effect_total("lifesteal") / 100.0 * Realms.lifesteal_mult(self))
+	if steal > 0:
+		hero_hp = mini(hero_hp + steal, get_max_hp())
+		ClassTree.on_heal(self, "lifesteal", steal)
+		events.append({"type": "heal", "amount": steal})
+	if has_mod("Thorny"):
+		var back := maxi(1, int(total_dmg * 0.1))
+		hero_hp = maxi(1, hero_hp - back)
+		events.append({"type": "enemy_hit", "dmg": back, "thorny": true})
+	var line := "You hit for %d" % total_dmg
+	if hits > 1:
+		line += " (double strike)"
+	if crit:
+		line += " (crit!)"
+	return {"line": line, "dealt": total_dmg}
+
 ## Loot rarity bonus right now (events, scrolls, the shrine's curse).
 func _loot_bonus() -> int:
-	var b := int(GameData.event_bonus("rarity", 0.0))
+	var b := int(GameData.event_bonus("rarity", 0.0)) + int(dim("LUK", GameData.LUK_LOOT))
 	if luck_turns > 0:
 		b += GameData.LUCK_BONUS
 	b += Realms.loot_bonus(self)
@@ -1366,6 +1583,8 @@ func _enemy_defeated() -> void:
 	var zone_i := GameData.zone_index(floor_num)
 	events.append({"type": "enemy_dead", "shape": enemy_shape, "color": enemy_color, "boss": was_boss, "name": enemy_name,
 		"art": enemy_art, "tier": tier, "scale": enemy_scale()})
+	if not was_boss:
+		Combat.on_enemy_death(self)
 	if enemy_boss_kind == "trial":
 		_finish_trial()
 		return
@@ -1462,7 +1681,7 @@ func _enemy_defeated() -> void:
 		var mats: Array = t["mats"]
 		if int(mats[1]) > 0:
 			_give_materials(randi_range(int(mats[0]), int(mats[1])))
-		if Monsters.has_signature(species) and randi() % Monsters.SIGNATURE_CHANCE == 0:
+		if Monsters.has_signature(species) and randf() * Monsters.SIGNATURE_CHANCE < 1.0 + luck_odds() / 100.0:
 			_give_signature(species)
 
 	hero_hp = mini(hero_hp + int(get_max_hp() * 0.15), get_max_hp())
@@ -1492,6 +1711,7 @@ func _add_gold(amount: int) -> void:
 	gold += amount
 	codex.add("gold_earned", amount)
 	ClassTree.count(self, "gold_earned", amount)
+	ClassTree.grow(self, "gold", float(amount) / (2.0 + floor_num))
 
 func _finish_horde() -> void:
 	var g := (5 + floor_num * 6) * GameData.HORDE_CHEST_GOLD
@@ -1562,6 +1782,9 @@ func _next_floor() -> void:
 		_maybe_start_event()
 
 func _hero_died() -> void:
+	last_death = Combat.recap(self)
+	events.append({"type": "death_recap"})
+	hero_status.clear()
 	codex.add("deaths")
 	ClassTree.on_death(self)
 	Lineage.gain(self, "death")
@@ -1664,7 +1887,7 @@ func use_potion() -> void:
 	codex.add("potions_used")
 	Hidden.on_potion(self)
 	kill_streak = 0
-	var heal := int(get_max_hp() * GameData.POTION_HEAL * (1.0 + _flat("potion") / 100.0))
+	var heal := int(get_max_hp() * GameData.POTION_HEAL * (1.0 + _flat("potion") / 100.0) * heal_mult())
 	hero_hp = mini(hero_hp + heal, get_max_hp())
 	say("[color=#f472b6]Drank a potion (+%d HP).[/color]" % heal)
 	events.append({"type": "potion", "amount": heal})
@@ -1834,7 +2057,7 @@ func sell(id: int) -> void:
 	if item.get("locked", false):
 		say("%s is locked. Unlock it first." % _tag(item))
 		return
-	var value := GameData.sell_value(item)
+	var value := sell_price(item)
 	gold += value
 	ClassTree.count(self, "sold")
 	bag.remove_at(int(found["index"]))
@@ -1858,6 +2081,7 @@ func salvage(id: int) -> void:
 	scrap += value
 	Lineage.gain(self, "craft")
 	ClassTree.count(self, "scrapped")
+	ClassTree.grow(self, "craft")
 	bag.remove_at(int(found["index"]))
 	bag_version += 1
 	say("Salvaged %s for %d scrap." % [_tag(item), value])
@@ -1877,6 +2101,7 @@ func upgrade(id: int) -> void:
 		say("Not enough scrap (need %d)." % cost)
 		return
 	scrap -= cost
+	ClassTree.grow(self, "craft")
 	item["level"] = int(item["level"]) + 1
 	codex.at_least("max_upgrade", int(item["level"]))
 	bag_version += 1
@@ -1971,11 +2196,26 @@ func salvage_all(rarity: int) -> void:
 # Gold: shop, potions, bag upgrades
 # =====================================================================
 
+func potion_cost() -> int:
+	return price(GameData.POTION_GOLD)
+
+func greater_potion_cost() -> int:
+	return price(GameData.GREATER_POTION_GOLD)
+
+func restock_cost() -> int:
+	return price(GameData.SHOP_RESTOCK_GOLD)
+
+func elixir_cost(id: String) -> int:
+	return price(int(GameData.ELIXIRS[id]["gold"]))
+
+func shop_cost(item: Dictionary) -> int:
+	return price(GameData.shop_price(item))
+
 func buy_potion() -> void:
-	if gold < GameData.POTION_GOLD:
+	if gold < potion_cost():
 		say("Not enough gold.")
 		return
-	gold -= GameData.POTION_GOLD
+	gold -= potion_cost()
 	potions += 1
 	say("Bought a potion. You have %d." % potions)
 	save_game()
@@ -2007,7 +2247,7 @@ func restock_shop() -> void:
 	shop_version += 1
 
 func featured_price() -> int:
-	return GameData.shop_price(featured) * GameData.FEATURED_PRICE_MULT if not featured.is_empty() else 0
+	return shop_cost(featured) * GameData.FEATURED_PRICE_MULT if not featured.is_empty() else 0
 
 func buy_featured() -> bool:
 	if featured.is_empty():
@@ -2031,10 +2271,10 @@ func buy_featured() -> bool:
 	return true
 
 func buy_greater_potion() -> void:
-	if gold < GameData.GREATER_POTION_GOLD:
+	if gold < greater_potion_cost():
 		say("Not enough gold.")
 		return
-	gold -= GameData.GREATER_POTION_GOLD
+	gold -= greater_potion_cost()
 	var heal := get_max_hp() - hero_hp
 	hero_hp = get_max_hp()
 	events.append({"type": "potion", "amount": heal})
@@ -2043,10 +2283,10 @@ func buy_greater_potion() -> void:
 
 func buy_elixir(id: String) -> void:
 	var info: Dictionary = GameData.ELIXIRS[id]
-	if gold < int(info["gold"]):
+	if gold < elixir_cost(id):
 		say("Not enough gold.")
 		return
-	gold -= int(info["gold"])
+	gold -= elixir_cost(id)
 	elixirs[id] = int(info["turns"])
 	events.append({"type": "buff", "name": info["name"]})
 	say("[color=#c4b5fd]%s![/color] %s" % [info["name"], info["text"]])
@@ -2058,7 +2298,7 @@ func sell_all(rarity: int) -> void:
 	var total := 0
 	for item in bag.duplicate():
 		if int(item["rarity"]) == rarity and not item.get("locked", false) and not is_upgrade(item):
-			total += GameData.sell_value(item)
+			total += sell_price(item)
 			bag.erase(item)
 			count += 1
 	if count == 0:
@@ -2070,10 +2310,10 @@ func sell_all(rarity: int) -> void:
 	save_game()
 
 func paid_restock() -> void:
-	if gold < GameData.SHOP_RESTOCK_GOLD:
+	if gold < restock_cost():
 		say("Not enough gold.")
 		return
-	gold -= GameData.SHOP_RESTOCK_GOLD
+	gold -= restock_cost()
 	restock_shop()
 	say("The shop has new stock.")
 	save_game()
@@ -2082,7 +2322,7 @@ func buy_shop(index: int) -> bool:
 	if index < 0 or index >= shop.size():
 		return false
 	var item: Dictionary = shop[index]
-	var price := GameData.shop_price(item)
+	var price := shop_cost(item)
 	if gold < price:
 		say("Not enough gold (need %d)." % price)
 		return false
@@ -2376,6 +2616,14 @@ func save_game() -> void:
 		"auto_ability": auto_ability,
 		"stats": stats,
 		"stat_points": stat_points,
+		"stat_ver": 2,
+		"auto_stats": auto_stats,
+		"auto_potion_at": auto_potion_at,
+		"skill_priority": skill_priority,
+		"skill_auto_off": skill_auto_off,
+		"last_death": last_death,
+		"respec_tomes": respec_tomes,
+		"builds": builds,
 		"skill_book": skill_book,
 		"dust": dust,
 		"active_slots": active_slots,
@@ -2383,7 +2631,6 @@ func save_game() -> void:
 		"stones_since": stones_since,
 		"faith": faith,
 		"unique": unique,
-		"unique_points": unique_points,
 		"class_tree": ClassTree.to_save(self),
 		"kill_streak": kill_streak,
 		"party_slots": party_slots,
@@ -2570,7 +2817,15 @@ func load_game() -> bool:
 	stones_since = int(data.get("stones_since", 0))
 	faith = float(data.get("faith", 0.0))
 	unique = data.get("unique", {})
-	unique_points = data.get("unique_points", {})
+	auto_stats = bool(data.get("auto_stats", false))
+	auto_potion_at = float(data.get("auto_potion_at", GameData.AUTO_POTION_AT))
+	skill_priority = data.get("skill_priority", [])
+	skill_auto_off = data.get("skill_auto_off", {})
+	last_death = data.get("last_death", {})
+	respec_tomes = int(data.get("respec_tomes", 0))
+	var saved_builds: Array = data.get("builds", [])
+	for i in mini(saved_builds.size(), builds.size()):
+		builds[i] = saved_builds[i]
 	unique.erase("Sword Intent")
 	unique.erase("Demonic Qi")
 	ClassTree.from_save(self, data.get("class_tree", {}))
@@ -2624,11 +2879,54 @@ func load_game() -> bool:
 	_give_old_legendaries_effects()
 	if shop.is_empty() or not data.has("featured"):  # older saves get the new shop
 		restock_shop()
+	if int(data.get("stat_ver", 1)) < 2:
+		_convert_stats(data)
 	hero_hp = int(data.get("hero_hp", get_max_hp()))
 	if hero_hp <= 0 or hero_hp > get_max_hp():
 		hero_hp = get_max_hp()
 	spawn_enemy()
 	return true
+
+## v0.11: 4 stats at 3 points a level became 8 stats at 5 points a level.
+## Points scale by 5/3 (so you're exactly as strong), Agility splits into
+## Agility and Dexterity, and points put into special stats come back to spend.
+## (Older versions also counted your race's bonus again every time you spent
+## a point; any points that bug added are taken back here.)
+func _convert_stats(data: Dictionary) -> void:
+	var old: Dictionary = data.get("stats", {})
+	var old_unspent := int(data.get("stat_points", 0))
+	var old_unique := 0
+	var up: Dictionary = data.get("unique_points", {})
+	for k in up:
+		old_unique += int(up[k])
+		unique[k] = float(unique.get(k, 0.0)) + int(up[k]) * 0.1
+	var old_race := race_power_points
+	var legit := maxi(0, (level - 1) * GameData.OLD_STAT_POINTS)
+	var alloc := 0
+	for st in ["STR", "VIT", "AGI", "INT"]:
+		alloc += int(old.get(st, 0))
+	var room := maxi(0, legit - old_unspent - old_race)
+	var f := 1.0 if alloc <= room else float(room) / maxf(1.0, alloc)
+	var sc := GameData.STAT_SCALE
+	for st in GameData.STAT_ORDER:
+		stats[st] = 0
+	stats["STR"] = int(round(int(old.get("STR", 0)) * f * sc))
+	stats["VIT"] = int(round(int(old.get("VIT", 0)) * f * sc))
+	stats["INT"] = int(round(int(old.get("INT", 0)) * f * sc))
+	var agi := int(old.get("AGI", 0)) * f * sc
+	stats["AGI"] = int(round(agi / 2.0))
+	stats["DEX"] = int(round(agi)) - int(stats["AGI"])
+	race_power_points = int(round(old_race * sc))
+	var total := (level - 1) * GameData.STAT_POINTS_PER_LEVEL
+	var used := race_power_points
+	for st in GameData.STAT_ORDER:
+		used += int(stats[st])
+	stat_points = maxi(0, total - used)
+	var back := int(round(old_unique * sc))
+	if f < 1.0 or back > 0 or stat_points > 0:
+		say("[color=#e8b14a]New stats! Agility was split into Agility and Dexterity, and Wisdom, Luck and Charisma are new.[/color] You have %d points to spend in Character > Hero." % stat_points)
+	else:
+		say("[color=#e8b14a]New stats! Agility was split into Agility and Dexterity, and Wisdom, Luck and Charisma are new.[/color]")
 
 ## Legendaries found before they had special effects get one now.
 func _give_old_legendaries_effects() -> void:
@@ -2777,7 +3075,7 @@ func _maybe_start_event() -> void:
 		return
 	if floors_since_event < GameData.EVENT_GAP:
 		return
-	if randf() * 100.0 >= (floors_since_event - GameData.EVENT_GAP + 1) * GameData.EVENT_CHANCE_STEP:
+	if randf() * 100.0 >= (floors_since_event - GameData.EVENT_GAP + 1) * GameData.EVENT_CHANCE_STEP * (1.0 + luck_odds() / 100.0):
 		return
 	floors_since_event = 0
 	var roll := randf() * 100.0
@@ -2893,6 +3191,7 @@ const SCROLLS := {
 	"hunt": {"name": "Hunter's Scroll", "text": "The next %d monsters are 3x as likely to be rare"},
 	"key": {"name": "Boss Key", "text": "Every boss is ready to fight again right now"},
 	"box": {"name": "Mystery Box", "text": "Epic or Legendary gear, gold or materials"},
+	"tome": {"name": "Tome of Forgetting", "text": "Your next stat respec is free"},
 }
 
 func scroll_text(id: String) -> String:
@@ -2912,12 +3211,12 @@ func _make_merchant() -> void:
 	for _i in 2:
 		var r := GameData.LEGENDARY if randf() * 100.0 < GameData.MERCHANT_LEGENDARY_CHANCE else 3
 		var item := GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, best_floor, _new_id())
-		merchant.append({"kind": "item", "item": item, "price": int(GameData.shop_price(item) * GameData.MERCHANT_PRICE_MULT), "sold": false})
-	merchant.append({"kind": "scroll", "id": "box", "price": _gold_scale() * 8, "sold": false})
-	var scrolls := ["luck", "hunt", "key"]
+		merchant.append({"kind": "item", "item": item, "price": price(int(GameData.shop_price(item) * GameData.MERCHANT_PRICE_MULT)), "sold": false})
+	merchant.append({"kind": "scroll", "id": "box", "price": price(_gold_scale() * 8), "sold": false})
+	var scrolls := ["luck", "hunt", "key", "tome"]
 	scrolls.shuffle()
 	for id in scrolls.slice(0, 2):
-		merchant.append({"kind": "scroll", "id": id, "price": _gold_scale() * (3 if id != "key" else 2), "sold": false})
+		merchant.append({"kind": "scroll", "id": id, "price": price(_gold_scale() * {"key": 2, "tome": 4}.get(id, 3)), "sold": false})
 
 func buy_merchant(i: int) -> bool:
 	if i < 0 or i >= merchant.size():
@@ -2964,6 +3263,9 @@ func use_scroll(id: String) -> String:
 			return "[color=#c4b5fd]Boss Key![/color] Every boss is ready to fight again."
 		"box":
 			return _open_box()
+		"tome":
+			respec_tomes += 1
+			return "[color=#c4b5fd]Tome of Forgetting![/color] Your next respec is free (Character > Hero)."
 	return ""
 
 func _open_box() -> String:
@@ -3048,6 +3350,64 @@ func wear_loadout(i: int) -> int:
 			n += 1
 	say("Loadout %d: %d items swapped." % [i + 1, n] if n > 0 else "Loadout %d is already on (or its items are gone)." % (i + 1))
 	return n
+
+# ---------- Builds: stats, skills and gear together ----------
+
+## Saves what you're running now (stat spread, equipped skills, worn gear) as build i.
+func save_build(i: int, build_name := "") -> void:
+	var gear := {}
+	for s in equipped:
+		gear[s] = int(equipped[s]["id"])
+	var old: Dictionary = builds[i]
+	builds[i] = {"name": build_name if build_name != "" else String(old.get("name", "Build %d" % (i + 1))),
+		"stats": stats.duplicate(), "active": active_slots.duplicate(), "passive": passive_slots.duplicate(), "gear": gear}
+	say("Saved build %d: %s." % [i + 1, builds[i]["name"]])
+	save_game()
+
+func build_name(i: int) -> String:
+	return String((builds[i] as Dictionary).get("name", "Build %d" % (i + 1)))
+
+func build_saved(i: int) -> bool:
+	return (builds[i] as Dictionary).has("stats")
+
+## Switches to build i: your points move to its spread (free), its skills go in
+## their slots and its gear goes on. Things you no longer own are skipped.
+func apply_build(i: int) -> void:
+	var b: Dictionary = builds[i]
+	if not b.has("stats"):
+		return
+	var pool := stat_points
+	for st in GameData.STAT_ORDER:
+		pool += int(stats.get(st, 0))
+	var want: Dictionary = b["stats"]
+	var want_total := 0
+	for st in GameData.STAT_ORDER:
+		want_total += int(want.get(st, 0))
+	var f := 1.0 if want_total <= pool else float(pool) / maxf(1.0, want_total)
+	var used := 0
+	for st in GameData.STAT_ORDER:
+		stats[st] = int(floor(int(want.get(st, 0)) * f))
+		used += int(stats[st])
+	stat_points = pool - used
+	var acts: Array = b.get("active", [])
+	var pas: Array = b.get("passive", [])
+	for k in active_slots.size():
+		var id: String = String(acts[k]) if k < acts.size() else ""
+		active_slots[k] = id if id == "" or skill_book.has(id) else active_slots[k]
+	for k in passive_slots.size():
+		var id: String = String(pas[k]) if k < pas.size() else ""
+		passive_slots[k] = id if id == "" or skill_book.has(id) else passive_slots[k]
+	var gear: Dictionary = b.get("gear", {})
+	var n := 0
+	for s in gear:
+		var found := find_item(int(gear[s]))
+		if not found.is_empty() and found["where"] == "bag":
+			equip(int(gear[s]))
+			n += 1
+	hero_hp = mini(hero_hp, get_max_hp())
+	_check_spec()
+	say("Switched to %s." % build_name(i))
+	save_game()
 
 ## The most pieces of one set you're wearing.
 func best_set_count() -> int:
@@ -3165,6 +3525,9 @@ func start_special_trial(info: Dictionary, kind: String, data: Dictionary) -> bo
 	enemy_attack = int((3 + f * 2) * growth * float(info.get("atk", 1.5)))
 	enemy_base_hp = enemy_max_hp
 	enemy_base_atk = enemy_attack
+	burn_turns = 0
+	ClassTree.on_fight_start(self)
+	_setup_fight()
 	say("[color=#e8b14a]The trial begins: %s.[/color] %s" % [info["name"], info.get("lore", "")])
 	events.append({"type": "trial", "name": info["name"]})
 	return true
