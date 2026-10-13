@@ -2758,6 +2758,7 @@ func save_game() -> void:
 		"dust": dust,
 		"active_slots": active_slots,
 		"sig_slot": sig_slot,
+		"hero_status": hero_status,
 		"passive_slots": passive_slots,
 		"stones_since": stones_since,
 		"faith": faith,
@@ -2966,6 +2967,7 @@ func load_game() -> bool:
 	unique.erase("Demonic Qi")
 	ClassTree.from_save(self, data.get("class_tree", {}))
 	sig_slot = str(data.get("sig_slot", ""))
+	hero_status = data.get("hero_status", {})
 	var sigs := Signatures.owned(self)
 	if not sig_slot in sigs:
 		sig_slot = sigs[sigs.size() - 1] if not sigs.is_empty() else ""

@@ -148,7 +148,7 @@ const INFO := {
 			{"name": "Great Khan", "level": 120, "power": 260, "key": {"trial": {"name": "The Great Khan", "art": "boss_typhon", "lore": "One Khan. Every tribe. Forever."}},
 				"bonus": {"atk": 1.12, "hp": 1.1, "rage": 10}, "text": "+12% Attack, +10% HP, +10% rage damage.", "look": "crown"},
 		]},
-	"Goblin": {"text": "Greedy and sneaky. +3 AGI, +4 LUK, +2 CHA, +15% gold, but -7% HP.", "stats": {"AGI": 3, "LUK": 4, "CHA": 2}, "passive": {"gold_find": 15, "hp": 0.93},
+	"Goblin": {"text": "Greedy and sneaky. +3 AGI, +3 DEX, +4 LUK, +2 CHA, +15% gold, but -5% HP.", "stats": {"AGI": 3, "DEX": 3, "LUK": 4, "CHA": 2}, "passive": {"gold_find": 15, "hp": 0.95},
 		"color": "#a8ca58", "skins": [6, 2, 3],
 		"power": {"name": "Greed", "color": "#facc15", "gains": {"goblin": 2.0, "rare_kill": 0.1, "kill": 0.01, "gamble": 0.3},
 			"bonus": {"gold_find": 0.025, "crit": 0.005}, "how": "Grows from catching treasure goblins, rare monsters, kills and the Wheel."},

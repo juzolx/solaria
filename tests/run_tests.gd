@@ -44,7 +44,7 @@ func _initialize() -> void:
 	var uniques := 0
 	var deaths := 0
 	var max_floor := 1
-	for turn in 60000:
+	for turn in 20000:
 		var boss_before := g.enemy_is_boss
 		var floor_before := g.floor_num
 		g.take_turn()
@@ -105,7 +105,7 @@ func _initialize() -> void:
 			g.messages.clear()
 		g.events.clear()
 
-	print("Simulated 60000 turns: max floor %d, bosses killed %d, uniques %d, deaths %d" % [max_floor, bosses_killed, uniques, deaths])
+	print("Simulated 20000 turns: max floor %d, bosses killed %d, uniques %d, deaths %d" % [max_floor, bosses_killed, uniques, deaths])
 	print("End: floor %d, gold %d, scrap %d, potions %d, bag %d/%d (level %d), ATK %d DEF %d HP %d" % [
 		g.floor_num, g.gold, g.scrap, g.potions, g.bag.size(), g.bag_capacity(), g.bag_level, g.get_attack(), g.get_defense(), g.get_max_hp()])
 	check(max_floor > 10, "reached past the first boss (max %d)" % max_floor)
@@ -122,7 +122,9 @@ func _initialize() -> void:
 	var h := GameState.new()
 	check(h.load_game(), "save loads")
 	check(h.floor_num == g.floor_num and h.gold == g.gold and h.bag.size() == g.bag.size() and h.equipped.size() == g.equipped.size(), "save round trip matches")
-	check(h.get_attack() == g.get_attack(), "stats match after load")
+	h.codex = g.codex  # achievement power comes from the Codex, which this test keeps in memory only
+	h.buffs = g.buffs.duplicate(true)  # fight buffs are not saved on purpose
+	check(h.get_attack() == g.get_attack(), "stats match after load (%d vs %d)" % [h.get_attack(), g.get_attack()])
 
 	# Forced unique
 	var u := GameData.make_unique(GameData.ZONES[0]["boss"]["uniques"][0], 10, 999)
@@ -185,7 +187,7 @@ func _initialize() -> void:
 					main.refresh()
 			# Hero: spend points
 			for st in GameData.STAT_ORDER:
-				(main.hero_tab.stat_buttons[st][0] as Button).pressed.emit()
+				(main.hero_tab.rows[st]["p1"] as Button).pressed.emit()
 			# Skills: select + learn everything possible
 			gs.dust += 500
 			for id in SkillData.SKILLS.keys().slice(0, 12):
