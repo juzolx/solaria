@@ -1,15 +1,15 @@
 class_name BountyTab
 extends ScrollContainer
-## Codex > Bounties: 3 small goals a day and 2 bigger ones a week.
+## Town > Bounty Board: monster contracts for the zone you're in. Each posting
+## shows its reward up front (gold, gear, or a weapon for your class). Take up to
+## Town.MAX_TAKEN, hunt in the dungeon, and turn them in here.
 
 var main
-var codex: Codex
 var box: VBoxContainer
 var shown := ""
 
 func setup(m) -> void:
 	main = m
-	codex = m.codex
 	name = "Bounties"
 	horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	box = UI.vbox(8)
@@ -17,54 +17,99 @@ func setup(m) -> void:
 	add_child(box)
 
 func refresh() -> void:
-	codex.refresh_bounties(main.state)
-	var key := str(codex.bounties) + str(Time.get_unix_time_from_system() / 60)
+	var g: GameState = main.state
+	Town.refresh_board(g)
+	var key := str(g.contracts) + str(g.gold / 50) + str(g.in_town)
 	if key == shown:
 		return
 	shown = key
 	OnlineUI.clear(box)
-	var now := Time.get_unix_time_from_system()
-	var day_left := 86400 - int(now) % 86400
-	var streak := int(codex.login.get("streak", 0))
-	box.add_child(UI.label("Login streak: %d day%s" % [streak, "" if streak == 1 else "s"], 13, UI.GOLD))
-	box.add_child(UI.heading("Daily  -  new ones in %dh %dm" % [day_left / 3600, (day_left % 3600) / 60]))
-	var daily: Array = codex.bounties.get("daily", [])
-	for i in daily.size():
-		box.add_child(_row(daily[i], false, i))
-	var days := floori(now / 86400.0)
-	var monday := days - ((days + 3) % 7)
-	var week_left := int((monday + 7) * 86400 - now)
-	box.add_child(UI.heading("Weekly  -  new ones in %dd %dh" % [week_left / 86400, (week_left % 86400) / 3600]))
-	var weekly: Array = codex.bounties.get("weekly", [])
-	for i in weekly.size():
-		box.add_child(_row(weekly[i], true, i))
-	var note := UI.label("Daily: gold and 2 materials. Weekly: lots of gold, 6 materials and a Mystery Box.", 11, UI.DIM)
+	var head := UI.hbox(8)
+	box.add_child(head)
+	var title := UI.heading("Bounty Board  -  %s" % Town.look(g)["name"])
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(title)
+	var reroll := UI.button("New postings (%d gold)" % Town.reroll_cost(g), func():
+		if Town.reroll(g):
+			main.sfx.play("buy")
+		shown = ""
+		main.refresh())
+	reroll.disabled = g.gold < Town.reroll_cost(g)
+	reroll.tooltip_text = "Replace the postings you haven't taken. They also change every day."
+	head.add_child(reroll)
+	var taken: Array = []
+	var posted: Array = []
+	for c in g.contracts:
+		(taken if c.get("taken", false) else posted).append(c)
+	box.add_child(UI.label("YOUR CONTRACTS  (%d / %d)" % [taken.size(), Town.MAX_TAKEN], 11, UI.DIM))
+	if taken.is_empty():
+		box.add_child(UI.label("No contracts yet. Take one from the board below.", 12, UI.DIM))
+	for c in taken:
+		box.add_child(_card(c, true))
+	box.add_child(UI.label("POSTED", 11, UI.DIM))
+	for c in posted:
+		box.add_child(_card(c, false))
+	var streak := int(main.codex.login.get("streak", 0))
+	var note := UI.label("Hunts pay gold or gear. Elite contracts want Rare or stronger monsters. WANTED posters name a boss and pay with a weapon for your class. Login streak: %d day%s." % [streak, "" if streak == 1 else "s"], 11, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(note)
 
-func _row(b: Dictionary, weekly: bool, i: int) -> PanelContainer:
-	var done: bool = b["done"]
-	var claimed: bool = b["claimed"]
-	var card := UI.panel(UI.INSET, UI.GOLD if done and not claimed else UI.BORDER, 6, 8, 2 if done and not claimed else 1)
+func _card(c: Dictionary, taken: bool) -> PanelContainer:
+	var g: GameState = main.state
+	var kind := String(c["kind"])
+	var accent: Color = {"hunt": UI.GOLD, "elite": Color("#c084fc"), "wanted": UI.RED}.get(kind, UI.GOLD)
+	var done: bool = c.get("done", false)
+	var card := UI.panel(UI.INSET, UI.GREEN if done else (accent.darkened(0.3) if taken else UI.BORDER), 6, 10, 2 if done else 1)
 	var h := UI.hbox(10)
 	card.add_child(h)
 	var v := UI.vbox(4)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
-	v.add_child(UI.label(str(b["text"]), 14, UI.DIM if claimed else UI.TEXT))
-	var bar := UI.bar(UI.GREEN if done else UI.GOLD, 6)
-	bar.max_value = int(b["need"])
-	bar.value = mini(int(b["have"]), int(b["need"]))
-	v.add_child(bar)
-	v.add_child(UI.label("%d / %d" % [mini(int(b["have"]), int(b["need"])), int(b["need"])], 11, UI.DIM))
-	var btn := UI.primary("Claimed" if claimed else ("Claim" if done else "In progress"), func():
-		var got: String = main.state.claim_bounty(weekly, i)
-		if got != "":
-			main.sfx.play("buy")
-		shown = ""
-		main.refresh(), UI.GREEN)
-	btn.disabled = claimed or not done
-	btn.custom_minimum_size = Vector2(110, 40)
-	btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	h.add_child(btn)
+	var tag: String = {"hunt": "HUNT", "elite": "ELITE", "wanted": "WANTED"}.get(kind, "")
+	var top := UI.hbox(6)
+	v.add_child(top)
+	top.add_child(UI.chip(tag, accent, 10))
+	var name_l := UI.label(String(c["text"]).trim_prefix("WANTED: "), 14, UI.TEXT)
+	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(name_l)
+	var rw := UI.rich(12)
+	rw.text = "[color=%s]Reward:[/color] [color=#f6d88f]%s[/color]" % [UI.hex(UI.DIM), Town.reward_text(c["reward"], g)]
+	v.add_child(rw)
+	if taken:
+		var bar := UI.bar(UI.GREEN if done else accent, 6)
+		bar.max_value = int(c["need"])
+		bar.value = mini(int(c["have"]), int(c["need"]))
+		v.add_child(bar)
+		v.add_child(UI.label("%d / %d" % [mini(int(c["have"]), int(c["need"])), int(c["need"])], 11, UI.DIM))
+	var right := UI.vbox(4)
+	right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(right)
+	var id := int(c["id"])
+	if done:
+		var b := UI.primary("Turn in", func():
+			if Town.claim(g, id) != "":
+				main.sfx.play("buy")
+			shown = ""
+			main.refresh(), UI.GREEN)
+		b.custom_minimum_size = Vector2(110, UI.TAP)
+		b.disabled = not g.in_town
+		right.add_child(b)
+	elif taken:
+		var drop := UI.button("Drop", func():
+			main.confirm("Drop this contract?", "Its progress is lost.", "Drop", func():
+				Town.drop(g, id)
+				shown = ""
+				main.refresh()))
+		drop.custom_minimum_size = Vector2(90, UI.TAP)
+		right.add_child(drop)
+	else:
+		var take := UI.primary("Take", func():
+			if Town.take(g, id):
+				main.sfx.play("click")
+			shown = ""
+			main.refresh(), accent)
+		take.custom_minimum_size = Vector2(100, UI.TAP)
+		take.disabled = Town.taken_count(g) >= Town.MAX_TAKEN
+		right.add_child(take)
 	return card

@@ -18,6 +18,16 @@ var tabs: TabContainer
 var char_tabs: TabContainer
 var item_tabs: TabContainer
 var town_tabs: TabContainer
+var town_page: VBoxContainer    # the Town group: a "back to the map" bar over town_tabs
+var town_back: Control
+var fight_frame: Control
+var fight_panel: Control
+var town_frame: Control
+var town_view: TownView
+var town_leave: Button
+var town_status: Label
+var inn_tab: InnTab
+var _was_in_town := false
 var hero_tab: HeroTab
 var class_tab: ClassTab
 var skills_tab: SkillsTab
@@ -80,6 +90,7 @@ var nav_bar: PanelContainer   # phone layout: the bottom navigation (Fight, Hero
 var nav_buttons: Array[Button] = []
 var nav_page := 0              # 0 = the fight, 1.. = a tab group (1 + its index)
 var is_tall := false
+const TOWN_PAGES := ["Shop", "Blacksmith", "Tavern", "Inn", "Vault", "Bounty Board", "Guild Hall"]
 const NAV := [["Fight", "sword"], ["Hero", "person"], ["Items", "bag"], ["Town", "house"], ["Codex", "book"], ["Online", "globe"]]
 var left_panel: VBoxContainer
 var title_label: Label
@@ -458,7 +469,23 @@ func _build_ui() -> void:
 	_build_nav(main_v)
 	char_tabs = _group("Character")
 	item_tabs = _group("Items")
-	town_tabs = _group("Town")
+	town_page = UI.vbox(6)
+	town_page.name = "Town"
+	tabs.add_child(town_page)
+	town_back = UI.hbox(8)
+	town_page.add_child(town_back)
+	var back_btn := UI.button("◀  Town map", func():
+		nav_page = 0
+		_apply_nav()
+		refresh())
+	back_btn.custom_minimum_size = Vector2(0, UI.TAP)
+	town_back.add_child(back_btn)
+	town_tabs = TabContainer.new()
+	town_tabs.name = "TownPages"
+	town_tabs.theme_type_variation = "SubTabs"
+	town_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	town_tabs.tab_changed.connect(func(_i): sfx.play("click"); refresh())
+	town_page.add_child(town_tabs)
 	codex_tabs = _group("Codex")
 	online_tabs = _group("Online")
 	leaderboard_tab = LeaderboardTab.new()
@@ -480,10 +507,13 @@ func _build_ui() -> void:
 	stats_tab = StatsTab.new()
 	achievements_tab = AchievementsTab.new()
 	bounty_tab = BountyTab.new()
+	inn_tab = InnTab.new()
 	guide_tab = GuideTab.new()
 	for pair in [[char_tabs, hero_tab], [char_tabs, class_tab], [char_tabs, race_tab], [char_tabs, skills_tab], [char_tabs, party_tab],
-			[item_tabs, gear_tab], [item_tabs, bag_tab], [item_tabs, stash_tab], [town_tabs, shop_tab], [town_tabs, craft_tab], [town_tabs, wheel_tab],
-			[codex_tabs, bestiary_tab], [codex_tabs, collection_tab], [codex_tabs, achievements_tab], [codex_tabs, bounty_tab],
+			[item_tabs, gear_tab], [item_tabs, bag_tab],
+			[town_tabs, shop_tab], [town_tabs, craft_tab], [town_tabs, wheel_tab], [town_tabs, inn_tab], [town_tabs, stash_tab],
+			[town_tabs, bounty_tab], [town_tabs, achievements_tab],
+			[codex_tabs, bestiary_tab], [codex_tabs, collection_tab],
 			[codex_tabs, stats_tab], [codex_tabs, guide_tab],
 			[online_tabs, leaderboard_tab], [online_tabs, guild_tab], [online_tabs, raid_tab]]:
 		pair[1].setup(self)
@@ -623,12 +653,15 @@ func _build_fight(parent: Control) -> void:
 	var frame := UI.panel(UI.PANEL, UI.BORDER, 10, 2)
 	frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	parent.add_child(frame)
+	fight_frame = frame
 	battle = BattleView.new()
 	battle.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	frame.add_child(battle)
+	_build_town(parent)
 
 	var panel := UI.panel(UI.PANEL, UI.BORDER, 10, 10)
 	parent.add_child(panel)
+	fight_panel = panel
 	var col := UI.vbox(8)
 	panel.add_child(col)
 	# The next goal: always something to chase (world.gd)
@@ -698,6 +731,117 @@ func _build_fight(parent: Control) -> void:
 	for b in [escape_button, spare_button]:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		run_row.add_child(b)
+
+## The town map (shown instead of the fight while you're in town).
+func _build_town(parent: Control) -> void:
+	var frame := UI.panel(UI.PANEL, UI.BORDER, 10, 2)
+	frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	frame.visible = false
+	parent.add_child(frame)
+	town_frame = frame
+	var v := UI.vbox(0)
+	frame.add_child(v)
+	town_view = TownView.new()
+	town_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	town_view.building_pressed.connect(_on_building)
+	v.add_child(town_view)
+	var bar := UI.panel(UI.PANEL, UI.BORDER, 0, 8, 0)
+	v.add_child(bar)
+	var row := UI.hbox(8)
+	bar.add_child(row)
+	town_status = UI.label("", 13, UI.TEXT)
+	town_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	town_status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(town_status)
+	var pick := UI.button("Floors", func(): FloorPicker.new().show_for(self))
+	pick.tooltip_text = "Pick which floor to head down to"
+	pick.custom_minimum_size = Vector2(0, UI.TAP)
+	row.add_child(pick)
+	town_leave = UI.primary("", _leave_town, UI.RED)
+	town_leave.custom_minimum_size = Vector2(0, UI.TAP)
+	row.add_child(town_leave)
+
+func _on_building(id: String) -> void:
+	sfx.play("click")
+	if id == "gate":
+		_leave_town()
+		return
+	if not Town.BUILDINGS.has(id):
+		return
+	var page: int = Town.BUILDINGS[id][0]
+	if town_tabs.is_tab_hidden(page):
+		toast(String(town_view.locked.get(id, "That's closed for now.")))
+		return
+	show_tab(2, page)
+	refresh()
+
+func _leave_town() -> void:
+	Town.leave(state)
+	if tabs.current_tab == 2:
+		tabs.current_tab = 1
+	nav_page = 0
+	_apply_nav()
+	timer.start()
+	refresh()
+
+## A short message near the top of the screen (works in town too, where the fight view is hidden).
+func toast(text: String) -> void:
+	var vp := get_viewport().get_visible_rect().size
+	var p := UI.panel(Color(0.05, 0.06, 0.11, 0.95), UI.GOLD, 8, 10, 1)
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var l := UI.label(text, 13, UI.TEXT)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.custom_minimum_size = Vector2(minf(420.0, vp.x - 40.0) - 24.0, 0)
+	p.add_child(l)
+	p.z_index = 60
+	add_child(p)
+	p.reset_size()
+	p.position = Vector2((vp.x - p.size.x) / 2.0, 64.0)
+	var tw := p.create_tween()
+	tw.tween_interval(2.4 + text.length() / 30.0)
+	tw.tween_property(p, "modulate:a", 0.0, 0.5)
+	tw.tween_callback(p.queue_free)
+
+## Goes to town (if you can). Returns false and says why if not.
+func go_to_town() -> bool:
+	if state.in_town:
+		return true
+	if not Town.enter(state):
+		var why := Town.blocked(state)
+		if why != "":
+			toast(why)
+		return false
+	sfx.play("click")
+	return true
+
+## Map or fight, town look, plates and the leave button.
+func _sync_town() -> void:
+	var inside := state.in_town
+	if inside != _was_in_town:
+		_was_in_town = inside
+		_apply_nav()
+	fight_frame.visible = not inside
+	fight_panel.visible = not inside
+	town_frame.visible = inside
+	town_back.visible = is_tall
+	if not inside:
+		return
+	town_view.set_look(Town.look(state))
+	town_leave.text = "Into the dungeon  -  Floor %d" % state.floor_num
+	town_status.text = "HP %d / %d   ·   %s" % [state.hero_hp, state.get_max_hp(), Town.look(state)["name"]]
+	var notes := {}
+	for id in Town.BUILDINGS:
+		notes[id] = Town.BUILDINGS[id][1]
+	notes["gate"] = "Back to floor %d" % state.floor_num
+	town_view.notes = notes
+	town_view.locked = {
+		"smith": "" if state.craft_unlocked() else "Opens at floor %d" % GameData.CRAFT_UNLOCK_FLOOR,
+		"tavern": "" if state.gamble_unlocked() else "Opens at floor %d" % GameData.GAMBLE_UNLOCK_FLOOR,
+		"stash": "" if not state.hardcore else "Hardcore heroes can't use the Vault",
+	}
+	town_view.badges = {"bounty": Town.ready_count(state), "guild": codex.deeds.size(),
+		"inn": 1 if state.hero_hp < state.get_max_hp() * 0.6 else 0}
 
 # =====================================================================
 # Popups
@@ -844,6 +988,8 @@ func _on_battle_tapped(pos: Vector2) -> void:
 
 ## Jump to a tab: group 0 Character, 1 Items, 2 Town, 3 Codex, 4 Online.
 func show_tab(group: int, sub: int) -> void:
+	if group == 2 and not go_to_town():
+		return
 	nav_page = group + 1
 	_apply_nav()
 	tabs.current_tab = group
@@ -879,11 +1025,15 @@ func refresh() -> void:
 	_refresh_top()
 	_refresh_fight()
 	_refresh_tabs()
+	_sync_town()
 	sfx.update_music(state)
 
 ## Events that open popups: new guide pages, the merchant. Also keeps records.
 func _handle_events() -> void:
 	for e in state.events:
+		# The fight view is hidden in town, so its tips show up here instead
+		if state.in_town and e["type"] in ["tip", "toast"]:
+			toast(String(e["text"]))
 		match e["type"]:
 			"guide":
 				if codex.stat("guide_skip") == 0 and not _popup_open():
@@ -1078,7 +1228,16 @@ func _build_nav(parent: Control) -> void:
 			b.add_theme_stylebox_override(st, sb)
 		b.pressed.connect(func():
 			sfx.play("click")
-			nav_page = i
+			# Town = travel to town and look at the map; Fight = head back down
+			if i == 3:
+				if not go_to_town():
+					return
+				nav_page = 0
+			elif i == 0 and state.in_town:
+				_leave_town()
+				return
+			else:
+				nav_page = i
 			_apply_nav()
 			refresh())
 		row.add_child(b)
@@ -1101,6 +1260,8 @@ func _apply_nav() -> void:
 		tabs.current_tab = nav_page - 1
 	for i in nav_buttons.size():
 		var on := i == nav_page
+		if state != null and state.in_town:
+			on = (i == 3 and (nav_page == 0 or nav_page == 3)) or (i == nav_page and i != 0)
 		nav_buttons[i].add_theme_color_override("font_color", UI.GOLD if on else UI.DIM)
 		nav_buttons[i].add_theme_color_override("font_hover_color", UI.GOLD if on else UI.TEXT)
 		nav_buttons[i].modulate = Color.WHITE
@@ -1135,6 +1296,12 @@ func _refresh_tabs() -> void:
 	tabs.set_tab_hidden(2, not state.shop_unlocked())
 	town_tabs.set_tab_hidden(1, not state.craft_unlocked())
 	town_tabs.set_tab_hidden(2, not state.gamble_unlocked())
+	town_tabs.set_tab_hidden(4, state.hardcore)
+	for i in TOWN_PAGES.size():
+		town_tabs.set_tab_title(i, TOWN_PAGES[i])
+	# On a wide screen, picking the Town tab means walking to town
+	if not is_tall and tabs.current_tab == 2 and not state.in_town and not go_to_town():
+		tabs.current_tab = 1
 
 	# Badges: numbers on tabs that need your attention
 	var pts := state.stat_points if state.hero_class != "" else 0
@@ -1150,15 +1317,15 @@ func _refresh_tabs() -> void:
 	char_tabs.set_tab_title(2, "Race (!)" if Lineage.awaken_block(state) in ["", "trial"] and state.hero_class != "" else "Race")
 	item_tabs.set_tab_title(0, "Gear (%d)" % ups if ups > 0 else "Gear")
 	item_tabs.set_tab_title(1, "Bag (full)" if state.bag_full() else "Bag")
-	item_tabs.set_tab_hidden(2, state.hardcore)
-	var ready := codex.bounties_ready()
-	tabs.set_tab_title(3, "Codex (%d)" % ready if ready > 0 else "Codex")
+	var ready := Town.ready_count(state) + codex.deeds.size()
+	tabs.set_tab_title(2, "Town (%d)" % ready if ready > 0 else "Town")
+	town_tabs.set_tab_title(5, "Bounty Board (%d)" % Town.ready_count(state) if Town.ready_count(state) > 0 else TOWN_PAGES[5])
+	town_tabs.set_tab_title(6, "Guild Hall (%d)" % codex.deeds.size() if codex.deeds.size() > 0 else TOWN_PAGES[6])
 	if nav_buttons.size() == NAV.size():
-		var counts := [0, pts + sk, ups, 0, ready, 0]
+		var counts := [0, pts + sk, ups, ready, 0, 0]
 		for i in NAV.size():
 			nav_buttons[i].text = NAV[i][0] + (" %d" % counts[i] if counts[i] > 0 else "")
 		nav_buttons[3].visible = not tabs.is_tab_hidden(2)
-	codex_tabs.set_tab_title(3, "Bounties (%d)" % ready if ready > 0 else "Bounties")
 
 	# Only the page you're looking at needs updating
 	var group := _groups()[tabs.current_tab] as TabContainer

@@ -57,6 +57,21 @@ BOSS2 = {"bpm": 152, "root": 40, "scale": "phrygian", "prog": [0, 0, 1, 0, 5, 5,
          "drums": "KhKhShKhKhKhSKSh", "seed": 21, "verb": 0.18, "gains": {"bass": 0.6, "drums": 0.75, "lead": 0.24, "pad": 0.32}}
 
 
+# The town: a warm, unhurried tavern tune (mixolydian lute-like plucks, soft bass, light hand drum)
+TOWN = {"bpm": 88, "root": 55, "scale": "mixolydian", "prog": [0, 3, 6, 0, 0, 3, 4, 4, 0, 3, 6, 3, 5, 3, 4, 0], "bars": 16,
+        "pad": True, "pad_cut": 1300,
+        "bass": [0, None, 7, None, 0, None, 7, None], "bass_kind": "tri",
+        "arp": [0, 2, 4, 2, 5, 4, 2, 1], "arp_kind": "tri", "arp_decay": 0.22, "arp_cut": 3200,
+        "lead": 3, "lead_kind": "bell", "lead_rest": 0.35, "drums": "K...h.h.K...h.hh", "seed": 77, "verb": 0.32,
+        "gains": {"pad": 0.3, "arp": 0.3, "lead": 0.16, "bass": 0.4, "drums": 0.25}}
+
+
+def make_town():
+    x = song(TOWN)
+    save("music_town", x, 0.78, rate=32000, loop=True)
+    return len(x) / SR
+
+
 def make_boss2():
     x = song(BOSS2)
     save("music_boss2", x, 0.82, rate=32000, loop=True)
@@ -66,6 +81,9 @@ def make_boss2():
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     if "--music" in sys.argv:
-        print("boss2 seconds:", make_boss2())
+        if "--town" in sys.argv:
+            print("town seconds:", make_town())
+        else:
+            print("boss2 seconds:", make_boss2())
     else:
         print("v11 sfx:", make_sfx_v11())

@@ -886,6 +886,50 @@ func _initialize() -> void:
 	e2.slot = 1
 	e2.load_game()
 	check(e2.materials == e.materials and e2.skill_book == e.skill_book and e2.title() == e.title(), "new fields saved (%s vs %s)" % [e2.title(), e.title()])
+	# ---- Town: no fighting inside, contracts, deeds, the inn
+	var tg := GameState.new()
+	tg.slot = 1
+	tg.codex.path = ""
+	tg.new_game()
+	tg.choose_class("Warrior")
+	tg.best_floor = 40
+	tg.floor_num = 30
+	tg.level = 20
+	tg.gold = 100000
+	tg.spawn_enemy()
+	check(Town.enter(tg) and tg.in_town, "can go to town")
+	var t_hp0 := tg.enemy_hp
+	var t_fl0 := tg.floor_num
+	for i in 20:
+		tg.take_turn()
+	check(tg.enemy_hp == t_hp0 and tg.floor_num == t_fl0, "nothing happens while in town")
+	Town.refresh_board(tg)
+	check(tg.contracts.size() == Town.POSTED, "board has %d postings" % tg.contracts.size())
+	var t_c0: Dictionary = tg.contracts[0]
+	check(Town.take(tg, int(t_c0["id"])), "take a contract")
+	t_c0["kind"] = "hunt"
+	t_c0["monster"] = "Kobold"
+	t_c0["need"] = 2
+	Town.on_kill(tg, "Kobold", 0, false, 0)
+	check(not t_c0["done"], "contract not done after 1 of 2")
+	Town.on_kill(tg, "Kobold", 0, false, 0)
+	check(t_c0["done"], "contract done after 2 of 2")
+	var t_bag0 := tg.bag.size()
+	var t_gold0 := tg.gold
+	t_c0["reward"] = {"gold": 100, "item": {"slot": "Weapon", "rarity": 3}}
+	check(Town.claim(tg, int(t_c0["id"])) != "" and tg.bag.size() == t_bag0 + 1 and tg.gold > t_gold0, "contract pays gold and a weapon")
+	check(String(tg.bag[-1]["type"]) == String(tg.class_info().get("look", {}).get("Weapon", "")), "reward weapon fits the class (%s)" % tg.bag[-1]["type"])
+	tg.codex.deeds = ["f25"]
+	check(Town.claim_deed(tg, "f25") != "" and tg.codex.deeds.is_empty(), "deed claimed at the Guild Hall")
+	tg.hero_hp = 1
+	check(Town.rest(tg) and tg.hero_hp == tg.get_max_hp(), "inn heals fully")
+	tg.save_game()
+	var t_tg2 := GameState.new()
+	t_tg2.slot = 1
+	t_tg2.load_game()
+	check(t_tg2.in_town and t_tg2.contracts.size() == tg.contracts.size(), "town state saved")
+	Town.leave(tg)
+	check(not tg.in_town and tg.enemy_hp > 0, "leaving town starts a fight")
 	print("TESTS DONE, failures: ", fails)
 	GameState.delete_saves()
 	Codex.delete()

@@ -143,6 +143,7 @@ var collection := {}    # Unique / Signature / Set item name -> date found
 var achievements := {}  # id -> date unlocked
 var title := ""         # the achievement title you're showing ("" = your class)
 var bounties := {"day": "", "daily": [], "week": "", "weekly": []}
+var deeds: Array = []   # achievement ids whose rewards wait at the Guild Hall
 var login := {"last": "", "streak": 0}
 var guide := {}         # guide page id -> true (unlocked)
 var guide_queue: Array = []  # pages unlocked this session that haven't popped up yet
@@ -170,6 +171,7 @@ func _from(d: Dictionary) -> void:
 	bounties = d.get("bounties", bounties)
 	login = d.get("login", login)
 	guide = d.get("guide", {})
+	deeds = d.get("deeds", [])
 
 func save() -> void:
 	dirty = false
@@ -179,7 +181,7 @@ func save() -> void:
 	if f == null:
 		return
 	f.store_var({"bestiary": bestiary, "stats": stats, "collection": collection, "achievements": achievements,
-		"title": title, "bounties": bounties, "login": login, "guide": guide})
+		"title": title, "bounties": bounties, "login": login, "guide": guide, "deeds": deeds})
 
 static func delete() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))

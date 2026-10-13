@@ -139,6 +139,26 @@ static func build(spec: Dictionary) -> Dictionary:
 	var flip: bool = spec.get("flip", false)
 	if _built.has(key):
 		return _built[key]
+	var layers := _layers(spec)
+	var out := {"anims": {}}
+	for anim in BUILD:
+		var a := _compose(layers, anim, flip)
+		if not a.is_empty():
+			out["anims"][anim] = a
+	if not out["anims"].has("combat_idle"):
+		out["anims"]["combat_idle"] = _compose(layers, "walk", flip)
+	var idle: Dictionary = out["anims"]["combat_idle"]
+	out["still"] = (idle["img"][0] as Image)
+	_built[key] = out
+	return out
+
+## Walking and standing frames for a townsperson (right-facing): {"walk": {...}, "idle": {...}}.
+static func build_walker(spec: Dictionary) -> Dictionary:
+	var layers := _layers(spec)
+	return {"walk": _compose(layers, "walk", false), "idle": _compose(layers, "idle", false)}
+
+## The spec's parts as sorted layers: [z, order, files dict, info].
+static func _layers(spec: Dictionary) -> Array:
 	var items: Dictionary = manifest().get("items", {})
 	var body: String = spec.get("body", "male")
 	# LPC has few clothes cut for the muscular build: if any part lacks it, the whole
@@ -150,7 +170,7 @@ static func build(spec: Dictionary) -> Dictionary:
 				var fl: Dictionary = L["files"]
 				if fl.has("male") and not fl.has("muscular"):
 					body = "male"
-	var layers: Array = []  # [z, order, files dict, maps]
+	var layers: Array = []
 	var order := 0
 	for part in spec.get("parts", []):
 		var it: Dictionary = items.get(part["id"], {})
@@ -166,17 +186,7 @@ static func build(spec: Dictionary) -> Dictionary:
 			layers.append([int(L["z"]), order, f, info])
 			order += 1
 	layers.sort_custom(func(a, b): return a[0] < b[0] or (a[0] == b[0] and a[1] < b[1]))
-	var out := {"anims": {}}
-	for anim in BUILD:
-		var a := _compose(layers, anim, flip)
-		if not a.is_empty():
-			out["anims"][anim] = a
-	if not out["anims"].has("combat_idle"):
-		out["anims"]["combat_idle"] = _compose(layers, "walk", flip)
-	var idle: Dictionary = out["anims"]["combat_idle"]
-	out["still"] = (idle["img"][0] as Image)
-	_built[key] = out
-	return out
+	return layers
 
 ## One animation: every layer's strip for it (or its standing frame when a part
 ## has no such animation), stacked frame by frame.

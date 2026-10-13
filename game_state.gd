@@ -31,6 +31,10 @@ var hero_hp := BASE_HP
 
 # ---------- Hero ----------
 var hero_class := ""  # one of Classes.ORDER ("" until picked)
+var in_town := false     # in town (town.gd): no fighting until you leave
+var contracts: Array = []  # Bounty Board contracts, posted and taken (town.gd)
+var board_day := ""
+var shop_zone := -1      # the zone the shop's wares came from (they follow where you are)
 var level := 1
 var xp := 0
 var auto_ability := true
@@ -1351,7 +1355,7 @@ func enemy_scale() -> float:
 	return s
 
 func take_turn() -> void:
-	if run_over:
+	if run_over or in_town:
 		return
 	if not path_offer.is_empty():
 		# Waiting for you to pick a room; after a few turns it picks the first choice by itself
@@ -1653,6 +1657,7 @@ func _enemy_defeated() -> void:
 	if enemy_boss_kind == "trial":
 		_finish_trial()
 		return
+	Town.on_kill(self, species, tier, was_boss, zone_i)
 	ClassTree.on_kill(self, was_boss, tier, was_goblin)
 	if not was_goblin:
 		Mastery.on_kill(self)
@@ -2082,8 +2087,10 @@ func _check_codex() -> void:
 	if hardcore:
 		codex.at_least("hc_floor", best_floor)
 	for a in codex.check(self):
-		var reward_text := give_reward(a["reward"])
-		var line := "[color=#fbbf24]Achievement: %s![/color] %s" % [a["name"], reward_text]
+		# The reward waits at the Guild Hall in town (town.gd deeds)
+		if not a["id"] in codex.deeds:
+			codex.deeds.append(a["id"])
+		var line := "[color=#fbbf24]Achievement: %s![/color] Claim your reward at the Guild Hall in town." % a["name"]
 		if a.has("title"):
 			line += "  New title: [color=#e8b14a]%s[/color]" % a["title"]
 		say(line)
@@ -2366,11 +2373,12 @@ func buy_bag_upgrade() -> void:
 func restock_shop() -> void:
 	var feat_rarity := GameData.LEGENDARY if randf() * 100.0 < GameData.FEATURED_LEGENDARY_CHANCE else 3
 	var feat_slot: String = GameData.SLOT_ORDER.pick_random()
-	featured = GameData.make_item(feat_slot, feat_rarity, best_floor, _new_id())
+	featured = Town.local_goods(self, GameData.make_item(feat_slot, feat_rarity, best_floor, _new_id()))
 	shop.clear()
 	for _i in GameData.SHOP_SIZE:
 		var slot: String = GameData.SLOT_ORDER.pick_random()
-		shop.append(GameData.make_item(slot, GameData.roll_rarity(GameData.SHOP_RARITY_BONUS, GameData.LEGENDARY_CHANCE_SHOP), best_floor, _new_id()))
+		shop.append(Town.local_goods(self, GameData.make_item(slot, GameData.roll_rarity(GameData.SHOP_RARITY_BONUS, GameData.LEGENDARY_CHANCE_SHOP), best_floor, _new_id())))
+	shop_zone = GameData.zone_index(maxi(1, floor_num))
 	shop_version += 1
 
 func featured_price() -> int:
@@ -2741,6 +2749,10 @@ func save_game() -> void:
 		"level": level,
 		"xp": xp,
 		"auto_ability": auto_ability,
+		"in_town": in_town,
+		"contracts": contracts,
+		"board_day": board_day,
+		"shop_zone": shop_zone,
 		"stats": stats,
 		"stat_points": stat_points,
 		"stat_ver": 2,
@@ -2935,6 +2947,10 @@ func load_game() -> bool:
 	level = int(data.get("level", 1))
 	xp = int(data.get("xp", 0))
 	auto_ability = bool(data.get("auto_ability", true))
+	in_town = bool(data.get("in_town", false))
+	contracts = data.get("contracts", [])
+	board_day = str(data.get("board_day", ""))
+	shop_zone = int(data.get("shop_zone", -1))
 	var saved_stats: Dictionary = data.get("stats", {})
 	for st in GameData.STAT_ORDER:
 		stats[st] = int(saved_stats.get(st, 0))

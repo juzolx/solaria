@@ -65,6 +65,11 @@ func load_members(slots: Array, leader: GameState) -> void:
 		members.append(m)
 
 ## Saves every companion (their XP, levels and stat points).
+## Everyone back to full (a night at the inn).
+func heal_all() -> void:
+	for m in members:
+		m.hp = m.max_hp()
+
 func save_all() -> void:
 	for m in members:
 		m.hero.save_game()

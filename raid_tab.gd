@@ -50,7 +50,7 @@ func _load() -> void:
 	if g["data"] == null:
 		box.add_child(UI.label("Raids are for guilds", 18, UI.GOLD))
 		box.add_child(UI.label("Join or start a guild in the Guild tab. Then everyone fights the same weekly boss and the damage adds up.", 13, UI.DIM))
-		box.add_child(UI.primary("Go to Guild", func(): main.show_tab(3, 1)))
+		box.add_child(UI.primary("Go to Guild", func(): main.show_tab(4, 1)))
 		loading = false
 		return
 	var gid := int(g["data"]["id"])

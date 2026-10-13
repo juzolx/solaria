@@ -17,6 +17,10 @@ const NOTES := [
 		"New dark fantasy art: heroes and 32 monsters are built from the LPC character parts, with real attack animations (slash, thrust, cast, shoot), 37 hairstyles, 18 hair colors and all 12 races. Hit and spell effects, and the game now scales to fit your window.",
 		"Phones: a bottom bar (Fight, Hero, Items, Town, Codex, Online) and the fight fills the screen. Art credits are in Settings.",
 		"A faster first 10 minutes, hit impact, new sounds and a balance pass.",
+		"The Town: a real place you walk back to between dives. Tap a building: Shop, Blacksmith, Tavern (Fortune's Wheel), Inn (rest to full), Vault, Bounty Board and Guild Hall. Nothing can attack you in town. Its colors, weather and wares follow the zone you're in, and townsfolk walk the square.",
+		"Bounty Board: monster contracts with the reward shown up front. Hunts, elite hunts and WANTED bosses pay gold, gear and weapons made for your class. Turn them in back in town.",
+		"Deeds: achievements now pay real rewards (gold plus gear by how hard they were), claimed at the Guild Hall.",
+		"Heroes fit their race: hair sits right on orc, golem and beastkin heads, Dragonkin grow crests and horns, golems get stone styles, orcs and golems wear every outfit, and fairies have butterfly wings in their hair color. Stats show as small boxes side by side.",
 	]},
 	{"version": "0.10", "name": "Family Trees", "lines": [
 		"Every class is now a family tree: it splits in two at level 15, again at 35 and again at 60. You choose each step in the Class tab, which draws your whole tree.",

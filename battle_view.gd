@@ -297,7 +297,7 @@ func play(events: Array[Dictionary]) -> void:
 			"loot":
 				_later(delay + 0.15, _loot_pop.bind(e))
 				delay += 0.12
-			"tip":
+			"tip", "toast":
 				toast(e["text"])
 			"elite":
 				_sfx("boss_intro", 1.2)
