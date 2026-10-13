@@ -1060,6 +1060,7 @@ func _draw() -> void:
 			draw_rect(Rect2(0, 0, w * 0.18 * (1.0 - t), h), Color(0.0, 0.0, 0.02, va))
 			draw_rect(Rect2(w - w * 0.18 * (1.0 - t), 0, w * 0.18 * (1.0 - t), h), Color(0.0, 0.0, 0.02, va))
 			draw_rect(Rect2(0, 0, w, h * 0.22 * (1.0 - t)), Color(0.0, 0.0, 0.02, va))
+		_draw_mood(w, h, gy)
 	else:
 		draw_rect(Rect2(0, 0, w, h), tint.darkened(0.82))
 		draw_rect(Rect2(0, _ground(), w, h - _ground()), tint.darkened(0.6))
@@ -1435,6 +1436,46 @@ func _draw_status(font: Font) -> void:
 		x += wdt + 6.0
 
 ## The light color of the current zone (for rim lights).
+## Mood: slow light shafts from above and two layers of drifting ground fog,
+## in the zone's light. Pixel-sized blocks so it matches the art.
+static var _fog_tex: ImageTexture
+func _draw_mood(w: float, h: float, gy: float) -> void:
+	var lc := _rim_color()
+	# Light shafts
+	for i in 3:
+		var sway := sin(bob * 0.25 + i * 2.1) * w * 0.03
+		var x0 := w * (0.18 + 0.3 * i) + sway
+		var top := 0.0
+		var pts := PackedVector2Array([Vector2(x0, top), Vector2(x0 + w * 0.07, top), Vector2(x0 + w * 0.17, gy), Vector2(x0 + w * 0.06, gy)])
+		draw_colored_polygon(pts, Color(lc, 0.06 + 0.02 * sin(bob * 0.6 + i)))
+	# Fog
+	if _fog_tex == null:
+		var n := FastNoiseLite.new()
+		n.seed = 7
+		n.frequency = 0.06
+		var img := Image.create(96, 12, false, Image.FORMAT_RGBA8)
+		for y in 12:
+			for x in 96:
+				# tileable in x: blend the noise with its wrapped copy
+				var t := float(x) / 96.0
+				var v := lerpf(n.get_noise_2d(x, y * 2.0), n.get_noise_2d(x - 96, y * 2.0), t) * 0.5 + 0.5
+				var fall := 1.0 - absf(float(y) - 6.0) / 6.0
+				var al := snappedf(clampf(v * fall * 1.4 - 0.25, 0.0, 1.0), 0.25)
+				img.set_pixel(x, y, Color(1, 1, 1, al))
+		_fog_tex = ImageTexture.create_from_image(img)
+	var u := _u()
+	var fw := 96.0 * u * 4.0
+	var fh := 12.0 * u * 4.0
+	var fog_c := Color(lc.lerp(Color("#8a93a8"), 0.5), 0.3)
+	for layer in 2:
+		var speed := 6.0 + layer * 5.0
+		var off := fmod(bob * speed * u, fw)
+		var y := gy - fh * (0.75 - layer * 0.3)
+		var x := -off
+		while x < w:
+			draw_texture_rect(_fog_tex, Rect2(_snap(Vector2(x, y)), Vector2(fw, fh)), false, Color(fog_c, fog_c.a * (1.0 - layer * 0.35)))
+			x += fw
+
 func _rim_color() -> Color:
 	var zc := Color(GameData.zone_for_floor(state.floor_num)["color"])
 	return zc.lerp(Color("#fff4d6"), 0.55)

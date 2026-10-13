@@ -3,7 +3,7 @@
 achievements_tab.gd::GDScript::225817628144516105::1791830271::0::1::::AchievementsTab<>VBoxContainer<><>0<>0<><>::
 art_info.gd::GDScript::2121761137587333428::1791873882::0::1::::ArtInfo<>RefCounted<><>0<>0<><>::
 bag_tab.gd::GDScript::7963412957330005317::1791866958::0::1::::BagTab<>VBoxContainer<><>0<>0<><>::
-battle_view.gd::GDScript::1321114398721736239::1791892689::0::1::::BattleView<>Control<><>0<>0<><>::
+battle_view.gd::GDScript::1321114398721736239::1791892783::0::1::::BattleView<>Control<><>0<>0<><>::
 bestiary_tab.gd::GDScript::3473921906557743363::1791868480::0::1::::BestiaryTab<>HBoxContainer<><>0<>0<><>::
 bounty_tab.gd::GDScript::6266114143799082059::1791830295::0::1::::BountyTab<>ScrollContainer<><>0<>0<><>::
 character_creator.gd::GDScript::5800014703699665626::1791892077::0::1::::CharacterCreator<>Overlay<><>0<>0<><>::
@@ -1583,7 +1583,7 @@ ff813cb34bb4f6.png::CompressedTexture2D::7526341693947289217::1791891648::179189
 ff80600cecb9bd.png::CompressedTexture2D::7990517819787391636::1791891644::1791891672::1::::<><><>0<>0<>f56e8e030c2904e4461332daee1955d0<>res://.godot/imported/ff80600cecb9bd.png-67317b3c244c3eb291f777bed1bd7292.ctex::
 ffbe7f49bb5ce2.png::CompressedTexture2D::912945525569258742::1791891639::1791891672::1::::<><><>0<>0<>fe281e4c102b641962d76612a2fa3f89<>res://.godot/imported/ffbe7f49bb5ce2.png-fdac736bded5f87065c091c537f19ef4.ctex::
 ffdfbc2b352f98.png::CompressedTexture2D::4810183982156678::1791891642::1791891672::1::::<><><>0<>0<>f52f9c8e53c0b5bc401983f2ee4501d1<>res://.godot/imported/ffdfbc2b352f98.png-9df71321aeea5c841966ff388840800b.ctex::
-::res://art/pets/::1791892649
+::res://art/pets/::1791892692
 acolyte_0.png::CompressedTexture2D::6950289913628537160::1791892663::1791892692::1::::<><><>0<>0<>992ba956e991b801b3bb414d78c83070<>res://.godot/imported/acolyte_0.png-21830f2ca07dfc775d227fc3dfae283b.ctex::
 acolyte_1.png::CompressedTexture2D::1695217515112025776::1791892663::1791892692::1::::<><><>0<>0<>7c38248de5e17729e6cccc4056654811<>res://.godot/imported/acolyte_1.png-52bc7f72e1129e6bc08ea2ada8938c62.ctex::
 acolyte_2.png::CompressedTexture2D::730487058998075458::1791892663::1791892692::1::::<><><>0<>0<>355f29dd781c41ab59382476e5fd6780<>res://.godot/imported/acolyte_2.png-a96155cbd2618160567cfd7540edd6dc.ctex::
