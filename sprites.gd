@@ -20,9 +20,10 @@ const OUTLINE_ALPHA := 201     # layer outlines: drawn on empty space, only dark
 # ---------- Character creator choices ----------
 const BODIES := ["masc", "fem"]
 const BODY_NAMES := ["Build A", "Build B"]
+const USE_LPC := true  # heroes from the LPC parts (lpc.gd); false = the older drawn heroes
 const PORTRAIT_CROP := Rect2i(4, 4, 88, 88)  # the part of the canvas menus show
 const PORTRAIT := 88  # its size: show portraits at 88 or 176 to keep pixels crisp
-const HAIR_STYLES := ["Short", "Spiky", "Side Swept", "Shaggy", "Mohawk", "Buzz", "Bald", "Long", "Ponytail", "Bob", "Bun", "Braid", "Pixie"]
+const HAIR_STYLES := Lpc.HAIR_ORDER  # 37 styles; the 13 older names are kept so saves look the same
 
 const TYPE_MATERIAL := {
 	"sword": "steel", "dagger": "steel", "axe": "steel", "mace": "iron", "spear": "steel", "bow": "wood", "staff": "wood",
@@ -289,6 +290,10 @@ static func hero(app: Dictionary, looks: Dictionary) -> Dictionary:
 	var key := str(app) + str(looks)
 	if _cache.has(key):
 		return _cache[key]
+	if USE_LPC and Lpc.available():
+		var lp := _hero_lpc(app, looks)
+		_cache[key] = lp
+		return lp
 	var body: String = app.get("body", "masc")
 	if not body in BODIES:
 		body = "masc"
@@ -358,6 +363,24 @@ static func hero(app: Dictionary, looks: Dictionary) -> Dictionary:
 				out["glow"] = lk["trim"]
 	_cache[key] = out
 	return out
+
+## The LPC hero: animation frames plus a still picture laid out like the old
+## hero canvas (the 64x64 character at BODY_OFFSET), so menus and portraits work.
+static func _hero_lpc(app: Dictionary, looks: Dictionary) -> Dictionary:
+	var built := Lpc.build(Lpc.spec(app, looks))
+	var canvas := Image.create(CANVAS, CANVAS, false, Image.FORMAT_RGBA8)
+	var still: Image = built["still"]
+	var s := still.get_width()
+	canvas.blend_rect(still, Rect2i(0, 0, s, s), BODY_OFFSET - Vector2i((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2))
+	var glow := Color(0, 0, 0, 0)
+	var wt := ""
+	if looks.has("Weapon"):
+		wt = looks["Weapon"].get("type", "")
+		if looks["Weapon"].get("glow", false):
+			glow = looks["Weapon"]["trim"]
+	return {"body_img": canvas, "body": ImageTexture.create_from_image(canvas), "body_white": ImageTexture.create_from_image(_silhouette(canvas)),
+		"weapon": null, "weapon_white": null, "weapon_type": wt, "pivot": Vector2.ZERO, "glow": glow,
+		"hand": Vector2(BODY_OFFSET) + Vector2(44, 38), "lpc": built["anims"]}
 
 ## A small picture of an item on its own (for item cards and the collection).
 static func item_icon(item: Dictionary) -> ImageTexture:

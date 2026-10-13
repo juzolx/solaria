@@ -156,6 +156,8 @@ var _off := Vector2.ZERO
 var hero_art := {}       # from Sprites.hero()
 var hero_art_key := ""
 var swing := 0.0         # weapon swing: -1 wind-up, +1 strike
+var lpc_anim := "combat_idle"  # LPC heroes: the animation playing (lpc.gd)
+var lpc_t := 0.0
 var recoil := 0.0        # hero knocked back when hit
 var enemy_recoil := 0.0
 var projectiles: Array[Dictionary] = []
@@ -501,7 +503,14 @@ func _later(delay: float, fn: Callable) -> void:
 	else:
 		get_tree().create_timer(delay).timeout.connect(fn)
 
+## LPC heroes play a real animation (slash, thrust, cast, shoot).
+func _lpc_play(anim: String) -> void:
+	if hero_art.has("lpc") and (hero_art["lpc"] as Dictionary).has(anim):
+		lpc_anim = anim
+		lpc_t = 0.0
+
 func _hero_attack(e: Dictionary) -> void:
+	_lpc_play(Lpc.attack_anim(_weapon_type()))
 	var ranged := _weapon_type() in ["bow", "staff"]
 	if ranged:
 		_pose_hero([["crouch", 0.08], ["follow", 0.16]])
@@ -559,6 +568,7 @@ func _ability_fx(e: Dictionary) -> void:
 	var c := Color(e.get("color", "#ffffff"))
 	_sfx("ability", randf_range(0.95, 1.05))
 	_pose_hero([["crouch", 0.1], ["cast", 0.18], ["strike", 0.06], ["follow", 0.14]])
+	_lpc_play("spellcast" if _weapon_type() in ["staff", "", "orb", "tome"] else Lpc.attack_anim(_weapon_type()))
 	cast_color = c
 	cast_glow = 1.0
 	create_tween().tween_property(self, "cast_glow", 0.0, 0.6)
@@ -732,6 +742,12 @@ func _float(text: String, pos: Vector2, color: Color, font_size: int) -> void:
 func _process(delta: float) -> void:
 	bob += delta
 	shake = move_toward(shake, 0.0, delta * 40.0)
+	lpc_t += delta
+	if lpc_anim != "combat_idle" and hero_art.has("lpc"):
+		var la: Dictionary = hero_art["lpc"].get(lpc_anim, {})
+		if la.is_empty() or lpc_t >= float((la["tex"] as Array).size()) / float(la["fps"]):
+			lpc_anim = "combat_idle"
+			lpc_t = 0.0
 	var hs := _step_pose(hero_seq, hero_pose, hero_pose_t, delta, 0.0)
 	hero_seq = hs[0]
 	hero_pose = hs[1]
@@ -817,7 +833,12 @@ func _hero_canvas() -> Rect2:
 
 ## With companions around, everyone is drawn a size smaller so the group fits.
 func _hero_unit() -> int:
-	return maxi(1, _unit() - (1 if _party_members().size() > 0 and _unit() > 2 else 0))
+	var un := maxi(1, _unit() - (1 if _party_members().size() > 0 and _unit() > 2 else 0))
+	# LPC heroes are drawn smaller (about 48 of 64 pixels tall): one size up
+	# keeps them as big as the monsters while staying on whole pixels
+	if hero_art.has("lpc"):
+		un = maxi(un, roundi(un * 4.0 / 3.0))
+	return un
 
 func _party_members() -> Array:
 	return state.party.members if state != null and state.party != null else []
@@ -1175,6 +1196,9 @@ func _draw_hero() -> void:
 		var piv: Vector2 = hero_art["pivot"]
 		draw_texture_rect(hero_art["weapon_white"], Rect2(-piv - Vector2(2, 2), wtex.get_size() + Vector2(4, 4)), false, Color(glow, pulse))
 		draw_set_transform(_off)
+	if hero_art.has("lpc"):
+		_draw_lpc_hero(c, u, a, glow)
+		return
 	var poses := _hero_poses()
 	var pose: Dictionary = poses.get(hero_pose, {})
 	# Rim light: the zone's light catches the top edge of the silhouette
@@ -1195,6 +1219,29 @@ func _draw_hero() -> void:
 		if hero_flash > 0.0:
 			draw_texture(hero_art["weapon_white"], -piv, Color(1.0, 0.2, 0.2, hero_flash * 0.75))
 		draw_set_transform(_off)
+
+## An LPC hero: the current animation frame, with rim light, weapon glow and hit flash.
+func _draw_lpc_hero(c: Rect2, u: float, a: float, glow: Color) -> void:
+	var anims: Dictionary = hero_art["lpc"]
+	var an: Dictionary = anims.get(lpc_anim, anims.get("combat_idle", {}))
+	if an.is_empty():
+		return
+	var tex: Array = an["tex"]
+	var n := tex.size()
+	var fi := int(lpc_t * float(an["fps"]))
+	fi = fi % n if lpc_anim == "combat_idle" else mini(fi, n - 1)
+	var s: int = an["size"]
+	var off := Vector2(Sprites.BODY_OFFSET) - Vector2((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2)
+	var r := Rect2(c.position + off * u, Vector2(s, s) * u)
+	var white: Texture2D = an["white"][fi]
+	if glow.a > 0.0:
+		var pulse := 0.22 + 0.1 * sin(bob * 4.0)
+		for d in [Vector2(-u, 0), Vector2(u, 0), Vector2(0, -u), Vector2(0, u)]:
+			draw_texture_rect(white, Rect2(r.position + d, r.size), false, Color(glow, pulse * a))
+	draw_texture_rect(white, Rect2(r.position + Vector2(0, -u), r.size), false, Color(_rim_color(), 0.42 * a))
+	draw_texture_rect(tex[fi], r, false, Color(1, 1, 1, a))
+	if hero_flash > 0.0:
+		draw_texture_rect(white, r, false, Color(1.0, 0.2, 0.2, hero_flash * 0.75))
 
 ## God rank: a slow ring of golden motes circling the hero and a soft halo.
 func _draw_god_aura(r: Rect2, c: Color, a: float) -> void:
