@@ -19,7 +19,7 @@ func show_for(m) -> void:
 	body.add_child(left)
 	preview = TextureRect.new()
 	preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	preview.custom_minimum_size = Vector2(220, 220)
+	preview.custom_minimum_size = Vector2(Sprites.PORTRAIT * 2, Sprites.PORTRAIT * 2)
 	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	left.add_child(preview)

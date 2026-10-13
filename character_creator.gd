@@ -32,7 +32,7 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	left.add_child(lv)
 	preview = TextureRect.new()
 	preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	preview.custom_minimum_size = Vector2(230, 230)
+	preview.custom_minimum_size = Vector2(Sprites.PORTRAIT * 2, Sprites.PORTRAIT * 2)
 	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	lv.add_child(preview)

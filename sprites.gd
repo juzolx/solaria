@@ -20,6 +20,8 @@ const OUTLINE_ALPHA := 201     # layer outlines: drawn on empty space, only dark
 # ---------- Character creator choices ----------
 const BODIES := ["masc", "fem"]
 const BODY_NAMES := ["Build A", "Build B"]
+const PORTRAIT_CROP := Rect2i(4, 4, 88, 88)  # the part of the canvas menus show
+const PORTRAIT := 88  # its size: show portraits at 88 or 176 to keep pixels crisp
 const HAIR_STYLES := ["Short", "Spiky", "Side Swept", "Shaggy", "Mohawk", "Buzz", "Bald", "Long", "Ponytail", "Bob", "Bun", "Braid", "Pixie"]
 
 const TYPE_MATERIAL := {
@@ -393,6 +395,10 @@ static func portrait(app: Dictionary, looks := {}) -> ImageTexture:
 		var hand: Vector2 = h["hand"]
 		var piv: Vector2 = h["pivot"]
 		_stack(img, h["weapon_img"], Vector2i(int(hand.x - piv.x), int(hand.y - piv.y)))
+	# A fixed crop around the hero, so every portrait shows the hero at the same
+	# size and menus can show it at whole-pixel scales (88, 176...).
+	var r := Rect2i(PORTRAIT_CROP).intersection(Rect2i(Vector2i.ZERO, img.get_size()))
+	img = img.get_region(r)
 	var tex := ImageTexture.create_from_image(img)
 	_cache[key] = tex
 	return tex

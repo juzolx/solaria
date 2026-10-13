@@ -84,7 +84,7 @@ func _slot_button(id: String, open: bool, need: int, active: bool) -> Button:
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.custom_minimum_size = Vector2(0, 34)
 	b.clip_text = true
-	b.add_theme_font_size_override("font_size", 11)
+	b.add_theme_font_size_override("font_size", 12)
 	if not open:
 		b.text = "Lv %d" % need
 		b.disabled = true
@@ -137,7 +137,7 @@ func refresh() -> void:
 		sb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		sb.custom_minimum_size = Vector2(0, 34)
 		sb.clip_text = true
-		sb.add_theme_font_size_override("font_size", 11)
+		sb.add_theme_font_size_override("font_size", 12)
 		var sc := Color(Signatures.COLOR)
 		sb.text = "Signature: %s" % (SkillData.skill_name(state.sig_slot) if state.sig_slot != "" else "(none)")
 		sb.add_theme_stylebox_override("normal", UI.style(sc.darkened(0.75), sc.darkened(0.2), 6, 4, 1))

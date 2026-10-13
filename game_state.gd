@@ -138,6 +138,7 @@ var path_offer: Array = []  # room choices waiting for you ("fight", "treasure",
 var path_rooms_on := true   # off = never offer room choices
 var enemy_elite := false
 var path_wait := 0
+var path_hold := false  # "Wait for me": the fork doesn't pick by itself
 
 # ---------- Current enemy ----------
 var enemy_name := ""
@@ -1352,7 +1353,8 @@ func take_turn() -> void:
 		return
 	if not path_offer.is_empty():
 		# Waiting for you to pick a room; after a few turns it picks the first choice by itself
-		path_wait += 1
+		if not path_hold:
+			path_wait += 1
 		if path_wait >= GameData.PATH_WAIT_TURNS:
 			choose_path(auto_path())
 		return
@@ -1875,6 +1877,12 @@ func _next_floor() -> void:
 		_page("zones")
 	if floor_num >= 8:
 		_page("bounties")
+	if floor_num >= 4:
+		_page("elements")
+	if floor_num >= 10 or best_floor >= World.CURSE_UNLOCK:
+		_page("milestones")
+	if level >= World.PET_LEVEL:
+		_page("pets")
 	if floor_num >= 3:
 		_page("escape")
 	if level >= 8:
@@ -3192,6 +3200,7 @@ func _maybe_offer_path() -> void:
 	others.shuffle()
 	path_offer = ["fight", others[0], others[1]]
 	path_wait = 0
+	path_hold = false
 	tip("paths", "A fork in the dungeon! Pick the next room, or it picks Fight on by itself in a few seconds.")
 
 ## After every boss the fork has the wandering merchant in it.

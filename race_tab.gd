@@ -47,7 +47,7 @@ func _power_card() -> void:
 	var pic := TextureRect.new()
 	pic.texture = Sprites.portrait(state.appearance, state.hero_looks())
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(72, 72)
+	pic.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	head.add_child(pic)

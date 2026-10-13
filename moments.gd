@@ -62,7 +62,7 @@ func _build(kind: String, title: String, sub: String, color: Color, extra: Strin
 		var pic := TextureRect.new()
 		pic.texture = portrait
 		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		pic.custom_minimum_size = Vector2(150, 150)
+		pic.custom_minimum_size = Vector2(Sprites.PORTRAIT * 2, Sprites.PORTRAIT * 2)
 		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		pic.modulate.a = 0.0
@@ -161,7 +161,7 @@ func _build_evolve(d: Dictionary) -> void:
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
 	center.add_child(v)
 	var pic_box := Control.new()
-	pic_box.custom_minimum_size = Vector2(190, 190)
+	pic_box.custom_minimum_size = Vector2(Sprites.PORTRAIT * 2, Sprites.PORTRAIT * 2)
 	pic_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(pic_box)
 	var before := TextureRect.new()
@@ -217,7 +217,7 @@ func _build_evolve(d: Dictionary) -> void:
 	if main_node and main_node.timer:
 		main_node.timer.paused = true
 	if main_node and main_node.sfx:
-		main_node.sfx.play("spec")
+		main_node.sfx.play("evolve")
 
 func _burst() -> void:
 	_sparks.clear()

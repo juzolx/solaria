@@ -47,7 +47,7 @@ func setup(m) -> void:
 	card.add_child(ch)
 	portrait = TextureRect.new()
 	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	portrait.custom_minimum_size = Vector2(72, 72)
+	portrait.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT)
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	ch.add_child(portrait)

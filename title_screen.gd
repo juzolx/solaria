@@ -111,7 +111,7 @@ func _draw() -> void:
 	if hero_tex:
 		var hs := Vector2(hero_tex.get_size()) * unit
 		var bob := roundf(sin(t * 2.2) * unit * 0.5)
-		var feet := float(Sprites.HERO_FOOT) * unit
+		var feet := float(Sprites.HERO_FOOT - Sprites.PORTRAIT_CROP.position.y) * unit
 		draw_texture_rect(hero_tex, Rect2(Vector2(vs.x * 0.30 - hs.x / 2.0, ground_y - feet + bob), hs), false)
 	if not monster.is_empty():
 		var tex: Texture2D = monster["tex"]
@@ -250,7 +250,7 @@ func _fill_side() -> void:
 		var up := UI.panel(Color("#2a1a2e"), Color("#e8b14a"), 8, 10, 2)
 		side_box.add_child(up)
 		var ut := UI.rich(13)
-		ut.text = "[color=#e8b14a][b]FAMILY TREES[/b][/color]  [color=%s]v%s[/color]\nClass family trees, 72 unique classes with ranks up to God, 115 hidden branch-offs, and HD art." % [UI.hex(UI.DIM), PatchNotes.VERSION]
+		ut.text = "[color=#e8b14a][b]EVOLUTION[/b][/color]  [color=%s]v%s[/color]\n8 stats, signature skills, elements and combos, companions, milestones and new 64x64 heroes." % [UI.hex(UI.DIM), PatchNotes.VERSION]
 		up.add_child(ut)
 		var pulse := up.create_tween().set_loops()
 		pulse.tween_property(up, "modulate", Color(1.15, 1.1, 0.95), 0.9)

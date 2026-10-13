@@ -3,9 +3,20 @@ extends RefCounted
 ## What changed in each version. Shown on the title screen.
 ## Add the newest version at the top of NOTES.
 
-const VERSION := "0.10"
+const VERSION := "0.11"
 
 const NOTES := [
+	{"version": "0.11", "name": "Evolution", "lines": [
+		"The Family Tree is now the Evolution Tree. Classes you haven't reached show as ???, and every evolution has a big moment and teaches a signature skill for a new 4th skill slot.",
+		"8 stats: STR, VIT, AGI, DEX, INT, WIS, LUK and CHA, at 5 points a level. Your old points were converted. Suggested builds, Auto-spend, respec tomes and 3 saved builds (stats, skills and gear).",
+		"Special stats now grow from what you do, not from points. Weapon mastery grows with each weapon type you use.",
+		"Combat: elemental weaknesses and resistances, status combos (freeze, shatter, conduct, toxic), new elite modifiers, boss mechanics, auto-battle settings and a death recap with tips.",
+		"Loot: upgrade arrows with a percent, gear sets for every class tree, and living legendaries that awaken as they kill.",
+		"World: floor hazards, events between fights, milestone floors with Champions and checkpoints, opt-in curses, bestiary mastery bonuses, companions that evolve, achievement rewards and a Next goal line under the fight.",
+		"God trials rotate every week. Unique classes get a cape and God rank an aura.",
+		"Art: every hero is redrawn at native 64x64 with 13 hair styles, 18 hair colors and all 12 races redone. Pixel-perfect scaling so the art stays crisp, and the game now scales to fit your window.",
+		"A faster first 10 minutes, hit impact, new sounds and a balance pass.",
+	]},
 	{"version": "0.10", "name": "Family Trees", "lines": [
 		"Every class is now a family tree: it splits in two at level 15, again at 35 and again at 60. You choose each step in the Class tab, which draws your whole tree.",
 		"Your deeds limit you: every class is Good, Neutral or Evil. Good heroes can't take Evil classes, Evil heroes can't take Good ones, and Neutral heroes can take either.",

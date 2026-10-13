@@ -656,6 +656,8 @@ static func display_name(item: Dictionary) -> String:
 		n += " (Awakened)"
 	elif sl > 0:
 		n += " (Soul %d)" % sl
+	if UI.colorblind:
+		n = "[%s] %s" % [RARITY_NAMES[clampi(int(item.get("rarity", 0)), 0, RARITY_NAMES.size() - 1)].substr(0, 3), n]
 	return n
 
 static func sell_value(item: Dictionary) -> int:

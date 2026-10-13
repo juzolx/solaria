@@ -29,6 +29,7 @@ var text_size := 1           # 0 small, 1 normal, 2 large
 var notes_seen := ""         # last patch notes version shown
 var skill_book := {}         # the skill book every Regular hero shares
 var show_recap := true       # show what killed you after a defeat
+var colorblind := false      # spell out what colors mean (rarity, weak / resist)
 
 static func load_profile() -> Profile:
 	var p := Profile.new()
@@ -63,6 +64,7 @@ func _from(d: Dictionary) -> void:
 	notes_seen = str(d.get("notes_seen", ""))
 	skill_book = d.get("skill_book", {})
 	show_recap = bool(d.get("show_recap", true))
+	colorblind = bool(d.get("colorblind", false))
 
 func save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
@@ -73,7 +75,7 @@ func save() -> void:
 		"fullscreen": fullscreen, "dev_mode": dev_mode, "hc_best": hc_best, "hc_runs": hc_runs,
 		"player_name": player_name, "online": online, "path_choice": path_choice,
 		"active_slot": active_slot, "max_floor": max_floor, "stash": stash, "stash_level": stash_level,
-		"shake": shake, "damage_numbers": damage_numbers, "flashes": flashes, "text_size": text_size, "notes_seen": notes_seen, "skill_book": skill_book, "show_recap": show_recap,
+		"shake": shake, "damage_numbers": damage_numbers, "flashes": flashes, "text_size": text_size, "notes_seen": notes_seen, "skill_book": skill_book, "show_recap": show_recap, "colorblind": colorblind,
 	})
 
 ## How many hero slots are open (the 2nd at floor 25, the 3rd at floor 50).

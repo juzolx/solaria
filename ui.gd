@@ -21,7 +21,11 @@ const PURPLE := Color("#a78bfa")
 static var sfx: Sfx  # set by main, used for button clicks
 static var tip_layer: CanvasLayer  # set by main: where tap-tips appear
 static var _tip: Control
-const TAP := 40  # smallest comfortable tap target on a phone (pixels at the design size)
+const TAP := 44  # smallest comfortable tap target on a phone (pixels at the design size)
+const BUTTON_H := 36  # every button is at least this tall (the window scales up on phones)
+const EDGE := Color("#64759b")  # edges of things you can press: 3:1 contrast or better
+const MIN_FONT := 12
+static var colorblind := false  # set from the settings: adds words and symbols where color carries meaning
 
 static func hex(c: Color) -> String:
 	return "#" + c.to_html(false)
@@ -38,7 +42,7 @@ static func style(bg: Color, border: Color, radius := 8, margin := 8, width := 2
 static func label(text: String, font_size := 14, color := TEXT) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", font_size)
+	l.add_theme_font_size_override("font_size", maxi(MIN_FONT, font_size))
 	l.add_theme_color_override("font_color", color)
 	return l
 
@@ -47,8 +51,8 @@ static func rich(font_size := 13, fit := true) -> RichTextLabel:
 	r.bbcode_enabled = true
 	r.scroll_active = false
 	r.fit_content = fit
-	r.add_theme_font_size_override("normal_font_size", font_size)
-	r.add_theme_font_size_override("bold_font_size", font_size)
+	r.add_theme_font_size_override("normal_font_size", maxi(MIN_FONT, font_size))
+	r.add_theme_font_size_override("bold_font_size", maxi(MIN_FONT, font_size))
 	return r
 
 static func vbox(sep := 8) -> VBoxContainer:
@@ -80,6 +84,7 @@ static func heading(text: String) -> Label:
 static func button(text: String, on_press: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
+	b.custom_minimum_size.y = BUTTON_H
 	b.pressed.connect(on_press)
 	b.resized.connect(func(): b.pivot_offset = b.size / 2.0)
 	b.button_down.connect(func():
@@ -154,7 +159,7 @@ static func section(parent: Control, title: String, note := "") -> void:
 	line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(line)
 	if note != "":
-		parent.add_child(wrap(note, 12, DIM))
+		parent.add_child(UI.wrap(note, 12, DIM))
 
 ## A small rounded tag ("SUGGESTED", "WEAK: Fire").
 static func chip(text: String, color: Color, font_size := 11) -> PanelContainer:
@@ -241,11 +246,19 @@ static func make_theme() -> Theme:
 	t.set_color("default_color", "RichTextLabel", TEXT)
 	t.set_stylebox("panel", "PanelContainer", style(PANEL, BORDER, 10, 12))
 
-	t.set_stylebox("normal", "Button", style(Color("#1b2438"), Color("#2e3b58"), 6, 6))
+	t.set_stylebox("normal", "Button", style(Color("#1b2438"), EDGE, 6, 6))
 	t.set_stylebox("hover", "Button", style(Color("#232f49"), Color("#8a6d3b"), 6, 6))
 	t.set_stylebox("pressed", "Button", style(Color("#8a6420"), GOLD, 6, 6))
 	t.set_stylebox("disabled", "Button", style(Color("#111829"), Color("#1a2236"), 6, 6))
-	t.set_stylebox("focus", "Button", StyleBoxEmpty.new())
+	var ring := style(Color(0, 0, 0, 0), Color("#f6d88f"), 7, 6, 2)
+	ring.draw_center = false
+	ring.expand_margin_left = 2
+	ring.expand_margin_right = 2
+	ring.expand_margin_top = 2
+	ring.expand_margin_bottom = 2
+	t.set_stylebox("focus", "Button", ring)
+	t.set_stylebox("focus", "OptionButton", ring)
+	t.set_stylebox("focus", "LineEdit", ring)
 	t.set_color("font_color", "Button", TEXT)
 	t.set_color("font_hover_color", "Button", Color("#f6d88f"))
 	t.set_color("font_pressed_color", "Button", BG)
@@ -262,7 +275,7 @@ static func make_theme() -> Theme:
 	var tab_on := style(PANEL, GOLD, 6, 8, 0)
 	tab_on.border_width_top = 3
 	t.set_stylebox("tab_selected", "TabContainer", tab_on)
-	t.set_stylebox("tab_unselected", "TabContainer", style(BG, EMPTY, 6, 8, 1))
+	t.set_stylebox("tab_unselected", "TabContainer", style(BG, EDGE, 6, 8, 1))
 	t.set_stylebox("tab_hovered", "TabContainer", style(Color("#111a2e"), Color("#8a6d3b"), 6, 8, 1))
 	t.set_color("font_selected_color", "TabContainer", GOLD)
 	t.set_color("font_unselected_color", "TabContainer", DIM)
@@ -281,12 +294,12 @@ static func make_theme() -> Theme:
 	t.set_font_size("font_size", "SubTabs", 13)
 	t.set_color("font_selected_color", "SubTabs", TEXT)
 
-	t.set_stylebox("normal", "OptionButton", style(Color("#1b2438"), Color("#2e3b58"), 6, 6))
+	t.set_stylebox("normal", "OptionButton", style(Color("#1b2438"), EDGE, 6, 6))
 	t.set_stylebox("hover", "OptionButton", style(Color("#232f49"), Color("#8a6d3b"), 6, 6))
 	t.set_stylebox("panel", "PopupMenu", style(PANEL, BORDER, 6, 6))
 	t.set_stylebox("grabber_area", "HSlider", style(GOLD, GOLD, 3, 0, 0))
 	t.set_stylebox("grabber_area_highlight", "HSlider", style(GOLD, GOLD, 3, 0, 0))
-	t.set_stylebox("slider", "HSlider", style(Color("#070a14"), BORDER, 3, 2, 1))
+	t.set_stylebox("slider", "HSlider", style(Color("#070a14"), EDGE, 3, 2, 1))
 	t.set_color("font_color", "TooltipLabel", TEXT)
 	t.set_stylebox("panel", "TooltipPanel", style(INSET, GOLD, 6, 8))
 	return t

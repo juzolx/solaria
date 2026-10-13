@@ -58,7 +58,8 @@ func _ready() -> void:
 			"potion", "floor", "death", "click", "equip", "buy", "sell", "salvage", "craft", "level_up", "spec",
 			"boss_intro", "dodge", "burn", "stun", "buff", "ability", "error",
 			"rare_spawn", "signature", "achievement", "event", "page",
-			"awaken", "transform", "hidden", "escape", "portal"]:
+			"awaken", "transform", "hidden", "escape", "portal",
+			"evolve", "weak_hit", "resisted", "freeze", "shatter", "combo", "milestone", "pet", "curse", "enrage"]:
 		var path: String = SOUND_DIR + n + ".wav"
 		if ResourceLoader.exists(path):
 			sounds[n] = load(path)
@@ -68,7 +69,8 @@ func _ready() -> void:
 		"level_up": "legendary", "spec": "legendary", "boss_intro": "floor", "dodge": "tap", "burn": "hit",
 		"stun": "crit", "buff": "potion", "ability": "crit", "error": "click",
 		"rare_spawn": "boss_intro", "signature": "unique", "achievement": "level_up", "event": "floor", "page": "click",
-		"awaken": "level_up", "transform": "rare_spawn", "hidden": "signature", "escape": "dodge", "portal": "event"}
+		"awaken": "level_up", "transform": "rare_spawn", "hidden": "signature", "escape": "dodge", "portal": "event",
+		"evolve": "spec", "weak_hit": "crit", "resisted": "hit", "freeze": "stun", "shatter": "crit", "combo": "ability", "milestone": "level_up", "pet": "buff", "curse": "boss_intro", "enrage": "boss_intro"}
 	for n in aliases:
 		if not sounds.has(n):
 			sounds[n] = sounds[aliases[n]]

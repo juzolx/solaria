@@ -60,6 +60,9 @@ var potion_label: Label
 # Fight panel
 var battle: BattleView
 var log_label: RichTextLabel
+var ui_root: MarginContainer
+var goal_label: Label
+var goal_bar: ProgressBar
 var log_lines: Array[String] = []
 var skill_buttons: Array[Button] = []  # one per active skill slot
 var auto_ability_button: Button
@@ -291,9 +294,17 @@ func _show_path_choice() -> void:
 		bv.add_child(d)
 		b.pressed.connect(_choose_path.bind(kind))
 		row.add_child(b)
-	path_count_label = UI.label("", 11, UI.DIM)
-	path_count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(path_count_label)
+	var crow := UI.hbox(8)
+	crow.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_child(crow)
+	path_count_label = UI.label("", 12, UI.DIM)
+	path_count_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	crow.add_child(path_count_label)
+	var hold := UI.button("Wait for me", func():
+		state.path_hold = true
+		refresh())
+	hold.tooltip_text = "Stop the countdown: the fight waits until you pick"
+	crow.add_child(hold)
 	await get_tree().process_frame
 	if is_instance_valid(path_panel):
 		path_panel.position = (battle.size - path_panel.size) / 2.0
@@ -351,7 +362,7 @@ func _show_recap() -> void:
 		profile.save()
 		if is_instance_valid(recap_panel):
 			recap_panel.queue_free())
-	off.add_theme_font_size_override("font_size", 11)
+	off.add_theme_font_size_override("font_size", 12)
 	v.add_child(off)
 	recap_panel.custom_minimum_size.x = minf(520.0, battle.size.x - 24.0)
 	await get_tree().process_frame
@@ -413,9 +424,9 @@ func _build_ui() -> void:
 	for side in ["left", "right", "top", "bottom"]:
 		root.add_theme_constant_override("margin_" + side, 10)
 	add_child(root)
-	var fit := func(): root.size = get_viewport().get_visible_rect().size
-	fit.call()
-	get_viewport().size_changed.connect(fit)
+	ui_root = root
+	_fit_root()
+	get_viewport().size_changed.connect(_fit_root)
 
 	var main_v := UI.vbox(10)
 	root.add_child(main_v)
@@ -476,6 +487,11 @@ func _build_ui() -> void:
 	get_viewport().size_changed.connect(_fit_layout)
 
 ## Phone-style tall screens stack the fight above the tabs.
+## Keeps the whole interface exactly as big as the visible screen.
+func _fit_root() -> void:
+	if ui_root:
+		ui_root.size = get_viewport().get_visible_rect().size
+
 func _fit_layout() -> void:
 	var win := get_tree().root.size
 	var tall := win.x < win.y * 0.95
@@ -485,6 +501,7 @@ func _fit_layout() -> void:
 	var want := Vector2i(Vector2(648, 1152) * zoom) if tall else Vector2i(Vector2(1152, 648) * zoom)
 	if get_tree().root.content_scale_size != want:
 		get_tree().root.content_scale_size = want
+		_fit_root.call_deferred()
 	body.vertical = tall
 	left_panel.size_flags_stretch_ratio = 0.9 if tall else 1.0
 	tabs.size_flags_stretch_ratio = 1.1 if tall else 1.2
@@ -569,7 +586,7 @@ func _build_top_bar(parent: Control) -> void:
 		names.append(GameData.EVENTS[id]["name"])
 		tips.append("%s: %s" % [GameData.EVENTS[id]["name"], GameData.EVENTS[id]["text"]])
 	(ep[1] as Label).text = " + ".join(names)
-	(ep[1] as Label).add_theme_font_size_override("font_size", 11)
+	(ep[1] as Label).add_theme_font_size_override("font_size", 12)
 	event_pill.tooltip_text = "Events running now:\n" + "\n".join(tips)
 	event_pill.mouse_filter = Control.MOUSE_FILTER_STOP
 	event_pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -606,15 +623,23 @@ func _build_fight(parent: Control) -> void:
 	parent.add_child(panel)
 	var col := UI.vbox(8)
 	panel.add_child(col)
+	# The next goal: always something to chase (world.gd)
+	var goal_row := UI.vbox(2)
+	col.add_child(goal_row)
+	goal_label = UI.label("", 13, UI.GOLD)
+	goal_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	goal_row.add_child(goal_label)
+	goal_bar = UI.bar(UI.GOLD, 5)
+	goal_row.add_child(goal_bar)
 	log_label = UI.rich(12, false)
 	log_label.custom_minimum_size = Vector2(0, 80)
 	col.add_child(log_label)
 
 	var ability_row := UI.hbox(6)
 	col.add_child(ability_row)
-	for i in 3:
+	for i in 4:
 		var b := UI.primary("", func():
-			var id: String = state.active_slots[i]
+			var id: String = state.sig_slot if i == 3 else state.active_slots[i]
 			if id != "" and state.use_skill(id):
 				refresh(), UI.GOLD)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -786,6 +811,7 @@ func apply_settings() -> void:
 		DisplayServer.window_set_mode(mode)
 	state.dev_mode = profile.dev_mode
 	state.path_rooms_on = profile.path_choice != "fight"
+	UI.colorblind = profile.colorblind
 	profile.save()
 
 func reset_save() -> void:
@@ -834,7 +860,7 @@ func refresh() -> void:
 		path_count_label = null
 	if path_count_label:
 		var auto_pick: String = state.path_info(state.auto_path())["name"]
-		path_count_label.text = "Picks %s by itself in %d..." % [auto_pick, maxi(0, GameData.PATH_WAIT_TURNS - state.path_wait)]
+		path_count_label.text = ("Waiting for you to pick" if state.path_hold else "Picks %s by itself in %d..." % [auto_pick, maxi(0, GameData.PATH_WAIT_TURNS - state.path_wait)])
 	if state.run_over and not fallen_shown:
 		get_tree().create_timer(1.6).timeout.connect(_on_hardcore_death)
 		fallen_shown = true
@@ -971,7 +997,12 @@ func _refresh_fight() -> void:
 	var acts := state.equipped_actives()
 	for i in skill_buttons.size():
 		var b: Button = skill_buttons[i]
-		var id: String = state.active_slots[i] if i < state.active_slot_count() else ""
+		var id: String = state.active_slots[i] if i < mini(3, state.active_slot_count()) else ""
+		if i == 3:
+			id = state.sig_slot
+			if id == "":
+				b.visible = false
+				continue
 		if state.hero_class == "":
 			b.visible = i == 0
 			b.text = "Choose a class first"
@@ -991,6 +1022,13 @@ func _refresh_fight() -> void:
 		b.add_theme_stylebox_override("normal", UI.style(c.darkened(0.6), c, 6, 8))
 		b.add_theme_color_override("font_color", c.lightened(0.55))
 	auto_ability_button.text = "Auto %s" % ("ON" if state.auto_ability else "OFF")
+	var goal := World.next_goal(state)
+	goal_label.text = "Next: " + String(goal.get("text", ""))
+	goal_label.add_theme_color_override("font_color", goal.get("color", UI.GOLD))
+	var gp := float(goal.get("pct", -1.0))
+	goal_bar.visible = gp >= 0.0
+	goal_bar.value = gp * 100.0
+	goal_bar.max_value = 100.0
 	var why := Lineage.escape_block(state)
 	escape_button.disabled = why != "" or not state.path_offer.is_empty()
 	escape_button.text = ("Run (%d%%)" % int(Lineage.escape_chance(state))) if why == "" else "Run"

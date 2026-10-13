@@ -309,7 +309,7 @@ func play(events: Array[Dictionary]) -> void:
 					_sfx("achievement")
 					toast("Achievement unlocked: %s! %s" % [e["name"], e["text"]] + (("  New title: " + str(e["title"])) if str(e["title"]) != "" else "")))
 			"mini_event":
-				_sfx("event")
+				_sfx({"milestone": "milestone", "pet": "pet", "chest": "curse"}.get(String(e["kind"]), "event"))
 				banner_text = str(e["title"])
 				banner_sub = str(e["sub"])
 				banner_color = Color("#c084fc") if e["kind"] == "shrine" else Color("#fbbf24")
@@ -396,10 +396,11 @@ func play(events: Array[Dictionary]) -> void:
 			"element":
 				var weak: bool = e["kind"] == "weak"
 				var ec := Color(Combat.ELEMENT_COLORS.get(e["element"], "#ffffff"))
+				_later(delay, func(): _sfx("weak_hit" if weak else "resisted", randf_range(0.95, 1.08)))
 				_later(delay, func(): _float("WEAK!" if weak else "RESISTED", _enemy_center() + Vector2(34, -44), ec.lightened(0.2) if weak else Color("#94a3b8"), 14 if weak else 12))
 			"combo":
 				_later(delay + 0.1, func():
-					_sfx("signature" if e["id"] in ["frozen", "shatter"] else "buff", 1.15)
+					_sfx({"frozen": "freeze", "shatter": "shatter"}.get(e["id"], "combo"))
 					var cc := Color(e["color"])
 					floaters.append({"text": String(e["name"]).to_upper(), "pos": _enemy_center() + Vector2(0, -64), "color": cc, "size": 24, "life": 1.6, "keep": true, "t": 0.0, "lane": 0, "base": _enemy_center() + Vector2(0, -64)})
 					_burst(_enemy_center(), cc, 26, 320.0)
@@ -418,7 +419,7 @@ func play(events: Array[Dictionary]) -> void:
 				_later(delay, func(): _float("RESISTED", _hero_center() + Vector2(0, -36), Color("#2dd4bf"), 14))
 			"boss_mechanic":
 				_later(delay + 0.2, func():
-					_sfx("boss_intro", 1.3)
+					_sfx("enrage" if e["id"] == "enrage" else "boss_intro", 1.0 if e["id"] == "enrage" else 1.3)
 					banner_text = String(e["name"]).to_upper()
 					banner_sub = String(Combat.MECHANICS[e["id"]]["text"]).replace("%d", str(Combat.ENRAGE_TURNS))
 					banner_color = Color(e["color"])
@@ -1158,6 +1159,8 @@ func _draw_hero() -> void:
 	if not uc.is_empty():
 		var ri := ClassTree.RANK_ORDER.find(ClassTree.rank_of(uc))
 		_draw_road_aura(_hero_rect(), Color(ClassTree.RANK_COLORS[ClassTree.rank_of(uc)]), 0.6 + ri * 0.55)
+		if state.hero_looks().has("Aura"):
+			_draw_god_aura(_hero_rect(), Color(ClassTree.RANK_COLORS["God"]), a)
 	elif state.hero_class == "Wanderer" and not state.class_path.is_empty():
 		var demon := state.class_path[0] == "demonic_disciple"
 		_draw_road_aura(_hero_rect(), Color("#e43b44") if demon else Color("#7fe9ff"), float(state.class_path.size()))
@@ -1192,6 +1195,20 @@ func _draw_hero() -> void:
 		if hero_flash > 0.0:
 			draw_texture(hero_art["weapon_white"], -piv, Color(1.0, 0.2, 0.2, hero_flash * 0.75))
 		draw_set_transform(_off)
+
+## God rank: a slow ring of golden motes circling the hero and a soft halo.
+func _draw_god_aura(r: Rect2, c: Color, a: float) -> void:
+	var u := _u()
+	var ctr := r.get_center() + _off
+	var rx := r.size.x * 0.48
+	var ry := r.size.y * 0.16
+	for i in 14:
+		var ang := bob * 0.9 + i * TAU / 14.0
+		var p := ctr + Vector2(cos(ang) * rx, sin(ang) * ry + r.size.y * 0.1)
+		var front := sin(ang) > 0.0
+		var sz := u * (2.0 if front else 1.0)
+		draw_rect(Rect2(_snap(p), Vector2(sz, sz)), Color(c.lightened(0.3 if front else 0.0), (0.85 if front else 0.4) * a))
+	draw_arc(ctr + Vector2(0, -r.size.y * 0.44), r.size.x * 0.16, 0.0, TAU, 24, Color(c, (0.55 + 0.2 * sin(bob * 2.0)) * a), maxf(2.0, u))
 
 ## The Wanderer's aura: rising streaks of light (sword) or flame (demon).
 func _draw_road_aura(r: Rect2, c: Color, strength: float) -> void:
