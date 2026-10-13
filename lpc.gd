@@ -315,6 +315,12 @@ const FIXED := {
 	"blood": ["#e05050", "#b02a3a", "#7a1a2e", "#4a0e1e", "#260810"],
 	"wine": ["#c86a8a", "#9a3e64", "#6e2448", "#46142e", "#24081a"],
 	"teal": ["#a4dddb", "#4fb0c6", "#2e7896", "#1d4a66", "#0e2638"],
+	"hag": ["#a8d0e0", "#78a0c0", "#4e7090", "#304868", "#1a283e"],
+	"ember": ["#fee761", "#feae34", "#f77622", "#be4a2f", "#733e39"],
+	"silver": ["#ffffff", "#e2e6ee", "#b4bccb", "#7d8798", "#4a5266"],
+	"green_royal": ["#8fd17a", "#56a05a", "#357048", "#224a36", "#122a1e"],
+	"fairy_skin": ["#fff0f6", "#fcd0e4", "#f0a8c8", "#c47a9e", "#7a4662"],
+	"ghost": ["#e8f4ff", "#c0d8ee", "#8fb0d2", "#5f7ea8", "#34466e"],
 }
 
 ## The parts for a hero. app = appearance, looks = slot -> Sprites.gear_look().
@@ -469,6 +475,24 @@ const MONSTERS := {
 	"wendigo": {"body": "muscular", "attack": "slash", "parts": [["body", "bone"], ["head_skeleton", "bone"], ["horns_back", "bone"], ["legs_shorts", "fur_brown"]]},
 	"woodwose": {"body": "muscular", "attack": "slash", "parts": [["body", "fur_brown"], ["head_human_m", "fur_brown"], ["face_angry", "fur_brown"], ["hair_long_messy", "fur_brown"], ["beard_beard", "fur_brown"], ["legs_shorts", "leather"], ["w_mace", ""]]},
 	"boggart": {"body": "muscular", "attack": "slash", "parts": [["body", "moss"], ["head_troll", "moss"], ["legs_shorts", "leather"], ["w_mace", ""]]},
+	# Bosses (drawn twice the size)
+	"boss_grendel": {"boss": true, "body": "muscular", "attack": "slash", "parts": [["body", "moss"], ["head_troll", "moss"], ["legs_shorts", "fur_brown"], ["w_mace", ""]]},
+	"boss_black_annis": {"boss": true, "body": "female", "attack": "slash", "parts": [["body", "hag"], ["head_human_f", "hag"], ["face_angry", "hag"], ["hair_long_messy", "ash"], ["robe_f", "black"], ["arms_gloves", "iron"], ["w_dagger", ""]]},
+	"boss_dullahan": {"boss": true, "body": "male", "attack": "slash", "parts": [["cape_tattered", "black"], ["body", "pale"], ["armor_plate", "obsidian"], ["arms_plate", "obsidian"], ["shoulders_legion", "obsidian"], ["legs_plate", "obsidian"], ["feet_plate", "obsidian"], ["w_scythe", ""]]},
+	"boss_hel": {"boss": true, "body": "female", "attack": "spellcast", "parts": [["body", "pale"], ["head_human_f", "pale"], ["face_neutral", "pale"], ["hair_xlong", "black"], ["robe_f", "black"], ["tiara", "bone"], ["w_staff", ""]]},
+	"boss_surtr": {"boss": true, "body": "muscular", "attack": "slash", "parts": [["body", "demon"], ["head_human_m", "demon"], ["face_angry", "demon"], ["beard_winter", "ember"], ["hair_long_messy", "ember"], ["armor_plate", "ember"], ["legs_plate", "ember"], ["feet_plate", "ember"], ["horns_back", "obsidian"], ["w_longsword", ""]]},
+	"boss_weeping_warden": {"boss": true, "body": "male", "attack": "thrust", "parts": [["body_skeleton", "bone"], ["head_skeleton", "bone"], ["armor_plate", "rust"], ["legs_plate", "rust"], ["hood", "black"], ["w_halberd", ""]]},
+	"boss_withered_queen": {"boss": true, "body": "female", "attack": "spellcast", "parts": [["body", "zombie"], ["head_human_f", "zombie"], ["face_neutral", "zombie"], ["hair_long", "pale"], ["robe_f", "wine"], ["crown", "gold"], ["w_wand", ""]]},
+	"boss_jester_of_thorns": {"boss": true, "body": "male", "attack": "thrust", "parts": [["body", "pale"], ["head_human_m", "pale"], ["face_angry", "pale"], ["shirt_long", "purple"], ["legs_leggings", "moss"], ["feet_shoes", "purple"], ["cap_leather", "moss"], ["w_dagger", ""]]},
+	"boss_fairy_queen": {"boss": true, "body": "female", "attack": "spellcast", "parts": [["wings_feather", "fairy"], ["body", "fairy_skin"], ["head_human_f", "fairy_skin"], ["face_neutral", "fairy_skin"], ["ears_long", "fairy_skin"], ["hair_princess", "gold"], ["robe_f", "purple"], ["tiara", "gold"], ["w_wand", ""]]},
+	"boss_forgemaster_brann": {"boss": true, "body": "muscular", "attack": "slash", "parts": [["body", "rust"], ["head_human_m", "rust"], ["face_angry", "rust"], ["beard_beard", "blood"], ["armor_plate", "iron"], ["arms_plate", "iron"], ["legs_plate", "iron"], ["feet_plate", "iron"], ["helm_barbarian", ""], ["w_mace", ""]]},
+	"boss_high_king_thrandor": {"boss": true, "body": "male", "attack": "slash", "parts": [["cape_solid", "green_royal"], ["body", "pale"], ["head_human_m", "pale"], ["face_neutral", "pale"], ["ears_elven", "pale"], ["hair_long", "silver"], ["armor_plate", "silver"], ["arms_plate", "silver"], ["legs_plate", "silver"], ["feet_plate", "silver"], ["crown", "gold"], ["w_sword", "silver"]]},
+	"boss_archon_valeth": {"boss": true, "body": "male", "attack": "thrust", "parts": [["wings_feather", "angel"], ["body", "pale"], ["head_human_m", "pale"], ["armor_plate", "gold"], ["arms_plate", "gold"], ["shoulders_legion", "gold"], ["legs_plate", "gold"], ["feet_plate", "gold"], ["helm_armet", "gold"], ["w_spear", "gold"]]},
+	"boss_seraphiel": {"boss": true, "body": "female", "attack": "spellcast", "parts": [["wings_feather", "angel"], ["body", "pale"], ["head_human_f", "pale"], ["face_neutral", "pale"], ["hair_xlong", "gold"], ["robe_f", "angel"], ["tiara", "gold"], ["w_staff", ""]]},
+	"boss_duke_malgrath": {"boss": true, "body": "male", "attack": "slash", "parts": [["cape_tattered", "blood"], ["wings_bat", "black"], ["body", "demon"], ["head_human_m", "demon"], ["face_angry", "demon"], ["horns_back", "horn"], ["hair_parted", "black"], ["armor_plate", "obsidian"], ["legs_plate", "obsidian"], ["feet_plate", "obsidian"], ["crown", "gold"], ["w_sword", "obsidian"]]},
+	"boss_azgaroth": {"boss": true, "body": "muscular", "attack": "slash", "parts": [["wings_lizard", "obsidian"], ["body", "obsidian"], ["head_human_m", "obsidian"], ["face_angry", "obsidian"], ["horns_curled", "blood"], ["tail_lizard", "obsidian"], ["armor_plate", "blood"], ["legs_plate", "blood"], ["feet_plate", "blood"], ["w_axe", ""]]},
+	"boss_sword_spirit": {"boss": true, "body": "male", "attack": "slash", "parts": [["body", "ghost"], ["head_human_m", "ghost"], ["face_neutral", "ghost"], ["hair_long", "silver"], ["shirt_long", "ghost"], ["legs_skirt", "ghost"], ["w_katana", ""]]},
+	"boss_demon_ancestor": {"boss": true, "body": "muscular", "attack": "slash", "parts": [["wings_bat", "black"], ["body", "demon"], ["head_minotaur", "black"], ["legs_pants", "black"], ["arms_bracers", "gold"], ["w_flail", ""]]},
 }
 
 ## The monster's parts as a build spec (mirrored to face left), or {} if it has no LPC look.

@@ -457,7 +457,7 @@ static func enemy_by_key(key: String) -> Dictionary:
 		var used := still.get_used_rect()
 		var lo := {"tex": ImageTexture.create_from_image(still), "white": ImageTexture.create_from_image(_silhouette(still)),
 			"size": Vector2(still.get_size()), "foot": float(used.end.y - 1), "lpc": built["anims"],
-			"attack": Lpc.MONSTERS[key].get("attack", "slash")}
+			"attack": Lpc.MONSTERS[key].get("attack", "slash"), "lpc_boss": Lpc.MONSTERS[key].get("boss", false)}
 		_cache["e_" + key] = lo
 		return lo
 	var img := _img("enemies/%s.png" % key)

@@ -1093,9 +1093,11 @@ func _rect_for(art: Dictionary, boss: bool, scale_mult: float) -> Rect2:
 		return Rect2(x - s / 2.0, _ground() - s + sin(bob * 2.4 + 1.0) * 2.0, s, s)
 	# LPC monsters are drawn smaller (about 48 of 64 pixels): one size up, on whole pixels
 	if art.has("lpc"):
-		ui = maxf(ui, roundf(ui * 4.0 / 3.0))
+		ui = maxf(ui, roundf(ui * (2.0 if art.get("lpc_boss", false) else 4.0 / 3.0)))
 	# Big bosses never take more than ~45% of the width
-	ui = maxf(1.0, minf(ui, floorf(size.x * 0.46 * sc / maxf(1.0, (art["size"] as Vector2).x))))
+	# (LPC frames are padded for big weapon swings, so measure the ~48-pixel body instead)
+	var span: float = Lpc.CORE * 0.75 if art.has("lpc") else (art["size"] as Vector2).x
+	ui = maxf(1.0, minf(ui, floorf(size.x * 0.46 * sc / maxf(1.0, span))))
 	u = ui / sc
 	var sz: Vector2 = art["size"] * u
 	var foot: float = art["foot"]

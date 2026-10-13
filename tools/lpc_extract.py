@@ -176,7 +176,32 @@ def source_palette(img, mat):
                 hit += n
         if hit > best_n:
             best, best_n = name, hit
+    total = sum(counts.values())
+    if total and best_n < total * 0.25:
+        return auto_palette(counts, mat) or best
     return best
+
+
+AUTO = {}
+
+
+def auto_palette(counts, mat):
+    """Sheets drawn outside the material's palettes (e.g. the grey robe): use their own colors."""
+    cols = [c for c, n in sorted(counts.items(), key=lambda t: -t[1])[:8]]
+    cols = sorted(cols, key=lambda c: 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2])
+    if len(cols) < 2:
+        return ""
+    slots = ["#ff00fe"] * 6
+    dark = cols[0]
+    start = 0 if 0.299 * dark[0] + 0.587 * dark[1] + 0.114 * dark[2] < 40 else 1
+    n = len(cols)
+    for i, c in enumerate(cols):
+        k = start + round(i * (5 - start) / max(1, n - 1))
+        if slots[k] == "#ff00fe":
+            slots[k] = "#%02x%02x%02x" % c
+    name = "auto_" + "".join(x.lstrip("#") for x in slots if x != "#ff00fe")[:24]
+    AUTO.setdefault(mat, {})[name] = slots
+    return name
 
 
 def right_row(path, size):
@@ -264,6 +289,7 @@ def main():
         for f in sorted(os.listdir(os.path.join(SRC, "palette_definitions", mat))):
             if f.startswith(mat + "_"):
                 p.update(json.load(open(os.path.join(SRC, "palette_definitions", mat, f))))
+        p.update(AUTO.get(mat, {}))
         pals[mat] = {"base": meta["base"], "palettes": p}
     pals["all"] = {"base": "", "palettes": json.load(open(os.path.join(SRC, "palette_definitions", "all", "all_lpcr.json")))}
     json.dump(pals, open(os.path.join(OUT, "palettes.json"), "w"))

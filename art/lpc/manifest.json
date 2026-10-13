@@ -10709,17 +10709,17 @@
 "walk": {
 "file": "f/ba0d00db7f95b5.png",
 "size": 64,
-"src": "brown"
+"src": "auto_3e3e3e707070b5b5b5e0e0e0"
 },
 "slash": {
 "file": "f/2567855702980e.png",
 "size": 64,
-"src": "brown"
+"src": "auto_3e3e3e707070b5b5b5e0e0e0"
 },
 "spellcast": {
 "file": "f/e233e9146dc0f3.png",
 "size": 64,
-"src": "brown"
+"src": "auto_3e3e3e707070b5b5b5e0e0e0"
 }
 }
 }
@@ -13527,111 +13527,111 @@
 "idle": {
 "file": "f/e567ce492c82a2.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "walk": {
 "file": "f/1043f1d880a76a.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "slash": {
 "file": "f/8ec00b1ca0027f.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "thrust": {
 "file": "f/a2088f5173ac16.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "spellcast": {
 "file": "f/2ab6dd128e4a1e.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "shoot": {
 "file": "f/f7701cd25e1848.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "combat_idle": {
 "file": "f/37c3d54dd355ca.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 }
 },
 "female": {
 "idle": {
 "file": "f/e567ce492c82a2.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "walk": {
 "file": "f/1043f1d880a76a.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "slash": {
 "file": "f/8ec00b1ca0027f.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "thrust": {
 "file": "f/a2088f5173ac16.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "spellcast": {
 "file": "f/2ab6dd128e4a1e.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "shoot": {
 "file": "f/f7701cd25e1848.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "combat_idle": {
 "file": "f/37c3d54dd355ca.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 }
 },
 "muscular": {
 "idle": {
 "file": "f/e567ce492c82a2.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "walk": {
 "file": "f/1043f1d880a76a.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "slash": {
 "file": "f/8ec00b1ca0027f.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "thrust": {
 "file": "f/a2088f5173ac16.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "spellcast": {
 "file": "f/2ab6dd128e4a1e.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "shoot": {
 "file": "f/f7701cd25e1848.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 },
 "combat_idle": {
 "file": "f/37c3d54dd355ca.png",
 "size": 64,
-"src": "black"
+"src": "auto_000000775f1e8c6f20917321"
 }
 }
 }
@@ -13773,111 +13773,111 @@
 "idle": {
 "file": "f/5dbd6f912e73cc.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "walk": {
 "file": "f/4c7c63a55fb4a3.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "slash": {
 "file": "f/80ad5985cc58c5.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "thrust": {
 "file": "f/3bc72b68b99cc3.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "spellcast": {
 "file": "f/041ca47c12e714.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "shoot": {
 "file": "f/287ab694471c7a.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "combat_idle": {
 "file": "f/f1ce577b1f6426.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 }
 },
 "female": {
 "idle": {
 "file": "f/5dbd6f912e73cc.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "walk": {
 "file": "f/4c7c63a55fb4a3.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "slash": {
 "file": "f/80ad5985cc58c5.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "thrust": {
 "file": "f/3bc72b68b99cc3.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "spellcast": {
 "file": "f/041ca47c12e714.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "shoot": {
 "file": "f/287ab694471c7a.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "combat_idle": {
 "file": "f/f1ce577b1f6426.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 }
 },
 "muscular": {
 "idle": {
 "file": "f/5dbd6f912e73cc.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "walk": {
 "file": "f/4c7c63a55fb4a3.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "slash": {
 "file": "f/80ad5985cc58c5.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "thrust": {
 "file": "f/3bc72b68b99cc3.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "spellcast": {
 "file": "f/041ca47c12e714.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "shoot": {
 "file": "f/287ab694471c7a.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 },
 "combat_idle": {
 "file": "f/f1ce577b1f6426.png",
 "size": 64,
-"src": "brass"
+"src": "auto_a3761cdeac49ebcd92"
 }
 }
 }
