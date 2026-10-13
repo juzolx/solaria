@@ -753,18 +753,14 @@ func _build_town(parent: Control) -> void:
 	town_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	town_status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(town_status)
-	var pick := UI.button("Floors", func(): FloorPicker.new().show_for(self))
-	pick.tooltip_text = "Pick which floor to head down to"
-	pick.custom_minimum_size = Vector2(0, UI.TAP)
-	row.add_child(pick)
-	town_leave = UI.primary("", _leave_town, UI.RED)
+	town_leave = UI.primary("Into the dungeon", _choose_floor, UI.RED)
 	town_leave.custom_minimum_size = Vector2(0, UI.TAP)
 	row.add_child(town_leave)
 
 func _on_building(id: String) -> void:
 	sfx.play("click")
 	if id == "gate":
-		_leave_town()
+		_choose_floor()
 		return
 	if not Town.BUILDINGS.has(id):
 		return
@@ -774,6 +770,11 @@ func _on_building(id: String) -> void:
 		return
 	show_tab(2, page)
 	refresh()
+
+## Leaving town: pick the floor to go down to first.
+func _choose_floor() -> void:
+	sfx.play("click")
+	FloorPicker.new().show_from_town(self)
 
 func _leave_town() -> void:
 	Town.leave(state)
@@ -828,12 +829,12 @@ func _sync_town() -> void:
 	if not inside:
 		return
 	town_view.set_look(Town.look(state))
-	town_leave.text = "Into the dungeon  -  Floor %d" % state.floor_num
+	town_leave.text = "Into the dungeon"
 	town_status.text = "HP %d / %d   ·   %s" % [state.hero_hp, state.get_max_hp(), Town.look(state)["name"]]
 	var notes := {}
 	for id in Town.BUILDINGS:
 		notes[id] = Town.BUILDINGS[id][1]
-	notes["gate"] = "Back to floor %d" % state.floor_num
+	notes["gate"] = "Choose your floor"
 	town_view.notes = notes
 	town_view.locked = {
 		"smith": "" if state.craft_unlocked() else "Opens at floor %d" % GameData.CRAFT_UNLOCK_FLOOR,
@@ -1234,7 +1235,7 @@ func _build_nav(parent: Control) -> void:
 					return
 				nav_page = 0
 			elif i == 0 and state.in_town:
-				_leave_town()
+				_choose_floor()
 				return
 			else:
 				nav_page = i

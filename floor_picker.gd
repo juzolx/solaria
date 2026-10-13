@@ -11,11 +11,31 @@ var rows: VBoxContainer
 var zone_bar: HFlowContainer
 var boss_buttons := {}  # floor -> Button (negative floor = the big "Fight" button)
 var tick := Timer.new()
+var from_town := false   # picking where to go down to from town (main._leave_town)
+
+## From town: the same picker, plus quick picks, and choosing a floor takes you down.
+func show_from_town(main_node) -> void:
+	from_town = true
+	show_for(main_node)
 
 func show_for(main_node) -> void:
 	m = main_node
 	state = m.state
-	open(m, "Choose a floor", 780.0)
+	open(m, "Into the dungeon: choose your floor" if from_town else "Choose a floor", 780.0)
+	if from_town:
+		var quick := UI.hbox(8)
+		content.add_child(quick)
+		var picks: Array = [["Where you left off: %d" % state.floor_num, state.floor_num]]
+		if state.best_floor != state.floor_num:
+			picks.append(["Deepest: %d" % state.best_floor, state.best_floor])
+		var cp := maxi(1, state.checkpoint)
+		if cp != state.floor_num and cp != state.best_floor and cp > 1:
+			picks.append(["Checkpoint: %d" % cp, cp])
+		for p in picks:
+			var b := UI.primary(String(p[0]), _go.bind(int(p[1])), UI.GOLD)
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			b.custom_minimum_size = Vector2(0, UI.TAP)
+			quick.add_child(b)
 	var sub := UI.rich(13)
 	sub.text = "[color=%s]Travel to any floor you've reached. Red floors are bosses: go back to farm them for uniques. You're on [color=#e8b14a]floor %d[/color] (%s).[/color]" % [UI.hex(UI.DIM), state.floor_num, GameData.sub_name(state.floor_num)]
 	content.add_child(sub)
@@ -125,6 +145,9 @@ func _show_zone(zb: int) -> void:
 func _go(f: int) -> void:
 	if state.go_to_floor(f):
 		close()
+		if from_town:
+			m._leave_town()
+			return
 	m.refresh()
 
 ## Opt-in curses: tougher monsters for better loot and more gold.

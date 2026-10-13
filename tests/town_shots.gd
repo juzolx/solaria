@@ -68,8 +68,14 @@ func _initialize() -> void:
 		main.refresh()
 		await shot(prefix + "_3_zone_%d" % f, 0.8)
 	st.floor_num = 30
-	main._leave_town()
-	await shot(prefix + "_4_left", 0.6)
+	main.refresh()
+	main._on_building("gate")
+	await shot(prefix + "_4_pick_floor", 0.6)
+	for c in main.get_children():
+		if c is FloorPicker:
+			c._go(20)
+	await shot(prefix + "_5_left", 0.6)
+	print("went to floor ", st.floor_num)
 	print("town shots ok, in_town=", st.in_town)
 	GameState.delete_saves()
 	Profile.delete()
