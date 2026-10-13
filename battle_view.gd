@@ -593,7 +593,11 @@ func _hero_attack(e: Dictionary) -> void:
 		_burst(target, Color("#fbbf24"), 22, 320.0)
 		_hit_stop(0.07)
 	else:
-		shake = maxf(shake, 3.0)
+		# Heavy weapons land heavy: more shake and a tiny freeze; light ones stay snappy
+		var weight: float = {"axe": 1.0, "mace": 1.0, "spear": 0.6, "sword": 0.5, "staff": 0.35, "bow": 0.25, "dagger": 0.2}.get(wt, 0.4)
+		shake = maxf(shake, 2.0 + 4.0 * weight)
+		if weight >= 0.9:
+			_hit_stop(0.035)
 		_float("%d" % e["dmg"], target, Color.WHITE, 20)
 		_burst(target, Color(state.enemy_color), 10, 220.0)
 	if e["double"]:

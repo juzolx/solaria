@@ -1029,6 +1029,8 @@ func _refresh_fight() -> void:
 		b.disabled = cd > 0
 		b.tooltip_text = sk["text"]
 		var c := Color(Classes.tag_color(sk["tags"][0]))
+		b.icon = SkillIcons.for_tag(String(sk["tags"][0]))
+		b.add_theme_constant_override("icon_max_width", 26)
 		b.add_theme_stylebox_override("normal", UI.style(c.darkened(0.6), c, 6, 8))
 		b.add_theme_color_override("font_color", c.lightened(0.55))
 	auto_ability_button.text = "Auto %s" % ("ON" if state.auto_ability else "OFF")
