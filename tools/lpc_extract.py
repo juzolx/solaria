@@ -45,6 +45,9 @@ add("horns_curled", "head/appendages/head_horns_curled.json")
 add("horns_back", "head/appendages/head_horns_backwards.json")
 add("wings_bat", "body/wings/wings_bat.json", variant="orange", material="hair")
 add("wings_feather", "body/wings/wings_feathered.json", variant="white", material="hair")
+# Butterfly wings: only the two wing tones recolor; black veins and white dots stay
+add("wings_monarch", "body/wings/monarch/wings_monarch.json", variant="pink", material="cloth",
+    src_palette=["#ff00fe", "#ff00fe", "#c36072", "#e08080", "#ff00fe", "#ff00fe"])
 add("wings_lizard", "body/lizard/wings_lizard_bat.json")
 add("tail_lizard", "body/lizard/tail_lizard.json")
 add("tail_wolf", "body/tails/tail_wolf.json", variant="orange", material="hair")
@@ -266,7 +269,11 @@ def main():
                     if written[key]:
                         name = CUSTOM[a][0] if custom else a
                         files[name] = {"file": written[key], "size": size}
-                        if mat:
+                        if mat and opt.get("src_palette"):
+                            pn = "item_" + item
+                            AUTO.setdefault(mat, {})[pn] = opt["src_palette"]
+                            files[name]["src"] = pn
+                        elif mat:
                             sk = written[key] + "|" + mat
                             if sk not in SRCPAL:
                                 SRCPAL[sk] = source_palette(Image.open(os.path.join(OUT, written[key])).convert("RGBA"), mat)

@@ -3735,6 +3735,99 @@
 }
 ]
 },
+"wings_monarch": {
+"name": "Monarch Wings",
+"material": "cloth",
+"eye": false,
+"layers": [
+{
+"z": 5,
+"files": {
+"male": {
+"walk": {
+"file": "f/674ca1b435958b.png",
+"size": 64,
+"src": "item_wings_monarch"
+},
+"slash": {
+"file": "f/15ad1ea9a42046.png",
+"size": 64,
+"src": "item_wings_monarch"
+},
+"thrust": {
+"file": "f/4e017b5960b740.png",
+"size": 64,
+"src": "item_wings_monarch"
+},
+"spellcast": {
+"file": "f/5bc0ed6130b1c8.png",
+"size": 64,
+"src": "item_wings_monarch"
+},
+"shoot": {
+"file": "f/3d33e58f4835ef.png",
+"size": 64,
+"src": "item_wings_monarch"
+}
+},
+"female": {
+"walk": {
+"file": "f/674ca1b435958b.png",
+"size": 64,
+"src": "item_wings_monarch"
+},
+"slash": {
+"file": "f/15ad1ea9a42046.png",
+"size": 64,
+"src": "item_wings_monarch"
+},
+"thrust": {
+"file": "f/4e017b5960b740.png",
+"size": 64,
+"src": "item_wings_monarch"
+},
+"spellcast": {
+"file": "f/5bc0ed6130b1c8.png",
+"size": 64,
+"src": "item_wings_monarch"
+},
+"shoot": {
+"file": "f/3d33e58f4835ef.png",
+"size": 64,
+"src": "item_wings_monarch"
+}
+},
+"muscular": {
+"walk": {
+"file": "f/674ca1b435958b.png",
+"size": 64,
+"src": "item_wings_monarch"
+},
+"slash": {
+"file": "f/15ad1ea9a42046.png",
+"size": 64,
+"src": "item_wings_monarch"
+},
+"thrust": {
+"file": "f/4e017b5960b740.png",
+"size": 64,
+"src": "item_wings_monarch"
+},
+"spellcast": {
+"file": "f/5bc0ed6130b1c8.png",
+"size": 64,
+"src": "item_wings_monarch"
+},
+"shoot": {
+"file": "f/3d33e58f4835ef.png",
+"size": 64,
+"src": "item_wings_monarch"
+}
+}
+}
+}
+]
+},
 "wings_lizard": {
 "name": "Batlike Lizard Wings",
 "material": "body",

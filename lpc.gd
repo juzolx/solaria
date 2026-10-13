@@ -141,6 +141,15 @@ static func build(spec: Dictionary) -> Dictionary:
 		return _built[key]
 	var items: Dictionary = manifest().get("items", {})
 	var body: String = spec.get("body", "male")
+	# LPC has few clothes cut for the muscular build: if any part lacks it, the whole
+	# figure uses the regular male build so everything fits together.
+	if body == "muscular":
+		for part in spec.get("parts", []):
+			var it: Dictionary = items.get(part["id"], {})
+			for L in it.get("layers", []):
+				var fl: Dictionary = L["files"]
+				if fl.has("male") and not fl.has("muscular"):
+					body = "male"
 	var layers: Array = []  # [z, order, files dict, maps]
 	var order := 0
 	for part in spec.get("parts", []):
@@ -148,7 +157,7 @@ static func build(spec: Dictionary) -> Dictionary:
 		if it.is_empty():
 			continue
 		var info := {"mat": it.get("material", ""), "ramp": part.get("ramp", []),
-			"eyes": part.get("eyes", []) if it.get("eye", false) else []}
+			"eyes": part.get("eyes", []) if it.get("eye", false) else [], "dy": int(part.get("dy", 0))}
 		for L in it["layers"]:
 			var files: Dictionary = L["files"]
 			var f: Dictionary = files.get(body, files.get("male", files.get("female", {})))
@@ -188,7 +197,7 @@ static func _compose(layers: Array, anim: String, flip := false) -> Dictionary:
 			continue
 		var fs := int(f["size"])
 		var n := maxi(1, im.get_width() / fs)
-		parts.append([im, fs, n, animated])
+		parts.append([im, fs, n, animated, int(L[3].get("dy", 0))])
 		size = maxi(size, fs)
 		if animated and fs == CORE:
 			frames = maxi(frames, n)
@@ -207,7 +216,7 @@ static func _compose(layers: Array, anim: String, flip := false) -> Dictionary:
 			var im: Image = p[0]
 			var fs: int = p[1]
 			var fi: int = mini(i, int(p[2]) - 1) if p[3] else 0
-			var at := Vector2i((size - fs) / 2, (size - fs) / 2)
+			var at := Vector2i((size - fs) / 2, (size - fs) / 2 + int(p[4]))
 			canvas.blend_rect(im, Rect2i(fi * fs, 0, fs, fs), at)
 		if flip:
 			canvas.flip_x()
@@ -253,7 +262,7 @@ const HAIR_ORDER := ["Short", "Spiky", "Side Swept", "Shaggy", "Mohawk", "Short 
 const RACES := {
 	"Human": ["human_m", "human_f", [], true],
 	"Elf": ["human_m", "human_f", ["ears_elven"], true],
-	"Fairy": ["human_m", "human_f", ["ears_long", "wings_feather:fairy"], true],
+	"Fairy": ["human_m", "human_f", ["ears_long", "wings_monarch:hair"], true],
 	"Angel": ["human_m", "human_f", ["wings_feather:angel"], true],
 	"Demon": ["human_m", "human_f", ["horns_curled:horn", "tail_lizard"], true],
 	"Dwarf": ["human_m", "human_f", ["beard_winter:hair"], true],
@@ -273,7 +282,7 @@ const FORMS := {
 }
 const LOOKS := {
 	"wings2": ["wings_feather:angel"], "wings3": ["wings_feather:angel"], "horns_big": ["horns_back:horn"],
-	"crown": ["crown:gold"], "dragon_wings": ["wings_lizard"], "wings_big": ["wings_feather:fairy"],
+	"crown": ["crown:gold"], "dragon_wings": ["wings_lizard"], "wings_big": ["wings_monarch:hair"],
 }
 ## Game gear type -> LPC parts. ":mat" recolors with the item's material, ":dark"/":linen" with a fixed one.
 const GEAR := {
@@ -287,6 +296,29 @@ const GEAR := {
 	"boots": ["feet_boots:mat"], "sandals": ["feet_sandals:mat"], "sabatons": ["feet_plate:mat"],
 }
 const HIDES_HAIR := ["helm", "hood"]
+## Hair is drawn for the human skull; these heads sit lower, so their hair moves down to meet them.
+const HAIR_DY := {"orc_m": 3, "troll": 2, "wolf_m": 3, "wolf_f": 3}
+## Dragonkin grow crests and horns instead of hair (their "hair" choice picks one).
+const CRESTS := {"Frills": ["ears_dragon:hair"], "Back Horns": ["horns_back:hair"], "Curled Horns": ["horns_curled:hair"],
+	"Frills and Horns": ["ears_dragon:hair", "horns_back:hair"], "Smooth": []}
+const CREST_ORDER := ["Frills", "Back Horns", "Curled Horns", "Frills and Horns", "Smooth"]
+## Golems are living stone: only short, cropped or tied styles read well on the troll skull.
+const GOLEM_HAIR := ["Bald", "Mohawk", "Short Mohawk", "Spiky", "Porcupine", "Back Horns", "Curled Horns"]
+
+## The hair choices a race offers in the hero creator.
+static func hair_styles(race: String) -> Array:
+	match race:
+		"Dragonkin":
+			return CREST_ORDER
+		"Golem":
+			return GOLEM_HAIR
+	return HAIR_ORDER
+
+## A Dragonkin crest from a hair choice (older heroes picked human hair: map it onto a crest).
+static func crest(name: String) -> Array:
+	if CRESTS.has(name):
+		return CRESTS[name]
+	return CRESTS[CREST_ORDER[maxi(0, HAIR_ORDER.find(name)) % CREST_ORDER.size()]]
 const FIXED := {
 	"linen": ["#f4e6c4", "#ead4aa", "#d0b48a", "#a3825f", "#5a3f35"],
 	"dark": ["#5a6988", "#3a4466", "#262b44", "#181425", "#0e0b16"],
@@ -367,9 +399,22 @@ static func spec(app: Dictionary, looks: Dictionary) -> Dictionary:
 		parts.append({"id": "brows_thin", "ramp": hair})
 	var helmet: Dictionary = looks.get("Helmet", {})
 	var hide_hair: bool = not helmet.is_empty() and helmet.get("type", "") in HIDES_HAIR
-	var style: String = HAIR.get(str(app.get("hair", "Short")), "plain")
-	if style != "" and not hide_hair:
-		parts.append({"id": "hair_" + style, "ramp": hair})
+	var hair_name := str(app.get("hair", "Short"))
+	if race == "Dragonkin":
+		for x in crest(hair_name):
+			if not (hide_hair and x.begins_with("horns")):
+				parts.append(_part(x, {}, skin, hair))
+	else:
+		if race == "Golem" and not hair_name in GOLEM_HAIR:
+			hair_name = GOLEM_HAIR[maxi(0, HAIR_ORDER.find(hair_name)) % GOLEM_HAIR.size()]
+		if race == "Golem" and CRESTS.has(hair_name):
+			if not hide_hair:
+				for x in CRESTS[hair_name]:
+					parts.append(_part(x.replace(":hair", ":stone"), {}, skin, hair))
+			hair_name = "Bald"
+		var style: String = HAIR.get(hair_name, "plain")
+		if style != "" and not hide_hair:
+			parts.append({"id": "hair_" + style, "ramp": hair, "dy": HAIR_DY.get(head, 0)})
 	for x in extras:
 		parts.append(_part(x, {}, skin, hair))
 	# Clothes: an empty slot shows plain clothes
@@ -484,7 +529,7 @@ const MONSTERS := {
 	"boss_weeping_warden": {"boss": true, "body": "male", "attack": "thrust", "parts": [["body_skeleton", "bone"], ["head_skeleton", "bone"], ["armor_plate", "rust"], ["legs_plate", "rust"], ["hood", "black"], ["w_halberd", ""]]},
 	"boss_withered_queen": {"boss": true, "body": "female", "attack": "spellcast", "parts": [["body", "zombie"], ["head_human_f", "zombie"], ["face_neutral", "zombie"], ["hair_long", "pale"], ["robe_f", "wine"], ["crown", "gold"], ["w_wand", ""]]},
 	"boss_jester_of_thorns": {"boss": true, "body": "male", "attack": "thrust", "parts": [["body", "pale"], ["head_human_m", "pale"], ["face_angry", "pale"], ["shirt_long", "purple"], ["legs_leggings", "moss"], ["feet_shoes", "purple"], ["cap_leather", "moss"], ["w_dagger", ""]]},
-	"boss_fairy_queen": {"boss": true, "body": "female", "attack": "spellcast", "parts": [["wings_feather", "fairy"], ["body", "fairy_skin"], ["head_human_f", "fairy_skin"], ["face_neutral", "fairy_skin"], ["ears_long", "fairy_skin"], ["hair_princess", "gold"], ["robe_f", "purple"], ["tiara", "gold"], ["w_wand", ""]]},
+	"boss_fairy_queen": {"boss": true, "body": "female", "attack": "spellcast", "parts": [["wings_monarch", "fairy"], ["body", "fairy_skin"], ["head_human_f", "fairy_skin"], ["face_neutral", "fairy_skin"], ["ears_long", "fairy_skin"], ["hair_princess", "gold"], ["robe_f", "purple"], ["tiara", "gold"], ["w_wand", ""]]},
 	"boss_forgemaster_brann": {"boss": true, "body": "muscular", "attack": "slash", "parts": [["body", "rust"], ["head_human_m", "rust"], ["face_angry", "rust"], ["beard_beard", "blood"], ["armor_plate", "iron"], ["arms_plate", "iron"], ["legs_plate", "iron"], ["feet_plate", "iron"], ["helm_barbarian", ""], ["w_mace", ""]]},
 	"boss_high_king_thrandor": {"boss": true, "body": "male", "attack": "slash", "parts": [["cape_solid", "green_royal"], ["body", "pale"], ["head_human_m", "pale"], ["face_neutral", "pale"], ["ears_elven", "pale"], ["hair_long", "silver"], ["armor_plate", "silver"], ["arms_plate", "silver"], ["legs_plate", "silver"], ["feet_plate", "silver"], ["crown", "gold"], ["w_sword", "silver"]]},
 	"boss_archon_valeth": {"boss": true, "body": "male", "attack": "thrust", "parts": [["wings_feather", "angel"], ["body", "pale"], ["head_human_m", "pale"], ["armor_plate", "gold"], ["arms_plate", "gold"], ["shoulders_legion", "gold"], ["legs_plate", "gold"], ["feet_plate", "gold"], ["helm_armet", "gold"], ["w_spear", "gold"]]},
@@ -501,11 +546,17 @@ static func monster_spec(key: String) -> Dictionary:
 		return {}
 	var m: Dictionary = MONSTERS[key]
 	var parts: Array = []
+	var dy := 0
+	for p in m["parts"]:
+		if String(p[0]).begins_with("head_"):
+			dy = HAIR_DY.get(String(p[0]).substr(5), 0)
 	for p in m["parts"]:
 		var ramp: Array = []
 		if String(p[1]) != "":
 			ramp = ramp6(FIXED.get(p[1], FIXED["dark"]))
 		var part := {"id": p[0], "ramp": ramp}
+		if String(p[0]).begins_with("hair_") and dy != 0:
+			part["dy"] = dy
 		if String(p[0]).begins_with("head_") or String(p[0]).begins_with("face_"):
 			part["eyes"] = eye_ramp(Color("#e43b44"))
 		if has_item(p[0]):

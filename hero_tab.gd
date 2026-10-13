@@ -20,6 +20,7 @@ var points_label: RichTextLabel
 var auto_button: Button
 var spend_button: Button
 var rows := {}      # stat -> {"value", "gives", "p1", "p5", "chip"}
+var stat_grid: GridContainer
 var special_box: VBoxContainer
 var special_rows := {}  # name -> [value label, text rich, bar, panel]
 var build_rows: Array = []  # [name label, use button, save button]
@@ -96,10 +97,15 @@ func setup(m) -> void:
 
 	# ---- The 8 stats ----
 	UI.section(v, "Stats", "Each stat has one job. Stats marked SUGGESTED are the ones your class wants most.")
-	var list := UI.vbox(6)
-	v.add_child(list)
+	# Small boxes side by side: 2 across on phones, 4 on wider screens (see _fit_stat_grid)
+	stat_grid = GridContainer.new()
+	stat_grid.columns = 2
+	stat_grid.add_theme_constant_override("h_separation", 6)
+	stat_grid.add_theme_constant_override("v_separation", 6)
+	stat_grid.resized.connect(_fit_stat_grid)
+	v.add_child(stat_grid)
 	for st in GameData.STAT_ORDER:
-		list.add_child(_stat_row(st))
+		stat_grid.add_child(_stat_row(st))
 
 	# ---- Special stats ----
 	special_box = UI.vbox(6)
@@ -160,35 +166,44 @@ func _stat_row(st: String) -> PanelContainer:
 	var color := Color(info["color"])
 	var c := UI.card(color, UI.INSET, 4)
 	var box: PanelContainer = c[0]
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var bv: VBoxContainer = c[1]
+	bv.add_theme_constant_override("separation", 2)
 	UI.tip(box, "%s: %s" % [info["name"], info["text"]])
-	var head := UI.hbox(8)
-	bv.add_child(head)
-	var name_col := UI.vbox(0)
-	name_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(name_col)
-	var nh := UI.hbox(6)
-	name_col.add_child(nh)
-	nh.add_child(UI.label(st, 16, color))
+	# STR  Strength          ★
+	var nh := UI.hbox(5)
+	bv.add_child(nh)
+	nh.add_child(UI.label(st, 15, color))
 	var nm := UI.label(info["name"], 12, UI.DIM)
 	nm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nm.clip_text = true
 	nh.add_child(nm)
-	var chip := UI.chip("SUGGESTED", UI.GOLD, 10)
+	var chip := UI.label("★", 14, UI.GOLD)
+	UI.tip(chip, "Suggested for your class")
 	nh.add_child(chip)
+	# The number, big
+	var val := UI.label("0", 24, UI.TEXT)
+	bv.add_child(val)
+	# What it gives (wraps to at most a few short lines)
 	var gives := UI.rich(12)
-	name_col.add_child(gives)
-	var val := UI.label("0", 22, UI.TEXT)
-	val.custom_minimum_size = Vector2(44, 0)
-	val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	head.add_child(val)
+	gives.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	bv.add_child(gives)
+	var br := UI.hbox(4)
+	bv.add_child(br)
 	var p1 := UI.button("+1", func(): state.spend_point(st, 1); main.refresh())
 	var p5 := UI.button("+5", func(): state.spend_point(st, 5); main.refresh())
 	for b in [p1, p5]:
-		b.custom_minimum_size = Vector2(UI.TAP + 6, UI.TAP)
-		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		head.add_child(b)
+		b.custom_minimum_size = Vector2(0, UI.TAP)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		br.add_child(b)
 	rows[st] = {"value": val, "gives": gives, "p1": p1, "p5": p5, "chip": chip}
 	return box
+
+func _fit_stat_grid() -> void:
+	var cols := 4 if stat_grid.size.x >= 680.0 else 2
+	if stat_grid.columns != cols:
+		stat_grid.columns = cols
 
 func _pct(v: float) -> String:
 	return "%d%%" % int(round(v))
@@ -255,9 +270,11 @@ func refresh() -> void:
 		(r["value"] as Label).text = str(state.stat(st))
 		var bonus := state.bonus_stat(st)
 		(r["gives"] as RichTextLabel).text = "[color=%s]%s[/color]%s" % [UI.hex(UI.DIM), gives_text(st),
-			("  [color=%s](+%d from your race)[/color]" % [UI.hex(UI.DIM.darkened(0.2)), bonus]) if bonus > 0 else ""]
+			("  [color=%s](+%d race)[/color]" % [UI.hex(UI.DIM.darkened(0.2)), bonus]) if bonus > 0 else ""]
 		(r["p1"] as Button).disabled = state.stat_points < 1
 		(r["p5"] as Button).disabled = state.stat_points < 5
+		# no points to spend: drop the buttons so the boxes stay small
+		(r["p1"] as Button).get_parent().visible = state.stat_points > 0
 		(r["chip"] as Control).visible = b.has(st)
 
 	var g := state

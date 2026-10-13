@@ -60,7 +60,12 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 		_text_row(right, "Race", "race", GameData.RACES)
 	_text_row(right, "Build", "body", Sprites.BODIES, Sprites.BODY_NAMES)
 	_swatch_row(right, "Skin", "skin", Sprites.swatches("skin"))
-	_text_row(right, "Hair", "hair", Sprites.HAIR_STYLES)
+	# Every race's choices in one row; _update shows only the current race's (Dragonkin get crests, Golems stone styles)
+	var all_hair: Array = Sprites.HAIR_STYLES.duplicate()
+	for x in Lpc.CREST_ORDER + Lpc.GOLEM_HAIR:
+		if not x in all_hair:
+			all_hair.append(x)
+	_text_row(right, "Hair and horns", "hair", all_hair)
 	_swatch_row(right, "Hair color", "hair_color", Sprites.swatches("hair"))
 	_swatch_row(right, "Eyes", "eyes", Sprites.swatches("eyes"))
 
@@ -106,6 +111,9 @@ func _pick(field: String, value) -> void:
 		var ok := Races.skins(String(value))
 		if not int(app.get("skin", 1)) in ok:
 			app["skin"] = ok[0]
+		var styles := Lpc.hair_styles(String(value))
+		if not str(app.get("hair", "")) in styles:
+			app["hair"] = styles[0]
 	if UI.sfx:
 		UI.sfx.play("click")
 	_update()
@@ -113,7 +121,7 @@ func _pick(field: String, value) -> void:
 func _randomize() -> void:
 	app["body"] = Sprites.BODIES.pick_random()
 	app["skin"] = Races.skins(app.get("race", "Human")).pick_random()
-	app["hair"] = Sprites.HAIR_STYLES.pick_random()
+	app["hair"] = Lpc.hair_styles(app.get("race", "Human")).pick_random()
 	app["hair_color"] = randi() % Sprites.hair_colors().size()
 	app["eyes"] = randi() % Sprites.eye_colors().size()
 	_update()
@@ -130,6 +138,8 @@ func _update() -> void:
 			var b: Button = entry[0]
 			if field == "skin":
 				b.visible = int(entry[1]) in Races.skins(race)
+			elif field == "hair":
+				b.visible = entry[1] in Lpc.hair_styles(race)
 			var picked: bool = app.get(field) == entry[1]
 			if entry.size() > 2:  # color swatch
 				var c: Color = entry[2]

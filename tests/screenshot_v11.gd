@@ -77,6 +77,18 @@ func _initialize() -> void:
 		main.show_tab(0, k)
 		main.refresh()
 		await shot(names[k])
+		if k == 0:
+			# and the stat boxes further down
+			for ht in main.find_children("*", "HeroTab", true, false):
+				var sg: Control = ht.stat_grid
+				var sc := sg.get_parent()
+				while sc != null and not sc is ScrollContainer:
+					sc = sc.get_parent()
+				if sc:
+					(sc as ScrollContainer).ensure_control_visible(sg)
+					await process_frame
+					(sc as ScrollContainer).scroll_vertical = int(sg.global_position.y - (sc as ScrollContainer).global_position.y + (sc as ScrollContainer).scroll_vertical - 40)
+			await shot("2b_stats")
 	main.show_tab(1, 0)
 	main.refresh()
 	await shot("7_gear")

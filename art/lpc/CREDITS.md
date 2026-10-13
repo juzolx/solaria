@@ -26,6 +26,7 @@ Source: https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character
 - **body/tail/wolf**: JaidynReiman (OGA-BY 3.0+, CC-BY 3.0+, GPL 3.0)
 - **body/wings/bat**: ElizaWy, JaidynReiman (OGA-BY 3.0)
 - **body/wings/feathered**: ElizaWy, Stephen Challener (Redshrike), JaidynReiman (OGA-BY 3.0)
+- **body/wings/monarch**: The Foreman (OGA-BY 4.0, CC-BY-SA 4.0)
 - **cape/solid/bg**: Nila122, JaidynReiman (OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0)
 - **cape/solid/fg**: bluecarrot16, JaidynReiman (OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0)
 - **cape/tattered/bg**: Nila122, JaidynReiman (OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0)
