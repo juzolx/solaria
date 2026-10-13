@@ -8,8 +8,9 @@ var slot_labels := {}
 var slot_styles := {}
 var stats_label: RichTextLabel
 var list_title: Label
-var list: ItemList
-var ids: Array[int] = []
+var item_grid: GridContainer
+var empty_note: Label
+var slot_pics := {}
 var slot := "Weapon"
 var shown := ""
 var equip_best_button: Button
@@ -48,9 +49,17 @@ func setup(m) -> void:
 		card.add_theme_stylebox_override("panel", st)
 		card.mouse_filter = Control.MOUSE_FILTER_STOP
 		card.gui_input.connect(_on_card_input.bind(s))
+		var ch := UI.hbox(8)
+		ch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.add_child(ch)
+		var pic := ItemGrid.picture(44)
+		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ch.add_child(pic)
+		slot_pics[s] = pic
 		var r := UI.rich(12)
 		r.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		card.add_child(r)
+		r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ch.add_child(r)
 		grid.add_child(card)
 		slot_labels[s] = r
 		slot_styles[s] = st
@@ -59,11 +68,18 @@ func setup(m) -> void:
 	add_child(stats_label)
 	list_title = UI.label("", 13, UI.TEXT)
 	add_child(list_title)
-	list = ItemList.new()
-	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	list.add_theme_font_size_override("font_size", 13)
-	list.item_selected.connect(_on_item_selected)
-	add_child(list)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
+	var sv := UI.vbox(4)
+	sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(sv)
+	item_grid = ItemGrid.grid()
+	sv.add_child(item_grid)
+	empty_note = UI.label("", 12, UI.DIM)
+	sv.add_child(empty_note)
+	resized.connect(_on_resized)
 
 	# Loadouts: save your gear to swap builds in one tap
 	var lrow := UI.hbox(6)
@@ -84,6 +100,9 @@ func setup(m) -> void:
 			r.add_child(sb))
 	lrow.add_child(save_lo)
 
+func _on_resized() -> void:
+	ItemGrid.fit([item_grid], size.x)
+
 func _on_card_input(event: InputEvent, s: String) -> void:
 	var mb := event as InputEventMouseButton
 	var touch := event as InputEventScreenTouch
@@ -93,19 +112,17 @@ func _on_card_input(event: InputEvent, s: String) -> void:
 		main.refresh()
 
 ## Tapping an item shows it next to what you're wearing; Equip from there.
-func _on_item_selected(idx: int) -> void:
-	if idx >= 0 and idx < ids.size() and ids[idx] >= 0:
-		var id := ids[idx]
-		var found := state.find_item(id)
-		if not found.is_empty():
-			var acts := []
-			if found["where"] == "bag":
-				acts.append(["Equip", func(): state.equip(id); main.sfx.play("equip"); main.refresh(), UI.GREEN])
-			elif not state.bag_full():
-				acts.append(["Unequip", func(): state.unequip(id); main.refresh(), UI.RED])
-			ItemPopup.show_item(main, found["item"], acts)
-	list.deselect_all()
-	main.refresh()
+func _show(id: int) -> void:
+	var found := state.find_item(id)
+	if found.is_empty():
+		return
+	main.sfx.play("click")
+	var acts := []
+	if found["where"] == "bag":
+		acts.append(["Equip", func(): state.equip(id); main.sfx.play("equip"); main.refresh(), UI.GREEN])
+	elif not state.bag_full():
+		acts.append(["Unequip", func(): state.unequip(id); main.refresh(), UI.RED])
+	ItemPopup.show_item(main, found["item"], acts)
 
 func _loadout(i: int) -> void:
 	if Input.is_key_pressed(KEY_SHIFT) or state.loadouts[i].is_empty():
@@ -136,6 +153,8 @@ func refresh() -> void:
 		if state.has_upgrade(s):
 			extra += "  [color=#4ade80]UPGRADE![/color]"
 			ups += 1
+		var pic: TextureRect = slot_pics[s]
+		pic.texture = Sprites.item_icon(state.equipped[s]) if state.equipped.has(s) else null
 		if state.equipped.has(s):
 			var item: Dictionary = state.equipped[s]
 			var c := GameData.color_of(item["rarity"])
@@ -176,27 +195,23 @@ func refresh() -> void:
 		_rebuild()
 
 func _rebuild() -> void:
-	list_title.text = "%s  -  %d in your bag  (tap one to wear it)" % [slot.to_upper(), _count(slot)]
-	list.clear()
-	ids.clear()
+	list_title.text = "%s  -  %d in your bag  (tap one to compare and wear it)" % [slot.to_upper(), _count(slot)]
+	ItemGrid.fit([item_grid], size.x)
+	for c in item_grid.get_children():
+		c.queue_free()
 	if state.equipped.has(slot):
 		var worn: Dictionary = state.equipped[slot]
-		var w := list.add_item("%s   +%d %s   (wearing)" % [GameData.display_name(worn), GameData.item_power(worn), worn["stat"]])
-		list.set_item_custom_fg_color(w, Color.html(GameData.color_of(worn["rarity"])))
-		list.set_item_custom_bg_color(w, UI.HILITE)
-		list.set_item_selectable(w, false)
-		ids.append(-1)
+		item_grid.add_child(ItemGrid.cell(worn, _show.bind(int(worn["id"])), true, ItemGrid.CELL, "ON"))
 	var best := state.best_for_slot(slot)
 	var items: Array = state.bag.filter(func(it): return it["slot"] == slot)
 	items.sort_custom(func(a, b): return state.score_with(a) > state.score_with(b))
 	for item in items:
-		var tag := "  BEST" if not best.is_empty() and int(best["id"]) == int(item["id"]) else ""
-		var idx := list.add_item("%s   +%d %s   %s%s" % [GameData.display_name(item), GameData.item_power(item), item["stat"], ItemText.delta(state, item), tag])
-		list.set_item_custom_fg_color(idx, Color.html(GameData.color_of(item["rarity"])))
-		list.set_item_tooltip(idx, ItemText.tip(state, item))
-		ids.append(int(item["id"]))
-	if items.is_empty():
-		var e := list.add_item("No %s items in your bag yet." % slot)
-		list.set_item_selectable(e, false)
-		list.set_item_custom_fg_color(e, UI.DIM)
-		ids.append(-1)
+		var pct := state.compare_pct(item)
+		var badge := ""
+		if not best.is_empty() and int(best["id"]) == int(item["id"]) and pct > 0.0:
+			badge = "BEST"
+		elif pct > 0.0:
+			badge = "+%d%%" % int(round(pct))
+		item_grid.add_child(ItemGrid.cell(item, _show.bind(int(item["id"])), false, ItemGrid.CELL, badge))
+	empty_note.visible = items.is_empty()
+	empty_note.text = "No %s items in your bag yet." % slot

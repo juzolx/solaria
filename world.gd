@@ -387,7 +387,7 @@ static func next_goal(g: GameState) -> Dictionary:
 		return {"text": "Your class can evolve! Choose in Character > Class", "pct": 1.0, "color": UI.GOLD}
 	for b in ClassTree.open_branches(g):
 		if ClassTree.branch_ready(g, b):
-			return {"text": "A branch-off class is ready: see Character > Class", "pct": 1.0, "color": Color(ClassTree.RANK_COLORS[b["rank"]])}
+			return {"text": "Something has changed in you... see Character > Class", "pct": 1.0, "color": Color(ClassTree.RANK_COLORS[b["rank"]])}
 	if g.stat_points >= GameData.STAT_POINTS_PER_LEVEL and not g.auto_stats:
 		return {"text": "%d stat points to spend (Character > Hero)" % g.stat_points, "pct": -1.0, "color": UI.GOLD}
 	if g.upgrade_count() > 0:
@@ -400,18 +400,7 @@ static func next_goal(g: GameState) -> Dictionary:
 		var prev := 1 if t == 0 else int(ClassTree.PICK_LEVELS[t - 1])
 		var frac := (float(g.level - prev) + float(g.xp) / maxf(1.0, GameData.xp_to_next(g.level))) / maxf(1.0, need - prev)
 		goals.append({"text": "Next evolution at level %d" % need, "pct": clampf(frac, 0.0, 0.999), "color": Color(g.class_info().get("color", "#e8b14a")), "w": 1.0})
-	# The closest branch-off
-	var best_b := {}
-	var best_p := 0.0
-	for b in ClassTree.open_branches(g):
-		var p := ClassTree.progress(g, b)
-		if p > best_p:
-			best_p = p
-			best_b = b
-	if not best_b.is_empty() and best_p >= 0.25:
-		var known := best_p >= 0.5 or g.dev_mode
-		goals.append({"text": "Branch-off %s: %s" % [String(best_b["name"]) if known else "???", ClassTree.progress_text(g, best_b)], "pct": best_p,
-			"color": Color(ClassTree.RANK_COLORS[best_b["rank"]]), "w": 1.2})
+	# (Branch-offs stay secret until they open, so they never show up as a goal)
 	# The next boss
 	var to_boss := 0
 	for f in range(g.floor_num, g.floor_num + 26):

@@ -1,65 +1,92 @@
 class_name StashTab
 extends VBoxContainer
-## Items > Stash: a chest shared by all your Regular heroes. Put gear in with
-## one hero and take it out with another. Hardcore heroes can't use it.
+## Town > Vault: a chest shared by all your Regular heroes, shown as a grid of
+## item pictures (empty squares are free space). Tap a picture to see the item,
+## then move it between your bag and the Vault. Hardcore heroes can't use it.
 
 var main
 var state: GameState
 var title: Label
-var bag_list: ItemList
-var stash_list: ItemList
-var bag_ids: Array[int] = []
 var upgrade_button: Button
+var vault_grid: GridContainer
+var bag_grid: GridContainer
+var bag_title: Label
+var info: PanelContainer
+var info_pic: TextureRect
+var info_text: RichTextLabel
+var info_button: Button
+var picked := {}          # {"where": "bag"/"vault", "key": item id (bag) or index (vault)}
 var shown := ""
 
 func setup(m) -> void:
 	main = m
 	state = m.state
-	name = "Stash"
+	name = "Vault"
 	add_theme_constant_override("separation", 6)
 	var head := UI.hbox(8)
 	add_child(head)
-	title = UI.label("", 14, UI.TEXT)
+	title = UI.label("", 14, UI.GOLD)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
 	upgrade_button = UI.button("", _upgrade)
 	head.add_child(upgrade_button)
-	var note := UI.label("Shared by all your Regular heroes. Tap an item to move it.", 12, UI.DIM)
+	var note := UI.label("Shared by all your Regular heroes. Tap an item to look at it, then move it.", 12, UI.DIM)
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(note)
-	var cols := HBoxContainer.new()
-	cols.add_theme_constant_override("separation", 8)
-	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	add_child(cols)
-	for which in ["bag", "stash"]:
-		var v := UI.vbox(4)
-		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		cols.add_child(v)
-		v.add_child(UI.label("YOUR BAG  (tap to stash)" if which == "bag" else "STASH  (tap to take)", 11, UI.DIM))
-		var l := ItemList.new()
-		l.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		l.add_theme_font_size_override("font_size", 12)
-		v.add_child(l)
-		if which == "bag":
-			bag_list = l
-			l.item_selected.connect(_from_bag)
-		else:
-			stash_list = l
-			l.item_selected.connect(_from_stash)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
+	var body := UI.vbox(8)
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(body)
+	body.add_child(UI.label("THE VAULT", 11, UI.DIM))
+	vault_grid = ItemGrid.grid()
+	body.add_child(vault_grid)
+	bag_title = UI.label("", 11, UI.DIM)
+	body.add_child(bag_title)
+	bag_grid = ItemGrid.grid()
+	body.add_child(bag_grid)
+	# The picked item: picture, stats and the move button
+	info = UI.panel(UI.INSET, UI.BORDER, 8, 8, 1)
+	add_child(info)
+	var ih := UI.hbox(10)
+	info.add_child(ih)
+	info_pic = ItemGrid.picture(48)
+	ih.add_child(info_pic)
+	info_text = UI.rich(12)
+	info_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info_text.custom_minimum_size = Vector2(120, 0)
+	ih.add_child(info_text)
+	info_button = UI.primary("", _move, UI.GOLD)
+	info_button.custom_minimum_size = Vector2(120, UI.TAP)
+	info_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	ih.add_child(info_button)
+	resized.connect(_on_resized)
 
-func _from_bag(idx: int) -> void:
-	bag_list.deselect_all()
-	if idx < 0 or idx >= bag_ids.size():
+func _on_resized() -> void:
+	ItemGrid.fit([vault_grid, bag_grid], size.x)
+
+func _pick(where: String, key: int) -> void:
+	main.sfx.play("click")
+	picked = {"where": where, "key": key}
+	shown = ""
+	refresh()
+
+func _move() -> void:
+	if picked.is_empty():
 		return
-	if state.to_stash(bag_ids[idx], main.profile.stash, main.profile.stash_capacity()):
-		main.profile.save()
+	var p: Profile = main.profile
+	var ok := false
+	if picked["where"] == "bag":
+		ok = state.to_stash(int(picked["key"]), p.stash, p.stash_capacity())
+	else:
+		ok = state.from_stash(int(picked["key"]), p.stash)
+	if ok:
+		p.save()
 		main.sfx.play("equip")
-	main.refresh()
-
-func _from_stash(idx: int) -> void:
-	stash_list.deselect_all()
-	if state.from_stash(idx, main.profile.stash):
-		main.profile.save()
-		main.sfx.play("equip")
+	picked = {}
+	shown = ""
 	main.refresh()
 
 func _upgrade() -> void:
@@ -70,36 +97,61 @@ func _upgrade() -> void:
 	state.gold -= cost
 	p.stash_level += 1
 	p.save()
-	state.say("The stash now holds %d items." % p.stash_capacity())
+	state.say("The Vault now holds %d items." % p.stash_capacity())
 	state.save_game()
 	main.sfx.play("buy")
 	main.refresh()
 
+func _picked_item() -> Dictionary:
+	if picked.is_empty():
+		return {}
+	if picked["where"] == "bag":
+		for it in state.bag:
+			if int(it["id"]) == int(picked["key"]):
+				return it
+		return {}
+	var p: Profile = main.profile
+	var i := int(picked["key"])
+	return p.stash[i] if i >= 0 and i < p.stash.size() else {}
+
 func refresh() -> void:
 	var p: Profile = main.profile
-	title.text = "STASH  %d / %d" % [p.stash.size(), p.stash_capacity()]
+	title.text = "VAULT  %d / %d" % [p.stash.size(), p.stash_capacity()]
 	var cost := GameData.stash_cost(p.stash_level)
 	if p.stash_level >= GameData.STASH_MAX_LEVEL:
-		upgrade_button.text = "Stash is max size"
+		upgrade_button.text = "Vault is max size"
 		upgrade_button.disabled = true
 	else:
 		upgrade_button.text = "+%d slots (%d gold)" % [GameData.STASH_STEP, cost]
 		upgrade_button.disabled = state.gold < cost
-	var key := "%d|%d|%d" % [state.bag_version, p.stash.size(), p.stash_level]
+	var key := "%d|%d|%d|%s" % [state.bag_version, p.stash.size(), p.stash_level, str(picked)]
 	if key == shown:
 		return
 	shown = key
-	bag_list.clear()
-	bag_ids.clear()
+	ItemGrid.fit([vault_grid, bag_grid], size.x)
+	var item := _picked_item()
+	if item.is_empty():
+		picked = {}
+	for g in [vault_grid, bag_grid]:
+		for c in g.get_children():
+			c.queue_free()
+	# The vault: its items, then empty squares for the free space
+	for i in p.stash.size():
+		var sel: bool = not picked.is_empty() and picked["where"] == "vault" and int(picked["key"]) == i
+		vault_grid.add_child(ItemGrid.cell(p.stash[i], _pick.bind("vault", i), sel))
+	for i in maxi(0, p.stash_capacity() - p.stash.size()):
+		vault_grid.add_child(ItemGrid.cell({}, Callable()))
+	bag_title.text = "YOUR BAG  %d / %d" % [state.bag.size(), state.bag_capacity()]
 	var items: Array = state.bag.duplicate()
 	items.reverse()
-	for item in items:
-		var i := bag_list.add_item("%s  +%d %s" % [GameData.display_name(item), GameData.item_power(item), item["stat"]])
-		bag_list.set_item_custom_fg_color(i, Color(GameData.color_of(item["rarity"])))
-		bag_list.set_item_tooltip(i, ItemText.plain(item))
-		bag_ids.append(int(item["id"]))
-	stash_list.clear()
-	for item in p.stash:
-		var i := stash_list.add_item("%s  +%d %s" % [GameData.display_name(item), GameData.item_power(item), item["stat"]])
-		stash_list.set_item_custom_fg_color(i, Color(GameData.color_of(item["rarity"])))
-		stash_list.set_item_tooltip(i, ItemText.tip(state, item))
+	for it in items:
+		var sel2: bool = not picked.is_empty() and picked["where"] == "bag" and int(picked["key"]) == int(it["id"])
+		bag_grid.add_child(ItemGrid.cell(it, _pick.bind("bag", int(it["id"])), sel2))
+	# The info strip
+	info.visible = not item.is_empty()
+	if not item.is_empty():
+		info_pic.texture = Sprites.item_icon(item)
+		info_text.text = ItemText.describe(state, item)
+		var to_vault: bool = picked["where"] == "bag"
+		info_button.text = "Put in the Vault" if to_vault else "Take it out"
+		info_button.disabled = (to_vault and p.stash.size() >= p.stash_capacity()) or (not to_vault and state.bag_full())

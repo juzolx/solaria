@@ -214,7 +214,10 @@ func _initialize() -> void:
 				ev.pressed = true
 				ev.button_index = MOUSE_BUTTON_LEFT
 				main.gear_tab._on_card_input(ev, slot)
-				main.gear_tab._on_item_selected(1)
+				main.gear_tab.refresh()
+				var cells: Array = main.gear_tab.item_grid.get_children()
+				if cells.size() > 1:
+					(cells[1] as Button).pressed.emit()
 			main.gear_tab.equip_best_button.pressed.emit()
 			# Bag: sort, filter, lock, sell, salvage, upgrade, reroll
 			main.bag_tab.sort_pick.select(i / 60 % 4)

@@ -179,19 +179,50 @@ static func class_card(m, n: Dictionary, with_button: bool, on_pick: Callable) -
 # =====================================================================
 
 func _tree() -> void:
-	UI.section(box, "Evolution Tree", "Your class evolves at levels 15, 35 and 60. Classes you haven't reached stay hidden until you get there.")
-	var tv := TreeView.new()
-	tv.state = state
-	tv.selected = selected
-	tv.picked.connect(func(id: String):
-		selected = id if selected != id else ""
-		shown = ""
-		refresh())
-	box.add_child(tv)
-	var legend := UI.rich(11)
-	legend.text = "[color=%s]Gold = your path. Border color shows a class's side: [color=%s]Good[/color], [color=%s]Neutral[/color], [color=%s]Evil[/color]. Level 60 classes are unique classes with a rank. Tap a class you've revealed to see it.[/color]" % [
-		UI.hex(UI.DIM), ClassTree.ALIGN_COLORS["G"], ClassTree.ALIGN_COLORS["N"], ClassTree.ALIGN_COLORS["E"]]
-	box.add_child(legend)
+	UI.section(box, "Your path", "Your class evolves at levels 15, 35 and 60. What it becomes stays a mystery until you get there and choose.")
+	var row := UI.hbox(6)
+	box.add_child(row)
+	var steps: Array = [{"level": 1, "id": "", "name": state.hero_class}]
+	for i in ClassTree.PICK_LEVELS.size():
+		var id: String = state.class_path[i] if state.class_path.size() > i else ""
+		steps.append({"level": int(ClassTree.PICK_LEVELS[i]), "id": id})
+	for i in steps.size():
+		if i > 0:
+			var arrow := UI.label("›", 18, UI.DIM)
+			arrow.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			row.add_child(arrow)
+		var st: Dictionary = steps[i]
+		var n: Dictionary = ClassTree.node(String(st["id"])) if String(st["id"]) != "" else {}
+		if st.has("name"):
+			n = {"name": st["name"]}
+		var reached := not n.is_empty()
+		var ready: bool = not reached and ClassTree.pick_tier(state) == i - 1 and state.level >= int(st["level"])
+		var col := UI.GOLD if reached else (UI.GREEN if ready else UI.BORDER)
+		var p := UI.panel(Color("#1d1708") if reached else UI.INSET, col, 8, 6, 2 if reached or ready else 1)
+		p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(p)
+		var v := UI.vbox(1)
+		p.add_child(v)
+		v.add_child(UI.label("Start" if i == 0 else "Level %d" % int(st["level"]), 10, UI.DIM))
+		var name_text: String = String(n["name"]) if reached else ("Choose now!" if ready else "???")
+		var nl := UI.label(name_text, 13, UI.GOLD if reached else (UI.GREEN if ready else UI.DIM))
+		nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(nl)
+	if state.class_branch != "":
+		var b := ClassTree.node(state.class_branch)
+		var t := UI.label("You stepped off the path to become a %s. Your special stat keeps growing." % b["name"], 12, UI.DIM)
+		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(t)
+	# Dev Mode still shows the whole branching tree
+	if state.dev_mode:
+		var tv := TreeView.new()
+		tv.state = state
+		tv.selected = selected
+		tv.picked.connect(func(id: String):
+			selected = id if selected != id else ""
+			shown = ""
+			refresh())
+		box.add_child(tv)
 
 func _detail() -> void:
 	if selected == "":
@@ -292,14 +323,17 @@ func _branches() -> void:
 	if state.class_path.is_empty() or state.class_path.size() >= 3:
 		return
 	var cur_id: String = state.class_path[state.class_path.size() - 1]
-	var cur := ClassTree.node(cur_id)
-	box.add_child(UI.heading("Branch-offs of %s" % cur["name"]))
-	var intro := UI.label("Hidden unique classes you can step into instead of climbing further. Taking one ends your tree, but gives you a special stat that keeps growing. They close when you pick your next class.", 11, UI.DIM)
+	# Branch-offs stay secret: one only shows up once you've earned it (or found it before)
+	var open: Array = ClassTree.branches(cur_id).filter(func(b): return ClassTree.branch_ready(state, b) or state.discovered.has(b["name"]) or state.dev_mode)
+	if open.is_empty():
+		return
+	box.add_child(UI.heading("A hidden path has opened"))
+	var intro := UI.label("Something about how you fight has opened a way off your path. Taking it ends your evolutions, but its special stat keeps growing. It closes when you pick your next class.", 11, UI.DIM)
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(intro)
-	for b in ClassTree.branches(cur_id):
+	for b in open:
 		var prog := ClassTree.progress(state, b)
-		var known: bool = prog >= 0.5 or state.dev_mode or state.discovered.has(b["name"])
+		var known := true
 		var ready := ClassTree.branch_ready(state, b)
 		var rc := Color(ClassTree.RANK_COLORS[b["rank"]])
 		var p := UI.panel(UI.INSET, rc if ready else UI.BORDER, 8, 8, 2 if ready else 1)
@@ -334,13 +368,17 @@ func _branches() -> void:
 # =====================================================================
 
 func _items() -> void:
+	if state.class_items.is_empty() and not state.dev_mode:
+		return
 	box.add_child(UI.heading("The Wanderer's items"))
-	var t := UI.label("Sword Saint and every Wanderer final except Asura need an item. Each one comes from a single meeting on the road: a fight or a conversation that only finds a Wanderer at the right class.", 11, UI.DIM)
+	var t := UI.label("Some roads only open for a Wanderer carrying the right thing. You'll know it when you find it.", 11, UI.DIM)
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(t)
 	for it in ClassTree.ITEMS:
 		var d: Dictionary = ClassTree.ITEMS[it]
 		var have: bool = it in state.class_items
+		if not have and not state.dev_mode:
+			continue
 		var n := ClassTree.node(String(d["node"]))
 		var at := ClassTree.node(String(d["at"]))
 		var r := UI.rich(12)
@@ -354,8 +392,11 @@ func _items() -> void:
 # =====================================================================
 
 func _hidden_classes() -> void:
+	# Secret until earned: nothing about them shows before you have one
+	if state.hidden.is_empty() and not state.dev_mode:
+		return
 	box.add_child(UI.heading("Hidden classes"))
-	var intro := UI.label("Secret classes you unlock by how you play. They sit on top of your class: you keep everything and gain their title, bonuses and their own special stat.", 11, UI.DIM)
+	var intro := UI.label("Earned by how you play. They sit on top of your class: you keep everything and gain their title, bonuses and their own special stat.", 11, UI.DIM)
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(intro)
 	if not state.hidden.is_empty():
@@ -377,6 +418,8 @@ func _hidden_classes() -> void:
 		for id in Hidden.ORDER:
 			var c := Hidden.info(id)
 			if int(c["tier"]) != tier:
+				continue
+			if not state.hidden.has(id) and not state.dev_mode:
 				continue
 			_hidden_card(id, c)
 
