@@ -158,6 +158,7 @@ var hero_art_key := ""
 var swing := 0.0         # weapon swing: -1 wind-up, +1 strike
 var lpc_anim := "combat_idle"  # LPC heroes: the animation playing (lpc.gd)
 var lpc_t := 0.0
+var pet_lunge := 0.0
 var fx_sprites: Array = []   # sprite effects: {"name", "pos", "t", "scale", "flip"} (art/fx)
 static var _fx_tex := {}
 static var _fx_frames := {}
@@ -348,7 +349,12 @@ func play(events: Array[Dictionary]) -> void:
 				_sfx("buff")
 				_float(str(e["name"]).to_upper() + "!", _hero_center() + Vector2(30, -20), Color("#c4b5fd"), 18)
 			"summon_hit":
+				if e.has("name") and state.pet_on and World.pet_stage(state) >= 0:
+					var pt := create_tween()
+					pt.tween_property(self, "pet_lunge", 1.0, 0.1)
+					pt.tween_property(self, "pet_lunge", 0.0, 0.2)
 				_later(delay + 0.15, func():
+					_fx("claw", _enemy_center() + Vector2(-16, 12), 0.7)
 					_float("%d" % e["dmg"], _enemy_center() + Vector2(-20, 20), Color("#c4b5fd"), 15)
 					_burst(_enemy_center() + Vector2(-20, 10), Color("#c4b5fd"), 6, 160.0))
 			"confused":
@@ -1074,6 +1080,7 @@ func _draw() -> void:
 		draw_arc(Vector2.ZERO, hr.size.x * (0.35 + 0.15 * (1.0 - cast_glow)), 0.0, TAU, 24, Color(cast_color, cast_glow * 0.6), 2.0)
 		draw_set_transform(_off)
 	_draw_members()
+	_draw_pet()
 	_draw_hero()
 	var hero_name := "HERO" if state.hero_class == "" else "%s  Lv %d" % [state.title(), state.level]
 	_draw_bar(hr, hero_name, state.hero_hp, state.get_max_hp(), Color("#22c55e"), Color("#e5e7eb"))
@@ -1303,6 +1310,20 @@ func _draw_hero() -> void:
 		if hero_flash > 0.0:
 			draw_texture(hero_art["weapon_white"], -piv, Color(1.0, 0.2, 0.2, hero_flash * 0.75))
 		draw_set_transform(_off)
+
+## The companion stands behind the hero (art/pets, tools/art_pets.py), a size smaller.
+func _draw_pet() -> void:
+	if state == null or not state.pet_on or World.pet_stage(state) < 0:
+		return
+	var tex := Pets.portrait(state)
+	if tex == null:
+		return
+	var pu := float(maxi(1, _unit() - 1)) / _scr()
+	var s := 64.0 * pu
+	var hc := _hero_canvas()
+	var x := hc.position.x + 30.0 * _hu() - s * 0.85 + pet_lunge * size.x * 0.06
+	var y := _ground() - 63.0 * pu + roundf(sin(bob * 3.4 + 1.3)) * pu
+	draw_texture_rect(tex, Rect2(_snap(Vector2(x, y)), Vector2(s, s)), false, Color(1, 1, 1, hero_alpha))
 
 ## An LPC hero: the current animation frame, with rim light, weapon glow and hit flash.
 func _draw_lpc_hero(c: Rect2, u: float, a: float, glow: Color) -> void:
