@@ -83,6 +83,8 @@ const ELIXIRS := {
 	"iron": {"name": "Elixir of Iron", "text": "+30% Defense for 30 turns", "def": 1.3, "turns": 30, "gold": 120},
 	"rested": {"name": "Well Rested", "text": "+15% Attack for 20 turns", "atk": 1.15, "turns": 20, "gold": 0},
 	"fortune": {"name": "Elixir of Fortune", "text": "+50% gold for 30 turns", "gold_find": 50, "turns": 30, "gold": 100},
+	"altar": {"name": "Blood Pact", "text": "+30% Attack", "atk": 1.3, "turns": 40, "gold": 0},
+	"hexed": {"name": "Hexed", "text": "-20% Defense", "def": 0.8, "turns": 40, "gold": 0},
 }
 const PATH_CHANCE := 30  # % chance after a floor that you get to choose the next room
 const PATH_WAIT_TURNS := 10  # turns before it picks "Fight on" for you
@@ -848,7 +850,10 @@ static func effect_text(effect: String, value: int) -> String:
 	return ""
 
 static func xp_to_next(level: int) -> int:
-	return int(30 * pow(level, 1.8))
+	# The first levels come quickly so the first evolution (level 15) arrives
+	# in the first session; from level 25 on it's the normal curve.
+	var early := clampf(0.35 + 0.65 * (level - 1) / 24.0, 0.35, 1.0)
+	return maxi(10, int(30 * pow(level, 1.8) * early))
 
 static func xp_for_kill(floor_num: int, boss: bool) -> int:
 	return (4 + floor_num * 2) * (8 if boss else 1)

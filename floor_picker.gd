@@ -19,6 +19,11 @@ func show_for(main_node) -> void:
 	var sub := UI.rich(13)
 	sub.text = "[color=%s]Travel to any floor you've reached. Red floors are bosses: go back to farm them for uniques. You're on [color=#e8b14a]floor %d[/color] (%s).[/color]" % [UI.hex(UI.DIM), state.floor_num, GameData.sub_name(state.floor_num)]
 	content.add_child(sub)
+	if World.curses_unlocked(state):
+		var cb := UI.button("Curses (%d on): harder climb, better loot" % state.curses.size(), func(): curses_popup(m))
+		cb.custom_minimum_size = Vector2(0, UI.TAP)
+		cb.add_theme_color_override("font_color", UI.PURPLE)
+		content.add_child(cb)
 	zone_bar = HFlowContainer.new()
 	zone_bar.add_theme_constant_override("h_separation", 6)
 	zone_bar.add_theme_constant_override("v_separation", 6)
@@ -121,3 +126,34 @@ func _go(f: int) -> void:
 	if state.go_to_floor(f):
 		close()
 	m.refresh()
+
+## Opt-in curses: tougher monsters for better loot and more gold.
+static func curses_popup(mm) -> void:
+	var st: GameState = mm.state
+	var o := Overlay.new().open(mm, "Curses", 520.0, UI.PURPLE)
+	_fill_curses(mm, o, st)
+
+static func _fill_curses(mm, o: Overlay, st: GameState) -> void:
+	for c in o.content.get_children():
+		if c != o.content.get_child(0):
+			c.queue_free()
+	o.content.add_child(UI.wrap("Turn on curses to make every fight harder. Each one makes loot rarer and gold richer. They stay on until you turn them off.", 13, UI.DIM))
+	o.content.add_child(UI.label("Now: +%d loot luck, +%d%% gold" % [World.curse_loot(st), int(World.curse_gold(st))], 15, UI.PURPLE))
+	for id in World.CURSE_ORDER:
+		var cu: Dictionary = World.CURSES[id]
+		var on := World.has_curse(st, id)
+		var c := UI.card(UI.PURPLE if on else UI.BORDER, Color("#1d1430") if on else UI.INSET, 4)
+		o.content.add_child(c[0])
+		var h := UI.hbox(8)
+		c[1].add_child(h)
+		var v := UI.vbox(2)
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(v)
+		v.add_child(UI.label(String(cu["name"]), 15, UI.PURPLE.lightened(0.3) if on else UI.TEXT))
+		v.add_child(UI.wrap("%s  Loot +%d, gold +%d%%." % [cu["text"], int(cu["loot"]), int(cu["gold"])], 12, UI.DIM))
+		var cid: String = id
+		var b := UI.primary("ON" if on else "OFF", func():
+			World.toggle_curse(st, cid)
+			_fill_curses(mm, o, st), UI.PURPLE if on else UI.DIM)
+		b.custom_minimum_size = Vector2(64, UI.TAP)
+		h.add_child(b)

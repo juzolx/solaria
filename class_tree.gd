@@ -703,6 +703,7 @@ static func _on_new_class(g: GameState, n: Dictionary) -> void:
 	g.events.append({"type": "class_up", "name": n["name"], "role": n["role_text"], "rank": r, "side": n["side"], "color": g.class_info().get("color", "#ffffff"),
 		"skill": SkillData.skill_name(sig), "skill_text": SkillData.info(sig).get("text", ""), "tier": int(n["tier"])})
 	g.say("[color=#fde047]New signature skill: %s![/color] %s" % [SkillData.skill_name(sig), SkillData.info(sig).get("text", "")])
+	World.check_pet(g)
 	if r != "":
 		g.codex.add("unique_classes")
 		g.say("[color=%s]*** UNIQUE CLASS: %s (%s rank) ***[/color] %s" % [RANK_COLORS[r], n["name"], r, n["role_text"]])

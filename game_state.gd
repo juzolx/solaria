@@ -172,6 +172,12 @@ var boss_minions := 0
 var minion_hp := 0
 var hero_status := {}         # statuses on you: "poison" / "burn" / "chill" -> turns left
 var last_death := {}          # the death recap (combat.gd)
+var enemy_champion := false   # a milestone floor's Champion (world.gd)
+var checkpoint := 0           # the highest milestone floor beaten: you never fall below it
+var curses := {}              # opt-in curses: id -> true (world.gd)
+var pet_on := true            # your companion fights with you
+var pet_name := ""            # "" = its species name
+var pet_seen := -1            # the companion stage we've told you about
 var auto_potion_at := 0.3     # auto-potion when HP drops below this
 var skill_priority: Array = []  # active skills in the order Auto should use them
 var skill_auto_off := {}      # active skills Auto never uses (you press them yourself)
@@ -288,6 +294,8 @@ func status_mult() -> float:
 
 ## Chance (%) of an extra attack each turn (Agility).
 func haste_chance() -> float:
+	if World.hazard(self) == "flood":
+		return 0.0
 	return dim("AGI", GameData.AGI_HASTE) + _flat("haste")
 
 ## Chance (%) to strike first when a fight starts (Agility).
@@ -419,6 +427,9 @@ func _bonus_sources() -> Array:
 	var mb := Mastery.bonus(self)
 	if not mb.is_empty():
 		out.append(mb)
+	var ab := World.achievement_bonus(self)
+	if not ab.is_empty():
+		out.append(ab)
 	return out
 
 ## Multiplier bonuses (atk, hp, def, skill) multiply together.
@@ -458,6 +469,7 @@ func tag_power(tags: Array) -> float:
 		var tg: Dictionary = b.get("tag", {})
 		for t in tags:
 			p += float(tg.get(t, 0.0))
+	p += World.hazard_tag_power(self, tags)
 	p += ClassTree.tag_power(self, tags)
 	for i in passive_slot_count():
 		var id: String = passive_slots[i]
@@ -748,7 +760,7 @@ func effect_value(effect: String) -> float:
 	elif effect == "regen":
 		total += dim("WIS", GameData.WIS_REGEN)
 	total += _flat(effect)
-	if effect == "regen" and form == "Vampire":
+	if effect == "regen" and (form == "Vampire" or curses.has("frailty")):
 		total = minf(total, 0.0)
 	if effect == "crit":
 		total = minf(total, GameData.CRIT_CAP)
@@ -762,6 +774,8 @@ func effect_total(effect: String) -> int:
 ## Defense reduces damage by a percentage: equal Defense and enemy Attack halves it.
 func damage_taken() -> int:
 	var atk := float(enemy_attack) * Lineage.enemy_attack_mult(self) * Realms.damage_mult(self)
+	# Bestiary mastery: you know this monster's moves (half your kill bonus as less damage)
+	atk *= 1.0 - Monsters.milestone_bonus(codex.kills(enemy_species)) / 200.0
 	return maxi(1, int(round(atk * atk / (atk + get_defense()))))
 
 ## Chance (%) the next boss drops a unique. Goes up after every boss without one.
@@ -1116,6 +1130,7 @@ func gain_xp(amount: int) -> void:
 		hero_hp = get_max_hp()
 		events.append({"type": "level_up", "level": level})
 		say("[color=#fbbf24]LEVEL UP! You're now level %d.[/color] +%d stat points" % [level, GameData.STAT_POINTS_PER_LEVEL])
+		World.check_pet(self)
 		if auto_stats:
 			auto_spend()
 		else:
@@ -1238,13 +1253,18 @@ func spawn_enemy() -> void:
 		if hunt_spawns > 0:
 			hunt_spawns -= 1
 			boost = GameData.HUNT_RARE_BOOST
-		enemy_tier = Monsters.roll_tier(hardcore, boost)
+		enemy_tier = Monsters.roll_tier(hardcore, boost * (1.6 if curses.has("swarm") else 1.0))
 		if horde_left > 0:
 			hp = int(hp * GameData.HORDE_HP)
 			enemy_tier = mini(enemy_tier, 1)
 	if curse_turns > 0 and not enemy_goblin:
 		hp = int(hp * GameData.CURSE_POWER)
 		atk = int(atk * GameData.CURSE_POWER)
+	if not enemy_goblin:
+		if curses.has("vigor"):
+			hp = int(hp * 1.5)
+		if curses.has("fury"):
+			atk = int(atk * 1.3)
 	if party != null and party.size() > 0 and not enemy_goblin:
 		hp = int(hp * party.hp_mult())
 		atk = int(atk * party.atk_mult())
@@ -1257,7 +1277,14 @@ func spawn_enemy() -> void:
 	enemy_base_hp = hp
 	enemy_base_atk = atk
 	burn_turns = 0
+	enemy_champion = false
 	_apply_tier(enemy_tier)
+	if curses.has("swarm") and enemy_tier > 0 and not enemy_is_boss:
+		var extra := Monsters.roll_mods(1)
+		if not extra.is_empty() and not extra[0] in enemy_mods:
+			enemy_mods.append(extra[0])
+	if World.champion_here(self) and not enemy_is_boss:
+		World.make_champion(self)
 	enemy_illusion = Realms.roll_illusion(self)
 	Realms.maybe_spirit(self)
 	var realm_here := GameData.realm_of(floor_num)
@@ -1360,6 +1387,9 @@ func take_turn() -> void:
 
 	# Hero attacks (Agility: sometimes first, sometimes twice)
 	var line := ""
+	if int(cfight.get("turns", 0)) <= 1 and World.pet_first(self) and not cfight.get("pet_first", false):
+		cfight["pet_first"] = true
+		World.pet_turn(self)
 	var my_swings := 1
 	if bool(cfight.get("first", false)) and int(cfight.get("turns", 0)) <= 1 and randf() * 100.0 < first_strike_chance():
 		my_swings += 1
@@ -1388,6 +1418,8 @@ func take_turn() -> void:
 		last_hit = "hit"
 		var sd := _damage_enemy(maxi(1, int(get_attack() * summon_power)))
 		events.append({"type": "summon_hit", "dmg": sd, "name": summon_name})
+	if enemy_hp > 0:
+		World.pet_turn(self)
 	var pal := Hidden.companion_power(self)
 	if pal > 0.0 and enemy_hp > 0:
 		last_hit = "hit"
@@ -1468,7 +1500,7 @@ func take_turn() -> void:
 			if Realms.misses(self):
 				line += ". The %s swings blind in the mist" % enemy_name
 				continue
-			var damage := int(damage_taken() * Combat.enrage_mult(self))
+			var damage := int(damage_taken() * Combat.enrage_mult(self) * World.pet_guard(self))
 			if enemy_weaken_turns > 0:
 				damage = maxi(1, int(damage * enemy_weaken))
 			if enemy_curse > 0:
@@ -1504,8 +1536,9 @@ func take_turn() -> void:
 		Combat.note_damage(self, "burning", burn)
 		events.append({"type": "enemy_hit", "dmg": burn, "burning": true})
 
-	# Poison, burns and chill on you
+	# Poison, burns and chill on you, and the floor's hazard
 	Combat.tick_hero(self)
+	World.hazard_turn(self)
 	# The realm itself (forge heat, hellfire, the angels' judgement)
 	line += Realms.on_turn(self)
 	# Regeneration (gear, skills, songs)
@@ -1536,6 +1569,9 @@ func _basic_attack() -> Dictionary:
 	if Realms.misses(self):
 		events.append({"type": "blink"})
 		return {"line": "Your attack is lost in the mist", "dealt": 0}
+	if World.dark_miss(self):
+		events.append({"type": "blink"})
+		return {"line": "You swing at shadows", "dealt": 0}
 	var hits := 2 if randf() * 100.0 < effect_total("double_strike") else 1
 	var total_dmg := 0
 	var crit := false
@@ -1581,6 +1617,7 @@ func _loot_bonus() -> int:
 	b += Realms.loot_bonus(self)
 	if curse_turns > 0:
 		b += GameData.CURSE_LOOT
+	b += World.curse_loot(self)
 	return b
 
 ## Which slot a monster's drop goes in: it favors its own 2 slots.
@@ -1639,7 +1676,7 @@ func _enemy_defeated() -> void:
 	if party != null:
 		party.on_kill(xp_gain)
 	var gold_gain := (2 + floor_num) * (10 if was_boss else 1)
-	gold_gain = int(gold_gain * float(t["gold"]) * (1.0 + (effect_total("gold_find") + bonus_pct) / 100.0) * GameData.event_bonus("gold"))
+	gold_gain = int(gold_gain * float(t["gold"]) * (1.0 + (effect_total("gold_find") + bonus_pct + World.curse_gold(self)) / 100.0) * GameData.event_bonus("gold"))
 	if curse_turns > 0:
 		gold_gain *= 2
 	if was_goblin:
@@ -1678,6 +1715,7 @@ func _enemy_defeated() -> void:
 		else:
 			bosses_since_unique += 1
 			say("No unique this time. Next boss: %d%% unique chance." % int(unique_chance()))
+		checkpoint = maxi(checkpoint, floor_num)
 		boss_ready_at[str(floor_num)] = Time.get_unix_time_from_system() + float(GameData.BOSS_COOLDOWN[enemy_boss_kind])
 		restock_shop()
 		merchant = []
@@ -1713,7 +1751,10 @@ func _enemy_defeated() -> void:
 		if Monsters.has_signature(species) and randf() * Monsters.SIGNATURE_CHANCE < 1.0 + luck_odds() / 100.0:
 			_give_signature(species)
 
-	hero_hp = mini(hero_hp + int(get_max_hp() * 0.15), get_max_hp())
+	if enemy_champion:
+		enemy_champion = false
+		World.champion_reward(self)
+	hero_hp = mini(hero_hp + int(get_max_hp() * 0.15 * (0.0 if curses.has("frailty") else 1.0)), get_max_hp())
 
 	# Move on (horde fights and the goblin don't count toward the floor's 3 fights)
 	if horde_left > 0 and not was_boss and not was_goblin:
@@ -1755,7 +1796,7 @@ func _feed_souls(boss: bool) -> void:
 ## An evolution set piece, usually from a set that fits your class.
 func _roll_evo_piece() -> Dictionary:
 	var mine: Array = []
-	var tags: Array = class_info().get("tags", [])
+	var tags: Array = (class_info().get("tags", []) as Array).duplicate()
 	for n in ClassTree.path_nodes(self):
 		tags.append_array(n.get("tags", []))
 	for sn in GameData.EVO_SET_ORDER:
@@ -1855,6 +1896,7 @@ func _next_floor() -> void:
 	Realms.note_seen(self)
 	if path_offer.is_empty():
 		_maybe_start_event()
+	World.on_floor(self)
 
 func _hero_died() -> void:
 	last_death = Combat.recap(self)
@@ -1900,12 +1942,12 @@ func _hero_died() -> void:
 	enemy_goblin = false
 	if enemy_is_boss:
 		boss_ready_at[str(floor_num)] = Time.get_unix_time_from_system() + float(GameData.BOSS_COOLDOWN[enemy_boss_kind])
-		var back := GameData.sub_start(floor_num)
-		say("[color=#f87171]%s was too strong! You're pushed back to floor %d, the start of %s.[/color]" % [enemy_name, back, GameData.sub_name(back)])
+		var back := maxi(GameData.sub_start(floor_num), mini(checkpoint, floor_num - 1))
+		say("[color=#f87171]%s was too strong! You're pushed back to floor %d.[/color]" % [enemy_name, back])
 		floor_num = back
 	else:
 		deaths_here += 1
-		if deaths_here >= 3 and floor_num > 1:
+		if deaths_here >= 3 and floor_num > 1 and floor_num - 1 >= checkpoint:
 			deaths_here = 0
 			floor_num -= 1
 			say("[color=#f87171]Defeated again. You fall back to floor %d to get stronger.[/color]" % floor_num)
@@ -1962,7 +2004,7 @@ func use_potion() -> void:
 	codex.add("potions_used")
 	Hidden.on_potion(self)
 	kill_streak = 0
-	var heal := int(get_max_hp() * GameData.POTION_HEAL * (1.0 + _flat("potion") / 100.0) * heal_mult())
+	var heal := int(get_max_hp() * GameData.POTION_HEAL * (1.0 + _flat("potion") / 100.0) * heal_mult() * (0.5 if curses.has("thirst") else 1.0))
 	hero_hp = mini(hero_hp + heal, get_max_hp())
 	say("[color=#f472b6]Drank a potion (+%d HP).[/color]" % heal)
 	events.append({"type": "potion", "amount": heal})
@@ -2694,6 +2736,11 @@ func save_game() -> void:
 		"stat_ver": 2,
 		"auto_stats": auto_stats,
 		"auto_potion_at": auto_potion_at,
+		"checkpoint": checkpoint,
+		"curses": curses,
+		"pet_on": pet_on,
+		"pet_name": pet_name,
+		"pet_seen": pet_seen,
 		"skill_priority": skill_priority,
 		"skill_auto_off": skill_auto_off,
 		"last_death": last_death,
@@ -2895,6 +2942,11 @@ func load_game() -> bool:
 	unique = data.get("unique", {})
 	auto_stats = bool(data.get("auto_stats", false))
 	auto_potion_at = float(data.get("auto_potion_at", GameData.AUTO_POTION_AT))
+	checkpoint = int(data.get("checkpoint", 0))
+	curses = data.get("curses", {})
+	pet_on = bool(data.get("pet_on", true))
+	pet_name = str(data.get("pet_name", ""))
+	pet_seen = int(data.get("pet_seen", -1))
 	skill_priority = data.get("skill_priority", [])
 	skill_auto_off = data.get("skill_auto_off", {})
 	last_death = data.get("last_death", {})
@@ -3170,12 +3222,16 @@ func _maybe_start_event() -> void:
 			Realms.start_realm_event(self)
 			return
 		roll = randf() * 100.0
-	if roll < 40.0:
+	if roll < 25.0:
 		start_event("goblin")
-	elif roll < 75.0:
+	elif roll < 45.0:
 		start_event("horde")
-	else:
+	elif roll < 60.0:
 		start_event("shrine")
+	elif path_rooms_on:
+		World.start_event(self)
+	else:
+		start_event("goblin")
 
 func start_event(kind: String) -> void:
 	_page("events")
@@ -3206,6 +3262,11 @@ func auto_path() -> String:
 func path_info(kind: String) -> Dictionary:
 	if kind.begins_with("cenc_"):
 		return ClassTree.path_info(kind, self)
+	if World.EVENT_PATHS.has(kind):
+		var d: Dictionary = World.EVENT_PATHS[kind].duplicate()
+		if kind == "bet":
+			d["text"] = "Bet %d gold on a coin toss. Luck and Charisma tilt the coin." % World.bet_amount(self)
+		return d
 	return GameData.PATHS[kind] if GameData.PATHS.has(kind) else Realms.path_info(self, kind)
 
 func choose_path(kind: String) -> void:
@@ -3225,6 +3286,9 @@ func choose_path(kind: String) -> void:
 			ClassTree.encounter_choice(self, kind == "cenc_yes")
 		"camp":
 			Realms.camp(self)
+		"altar", "chest_open", "bet", "well":
+			World.choose(self, kind)
+			return
 		"treasure":
 			var g := (5 + floor_num * 6) * 3
 			_add_gold(g)

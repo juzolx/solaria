@@ -769,14 +769,36 @@ func _process(delta: float) -> void:
 
 ## Screen pixels per art pixel (whole numbers keep pixel art crisp).
 ## (The art is HD: 64x64 bodies, so a unit is half what it was at 32x32.)
+## Pixel-perfect sizing: how many REAL screen pixels each art pixel covers.
+## The window may be scaled by any amount (phones, resized windows), so the
+## count is worked out in screen pixels and kept a whole number: every art
+## pixel is then exactly the same size, with no uneven or blurred pixels.
 func _unit() -> int:
-	var by_h := (_ground() - 34.0) / (32.0 * Sprites.HD)
-	var by_w := size.x * 0.4 / (32.0 * Sprites.HD)
-	return clampi(floori(minf(by_h, by_w)), 1, 6)
+	var sc := _scr()
+	var by_h := (_ground() - 34.0) * sc / (32.0 * Sprites.HD)
+	var by_w := size.x * 0.4 * sc / (32.0 * Sprites.HD)
+	return clampi(floori(minf(by_h, by_w)), 1, 12)
+
+## Screen pixels per design pixel (the window's stretch factor).
+func _scr() -> float:
+	var sc := get_global_transform_with_canvas().get_scale().x
+	return sc if sc > 0.01 else 1.0
+
+## One art pixel, in this control's (design) units.
+func _u() -> float:
+	return float(_unit()) / _scr()
+
+func _hu() -> float:
+	return float(_hero_unit()) / _scr()
+
+## Snaps a position to the real screen pixel grid.
+func _snap(v: Vector2) -> Vector2:
+	var sc := _scr()
+	return (v * sc).round() / sc
 
 ## Screen pixels per old 32x32-grid pixel (for distances that shouldn't change with HD).
 func _px() -> float:
-	return float(_unit() * Sprites.HD)
+	return _u() * Sprites.HD
 
 func _ground() -> float:
 	return size.y * 0.72
@@ -786,11 +808,11 @@ func _sprite_size(boss: bool) -> float:
 
 ## The hero's whole 48x48 picture; the feet sit on the ground line.
 func _hero_canvas() -> Rect2:
-	var u := float(_hero_unit())
+	var u := _hu()
 	var s := Sprites.CANVAS * u
 	var x := size.x * _leader_x() - s / 2.0 + hero_lunge * size.x * 0.1 - recoil * u * 4.0 * Sprites.HD
 	var y := _ground() - (Sprites.HERO_FOOT + 1) * u + roundf(sin(bob * 3.0)) * u
-	return Rect2(x, y, s, s)
+	return Rect2(_snap(Vector2(x, y)), Vector2(s, s))
 
 ## With companions around, everyone is drawn a size smaller so the group fits.
 func _hero_unit() -> int:
@@ -805,7 +827,7 @@ func _leader_x() -> float:
 
 ## Companions stand behind the leader, a size smaller (they're further back).
 func _member_canvas(i: int) -> Rect2:
-	var u := float(maxi(1, _unit() - 1))
+	var u := float(maxi(1, _unit() - 1)) / _scr()
 	var s := Sprites.CANVAS * u
 	var fx: Dictionary = party_fx.get(i, {})
 	var x := size.x * (_leader_x() - 0.13 * (i + 1)) - s / 2.0 + float(fx.get("lunge", 0.0)) * size.x * 0.06
@@ -864,14 +886,14 @@ func _draw_members() -> void:
 ## The visible body part of the hero (for bars, effects and centering).
 func _hero_rect() -> Rect2:
 	var c := _hero_canvas()
-	var u := float(_hero_unit())
+	var u := _hu()
 	return Rect2(c.position + Vector2(8, 12) * Sprites.HD * u, Vector2(32, 32) * Sprites.HD * u)
 
 func _hand_screen() -> Vector2:
 	var c := _hero_canvas()
 	var p: Dictionary = _hero_poses().get(hero_pose, {})
 	var off := Vector2(int(p.get("dx", 0)), int(p.get("dy", 0)))
-	return c.position + ((hero_art.get("hand", Vector2(32, 31) * Sprites.HD) as Vector2) + off) * float(_hero_unit())
+	return c.position + ((hero_art.get("hand", Vector2(32, 31) * Sprites.HD) as Vector2) + off) * _hu()
 
 func _hero_poses() -> Dictionary:
 	if hero_art.is_empty() or not hero_art.has("body_img"):
@@ -900,19 +922,22 @@ func _enemy_rect(boss: bool, enemy_name := "") -> Rect2:
 
 ## Rarer monsters are drawn bigger (by whole art pixels so they stay crisp).
 func _rect_for(art: Dictionary, boss: bool, scale_mult: float) -> Rect2:
-	var u := float(_unit())
+	var sc := _scr()
+	var ui := float(_unit())
 	if scale_mult > 1.0:
-		# Whole art pixels only, so the sprite stays crisp; Legendary and up are always a size bigger
-		u = maxf(u + (1.0 if scale_mult >= 1.28 else 0.0), roundf(u * scale_mult))
+		# Whole screen pixels only, so the sprite stays crisp; Legendary and up are always a size bigger
+		ui = maxf(ui + (1.0 if scale_mult >= 1.28 else 0.0), roundf(ui * scale_mult))
+	var u := ui / sc
 	var x := size.x * 0.73 - enemy_lunge * size.x * 0.1 + enemy_recoil * u * 3.0 * Sprites.HD
 	if art.is_empty():
 		var s := _sprite_size(boss)
 		return Rect2(x - s / 2.0, _ground() - s + sin(bob * 2.4 + 1.0) * 2.0, s, s)
 	# Big bosses never take more than ~45% of the width
-	u = maxf(1.0, minf(u, floorf(size.x * 0.46 / maxf(1.0, (art["size"] as Vector2).x))))
+	ui = maxf(1.0, minf(ui, floorf(size.x * 0.46 * sc / maxf(1.0, (art["size"] as Vector2).x))))
+	u = ui / sc
 	var sz: Vector2 = art["size"] * u
 	var foot: float = art["foot"]
-	return Rect2(x - sz.x / 2.0, _ground() - (foot + 1.0) * u, sz.x, sz.y)
+	return Rect2(_snap(Vector2(x - sz.x / 2.0, _ground() - (foot + 1.0) * u)), sz)
 
 func _hero_center() -> Vector2:
 	var r := _hero_rect()
@@ -935,10 +960,12 @@ func _draw() -> void:
 	var bg := _bg_tex(GameData.zone_index(state.floor_num), GameData.sub_index(state.floor_num))
 	if bg:
 		var gy := _ground()
-		var sc := maxf(maxf(ceilf(w / BG_SIZE.x), ceilf(gy / BG_GROUND)), ceilf((h - gy) / (BG_SIZE.y - BG_GROUND)))
+		var ss := _scr()
+		# Whole screen pixels per background pixel, so the scene stays crisp at any window size
+		var sc := maxf(maxf(ceilf(w * ss / BG_SIZE.x), ceilf(gy * ss / BG_GROUND)), ceilf((h - gy) * ss / (BG_SIZE.y - BG_GROUND))) / ss
 		var bw := BG_SIZE.x * sc
 		var dim := 0.62
-		draw_texture_rect(bg, Rect2((w - bw) / 2.0, gy - BG_GROUND * sc, bw, BG_SIZE.y * sc), false, Color(dim, dim, dim * 1.05))
+		draw_texture_rect(bg, Rect2(_snap(Vector2((w - bw) / 2.0, gy - BG_GROUND * sc)), Vector2(bw, BG_SIZE.y * sc)), false, Color(dim, dim, dim * 1.05))
 		# Vignette: the edges fall into shadow so the fighters read first
 		for i in 8:
 			var t := float(i) / 8.0
@@ -1098,7 +1125,7 @@ func _draw() -> void:
 ## Draws the hero picture and the weapon (rotated around the hand for swings).
 func _draw_hero() -> void:
 	var c := _hero_canvas()
-	var u := float(_hero_unit())
+	var u := _hu()
 	var a := hero_alpha
 	if hero_art.is_empty():
 		draw_texture_rect(hero_tex, _hero_rect(), false, Color(1, 1, 1, a))
@@ -1168,7 +1195,7 @@ func _draw_hero() -> void:
 
 ## The Wanderer's aura: rising streaks of light (sword) or flame (demon).
 func _draw_road_aura(r: Rect2, c: Color, strength: float) -> void:
-	var u := float(_unit())
+	var u := _u()
 	var n := int(4 + strength * 4)
 	for i in n:
 		var ph := fmod(bob * (0.5 + 0.15 * strength) + i * 0.29, 1.0)

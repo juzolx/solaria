@@ -127,7 +127,26 @@ func _show() -> void:
 			lines.append("Rare kills: " + ", ".join(parts))
 		var bonus := Monsters.milestone_bonus(kills)
 		var nxt := Monsters.next_milestone(kills)
-		lines.append("Hunter bonus: [color=#4ade80]+%d%% damage and gold[/color] against it" % bonus + ("  [color=%s](next at %d kills)[/color]" % [dim, nxt] if nxt > 0 else "  [color=#fbbf24](maxed!)[/color]"))
+		lines.append("Hunter bonus: [color=#4ade80]+%d%% damage and gold, %d%% less damage taken[/color] against it" % [bonus, bonus / 2] + ("  [color=%s](next at %d kills)[/color]" % [dim, nxt] if nxt > 0 else "  [color=#fbbf24](mastered!)[/color]"))
+		var prof: Dictionary = {"weak": [], "resist": []}
+		var zn := ""
+		for z in GameData.ZONES:
+			for en in z["enemies"]:
+				if en["name"] == selected:
+					zn = String(z.get("realm", z["name"]))
+					prof["shape"] = en["shape"]
+			for sb in z["subs"]:
+				if sb["monster"]["name"] == selected:
+					zn = String(z.get("realm", z["name"]))
+					prof["shape"] = sb["monster"]["shape"]
+		var ze: Dictionary = Combat.ZONE_ELEMENTS.get(zn, {})
+		var se: Dictionary = Combat.SHAPE_ELEMENTS.get(String(prof.get("shape", "")), {})
+		var weak: Array = (ze.get("weak", []) as Array) + (se.get("weak", []) as Array).filter(func(x): return not x in ze.get("resist", []))
+		var res: Array = (ze.get("resist", []) as Array) + (se.get("resist", []) as Array).filter(func(x): return not x in ze.get("weak", []))
+		if kills >= 10 or main.state.dev_mode:
+			lines.append("Weak to: [color=#4ade80]%s[/color]   Resists: [color=#94a3b8]%s[/color]" % [", ".join(weak.slice(0, 2)) if not weak.is_empty() else "nothing", ", ".join(res) if not res.is_empty() else "nothing"])
+		else:
+			lines.append("[color=%s]Kill 10 to learn its weaknesses.[/color]" % dim)
 		lines.append("")
 		var drops: Array = info.get("drops", [])
 		lines.append("[b]Drops[/b]: 1 item per kill, usually %s (%d%% of the time)" % [" or ".join(drops), int(GameData.FAVORED_SLOT_CHANCE * 100)])
