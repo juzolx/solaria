@@ -3,7 +3,7 @@
 achievements_tab.gd::GDScript::225817628144516105::1791830271::0::1::::AchievementsTab<>VBoxContainer<><>0<>0<><>::
 art_info.gd::GDScript::2121761137587333428::1791873882::0::1::::ArtInfo<>RefCounted<><>0<>0<><>::
 bag_tab.gd::GDScript::7963412957330005317::1791866958::0::1::::BagTab<>VBoxContainer<><>0<>0<><>::
-battle_view.gd::GDScript::1321114398721736239::1791893333::0::1::::BattleView<>Control<><>0<>0<><>::
+battle_view.gd::GDScript::1321114398721736239::1791894175::0::1::::BattleView<>Control<><>0<>0<><>::
 bestiary_tab.gd::GDScript::3473921906557743363::1791868480::0::1::::BestiaryTab<>HBoxContainer<><>0<>0<><>::
 bounty_tab.gd::GDScript::6266114143799082059::1791830295::0::1::::BountyTab<>ScrollContainer<><>0<>0<><>::
 character_creator.gd::GDScript::5800014703699665626::1791892077::0::1::::CharacterCreator<>Overlay<><>0<>0<><>::
@@ -1621,7 +1621,7 @@ warrior_0.png::CompressedTexture2D::5350010240734441216::1791892663::1791892692:
 warrior_1.png::CompressedTexture2D::182288808997362282::1791892663::1791892692::1::::<><><>0<>0<>6f06f3ceecfd54d9434c5fe754ac8c2f<>res://.godot/imported/warrior_1.png-f168601f7a2969cb0eae52d0cde8e3f9.ctex::
 warrior_2.png::CompressedTexture2D::1279320017153278297::1791892663::1791892692::1::::<><><>0<>0<>1eaac9597e2ea6e824fac2df250402c5<>res://.godot/imported/warrior_2.png-88cfeef8bef99fb8157ede8b34eec2b6.ctex::
 warrior_3.png::CompressedTexture2D::980524847299853323::1791892663::1791892692::1::::<><><>0<>0<>19d226f1a42f1788180039d33a545659<>res://.godot/imported/warrior_3.png-650caaf61417009d4c5d0544981f2a1c.ctex::
-::res://sounds/::1791894127
+::res://sounds/::1791894138
 ability.wav::AudioStreamWAV::6510726922606466446::1791794735::1791794776::1::::<><><>0<>0<>a7f2c17a0df5221c95c63a1980ca9f27<>res://.godot/imported/ability.wav-8f169b77ad4c6e34948fed441a2b118a.sample::
 achievement.wav::AudioStreamWAV::3690330039495765014::1791829741::1791830033::1::::<><><>0<>0<>ad858bf7e7603a6a6f74726925f1a4c5<>res://.godot/imported/achievement.wav-a235902a333c6cb274453427371ff83a.sample::
 awaken.wav::AudioStreamWAV::291887619146863593::1791848795::1791848809::1::::<><><>0<>0<>79253792add44e0b82471518a4e0330b<>res://.godot/imported/awaken.wav-a356f6dfdc03fa9751dfee7bc95449f4.sample::

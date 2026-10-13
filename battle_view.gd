@@ -159,6 +159,16 @@ var swing := 0.0         # weapon swing: -1 wind-up, +1 strike
 var lpc_anim := "combat_idle"  # LPC heroes: the animation playing (lpc.gd)
 var lpc_t := 0.0
 var pet_lunge := 0.0
+var chest_t := -1.0   # chest-opening moment: seconds since it appeared (-1 = none)
+static var _chest_tex: Array = []  # [closed, open]
+const CHEST_ART := [
+	["....KKKKKKKKKKKK....", "..KKbbbbbbbbbbbbKK..", ".KbbBBBBBBBBBBBBbbK.", ".KbBBBBBBBBBBBBBBbK.", "KbBBBBBBBBBBBBBBBBbK",
+	 "KGGGGGGGGGGGGGGGGGGK", "KGggggggKYYKggggggGK", "KbBBBBBBKyyKBBBBBBbK", "KbBBBBBBBKKBBBBBBBbK", "KbBBBBBBBBBBBBBBBBbK",
+	 "KbBBBBBBBBBBBBBBBBbK", "KGGGGGGGGGGGGGGGGGGK", "KbbbbbbbbbbbbbbbbbbK", ".KKKKKKKKKKKKKKKKKK."],
+	["..KKKKKKKKKKKKKKKK..", ".KbbbbbbbbbbbbbbbbK.", "KbBBBBBBBBBBBBBBBBbK", "KGGGGGGGGGGGGGGGGGGK", "KYYYYYYYYYYYYYYYYYYK",
+	 "KGGGGGGGGGGGGGGGGGGK", "KGggggggKYYKggggggGK", "KbBBBBBBKyyKBBBBBBbK", "KbBBBBBBBKKBBBBBBBbK", "KbBBBBBBBBBBBBBBBBbK",
+	 "KbBBBBBBBBBBBBBBBBbK", "KGGGGGGGGGGGGGGGGGGK", "KbbbbbbbbbbbbbbbbbbK", ".KKKKKKKKKKKKKKKKKK."],
+]
 var beams: Array = []   # loot beams: {"x", "color", "t", "life", "w"} (Rare and better)
 var fx_sprites: Array = []   # sprite effects: {"name", "pos", "t", "scale", "flip"} (art/fx)
 static var _fx_tex := {}
@@ -297,7 +307,7 @@ func play(events: Array[Dictionary]) -> void:
 				enemy_flash = 1.0
 				create_tween().tween_property(self, "enemy_flash", 0.0, 0.3)
 			"treasure":
-				_burst(_hero_center() + Vector2(40, 0), Color("#fbbf24"), 30, 300.0)
+				_open_chest()
 			"rare_monster":
 				_later(delay + 0.4, func():
 					var t: int = e["tier"]
@@ -529,6 +539,47 @@ func _later(delay: float, fn: Callable) -> void:
 		fn.call()
 	else:
 		get_tree().create_timer(delay).timeout.connect(fn)
+
+## A treasure chest pops up, rattles, and bursts open in a shower of gold.
+func _open_chest() -> void:
+	chest_t = 0.0
+	_sfx("event")
+	_later(0.55, func():
+		_sfx("legendary", 1.1)
+		var p := _chest_pos()
+		_burst(p, Color("#fbbf24"), 34, 320.0)
+		_fx("burst", p, 1.2)
+		beams.append({"x": p.x, "color": Color("#fbbf24"), "t": 0.0, "life": 1.4, "w": 4.0})
+		shake = maxf(shake, 5.0))
+
+func _chest_pos() -> Vector2:
+	return Vector2(size.x * 0.5, _ground() - 10.0 * _u())
+
+func _draw_chest() -> void:
+	if chest_t < 0.0:
+		return
+	if _chest_tex.is_empty():
+		var pal := {"K": Color("#1c1526"), "b": Color("#5a3a2a"), "B": Color("#8a5a3a"), "G": Color("#c8902a"), "g": Color("#8a5a1a"), "Y": Color("#fde68a"), "y": Color("#e8b14a")}
+		for art in CHEST_ART:
+			var img := Image.create(20, 14, false, Image.FORMAT_RGBA8)
+			for y in art.size():
+				for x in String(art[y]).length():
+					var ch := String(art[y])[x]
+					if pal.has(ch):
+						img.set_pixel(x, y, pal[ch])
+			_chest_tex.append(ImageTexture.create_from_image(img))
+	var u := float(maxi(2, _unit() + 1)) / _scr()
+	var open := chest_t > 0.55
+	var a := clampf(chest_t * 5.0, 0.0, 1.0) * clampf((2.2 - chest_t) * 2.5, 0.0, 1.0)
+	var rattle := 0.0 if open or chest_t < 0.15 else sin(chest_t * 60.0) * u
+	var pop := minf(1.0, chest_t * 6.0)
+	var sz := Vector2(20, 14) * u
+	var base := _chest_pos()
+	var pos := Vector2(base.x - sz.x / 2.0 + rattle, base.y - sz.y * pop + 6.0 * u)
+	if open:
+		var glow := clampf(1.0 - (chest_t - 0.55) / 1.4, 0.0, 1.0)
+		draw_circle(base + Vector2(0, -sz.y * 0.6), sz.x * (0.6 + 0.4 * (1.0 - glow)), Color(1.0, 0.85, 0.4, 0.25 * glow * a))
+	draw_texture_rect(_chest_tex[1 if open else 0], Rect2(_snap(pos), sz), false, Color(1, 1, 1, a))
 
 ## Plays a sprite effect from art/fx (see tools/fx_extract.py) centered on pos.
 func _fx(fx_name: String, pos: Vector2, scale_mult := 1.0, flip := false) -> void:
@@ -813,6 +864,10 @@ func _process(delta: float) -> void:
 	bob += delta
 	shake = move_toward(shake, 0.0, delta * 40.0)
 	lpc_t += delta
+	if chest_t >= 0.0:
+		chest_t += delta
+		if chest_t > 2.2:
+			chest_t = -1.0
 	for bm in beams:
 		bm["t"] = float(bm["t"]) + delta
 	beams = beams.filter(func(bm): return float(bm["t"]) < float(bm["life"]))
@@ -1186,6 +1241,7 @@ func _draw() -> void:
 		_draw_enemy_info(er, font)
 	_draw_hero_status(hr, font)
 
+	_draw_chest()
 	# Loot beams: a column of light that grows in, pulses and fades
 	for bm in beams:
 		var bt: float = float(bm["t"]) / float(bm["life"])
