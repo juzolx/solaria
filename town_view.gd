@@ -44,7 +44,7 @@ var people: Control    # townsfolk walking the square (drawn on the map, so they
 var folk: Array = []
 
 ## Where townsfolk stroll: [feet y, min x, max x] in map pixels (kept clear of things they'd walk through).
-const LANES := [[384, 150, 390], [604, 120, 455], [760, 300, 400], [470, 400, 470]]
+const LANES := [[384, 150, 390], [700, 200, 470], [800, 300, 400], [470, 400, 470]]
 const FOLK := [
 	[{"body": "fem", "skin": 2, "hair": "Bun", "hair_color": 6, "eyes": 2, "race": "Human"}, {"Chest": ["robe", "cloth"], "Feet": ["sandals", "leather"]}],
 	[{"body": "masc", "skin": 4, "hair": "Short", "hair_color": 2, "eyes": 1, "race": "Human"}, {"Chest": ["tunic", "leather"], "Legs": ["pants", "cloth"], "Feet": ["boots", "leather"]}],

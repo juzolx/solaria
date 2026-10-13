@@ -335,8 +335,10 @@ def build(season, seed=11):
     fx, fy = 320, 13 * T
     prop(sc, art.fountain, fx, fy)
     board(sc, 410, 12 * T + 10)
-    prop(sc, trim(art.city.crop((128, 480, 256, 576))), 6 * T + 4, 16 * T + 8)
-    prop(sc, trim(art.city.crop((0, 384, 128, 448))), 6 * T + 4, 16 * T - 26)
+    # the market stall stands out in the square, just below the fountain
+    prop(sc, trim(art.city.crop((128, 480, 256, 576))), 9 * T, 17 * T + 18)
+    prop(sc, trim(art.city.crop((0, 384, 128, 448))), 9 * T, 17 * T - 16)
+    sc.spots.append({"id": "market", "label": "Market", "rect": [9 * T, 17 * T - 16, 128, 130], "door": [9 * T + 64, 20 * T]})
     prop(sc, trim(art.anvil.crop((64, 0, 128, 32))), 14 * T + 16, 17 * T + 20)
     prop(sc, trim(art.anvil.crop((0, 0, 32, 32))), 16 * T + 4, 18 * T + 6)
     prop(sc, trim(art.coal.crop((0, 0, 32, 32))), 18 * T + 12, 17 * T + 22)
@@ -349,7 +351,7 @@ def build(season, seed=11):
     for cx2, cy2 in [(14 * T + 4, 25 * T + 10), (14 * T + 8, 24 * T + 14), (5 * T + 20, 17 * T + 14)]:
         prop(sc, crate, cx2, cy2)
     prop(sc, trim(art.chest.crop((0, 0, 32, 32))), 19 * T + 12, 26 * T + 14)
-    for lx, ly in [(3 * T, 10 * T + 4), (18 * T + 6, 10 * T + 4), (8 * T + 4, 19 * T + 18), (13 * T - 4, 19 * T + 18)]:
+    for lx, ly in [(3 * T, 10 * T + 4), (18 * T + 6, 10 * T + 4), (7 * T + 8, 19 * T + 18), (13 * T + 16, 19 * T + 18)]:
         lamp_at(lx, ly)
     planter = trim(art.city.crop((14 * T, 12 * T, 15 * T, 13 * T)))
     planter2 = trim(art.city.crop((15 * T, 12 * T, 16 * T, 13 * T)))

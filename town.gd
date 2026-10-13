@@ -33,6 +33,7 @@ const LOOKS := [
 ## Building id -> [Town page index, short line shown when you tap it]
 const BUILDINGS := {
 	"shop": [0, "Buy gear and potions"],
+	"market": [0, "Today's wares from this zone"],
 	"smith": [1, "Craft sets, upgrade your bag"],
 	"tavern": [2, "Try your luck on Fortune's Wheel"],
 	"inn": [3, "Rest and heal"],
