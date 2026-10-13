@@ -158,6 +158,10 @@ var hero_art_key := ""
 var swing := 0.0         # weapon swing: -1 wind-up, +1 strike
 var lpc_anim := "combat_idle"  # LPC heroes: the animation playing (lpc.gd)
 var lpc_t := 0.0
+var fx_sprites: Array = []   # sprite effects: {"name", "pos", "t", "scale", "flip"} (art/fx)
+static var _fx_tex := {}
+static var _fx_frames := {}
+const FX_FPS := 26.0
 var enemy_lpc_anim := "combat_idle"  # LPC monsters: the animation playing
 var enemy_lpc_t := 0.0
 var recoil := 0.0        # hero knocked back when hit
@@ -234,7 +238,10 @@ func play(events: Array[Dictionary]) -> void:
 					_float("DODGE", _hero_center(), Color("#e5e7eb"), 18))
 				delay += 0.3
 			"heal":
-				_later(delay, func(): _float("+%d" % e["amount"], _hero_center() + Vector2(-20, 20), Color("#4ade80"), 16))
+				_later(delay, func():
+					_float("+%d" % e["amount"], _hero_center() + Vector2(-20, 20), Color("#4ade80"), 16)
+					if int(e["amount"]) > 0:
+						_fx("heal", _hero_center(), 0.9))
 			"potion":
 				_sfx("potion")
 				_float("+%d" % e["amount"], _hero_center() + Vector2(0, 10), Color("#f472b6"), 20)
@@ -401,6 +408,8 @@ func play(events: Array[Dictionary]) -> void:
 				var weak: bool = e["kind"] == "weak"
 				var ec := Color(Combat.ELEMENT_COLORS.get(e["element"], "#ffffff"))
 				_later(delay, func(): _sfx("weak_hit" if weak else "resisted", randf_range(0.95, 1.08)))
+				if weak:
+					_later(delay + 0.08, func(): _fx(ELEMENT_FX.get(String(e["element"]), "burst"), _enemy_center(), 1.3))
 				_later(delay, func(): _float("WEAK!" if weak else "RESISTED", _enemy_center() + Vector2(34, -44), ec.lightened(0.2) if weak else Color("#94a3b8"), 14 if weak else 12))
 			"combo":
 				_later(delay + 0.1, func():
@@ -408,11 +417,13 @@ func play(events: Array[Dictionary]) -> void:
 					var cc := Color(e["color"])
 					floaters.append({"text": String(e["name"]).to_upper(), "pos": _enemy_center() + Vector2(0, -64), "color": cc, "size": 24, "life": 1.6, "keep": true, "t": 0.0, "lane": 0, "base": _enemy_center() + Vector2(0, -64)})
 					_burst(_enemy_center(), cc, 26, 320.0)
+					_fx({"frozen": "ice", "shatter": "shatter", "conduct": "lightning", "toxic": "poison", "purge": "holy"}.get(String(e["id"]), "burst"), _enemy_center(), 1.5)
 					shake = maxf(shake, 5.0))
 			"poison":
 				_later(delay + 0.12, func():
 					_float("%d" % e["dmg"], _enemy_center() + Vector2(randf_range(-25, 25), 18), Color("#a3e635"), 15)
-					_burst(_enemy_center(), Color("#a3e635"), 5, 100.0))
+					_burst(_enemy_center(), Color("#a3e635"), 5, 100.0)
+					_fx("poison", _enemy_center() + Vector2(0, 10), 0.8))
 			"first_strike":
 				_later(delay, func(): _float("FIRST STRIKE", _hero_center() + Vector2(0, -42), Color("#93c5fd"), 15))
 			"haste":
@@ -505,6 +516,24 @@ func _later(delay: float, fn: Callable) -> void:
 	else:
 		get_tree().create_timer(delay).timeout.connect(fn)
 
+## Plays a sprite effect from art/fx (see tools/fx_extract.py) centered on pos.
+func _fx(fx_name: String, pos: Vector2, scale_mult := 1.0, flip := false) -> void:
+	if not _fx_tex.has(fx_name):
+		if _fx_frames.is_empty():
+			var f := FileAccess.open("res://art/fx/fx.json", FileAccess.READ)
+			if f:
+				_fx_frames = JSON.parse_string(f.get_as_text())
+		var path := "res://art/fx/%s.png" % fx_name
+		_fx_tex[fx_name] = load(path) if ResourceLoader.exists(path) else null
+	if _fx_tex[fx_name] == null:
+		return
+	fx_sprites.append({"name": fx_name, "pos": pos, "t": 0.0, "scale": scale_mult, "flip": flip})
+	if fx_sprites.size() > 12:
+		fx_sprites.pop_front()
+
+const ELEMENT_FX := {"Fire": "fire", "Ice": "ice", "Lightning": "lightning", "Poison": "poison", "Holy": "holy",
+	"Dark": "shadow", "Shadow": "shadow", "Nature": "nature", "Arcane": "arcane", "Storm": "lightning"}
+
 ## LPC heroes play a real animation (slash, thrust, cast, shoot).
 func _lpc_play(anim: String) -> void:
 	if hero_art.has("lpc") and (hero_art["lpc"] as Dictionary).has(anim):
@@ -537,6 +566,12 @@ func _hero_attack(e: Dictionary) -> void:
 	enemy_flash = 1.0
 	create_tween().tween_property(self, "enemy_flash", 0.0, 0.1)
 	var target := _enemy_center()
+	var wt := _weapon_type()
+	var hit_fx := "pierce" if wt in ["spear", "bow"] else ("impact" if wt in ["staff", "mace"] else "slash")
+	_later(0.06 if not ranged else 0.16, func():
+		_fx("slash_crit" if e["crit"] and hit_fx == "slash" else hit_fx, target, 1.25 if e["crit"] else 1.0)
+		if e["crit"]:
+			_fx("crit", target, 1.4))
 	_sfx("crit" if e["crit"] else "hit", randf_range(0.92, 1.08))
 	if e["crit"]:
 		shake = 10.0
@@ -570,6 +605,7 @@ func _enemy_attack(e: Dictionary) -> void:
 	create_tween().tween_property(self, "hero_flash", 0.0, 0.1)
 	shake = maxf(shake, 4.0)
 	_burst(_hero_center(), Color("#f87171"), 8, 200.0)
+	_fx("claw", _hero_center(), 1.0, true)
 	_float("-%d" % e["dmg"], _hero_center(), Color("#f87171"), 20)
 
 func _ability_fx(e: Dictionary) -> void:
@@ -581,6 +617,9 @@ func _ability_fx(e: Dictionary) -> void:
 	cast_glow = 1.0
 	create_tween().tween_property(self, "cast_glow", 0.0, 0.6)
 	_later(0.3, func(): _pose_enemy([["hit1", 0.08], ["hit2", 0.14]]))
+	var els := Combat.elements_of([String(e.get("tag", ""))])
+	var sfx_name: String = ELEMENT_FX.get(String(els[0]) if not els.is_empty() else "", "arcane" if String(e.get("tag", "")) in ["Arcane", "Song", "Trick"] else "burst")
+	_later(0.28, func(): _fx(sfx_name, _enemy_center(), 1.6))
 	var t := create_tween()
 	t.set_parallel(true)
 	t.tween_property(self, "hero_lunge", 1.4, 0.07)
@@ -751,6 +790,9 @@ func _process(delta: float) -> void:
 	bob += delta
 	shake = move_toward(shake, 0.0, delta * 40.0)
 	lpc_t += delta
+	for fx in fx_sprites:
+		fx["t"] = float(fx["t"]) + delta
+	fx_sprites = fx_sprites.filter(func(fx): return float(fx["t"]) * FX_FPS < float(_fx_frames.get(fx["name"], 1)))
 	enemy_lpc_t += delta
 	if enemy_lpc_anim != "combat_idle":
 		var ea: Dictionary = _enemy_art(state.enemy_is_boss).get("lpc", {}).get(enemy_lpc_anim, {}) if state != null else {}
@@ -1116,6 +1158,17 @@ func _draw() -> void:
 		_draw_enemy_info(er, font)
 	_draw_hero_status(hr, font)
 
+	# Sprite effects (slashes, bursts, spells) over the fighters
+	for fx in fx_sprites:
+		var tex: Texture2D = _fx_tex.get(fx["name"])
+		if tex == null:
+			continue
+		var fi := mini(int(float(fx["t"]) * FX_FPS), int(_fx_frames[fx["name"]]) - 1)
+		var sz := 64.0 * _u() * float(fx["scale"])
+		var dst := Rect2(_snap(fx["pos"] - Vector2(sz, sz) / 2.0), Vector2(sz, sz))
+		if fx.get("flip", false):
+			dst = Rect2(dst.position + Vector2(sz, 0), Vector2(-sz, sz))
+		draw_texture_rect_region(tex, dst, Rect2(fi * 64, 0, 64, 64))
 	# Particles and tap rings
 	for p in particles:
 		var pc: Color = p["color"]
