@@ -6,7 +6,7 @@ bag_tab.gd::GDScript::7963412957330005317::1791933043::0::1::::BagTab<>VBoxConta
 battle_view.gd::GDScript::1321114398721736239::1791916606::0::1::::BattleView<>Control<><>0<>0<><>::
 bestiary_tab.gd::GDScript::3473921906557743363::1791868480::0::1::::BestiaryTab<>HBoxContainer<><>0<>0<><>::
 bounty_tab.gd::GDScript::6266114143799082059::1791916695::0::1::::BountyTab<>ScrollContainer<><>0<>0<><>::
-character_creator.gd::GDScript::5800014703699665626::1791933595::0::1::::CharacterCreator<>Overlay<><>0<>0<><>::
+character_creator.gd::GDScript::5800014703699665626::1791933613::0::1::::CharacterCreator<>Overlay<><>0<>0<><>::
 classes.gd::GDScript::7529797850237806296::1791879378::0::1::::Classes<>RefCounted<><>0<>0<><>::
 class_tab.gd::GDScript::2242816760745440118::1791920629::0::1::::ClassTab<>ScrollContainer<><>0<>0<><>::
 class_tree.gd::GDScript::144847341442138040::1791868445::0::1::::ClassTree<>RefCounted<><>0<>0<><>::
@@ -38,7 +38,7 @@ lpc.gd::GDScript::6476357131776489764::1791933573::0::1::::Lpc<>RefCounted<><>0<
 main.gd::GDScript::4980085469003106584::1791932862::0::1::::<>Node2D<><>0<>0<><>::
 main.tscn::PackedScene::-1::1791786358::0::1::::<><><>0<>0<><>::res://main.gd
 mastery.gd::GDScript::1886379589401195059::1791867797::0::1::::Mastery<>RefCounted<><>0<>0<><>::
-merchant_popup.gd::GDScript::451759874068470914::1791849255::0::1::::MerchantPopup<>Overlay<><>0<>0<><>::
+merchant_popup.gd::GDScript::451759874068470914::1791935325::0::1::::MerchantPopup<>Overlay<><>0<>0<><>::
 moments.gd::GDScript::6782787899098517277::1791892077::0::1::::Moments<>Control<><>0<>0<><>::
 monsters.gd::GDScript::2411964364534414653::1791867259::0::1::::Monsters<>RefCounted<><>0<>0<><>::
 new_hero_picker.gd::GDScript::6902112749443168103::1791829894::0::1::::NewHeroPicker<>Overlay<><>0<>0<><>::
@@ -1702,8 +1702,9 @@ tap.wav::AudioStreamWAV::903487100524294280::1791794735::1791794776::1::::<><><>
 transform.wav::AudioStreamWAV::3242181621917726564::1791848795::1791848809::1::::<><><>0<>0<>d737718abe44d85914587adf704c44e4<>res://.godot/imported/transform.wav-ef65b0c9f919ab97e67c1c60f4d2d605.sample::
 unique.wav::AudioStreamWAV::8636343434808806334::1791794735::1791794776::1::::<><><>0<>0<>24b953901c641877be8bd90b0855e4f1<>res://.godot/imported/unique.wav-01a11a3f6299a52159d56bc3979efc29.sample::
 weak_hit.wav::AudioStreamWAV::274863471046238212::1791874229::1791874254::1::::<><><>0<>0<>97037ddd4d71eda073d42530b2de2f5c<>res://.godot/imported/weak_hit.wav-2b1222b25052fbed1eab50fdb4b254b0.sample::
-::res://tests/::1791933347
+::res://tests/::1791935304
 _dump.gd::GDScript::7543732177956544217::1791867638::0::1::::<>SceneTree<><>0<>0<><>::
+_merchant.gd::GDScript::8855095096715966401::1791935304::0::1::::<>SceneTree<><>0<>0<><>::
 _minw.gd::GDScript::8410735918571722626::1791874501::0::1::::<>SceneTree<><>0<>0<><>::
 art_gallery.gd::GDScript::1438500894231217281::1791873897::0::1::::<>SceneTree<><>0<>0<><>::
 balance11.gd::GDScript::7568462071271560971::1791878281::0::1::::<>SceneTree<><>0<>0<><>::

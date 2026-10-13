@@ -53,16 +53,23 @@ static func rows(main_node, parent: Control, on_change: Callable) -> void:
 		else:
 			t.text = "[color=#c4b5fd][b]%s[/b][/color]\n%s" % [GameState.SCROLLS[e["id"]]["name"], st.scroll_text(e["id"])]
 		h.add_child(t)
-		var b := UI.primary("Sold" if e["sold"] else "%d gold" % int(e["price"]), func():
+		# Say why you can't buy it instead of a button that does nothing
+		var need := int(e["price"]) - st.gold
+		var full: bool = e["kind"] == "item" and st.bag_full()
+		var label := "Sold" if e["sold"] else ("Bag full" if full else ("Need %d more" % need if need > 0 else "%d gold" % int(e["price"])))
+		var b := UI.primary(label, func():
 			if st.buy_merchant(i):
 				main_node.sfx.play("buy")
 			on_change.call(), UI.GOLD)
 		b.custom_minimum_size = Vector2(120, 40)
-		b.disabled = e["sold"] or st.gold < int(e["price"])
+		b.tooltip_text = "%d gold" % int(e["price"])
+		b.disabled = e["sold"] or need > 0 or full
 		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(b)
 
 func _fill() -> void:
 	OnlineUI.clear(grid)
 	gold_label.text = "Your gold: %d" % state.gold
+	if state.bag_full():
+		gold_label.text += "    Your bag is full (%d / %d): sell, salvage or stash something to buy gear." % [state.bag.size(), state.bag_capacity()]
 	rows(m, grid, func(): _fill(); m.refresh())
