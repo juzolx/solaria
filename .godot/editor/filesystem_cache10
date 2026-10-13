@@ -1,5 +1,5 @@
 78098b89c88a74ebe8c20117b8754620
-::res://::1791893451
+::res://::1791893455
 achievements_tab.gd::GDScript::225817628144516105::1791830271::0::1::::AchievementsTab<>VBoxContainer<><>0<>0<><>::
 art_info.gd::GDScript::2121761137587333428::1791873882::0::1::::ArtInfo<>RefCounted<><>0<>0<><>::
 bag_tab.gd::GDScript::7963412957330005317::1791866958::0::1::::BagTab<>VBoxContainer<><>0<>0<><>::
@@ -55,7 +55,7 @@ race_tab.gd::GDScript::2220945611450801819::1791892077::0::1::::RaceTab<>ScrollC
 raid_tab.gd::GDScript::1428950295531821644::1791819599::0::1::::RaidTab<>ScrollContainer<><>0<>0<><>::
 realms.gd::GDScript::8763364381053627760::1791866958::0::1::::Realms<>RefCounted<><>0<>0<><>::
 settings_menu.gd::GDScript::1087608805111442744::1791892142::0::1::::SettingsMenu<>Overlay<><>0<>0<><>::
-sfx.gd::GDScript::1267953317640007820::1791874235::0::1::::Sfx<>Node<><>0<>0<><>::
+sfx.gd::GDScript::1267953317640007820::1791894135::0::1::::Sfx<>Node<><>0<>0<><>::
 shop_tab.gd::GDScript::6518725852383496533::1791866958::0::1::::ShopTab<>ScrollContainer<><>0<>0<><>::
 signatures.gd::GDScript::5473582297840230887::1791867701::0::1::::Signatures<>RefCounted<><>0<>0<><>::
 skills_tab.gd::GDScript::5838519330532651803::1791874159::0::1::::SkillsTab<>VBoxContainer<><>0<>0<><>::
@@ -1621,7 +1621,7 @@ warrior_0.png::CompressedTexture2D::5350010240734441216::1791892663::1791892692:
 warrior_1.png::CompressedTexture2D::182288808997362282::1791892663::1791892692::1::::<><><>0<>0<>6f06f3ceecfd54d9434c5fe754ac8c2f<>res://.godot/imported/warrior_1.png-f168601f7a2969cb0eae52d0cde8e3f9.ctex::
 warrior_2.png::CompressedTexture2D::1279320017153278297::1791892663::1791892692::1::::<><><>0<>0<>1eaac9597e2ea6e824fac2df250402c5<>res://.godot/imported/warrior_2.png-88cfeef8bef99fb8157ede8b34eec2b6.ctex::
 warrior_3.png::CompressedTexture2D::980524847299853323::1791892663::1791892692::1::::<><><>0<>0<>19d226f1a42f1788180039d33a545659<>res://.godot/imported/warrior_3.png-650caaf61417009d4c5d0544981f2a1c.ctex::
-::res://sounds/::1791874254
+::res://sounds/::1791894127
 ability.wav::AudioStreamWAV::6510726922606466446::1791794735::1791794776::1::::<><><>0<>0<>a7f2c17a0df5221c95c63a1980ca9f27<>res://.godot/imported/ability.wav-8f169b77ad4c6e34948fed441a2b118a.sample::
 achievement.wav::AudioStreamWAV::3690330039495765014::1791829741::1791830033::1::::<><><>0<>0<>ad858bf7e7603a6a6f74726925f1a4c5<>res://.godot/imported/achievement.wav-a235902a333c6cb274453427371ff83a.sample::
 awaken.wav::AudioStreamWAV::291887619146863593::1791848795::1791848809::1::::<><><>0<>0<>79253792add44e0b82471518a4e0330b<>res://.godot/imported/awaken.wav-a356f6dfdc03fa9751dfee7bc95449f4.sample::
@@ -1656,6 +1656,7 @@ loot_1.wav::AudioStreamWAV::2399059211699435617::1791794735::1791794775::1::::<>
 loot_2.wav::AudioStreamWAV::3754939447633408164::1791794735::1791794775::1::::<><><>0<>0<>555f5cba1b6fb06997c29750ed77a7e2<>res://.godot/imported/loot_2.wav-84d83314b292d6a429ad6f8e47d1ad60.sample::
 loot_3.wav::AudioStreamWAV::802354413633221627::1791794735::1791794775::1::::<><><>0<>0<>b1ca0b08f057bdc58918d80d65000777<>res://.godot/imported/loot_3.wav-bd9a3d583660f2b15913d7d0fba28f0e.sample::
 milestone.wav::AudioStreamWAV::626656161021043616::1791874229::1791874254::1::::<><><>0<>0<>2dc57adb3566751a96e21467927c3696<>res://.godot/imported/milestone.wav-350fefd137bf0cab3cea71e1ccbcc9d6.sample::
+music_boss2.wav::AudioStreamWAV::3689024704359507718::1791894127::1791894138::1::::<><><>0<>0<>c67c9032b598f52580d46105fa0fc6f6<>res://.godot/imported/music_boss2.wav-44d2566d6e38b057bd3d52ac270c55ae.sample::
 music_boss.wav::AudioStreamWAV::3138142679216614460::1791794740::1791794775::1::::<><><>0<>0<>5f8ad0ab83672e33b7129b74a89e4f35<>res://.godot/imported/music_boss.wav-8cc5cb23296149bcf8f988a323f9522a.sample::
 music_menu.wav::AudioStreamWAV::5353391356839651631::1791829742::1791830033::1::::<><><>0<>0<>ecc5493a427f77d093c386c67fd390ed<>res://.godot/imported/music_menu.wav-2e0a766d756affebce076c272d850425.sample::
 music_zone_0.wav::AudioStreamWAV::728617071198481898::1791794736::1791794776::1::::<><><>0<>0<>ccda8699969398d0e79de28d92545de1<>res://.godot/imported/music_zone_0.wav-d494837c68d673adac3cd9761a2c106c.sample::

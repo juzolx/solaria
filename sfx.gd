@@ -74,7 +74,7 @@ func _ready() -> void:
 	for n in aliases:
 		if not sounds.has(n):
 			sounds[n] = sounds[aliases[n]]
-	for track in ["zone_0", "zone_1", "zone_2", "zone_3", "zone_4", "zone_5", "zone_6", "zone_7", "zone_8", "zone_9", "boss", "menu"]:
+	for track in ["zone_0", "zone_1", "zone_2", "zone_3", "zone_4", "zone_5", "zone_6", "zone_7", "zone_8", "zone_9", "boss", "boss2", "menu"]:
 		var path: String = SOUND_DIR + "music_" + track + ".wav"
 		if ResourceLoader.exists(path):
 			var stream: AudioStreamWAV = load(path)
@@ -106,7 +106,12 @@ func play(sound_name: String, pitch := 1.0) -> void:
 
 ## Picks the zone music (or the boss theme) and crossfades when it changes.
 func update_music(state: GameState) -> void:
-	play_music("boss" if state.enemy_is_boss else "zone_%d" % GameData.zone_index(state.floor_num))
+	if state.enemy_is_boss:
+		# The boss theme gets faster and heavier for the second half of the fight (or once it enrages)
+		var late := state.enemy_hp * 2 < state.enemy_max_hp or Combat.enrage_left(state) == 0
+		play_music("boss2" if late and music_streams.has("boss2") else "boss")
+	else:
+		play_music("zone_%d" % GameData.zone_index(state.floor_num))
 
 ## Crossfades to a music track ("menu", "boss", "zone_0"...).
 func play_music(want: String) -> void:

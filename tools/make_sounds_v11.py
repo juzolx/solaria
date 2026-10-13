@@ -50,6 +50,22 @@ def make_sfx_v11():
     return list(S)
 
 
+# The boss theme's second phase: same key, faster and heavier (plays below half health or when enraged)
+BOSS2 = {"bpm": 152, "root": 40, "scale": "phrygian", "prog": [0, 0, 1, 0, 5, 5, 1, 6], "bars": 8, "pad": True, "pad_cut": 1900,
+         "bass": [0, 0, 12, 0, 0, 12, 0, 12, 0, 0, 12, 0, 7, 7, 6, 6], "bass_kind": "saw",
+         "arp": [0, 3, 1, 3, 2, 3, 1, 3, 0, 4, 1, 4, 2, 4, 1, 4], "arp_kind": "square", "arp_cut": 4200, "lead": 6, "lead_kind": "saw", "lead_rest": 0.2,
+         "drums": "KhKhShKhKhKhSKSh", "seed": 21, "verb": 0.18, "gains": {"bass": 0.6, "drums": 0.75, "lead": 0.24, "pad": 0.32}}
+
+
+def make_boss2():
+    x = song(BOSS2)
+    save("music_boss2", x, 0.82, rate=32000, loop=True)
+    return len(x) / SR
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
-    print("v11 sfx:", make_sfx_v11())
+    if "--music" in sys.argv:
+        print("boss2 seconds:", make_boss2())
+    else:
+        print("v11 sfx:", make_sfx_v11())
