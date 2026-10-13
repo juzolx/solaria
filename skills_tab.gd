@@ -33,7 +33,7 @@ func setup(m) -> void:
 	head.add_child(t)
 	dust_label = UI.label("", 13, Color("#c4b5fd"))
 	head.add_child(dust_label)
-	head.add_child(UI.button("Auto-battle...", func(): auto_battle_popup(main)))
+	head.add_child(UI.button("Autoplay...", func(): auto_battle_popup(main)))
 	head.add_child(UI.button("Craft...", _craft_popup))
 
 	add_child(UI.label("ACTIVE", 10, UI.DIM))
@@ -246,16 +246,42 @@ func _craft_popup() -> void:
 			main.refresh())
 	o.content.add_child(UI.label("Double-tap a skill to craft it.", 11, UI.DIM))
 
-## Auto-battle settings: when to drink potions, and which skills Auto uses in what order.
+## Autoplay settings: whether the fight runs by itself, and what it does for you.
 static func auto_battle_popup(m) -> void:
 	var st: GameState = m.state
-	var o := Overlay.new().open(m, "Auto-battle", 560.0, UI.TEAL)
+	var o := Overlay.new().open(m, "Autoplay", 560.0, UI.TEAL)
 	_fill_auto(m, o, st)
 
 static func _fill_auto(m, o: Overlay, st: GameState) -> void:
 	for c in o.content.get_children():
 		if c != o.content.get_child(0):
 			c.queue_free()
+	# The big switch
+	var mode := UI.primary("Autoplay: ON  (the fight runs by itself)" if st.autoplay else "Autoplay: OFF  (you take every turn)", func():
+		st.autoplay = not st.autoplay
+		st.save_game()
+		m.refresh()
+		_fill_auto(m, o, st), UI.TEAL if st.autoplay else UI.RED)
+	mode.custom_minimum_size = Vector2(0, UI.TAP + 8)
+	o.content.add_child(mode)
+	var note := UI.label("With Autoplay off, nothing happens until you act: tap Attack (or the enemy) to take a turn, and use your skills when you choose.", 12, UI.DIM)
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	o.content.add_child(note)
+	UI.section(o.content, "What runs by itself", "Each of these works in both modes.")
+	var toggles: Array = [
+		["Auto skills", st.auto_ability, func(): st.auto_ability = not st.auto_ability],
+		["Pick rooms at forks", st.auto_paths, func(): st.auto_paths = not st.auto_paths],
+		["Spend stat points on your build", st.auto_stats, func(): st.auto_stats = not st.auto_stats],
+	]
+	for tg in toggles:
+		var cb: Callable = tg[2]
+		var b := UI.button("%s: %s" % [tg[0], "ON" if tg[1] else "OFF"], func():
+			cb.call()
+			st.save_game()
+			m.refresh()
+			_fill_auto(m, o, st))
+		b.custom_minimum_size = Vector2(0, UI.TAP)
+		o.content.add_child(b)
 	UI.section(o.content, "Potions", "Auto-potion drinks one when your HP drops below this.")
 	var prow := UI.hbox(8)
 	o.content.add_child(prow)

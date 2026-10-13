@@ -126,6 +126,8 @@ var next_id := 1
 
 # ---------- Settings ----------
 var auto_potion := true
+var autoplay := true      # the fight runs by itself; off = you take every turn (Attack / tap the enemy)
+var auto_paths := true    # forks pick a room by themselves after a few turns
 var auto_salvage := -1  # -1 = off, otherwise salvage new drops of this rarity and below
 var fast_mode := false
 var tips_seen := {}  # tips already shown once
@@ -1359,7 +1361,7 @@ func take_turn() -> void:
 		return
 	if not path_offer.is_empty():
 		# Waiting for you to pick a room; after a few turns it picks the first choice by itself
-		if not path_hold:
+		if not path_hold and auto_paths and autoplay:
 			path_wait += 1
 		if path_wait >= GameData.PATH_WAIT_TURNS:
 			choose_path(auto_path())
@@ -2740,6 +2742,8 @@ func save_game() -> void:
 		"bag_level": bag_level,
 		"next_id": next_id,
 		"auto_potion": auto_potion,
+		"autoplay": autoplay,
+		"auto_paths": auto_paths,
 		"auto_salvage": auto_salvage,
 		"fast_mode": fast_mode,
 		"tips_seen": tips_seen,
@@ -2938,6 +2942,8 @@ func load_game() -> bool:
 	bag_level = int(data.get("bag_level", 0))
 	next_id = int(data.get("next_id", 1))
 	auto_potion = bool(data.get("auto_potion", true))
+	autoplay = bool(data.get("autoplay", true))
+	auto_paths = bool(data.get("auto_paths", true))
 	auto_salvage = int(data.get("auto_salvage", -1))
 	fast_mode = bool(data.get("fast_mode", false))
 	tips_seen = data.get("tips_seen", {})

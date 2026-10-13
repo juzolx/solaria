@@ -10,8 +10,10 @@ var state: GameState
 var title: Label
 var sort_pick: OptionButton
 var filter_pick: OptionButton
-var list: ItemList
+var grid: GridContainer
+var empty_note: Label
 var ids: Array[int] = []
+var last_pick_ms := 0
 var details: RichTextLabel
 var equip_button: Button
 var lock_button: Button
@@ -48,17 +50,18 @@ func setup(m) -> void:
 	filter_pick.item_selected.connect(func(_i): shown = ""; main.refresh())
 	head.add_child(filter_pick)
 
-	list = ItemList.new()
-	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	list.add_theme_font_size_override("font_size", 13)
-	list.item_selected.connect(func(idx: int):
-		if idx >= 0 and idx < ids.size() and ids[idx] >= 0:
-			selected_id = ids[idx]
-		main.refresh())
-	list.item_activated.connect(func(idx: int):
-		if idx >= 0 and idx < ids.size() and ids[idx] >= 0:
-			_popup(ids[idx]))
-	add_child(list)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
+	var sv := UI.vbox(4)
+	sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(sv)
+	grid = ItemGrid.grid()
+	sv.add_child(grid)
+	empty_note = UI.label("", 12, UI.DIM)
+	sv.add_child(empty_note)
+	resized.connect(_on_resized)
 
 	var box := UI.panel(UI.INSET, UI.EMPTY, 8, 8, 1)
 	add_child(box)
@@ -101,6 +104,19 @@ func setup(m) -> void:
 	auto_salvage_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	frow.add_child(auto_salvage_button)
 	frow.add_child(UI.button("Loot filter...", func(): LootFilter.new().show_for(main)))
+
+func _on_resized() -> void:
+	ItemGrid.fit([grid], size.x)
+
+## Tap: select (details below). Tap it again: the full compare popup.
+func _tap(id: int) -> void:
+	main.sfx.play("click")
+	if id == selected_id:
+		_popup(id)
+		return
+	selected_id = id
+	shown = ""
+	main.refresh()
 
 ## The compare popup for one item, with what you can do with it.
 func _popup(id: int) -> void:
@@ -197,25 +213,21 @@ func refresh() -> void:
 		b.text = "%s (%d)" % [GameData.RARITY_NAMES[r], n]
 		b.disabled = n == 0
 
-	var key := "%d|%d|%d" % [state.bag_version, sort_pick.selected, filter_pick.selected]
+	var key := "%d|%d|%d|%d" % [state.bag_version, sort_pick.selected, filter_pick.selected, selected_id]
 	if key != shown:
 		shown = key
-		list.clear()
+		ItemGrid.fit([grid], size.x)
+		for c in grid.get_children():
+			c.queue_free()
 		ids.clear()
 		for item in _sorted_items():
-			var idx := list.add_item("%s   %s" % [ItemText.line(item), ItemText.delta(state, item)])
-			list.set_item_custom_fg_color(idx, Color.html(GameData.color_of(item["rarity"])))
-			list.set_item_tooltip(idx, ItemText.tip(state, item))
-			if item.get("locked", false):
-				list.set_item_custom_bg_color(idx, Color("#1f1a0e"))
-			ids.append(int(item["id"]))
-			if int(item["id"]) == selected_id:
-				list.select(idx)
-		if ids.is_empty():
-			var e := list.add_item("Nothing here yet." if state.bag.is_empty() else "No items match this filter.")
-			list.set_item_selectable(e, false)
-			list.set_item_custom_fg_color(e, UI.DIM)
-			ids.append(-1)
+			var id := int(item["id"])
+			var pct := state.compare_pct(item)
+			var badge := "LOCK" if item.get("locked", false) else ("+%d%%" % int(round(pct)) if pct > 0.0 else "")
+			grid.add_child(ItemGrid.cell(item, _tap.bind(id), id == selected_id, ItemGrid.CELL, badge))
+			ids.append(id)
+		empty_note.visible = ids.is_empty()
+		empty_note.text = "Nothing here yet." if state.bag.is_empty() else "No items match this filter."
 	_refresh_details()
 
 func _refresh_details() -> void:

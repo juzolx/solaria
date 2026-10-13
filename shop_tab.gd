@@ -19,6 +19,7 @@ var featured_box: PanelContainer
 var featured_style: StyleBoxFlat
 var featured_text: RichTextLabel
 var featured_buy: Button
+var featured_pic: TextureRect
 var restock_button: Button
 var gear_grid: GridContainer
 var gear_buttons := []   # [button, shop index, price]
@@ -67,6 +68,9 @@ func setup(m) -> void:
 	v.add_child(featured_box)
 	var frow := UI.hbox(12)
 	featured_box.add_child(frow)
+	featured_pic = ItemGrid.picture(64)
+	featured_pic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	frow.add_child(featured_pic)
 	featured_text = UI.rich(13)
 	featured_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	frow.add_child(featured_text)
@@ -159,17 +163,25 @@ func _gear_card(item: Dictionary, index: int) -> void:
 	var color := Color(GameData.color_of(r))
 	var card := UI.panel(UI.INSET, color, 10, 10, 2)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.custom_minimum_size = Vector2(0, 172)
+	card.custom_minimum_size = Vector2(0, 196)
 	card.tooltip_text = ItemText.plain(item)
 	gear_grid.add_child(card)
 	var cv := UI.vbox(3)
 	card.add_child(cv)
-	cv.add_child(UI.label(GameData.RARITY_NAMES[r].to_upper(), 10, color))
+	var top := UI.hbox(6)
+	cv.add_child(top)
+	var pic := ItemGrid.picture(44)
+	pic.texture = Sprites.item_icon(item)
+	top.add_child(pic)
+	var tv := UI.vbox(0)
+	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(tv)
+	tv.add_child(UI.label(GameData.RARITY_NAMES[r].to_upper(), 10, color))
+	tv.add_child(UI.label(item["slot"], 11, UI.DIM))
 	var nm := UI.label(GameData.display_name(item), 14, color.lightened(0.15))
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	nm.custom_minimum_size = Vector2(0, 38)
 	cv.add_child(nm)
-	cv.add_child(UI.label(item["slot"], 11, UI.DIM))
 	var stat := UI.rich(13)
 	var d := ItemText.delta(state, item)
 	var dcol := UI.GREEN if d.begins_with("(+") else (UI.RED if d.begins_with("(-") else UI.DIM)
@@ -220,8 +232,10 @@ func refresh() -> void:
 		featured_style.border_color = UI.EMPTY
 		featured_text.text = "[color=%s]Sold out! A new featured deal arrives after the next boss.[/color]" % UI.hex(UI.DIM)
 		featured_buy.visible = false
+		featured_pic.texture = null
 	else:
 		var f := state.featured
+		featured_pic.texture = Sprites.item_icon(f)
 		featured_style.border_color = Color(GameData.color_of(f["rarity"]))
 		featured_text.text = ItemText.describe(state, f) + "\n" + ItemText.compare(state, f)
 		featured_buy.visible = true

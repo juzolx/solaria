@@ -73,8 +73,11 @@ func setup(m) -> void:
 			var b := UI.button("", _craft_set.bind(set_name, slot))
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			b.clip_text = true
-			b.custom_minimum_size = Vector2(60, 46)
+			b.custom_minimum_size = Vector2(60, 56)
 			b.add_theme_color_override("font_color", Color("#99f6e4"))
+			b.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.expand_icon = false
+			b.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 			row.add_child(b)
 			buttons.append([b, slot])
 		set_info[set_name] = [title, cost, wearing]
@@ -164,6 +167,8 @@ func refresh() -> void:
 			var slot: String = entry[1]
 			var preview := GameData.make_set_item(set_name, slot, state.best_floor, -1)
 			b.text = "%s\n%s  +%d %s" % [info["pieces"][slot], slot, GameData.item_power(preview), preview["stat"]]
+			if b.icon == null:
+				b.icon = Sprites.item_icon(preview)
 			b.tooltip_text = "%s (%s)\n+%d %s\nSet bonus: %s" % [info["pieces"][slot], slot, GameData.item_power(preview), preview["stat"], info["text"]]
 			b.disabled = not ok
 

@@ -76,6 +76,8 @@ var goal_bar: ProgressBar
 var log_lines: Array[String] = []
 var skill_buttons: Array[Button] = []  # one per active skill slot
 var auto_ability_button: Button
+var attack_button: Button
+var last_turn_ms := 0
 var potion_button: Button
 var auto_potion_button: Button
 var floors_button: Button
@@ -426,6 +428,20 @@ func _on_hardcore_death() -> void:
 		row.add_child(b)
 
 func _on_tick() -> void:
+	# Manual play: nothing happens until you act (see _manual_turn)
+	if not state.autoplay:
+		return
+	state.take_turn()
+	refresh()
+
+## Manual play: one turn when you tap Attack or the enemy.
+func _manual_turn() -> void:
+	var now := Time.get_ticks_msec()
+	if now - last_turn_ms < 280:
+		return
+	last_turn_ms = now
+	if state.in_town or not state.path_offer.is_empty() or state.run_over:
+		return
 	state.take_turn()
 	refresh()
 
@@ -676,6 +692,11 @@ func _build_fight(parent: Control) -> void:
 	log_label.custom_minimum_size = Vector2(0, 80)
 	col.add_child(log_label)
 
+	attack_button = UI.primary("Attack", _manual_turn, UI.RED)
+	attack_button.custom_minimum_size = Vector2(0, UI.TAP + 8)
+	attack_button.tooltip_text = "Take your turn (you can also tap the enemy)"
+	attack_button.visible = false
+	col.add_child(attack_button)
 	var ability_row := UI.hbox(6)
 	col.add_child(ability_row)
 	for i in 4:
@@ -687,11 +708,8 @@ func _build_fight(parent: Control) -> void:
 		b.clip_text = true
 		ability_row.add_child(b)
 		skill_buttons.append(b)
-	auto_ability_button = UI.button("", func():
-		state.auto_ability = not state.auto_ability
-		state.save_game()
-		refresh())
-	auto_ability_button.tooltip_text = "Use your skills automatically whenever they're ready"
+	auto_ability_button = UI.button("", func(): SkillsTab.auto_battle_popup(self))
+	auto_ability_button.tooltip_text = "Autoplay options: let the fight run by itself, or take every turn yourself"
 	auto_ability_button.custom_minimum_size = Vector2(84, 0)
 	ability_row.add_child(auto_ability_button)
 
@@ -979,6 +997,10 @@ func reset_save() -> void:
 # =====================================================================
 
 func _on_battle_tapped(pos: Vector2) -> void:
+	if not state.autoplay:
+		battle.tap_ring(pos)
+		_manual_turn()
+		return
 	var now := Time.get_ticks_msec()
 	if now - last_tap_ms < int(GameData.TAP_COOLDOWN * 1000):
 		return
@@ -1184,7 +1206,9 @@ func _refresh_fight() -> void:
 		b.add_theme_constant_override("icon_max_width", 26)
 		b.add_theme_stylebox_override("normal", UI.style(c.darkened(0.6), c, 6, 8))
 		b.add_theme_color_override("font_color", c.lightened(0.55))
-	auto_ability_button.text = "Auto %s" % ("ON" if state.auto_ability else "OFF")
+	auto_ability_button.text = "Auto" if state.autoplay else "Manual"
+	attack_button.visible = not state.autoplay and not state.in_town
+	attack_button.disabled = not state.path_offer.is_empty() or state.enemy_hp <= 0
 	var goal := World.next_goal(state)
 	goal_label.text = "Next: " + String(goal.get("text", ""))
 	goal_label.add_theme_color_override("font_color", goal.get("color", UI.GOLD))

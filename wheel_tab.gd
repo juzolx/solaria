@@ -6,7 +6,8 @@ extends HBoxContainer
 
 var main
 var state: GameState
-var list: ItemList
+var grid: GridContainer
+var empty_note: Label
 var ids: Array[int] = []
 var selected_id := -1
 var wheel: Wheel
@@ -15,6 +16,22 @@ var spin_button: Button
 var result_label: RichTextLabel
 var shown := ""
 var spinning := false
+# High stakes: bet several items at once, each on its own wheel. Spinning again
+# quickly builds heat: more wheels at a time and faster spins.
+const HEAT_WINDOW_MS := 9000
+const BASE_WHEELS := 3
+const MAX_WHEELS := 8
+var high := false
+var slate: Array[int] = []      # item ids loaded onto wheels
+var heat := 0
+var last_round_ms := -100000
+var normal_box: Control
+var high_box: VBoxContainer
+var mini_grid: GridContainer
+var minis: Array = []           # Wheel per slate slot
+var mode_button: Button
+var heat_label: RichTextLabel
+var load_row: HBoxContainer
 
 class Wheel:
 	extends Control
@@ -65,21 +82,50 @@ func setup(m) -> void:
 	var note := UI.label("Bet an item. Win: it comes back one rarity higher. Lose: it's gone. Common %d%%, Uncommon %d%%, Rare %d%%, Epic %d%%." % GameData.GAMBLE_CHANCES, 12, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	left.add_child(note)
-	list = ItemList.new()
-	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	list.add_theme_font_size_override("font_size", 12)
-	list.item_selected.connect(func(i: int):
-		if i >= 0 and i < ids.size() and ids[i] >= 0 and not spinning:
-			selected_id = ids[i]
-			result_label.text = ""
-			_update())
-	left.add_child(list)
+	left.add_child(UI.label("TAP AN ITEM TO BET IT  (its odds are on it)", 11, UI.DIM))
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	left.add_child(scroll)
+	var sv := UI.vbox(4)
+	sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(sv)
+	grid = ItemGrid.grid()
+	sv.add_child(grid)
+	empty_note = UI.label("Nothing to bet. Locked items and Legendary or better can't go on the wheel.", 12, UI.DIM)
+	empty_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	sv.add_child(empty_note)
+	left.resized.connect(_on_left_resized.bind(left))
 	var right := UI.vbox(8)
 	right.custom_minimum_size = Vector2(250, 0)
 	add_child(right)
+	mode_button = UI.button("", _toggle_mode)
+	mode_button.custom_minimum_size = Vector2(0, UI.TAP)
+	right.add_child(mode_button)
+	var nb := UI.vbox(8)
+	right.add_child(nb)
+	normal_box = nb
 	wheel = Wheel.new()
 	wheel.custom_minimum_size = Vector2(230, 230)
-	right.add_child(wheel)
+	nb.add_child(wheel)
+	high_box = UI.vbox(6)
+	high_box.visible = false
+	right.add_child(high_box)
+	heat_label = UI.rich(12)
+	high_box.add_child(heat_label)
+	mini_grid = GridContainer.new()
+	mini_grid.columns = 2
+	mini_grid.add_theme_constant_override("h_separation", 6)
+	mini_grid.add_theme_constant_override("v_separation", 6)
+	high_box.add_child(mini_grid)
+	load_row = UI.hbox(4)
+	high_box.add_child(load_row)
+	for r in [0, 1, 2]:
+		var lb := UI.button("+ all %s" % GameData.RARITY_NAMES[r], _load_rarity.bind(r))
+		lb.add_theme_color_override("font_color", Color(GameData.color_of(r)))
+		lb.add_theme_font_size_override("font_size", 11)
+		lb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		load_row.add_child(lb)
 	info = UI.rich(13)
 	right.add_child(info)
 	spin_button = UI.primary("Spin!", _spin, UI.GOLD)
@@ -88,31 +134,55 @@ func setup(m) -> void:
 	result_label = UI.rich(15)
 	right.add_child(result_label)
 
+func _on_left_resized(left: Control) -> void:
+	ItemGrid.fit([grid], left.size.x)
+
+func _pick(id: int) -> void:
+	if spinning:
+		return
+	if high:
+		if id in slate:
+			slate.erase(id)
+		elif slate.size() < wheel_cap():
+			slate.append(id)
+		else:
+			result_label.text = "[color=%s]All %d wheels are loaded. Spin to build heat for more.[/color]" % [UI.hex(UI.DIM), wheel_cap()]
+		shown = ""
+		main.sfx.play("click")
+		refresh()
+		return
+	selected_id = id
+	result_label.text = ""
+	shown = ""
+	main.sfx.play("click")
+	refresh()
+
 func refresh() -> void:
-	var key := "%d|%d" % [state.bag_version, state.gold]
+	var key := "%d|%d|%d|%s|%s" % [state.bag_version, state.gold, selected_id, str(slate), high]
 	if key != shown and not spinning:
 		shown = key
-		list.clear()
+		for c in grid.get_children():
+			c.queue_free()
 		ids.clear()
 		var items: Array = state.bag.duplicate()
 		items.reverse()
 		for item in items:
 			if not GameData.can_gamble(item):
 				continue
-			var i := list.add_item("%s  -  %d%%" % [ItemText.line(item), state.gamble_chance(item)])
-			list.set_item_custom_fg_color(i, Color(GameData.color_of(item["rarity"])))
-			list.set_item_tooltip(i, ItemText.tip(state, item))
-			ids.append(int(item["id"]))
-			if int(item["id"]) == selected_id:
-				list.select(i)
-		if ids.is_empty():
-			var e := list.add_item("Nothing to bet. Locked items and Legendary or better can't go on the wheel.")
-			list.set_item_selectable(e, false)
-			list.set_item_custom_fg_color(e, UI.DIM)
-			ids.append(-1)
+			var id := int(item["id"])
+			var sel: bool = (id in slate) if high else id == selected_id
+			grid.add_child(ItemGrid.cell(item, _pick.bind(id), sel, ItemGrid.CELL, "%d%%" % state.gamble_chance(item)))
+			ids.append(id)
+		empty_note.visible = ids.is_empty()
 	_update()
 
 func _update() -> void:
+	mode_button.text = "High stakes: ON  (many wheels at once)" if high else "High stakes: OFF  (one wheel)"
+	normal_box.visible = not high
+	high_box.visible = high
+	if high:
+		_update_high()
+		return
 	var found := state.find_item(selected_id) if selected_id >= 0 else {}
 	if found.is_empty() or found["where"] != "bag" or not GameData.can_gamble(found["item"]):
 		if not spinning:
@@ -134,6 +204,9 @@ func _update() -> void:
 	wheel.queue_redraw()
 
 func _spin() -> void:
+	if high:
+		_spin_all()
+		return
 	if spinning or selected_id < 0:
 		return
 	var found := state.find_item(selected_id)
@@ -174,5 +247,143 @@ func _spin() -> void:
 		main.refresh()
 	if ItemText.is_precious(item) or int(item["rarity"]) >= 3 or item.get("level", 0) > 0:
 		main.confirm("Bet %s?" % GameData.display_name(item), "If you lose, it's gone for good. %d%% chance to win." % state.gamble_chance(item), "Spin", go)
+	else:
+		go.call()
+
+# =====================================================================
+# High stakes
+# =====================================================================
+
+func wheel_cap() -> int:
+	return mini(MAX_WHEELS, BASE_WHEELS + heat)
+
+func _heat_now() -> int:
+	return heat if Time.get_ticks_msec() - last_round_ms <= HEAT_WINDOW_MS else 0
+
+func _toggle_mode() -> void:
+	if spinning:
+		return
+	high = not high
+	slate.clear()
+	selected_id = -1
+	result_label.text = ""
+	shown = ""
+	main.sfx.play("click")
+	refresh()
+
+func _load_rarity(r: int) -> void:
+	if spinning:
+		return
+	var items: Array = state.bag.duplicate()
+	items.reverse()
+	for it in items:
+		if slate.size() >= wheel_cap():
+			break
+		var id := int(it["id"])
+		if int(it["rarity"]) == r and GameData.can_gamble(it) and not ItemText.is_precious(it) and not id in slate:
+			slate.append(id)
+	shown = ""
+	refresh()
+
+func _slate_items() -> Array:
+	var out: Array = []
+	for id in slate:
+		var f := state.find_item(id)
+		if not f.is_empty() and f["where"] == "bag" and GameData.can_gamble(f["item"]):
+			out.append(f["item"])
+	return out
+
+func _update_high() -> void:
+	heat = _heat_now()
+	var items := _slate_items()
+	slate.clear()
+	for it in items:
+		slate.append(int(it["id"]))
+	var fee := 0
+	for it in items:
+		fee += GameData.gamble_fee(it)
+	var fire := "".rpad(heat, "*")
+	heat_label.text = "[color=#f97316][b]HEAT %d[/b] %s[/color]  [color=%s]%d wheels, spins %.1fs. Spin again within %ds to keep it.[/color]" % [
+		heat, fire, UI.hex(UI.DIM), wheel_cap(), _spin_time(), HEAT_WINDOW_MS / 1000]
+	# One small wheel per loaded item
+	if not spinning:
+		for c in mini_grid.get_children():
+			c.queue_free()
+		minis.clear()
+		for it in items:
+			var w := Wheel.new()
+			w.custom_minimum_size = Vector2(112, 112)
+			w.chance = state.gamble_chance(it)
+			mini_grid.add_child(w)
+			minis.append(w)
+	info.text = "[color=%s]Tap items to load them onto wheels (up to %d).[/color]" % [UI.hex(UI.DIM), wheel_cap()] if items.is_empty() else \
+		"%d wheel%s loaded  -  fee %d gold\n[color=%s]If every wheel wins, you also win the fees back %dx.[/color]" % [items.size(), "" if items.size() == 1 else "s", fee, UI.hex(UI.DIM), items.size()]
+	spin_button.text = "Spin %d wheel%s! (%d gold)" % [items.size(), "" if items.size() == 1 else "s", fee] if not items.is_empty() else "Spin!"
+	spin_button.disabled = spinning or items.is_empty() or state.gold < fee
+
+func _spin_time() -> float:
+	return maxf(0.6, 1.5 - 0.15 * float(heat))
+
+func _spin_all() -> void:
+	if spinning:
+		return
+	var items := _slate_items()
+	if items.is_empty():
+		return
+	var risky := items.any(func(it): return ItemText.is_precious(it) or int(it["rarity"]) >= 3 or int(it.get("level", 0)) > 0)
+	var go := func():
+		spinning = true
+		spin_button.disabled = true
+		var fee := 0
+		var results: Array = []
+		for it in items:
+			fee += GameData.gamble_fee(it)
+			results.append(state.gamble(int(it["id"])))
+		main.sfx.play("click")
+		var dur := _spin_time()
+		var t := create_tween().set_parallel(true)
+		for i in mini(results.size(), minis.size()):
+			var res: Dictionary = results[i]
+			var w: Wheel = minis[i]
+			if not res.get("ok", false):
+				continue
+			var pct: float = randf_range(2.0, float(res["chance"]) - 2.0) if res["win"] else randf_range(float(res["chance"]) + 2.0, 98.0)
+			w.angle = 0.0
+			t.tween_property(w, "angle", TAU * (3.0 + i * 0.5) + TAU * pct / 100.0, dur + i * 0.08).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+			t.tween_method(func(_v): w.queue_redraw(), 0.0, 1.0, dur + i * 0.08)
+		await t.finished
+		var wins := 0
+		var played := 0
+		for i in results.size():
+			var res: Dictionary = results[i]
+			if not res.get("ok", false):
+				continue
+			played += 1
+			if res["win"]:
+				wins += 1
+			if i < minis.size():
+				var w: Wheel = minis[i]
+				w.glow_color = Color("#4ade80") if res["win"] else Color("#f87171")
+				w.glow = 1.0
+				create_tween().tween_property(w, "glow", 0.0, 1.0)
+		var text := "[color=#4ade80][b]%d won[/b][/color]  [color=#f87171][b]%d lost[/b][/color]" % [wins, played - wins]
+		if played >= 2 and wins == played:
+			var bonus := fee * played
+			state.gold += bonus
+			text += "\n[color=#fbbf24][b]CLEAN SWEEP![/b] +%d gold[/color]" % bonus
+			main.sfx.play("legendary")
+		else:
+			main.sfx.play("level_up" if wins > played - wins else "death")
+		result_label.text = text
+		# Heat: spin again soon to keep it going
+		heat = mini(MAX_WHEELS - BASE_WHEELS, _heat_now() + 1)
+		last_round_ms = Time.get_ticks_msec()
+		slate.clear()
+		spinning = false
+		state.save_game()
+		shown = ""
+		main.refresh()
+	if risky:
+		main.confirm("Bet them all?", "Lost items are gone for good. Some of these are Epic, upgraded or precious.", "Spin", go)
 	else:
 		go.call()
