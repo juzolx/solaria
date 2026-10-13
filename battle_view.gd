@@ -393,6 +393,43 @@ func play(events: Array[Dictionary]) -> void:
 				_later(delay + 0.05, _enemy_died)
 			"hero_dead":
 				_later(delay, _hero_died)
+			"element":
+				var weak: bool = e["kind"] == "weak"
+				var ec := Color(Combat.ELEMENT_COLORS.get(e["element"], "#ffffff"))
+				_later(delay, func(): _float("WEAK!" if weak else "RESISTED", _enemy_center() + Vector2(34, -44), ec.lightened(0.2) if weak else Color("#94a3b8"), 14 if weak else 12))
+			"combo":
+				_later(delay + 0.1, func():
+					_sfx("signature" if e["id"] in ["frozen", "shatter"] else "buff", 1.15)
+					var cc := Color(e["color"])
+					floaters.append({"text": String(e["name"]).to_upper(), "pos": _enemy_center() + Vector2(0, -64), "color": cc, "size": 24, "life": 1.6, "keep": true, "t": 0.0, "lane": 0, "base": _enemy_center() + Vector2(0, -64)})
+					_burst(_enemy_center(), cc, 26, 320.0)
+					shake = maxf(shake, 5.0))
+			"poison":
+				_later(delay + 0.12, func():
+					_float("%d" % e["dmg"], _enemy_center() + Vector2(randf_range(-25, 25), 18), Color("#a3e635"), 15)
+					_burst(_enemy_center(), Color("#a3e635"), 5, 100.0))
+			"first_strike":
+				_later(delay, func(): _float("FIRST STRIKE", _hero_center() + Vector2(0, -42), Color("#93c5fd"), 15))
+			"haste":
+				_later(delay, func(): _float("EXTRA ATTACK", _hero_center() + Vector2(0, -42), Color("#93c5fd"), 14))
+			"afflicted":
+				_later(delay, func(): _float(String(e["name"]).to_upper(), _hero_center() + Vector2(0, -36), Color(e["color"]), 15))
+			"resisted":
+				_later(delay, func(): _float("RESISTED", _hero_center() + Vector2(0, -36), Color("#2dd4bf"), 14))
+			"boss_mechanic":
+				_later(delay + 0.2, func():
+					_sfx("boss_intro", 1.3)
+					banner_text = String(e["name"]).to_upper()
+					banner_sub = String(Combat.MECHANICS[e["id"]]["text"]).replace("%d", str(Combat.ENRAGE_TURNS))
+					banner_color = Color(e["color"])
+					banner_alpha = 2.0
+					shake = maxf(shake, 6.0))
+			"minion_dead":
+				_later(delay, func(): _float("MINION DOWN", _enemy_center() + Vector2(-30, -10), Color("#d4d4d4"), 13))
+			"mastery":
+				_later(delay + 0.4, func():
+					_sfx("achievement")
+					toast(String(e["name"]) + "!"))
 
 ## Rebuilds the hero picture when the look or gear changes.
 func _update_hero_art() -> void:
@@ -990,6 +1027,8 @@ func _draw() -> void:
 			_draw_shield(er)
 		if not state.enemy_mods.is_empty() and not veiled:
 			_draw_mods(er)
+		_draw_enemy_info(er, font)
+	_draw_hero_status(hr, font)
 
 	# Particles and tap rings
 	for p in particles:
@@ -1286,3 +1325,66 @@ func _pixel_color(ch: String, tint: Color) -> Color:
 		"C":
 			return cape
 	return Color(0, 0, 0, 0)
+
+# =====================================================================
+# v0.11: elements, statuses and boss mechanics on screen
+# =====================================================================
+
+## A row of small chips: [label, color]. Centered on x, at y (top).
+func _chip_row(chips: Array, x: float, y: float, font: Font, fs := 11) -> void:
+	if chips.is_empty():
+		return
+	var widths: Array = []
+	var total := 0.0
+	for c in chips:
+		var wdt := font.get_string_size(String(c[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 10.0
+		widths.append(wdt)
+		total += wdt + 4.0
+	var cx := clampf(x - total / 2.0, 4.0, size.x - total - 4.0)
+	for i in chips.size():
+		var col: Color = chips[i][1]
+		var box := Rect2(cx, y, widths[i], fs + 6.0)
+		draw_rect(box, Color(0.03, 0.04, 0.08, 0.82))
+		draw_rect(box, Color(col, 0.85), false, 1.0)
+		draw_string(font, Vector2(cx + 5.0, y + fs + 1.0), String(chips[i][0]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+		cx += widths[i] + 4.0
+
+## What the monster is weak to and resists, its statuses, and its boss clock.
+func _draw_enemy_info(r: Rect2, font: Font) -> void:
+	var chips: Array = []
+	for el in state.enemy_weak:
+		chips.append(["Weak: " + String(el), Color(Combat.ELEMENT_COLORS.get(el, "#ffffff")).lightened(0.15)])
+	for el in state.enemy_resist:
+		chips.append(["Resists: " + String(el), Color("#94a3b8")])
+	var st: Array = []
+	if state.burn_turns > 0:
+		st.append(["Burning", Color("#fb923c")])
+	if state.enemy_poison_turns > 0:
+		st.append(["Poisoned", Color("#a3e635")])
+	if state.enemy_frozen > 0:
+		st.append(["FROZEN", Color("#bae6fd")])
+	elif state.enemy_chill > 0:
+		st.append(["Chilled", Color("#7fd0f0")])
+	if state.enemy_curse > 0:
+		st.append(["Cursed", Color("#a78bfa")])
+	if state.enemy_stun > 0:
+		st.append(["Stunned", Color("#fde68a")])
+	var el := Combat.enrage_left(state)
+	if el > 0:
+		st.append(["Enrage in %d" % el, Color("#ef4444")])
+	elif el == 0:
+		st.append(["ENRAGED", Color("#ef4444")])
+	if state.boss_minions > 0:
+		st.append(["Minions x%d" % state.boss_minions, Color("#d4d4d4")])
+	var top := maxf(34.0, r.position.y - 6.0)
+	_chip_row(st, r.get_center().x, top - 20.0, font)
+	_chip_row(chips, r.get_center().x, top, font, 10)
+
+## Your statuses (poison, burns, chill) over your head.
+func _draw_hero_status(r: Rect2, font: Font) -> void:
+	var chips: Array = []
+	for k in state.hero_status:
+		var info: Dictionary = Combat.STATUS_INFO.get(k, {})
+		if not info.is_empty():
+			chips.append(["%s %d" % [info["name"], int(state.hero_status[k])], Color(info["color"])])
+	_chip_row(chips, r.get_center().x, maxf(34.0, r.position.y - 4.0), font)

@@ -49,6 +49,7 @@ var dust := 0           # from stones of maxed skills; crafts any skill
 var active_slots: Array = ["", "", ""]          # equipped active skills
 var passive_slots: Array = ["", "", "", "", ""] # equipped passive skills
 var skill_cds := {}     # skill id -> turns until ready
+var sig_slot := ""      # the signature skill in the 4th slot (signatures.gd)
 var stones_since := 0   # kills since the last stone (pity)
 var buffs := {}         # skill id -> {"atk"/"def" multipliers, "crit"/"dodge" adds, "turns"}
 var shield_hp := 0      # soaks damage first
@@ -58,7 +59,7 @@ var summon_name := ""
 var song_turns := 0     # healing over time
 var song_regen := 0.0
 var confuse_turns := 0  # the monster hits itself
-# ---------- Paths (class family trees: rules in class_tree.gd) ----------
+# ---------- Paths (the Evolution Tree: rules in class_tree.gd) ----------
 var faith := 0.0        # -100 evil .. +100 good: decides which classes you may take
 var class_path: Array[String] = []  # the classes you picked at levels 15, 35 and 60 (node ids)
 var class_branch := ""  # a branch-off unique class you took (ends the tree)
@@ -291,7 +292,7 @@ func haste_chance() -> float:
 
 ## Chance (%) to strike first when a fight starts (Agility).
 func first_strike_chance() -> float:
-	return dim("AGI", GameData.AGI_FIRST)
+	return dim("AGI", GameData.AGI_FIRST) + _flat("first")
 
 ## Extra odds (%) of events, encounters and signature drops (Luck).
 func luck_odds() -> float:
@@ -415,6 +416,9 @@ func _bonus_sources() -> Array:
 	out.append_array(ClassTree.bonus_sources(self))
 	out.append_array(set_bonuses())
 	out.append_array(_passive_sources())
+	var mb := Mastery.bonus(self)
+	if not mb.is_empty():
+		out.append(mb)
 	return out
 
 ## Multiplier bonuses (atk, hp, def, skill) multiply together.
@@ -482,6 +486,8 @@ func set_bonuses() -> Array:
 # ---------- Skill book (ability stones) ----------
 
 func skill_rank(id: String) -> int:
+	if Signatures.is_signature(id):
+		return Signatures.rank(id) if id in Signatures.owned(self) else 0
 	return int(skill_book.get(id, 0))
 
 func active_slot_count() -> int:
@@ -504,7 +510,15 @@ func equipped_actives() -> Array:
 	for i in active_slot_count():
 		if active_slots[i] != "" and skill_book.has(active_slots[i]):
 			out.append(active_slots[i])
+	if sig_slot != "" and sig_slot in Signatures.owned(self):
+		out.append(sig_slot)
 	return out
+
+## Puts one of your signature skills in the signature slot.
+func set_signature(id: String) -> void:
+	if id in Signatures.owned(self):
+		sig_slot = id
+		save_game()
 
 func is_skill_equipped(id: String) -> bool:
 	return id in active_slots or id in passive_slots
@@ -679,7 +693,7 @@ func _check_spec() -> void:
 		class_told = t
 		events.append({"type": "class_pick", "tier": t})
 		say("[color=#e8b14a]Level %d: choose your next class in the Class tab![/color]" % int(ClassTree.PICK_LEVELS[t]))
-		tip("class_pick_%d" % t, "Your class can grow! Open Character > Class and choose where your family tree goes.")
+		tip("class_pick_%d" % t, "Your class can evolve! Open Character > Class and choose where your Evolution Tree goes.")
 
 ## What a stat would be if this item were worn instead of the current one.
 func stat_if_equipped(item: Dictionary) -> int:
@@ -1589,6 +1603,8 @@ func _enemy_defeated() -> void:
 		_finish_trial()
 		return
 	ClassTree.on_kill(self, was_boss, tier, was_goblin)
+	if not was_goblin:
+		Mastery.on_kill(self)
 	burn_turns = 0
 	enemy_stun = 0
 	enemy_weaken_turns = 0
@@ -2627,6 +2643,7 @@ func save_game() -> void:
 		"skill_book": skill_book,
 		"dust": dust,
 		"active_slots": active_slots,
+		"sig_slot": sig_slot,
 		"passive_slots": passive_slots,
 		"stones_since": stones_since,
 		"faith": faith,
@@ -2829,6 +2846,10 @@ func load_game() -> bool:
 	unique.erase("Sword Intent")
 	unique.erase("Demonic Qi")
 	ClassTree.from_save(self, data.get("class_tree", {}))
+	sig_slot = str(data.get("sig_slot", ""))
+	var sigs := Signatures.owned(self)
+	if not sig_slot in sigs:
+		sig_slot = sigs[sigs.size() - 1] if not sigs.is_empty() else ""
 	kill_streak = int(data.get("kill_streak", 0))
 	party_slots = data.get("party_slots", [])
 	if hero_class != "" and not data.has("skill_book"):
@@ -3018,6 +3039,9 @@ func hero_looks() -> Dictionary:
 	if not uc.is_empty() and transmog.get("Cape", "") != "hide":
 		out["Cape"] = {"type": "cape", "mat": "cloth", "ramp": Sprites.ramp_from(Color(class_info().get("color", "#3c5e8b")).darkened(0.15)),
 			"trim": Color(ClassTree.RANK_COLORS[ClassTree.rank_of(uc)]), "glow": false}
+	# God rank classes shine: a golden aura around the hero
+	if not uc.is_empty() and ClassTree.rank_of(uc) == "God" and transmog.get("Aura", "") != "hide":
+		out["Aura"] = {"type": "aura", "color": Color(ClassTree.RANK_COLORS["God"])}
 	return out
 
 func set_transmog(slot: String, key: String) -> void:
@@ -3549,6 +3573,8 @@ func _finish_trial() -> void:
 		"class_god", "class_item":
 			say("[color=#fbbf24]You won the trial![/color] +%d gold" % g)
 			ClassTree.trial_won(self, trial_data)
+		"god_rotation":
+			ClassTree.god_trial_won(self, trial_data)
 	trial_kind = "god"
 	trial_data = {}
 	_check_spec()

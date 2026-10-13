@@ -308,6 +308,60 @@ func _choose_path(kind: String) -> void:
 		path_count_label = null
 	refresh()
 
+## After a defeat: a card over the fight with what hurt you most and a tip.
+var recap_panel: PanelContainer
+func _show_recap() -> void:
+	var r: Dictionary = state.last_death
+	if r.is_empty() or battle == null:
+		return
+	if is_instance_valid(recap_panel):
+		recap_panel.queue_free()
+	recap_panel = UI.panel(Color(UI.PANEL, 0.97), UI.RED, 10, 12, 2)
+	battle.add_child(recap_panel)
+	var v := UI.vbox(6)
+	recap_panel.add_child(v)
+	var head := UI.hbox(8)
+	v.add_child(head)
+	var tl := UI.label("Defeated by %s" % r.get("enemy", "?"), 17, UI.RED)
+	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(tl)
+	var close := UI.button("OK", func():
+		if is_instance_valid(recap_panel):
+			recap_panel.queue_free())
+	close.custom_minimum_size = Vector2(56, UI.TAP)
+	head.add_child(close)
+	var taken: Dictionary = r.get("taken", {})
+	var total := maxf(1.0, float(r.get("total", 0)))
+	var names := {"hits": "its hits", "burning": "burning", "burn": "burns", "poison": "poison", "minions": "minions", "realm": "the realm"}
+	var parts: Array = []
+	var keys := taken.keys()
+	keys.sort_custom(func(a, b): return int(taken[a]) > int(taken[b]))
+	for k in keys:
+		parts.append("%s %d%%" % [names.get(k, String(k)), int(round(float(taken[k]) * 100.0 / total))])
+	var info := UI.rich(12)
+	info.text = "[color=%s]%d turns. Damage you took: %s. Biggest hit: %d. It had %d%% health left.[/color]" % [UI.hex(UI.DIM), int(r.get("turns", 0)),
+		", ".join(parts) if not parts.is_empty() else "none", int(r.get("biggest", 0)), int(float(r.get("enemy_left", 0.0)) * 100)]
+	v.add_child(info)
+	for tip_text in r.get("tips", []):
+		var t := UI.rich(13)
+		t.text = "[color=#e8b14a]Tip:[/color] %s" % tip_text
+		v.add_child(t)
+	var off := UI.button("Don't show these again", func():
+		profile.show_recap = false
+		profile.save()
+		if is_instance_valid(recap_panel):
+			recap_panel.queue_free())
+	off.add_theme_font_size_override("font_size", 11)
+	v.add_child(off)
+	recap_panel.custom_minimum_size.x = minf(520.0, battle.size.x - 24.0)
+	await get_tree().process_frame
+	if is_instance_valid(recap_panel):
+		recap_panel.position = Vector2((battle.size.x - recap_panel.size.x) / 2.0, 40.0)
+		var p := recap_panel
+		get_tree().create_timer(14.0).timeout.connect(func():
+			if is_instance_valid(p):
+				p.create_tween().tween_property(p, "modulate:a", 0.0, 0.5).finished.connect(p.queue_free))
+
 ## Change your look later (race stays).
 func show_look_editor() -> void:
 	timer.stop()
@@ -704,7 +758,7 @@ func _give_class_outfit() -> void:
 		state.add_to_wardrobe(item)
 	state.save_game()
 
-## Levels 15, 35 and 60: choose where your family tree goes.
+## Levels 15, 35 and 60: choose where your Evolution Tree goes.
 func _show_tree_picker() -> void:
 	if ClassTree.pick_tier(state) < 0 or _popup_open():
 		return
@@ -803,8 +857,16 @@ func _handle_events() -> void:
 			"class_pick":
 				_show_tree_picker.call_deferred()
 			"class_up":
-				moment_queue.append(["class", e["name"], e["role"], Color(ClassTree.RANK_COLORS.get(e["rank"], e["color"])) if e["rank"] != "" else Color(e["color"]),
-					("%s rank unique class" % e["rank"]) if e["rank"] != "" else "Your class grows", Sprites.portrait(state.appearance, state.hero_looks())])
+				var after_looks := state.hero_looks()
+				var before_looks := after_looks.duplicate()
+				if int(e.get("tier", 1)) >= 3 or e["rank"] != "":
+					before_looks.erase("Cape")
+					before_looks.erase("Aura")
+				moment_queue.append(["evolve", {"name": e["name"], "role": e["role"],
+					"color": Color(ClassTree.RANK_COLORS.get(e["rank"], e["color"])) if e["rank"] != "" else Color(e["color"]),
+					"sub": ("%s rank unique class" % e["rank"]) if e["rank"] != "" else "Level %d evolution" % int(ClassTree.PICK_LEVELS[clampi(int(e.get("tier", 1)) - 1, 0, 2)]),
+					"before": Sprites.portrait(state.appearance, before_looks), "after": Sprites.portrait(state.appearance, after_looks),
+					"skill": e.get("skill", ""), "skill_text": e.get("skill_text", ""), "tier": int(e.get("tier", 1))}])
 			"stone":
 				profile.save()  # the shared skill book lives in the profile
 			"realm_enter":
@@ -825,6 +887,9 @@ func _handle_events() -> void:
 				sfx.play("unique")
 			"escaped":
 				sfx.play("escape")
+			"death_recap":
+				if profile.show_recap and not state.hardcore:
+					_show_recap.call_deferred()
 	if state.best_floor > profile.max_floor:
 		var before := profile.slots_open()
 		profile.max_floor = state.best_floor
@@ -840,7 +905,11 @@ func _play_moments() -> void:
 		if c is Moments:
 			return
 	var m: Array = moment_queue.pop_front()
-	var mo := Moments.play(self, m[0], m[1], m[2], m[3], m[4], m[5], m[6] if m.size() > 6 else null)
+	var mo: Moments
+	if m[0] == "evolve":
+		mo = Moments.evolve(self, m[1])
+	else:
+		mo = Moments.play(self, m[0], m[1], m[2], m[3], m[4], m[5], m[6] if m.size() > 6 else null)
 	mo.tree_exited.connect(func(): if is_inside_tree(): _play_moments())
 
 func _popup_open() -> bool:

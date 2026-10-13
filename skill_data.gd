@@ -19,8 +19,8 @@ extends RefCounted
 
 const MAX_RANK := 5
 const RANK_POWER := 0.12        # each rank above 1 adds this much power to an active skill
-const RARITY_NAMES := ["Common", "Rare", "Epic"]
-const RARITY_COLORS := ["#cbd5e1", "#60a5fa", "#c084fc"]
+const RARITY_NAMES := ["Common", "Rare", "Epic", "Signature"]
+const RARITY_COLORS := ["#cbd5e1", "#60a5fa", "#c084fc", "#fde047"]
 const DROP_WEIGHTS := [70.0, 25.0, 5.0]       # stone rarity odds from normal monsters
 const BOSS_DROP_WEIGHTS := [40.0, 40.0, 20.0]
 const STONE_CHANCE := 1.0                     # % per kill...
@@ -148,13 +148,15 @@ const OLD_CLASS_SKILLS := {
 const OLD_CLASS_MOVE := {"Archer": "Ranger"}
 
 static func info(id: String) -> Dictionary:
+	if id.begins_with(Signatures.PREFIX):
+		return Signatures.info(id)
 	return SKILLS.get(id, {})
 
 static func skill_name(id: String) -> String:
-	return str(SKILLS.get(id, {"name": id})["name"])
+	return str(info(id).get("name", id))
 
 static func is_active(id: String) -> bool:
-	return SKILLS.get(id, {}).get("kind", "") == "active"
+	return info(id).get("kind", "") == "active"
 
 static func all_of(kind: String) -> Array:
 	var out: Array = []

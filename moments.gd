@@ -120,3 +120,134 @@ func close() -> void:
 	var t := create_tween()
 	t.tween_property(self, "modulate:a", 0.0, 0.3)
 	t.tween_callback(queue_free)
+
+# =====================================================================
+# Evolving: the hero changes in front of you
+# =====================================================================
+
+## The full-screen evolution: your old look, a burst of light in your rank's
+## color, your new look, then the new class, its rank and its signature skill.
+## d: {"name", "role", "rank", "color", "before", "after", "skill", "skill_text", "tier"}
+static func evolve(main_ref, d: Dictionary) -> Moments:
+	var m := Moments.new()
+	m.main_node = main_ref
+	main_ref.add_child(m)
+	m._build_evolve(d)
+	return m
+
+var _rays := 0.0       # 0..1 how bright the light burst is
+var _ray_color := Color.WHITE
+var _ray_center := Vector2.ZERO
+var _sparks: Array = []  # [pos, vel, life]
+
+func _build_evolve(d: Dictionary) -> void:
+	theme = UI.make_theme()
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	size = get_viewport().get_visible_rect().size
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	var color: Color = d.get("color", UI.GOLD)
+	_ray_color = color
+	var bg := ColorRect.new()
+	bg.color = Color(0.02, 0.03, 0.06, 0.0)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(bg)
+	move_child(bg, 0)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(center)
+	var v := UI.vbox(8)
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	center.add_child(v)
+	var pic_box := Control.new()
+	pic_box.custom_minimum_size = Vector2(190, 190)
+	pic_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(pic_box)
+	var before := TextureRect.new()
+	var after := TextureRect.new()
+	for p in [before, after]:
+		p.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		p.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		p.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		p.size = Vector2(190, 190)
+		p.pivot_offset = Vector2(95, 95)
+		p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pic_box.add_child(p)
+	before.texture = d.get("before")
+	after.texture = d.get("after")
+	before.modulate.a = 0.0
+	after.modulate.a = 0.0
+	var kicker := _line(v, "YOUR CLASS EVOLVES" if int(d.get("tier", 1)) < 3 else "UNIQUE CLASS", 14, color.lightened(0.3))
+	var title := _line(v, String(d.get("name", "")).to_upper(), 36, color.lightened(0.45))
+	var rank_txt := String(d.get("sub", ""))
+	var sub := _line(v, rank_txt, 15, color.lightened(0.2)) if rank_txt != "" else null
+	var role := _line(v, String(d.get("role", "")), 14, UI.TEXT)
+	var sk := String(d.get("skill", ""))
+	var skill := _line(v, "New signature skill: %s" % sk, 15, Color(Signatures.COLOR)) if sk != "" else null
+	var skill_t := _line(v, String(d.get("skill_text", "")), 12, UI.DIM) if sk != "" else null
+	var tap := _line(v, "(tap to continue)", 10, UI.DIM)
+	var texts: Array = [kicker, title, sub, role, skill, skill_t, tap].filter(func(x): return x != null)
+	for l in texts:
+		(l as Label).modulate.a = 0.0
+	lines.assign(texts)
+	await get_tree().process_frame
+	_ray_center = pic_box.get_global_rect().get_center() - global_position
+	var t := create_tween()
+	t.tween_property(bg, "color:a", 0.94, 0.4)
+	t.tween_property(before, "modulate:a", 1.0, 0.4)
+	# The old you shakes, glows and bursts into light
+	t.tween_property(before, "scale", Vector2(1.06, 1.06), 0.35).set_trans(Tween.TRANS_SINE)
+	t.tween_property(before, "modulate", Color(3, 3, 3, 1), 0.45)
+	t.tween_method(func(x: float): _rays = x; queue_redraw(), 0.0, 1.0, 0.25)
+	t.tween_callback(func():
+		before.visible = false
+		after.modulate = Color(3, 3, 3, 1)
+		after.scale = Vector2(1.25, 1.25)
+		_burst()
+		if main_node and main_node.sfx:
+			main_node.sfx.play("awaken"))
+	t.tween_property(after, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.parallel().tween_property(after, "modulate", Color.WHITE, 0.6)
+	t.parallel().tween_method(func(x: float): _rays = x; queue_redraw(), 1.0, 0.35, 1.2)
+	for l in texts:
+		t.tween_property(l, "modulate:a", 1.0, 0.25)
+	t.tween_interval(3.2)
+	t.tween_callback(close)
+	if main_node and main_node.timer:
+		main_node.timer.paused = true
+	if main_node and main_node.sfx:
+		main_node.sfx.play("spec")
+
+func _burst() -> void:
+	_sparks.clear()
+	for i in 46:
+		var a := randf() * TAU
+		var sp := randf_range(120.0, 420.0)
+		_sparks.append([_ray_center, Vector2(cos(a), sin(a)) * sp, randf_range(0.6, 1.3)])
+	set_process(true)
+
+func _process(delta: float) -> void:
+	if _sparks.is_empty():
+		return
+	for s in _sparks:
+		s[0] += s[1] * delta
+		s[1] *= 0.94
+		s[2] -= delta
+	_sparks = _sparks.filter(func(s): return float(s[2]) > 0.0)
+	queue_redraw()
+
+func _draw() -> void:
+	if _rays > 0.0:
+		var n := 14
+		var r := 260.0 + 340.0 * _rays
+		for i in n:
+			var a := TAU * i / n + Time.get_ticks_msec() / 2400.0
+			var a2 := a + TAU / n * 0.42
+			var pts := PackedVector2Array([_ray_center, _ray_center + Vector2(cos(a), sin(a)) * r, _ray_center + Vector2(cos(a2), sin(a2)) * r])
+			draw_colored_polygon(pts, Color(_ray_color, 0.16 * _rays))
+		for k in 5:
+			draw_circle(_ray_center, (40.0 + k * 26.0) * (0.6 + _rays), Color(_ray_color.lightened(0.4), 0.07 * _rays))
+	for s in _sparks:
+		var life := clampf(float(s[2]), 0.0, 1.0)
+		draw_rect(Rect2(s[0] - Vector2(2, 2), Vector2(4, 4)), Color(_ray_color.lightened(0.5), life))

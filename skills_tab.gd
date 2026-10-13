@@ -8,6 +8,7 @@ var main
 var state: GameState
 var slot_row_a: HBoxContainer
 var slot_row_p: HBoxContainer
+var sig_row: HBoxContainer
 var filter_pick: OptionButton
 var list: ItemList
 var ids: Array[String] = []
@@ -32,11 +33,14 @@ func setup(m) -> void:
 	head.add_child(t)
 	dust_label = UI.label("", 13, Color("#c4b5fd"))
 	head.add_child(dust_label)
+	head.add_child(UI.button("Auto-battle...", func(): auto_battle_popup(main)))
 	head.add_child(UI.button("Craft...", _craft_popup))
 
 	add_child(UI.label("ACTIVE", 10, UI.DIM))
 	slot_row_a = UI.hbox(4)
 	add_child(slot_row_a)
+	sig_row = UI.hbox(4)
+	add_child(sig_row)
 	add_child(UI.label("PASSIVE", 10, UI.DIM))
 	slot_row_p = UI.hbox(4)
 	add_child(slot_row_p)
@@ -120,12 +124,26 @@ func _passes(id: String) -> bool:
 
 func refresh() -> void:
 	dust_label.text = "Dust %d" % state.dust
-	var key := "%s|%s|%s|%d|%d|%d" % [str(state.skill_book), str(state.active_slots), str(state.passive_slots), filter_pick.selected, state.level, state.dust]
+	var key := "%s|%s|%s|%d|%d|%d|%s" % [str(state.skill_book), str(state.active_slots), str(state.passive_slots), filter_pick.selected, state.level, state.dust, state.sig_slot]
 	if key == shown:
 		return
 	shown = key
 	OnlineUI.clear(slot_row_a)
 	OnlineUI.clear(slot_row_p)
+	OnlineUI.clear(sig_row)
+	if not Signatures.owned(state).is_empty():
+		var sb := Button.new()
+		sb.focus_mode = Control.FOCUS_NONE
+		sb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		sb.custom_minimum_size = Vector2(0, 34)
+		sb.clip_text = true
+		sb.add_theme_font_size_override("font_size", 11)
+		var sc := Color(Signatures.COLOR)
+		sb.text = "Signature: %s" % (SkillData.skill_name(state.sig_slot) if state.sig_slot != "" else "(none)")
+		sb.add_theme_stylebox_override("normal", UI.style(sc.darkened(0.75), sc.darkened(0.2), 6, 4, 1))
+		sb.add_theme_color_override("font_color", sc.lightened(0.3))
+		sb.pressed.connect(func(): main.show_tab(0, 1))
+		sig_row.add_child(sb)
 	for i in 3:
 		slot_row_a.add_child(_slot_button(state.active_slots[i], i < state.active_slot_count(), int(SkillData.ACTIVE_SLOTS_AT[i]), true))
 	for i in 5:
@@ -227,3 +245,68 @@ func _craft_popup() -> void:
 			shown = ""
 			main.refresh())
 	o.content.add_child(UI.label("Double-tap a skill to craft it.", 11, UI.DIM))
+
+## Auto-battle settings: when to drink potions, and which skills Auto uses in what order.
+static func auto_battle_popup(m) -> void:
+	var st: GameState = m.state
+	var o := Overlay.new().open(m, "Auto-battle", 560.0, UI.TEAL)
+	_fill_auto(m, o, st)
+
+static func _fill_auto(m, o: Overlay, st: GameState) -> void:
+	for c in o.content.get_children():
+		if c != o.content.get_child(0):
+			c.queue_free()
+	UI.section(o.content, "Potions", "Auto-potion drinks one when your HP drops below this.")
+	var prow := UI.hbox(8)
+	o.content.add_child(prow)
+	var pl := UI.label("", 15, UI.PINK)
+	pl.custom_minimum_size = Vector2(70, 0)
+	var slider := HSlider.new()
+	slider.min_value = 10
+	slider.max_value = 70
+	slider.step = 5
+	slider.value = st.auto_potion_at * 100.0
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.custom_minimum_size = Vector2(0, UI.TAP)
+	pl.text = "%d%%" % int(slider.value)
+	slider.value_changed.connect(func(v: float):
+		st.auto_potion_at = v / 100.0
+		pl.text = "%d%%" % int(v)
+		st.save_game())
+	prow.add_child(slider)
+	prow.add_child(pl)
+	var ap := UI.button("Auto-potion: %s" % ("ON" if st.auto_potion else "OFF"), func():
+		st.auto_potion = not st.auto_potion
+		st.save_game()
+		_fill_auto(m, o, st))
+	ap.custom_minimum_size = Vector2(0, UI.TAP)
+	o.content.add_child(ap)
+	UI.section(o.content, "Skill order", "Auto tries your skills top to bottom and uses the first one that makes sense right now (it won't heal you at full HP, or waste a big hit on a monster that resists it). Turn a skill off to only use it yourself.")
+	var order := st.auto_order()
+	if order.is_empty():
+		o.content.add_child(UI.label("No active skills equipped yet.", 13, UI.DIM))
+	for i in order.size():
+		var id: String = order[i]
+		var s := SkillData.info(id)
+		var c := Color(Classes.tag_color(String(s["tags"][0]))) if not Signatures.is_signature(id) else Color(Signatures.COLOR)
+		var row := UI.hbox(6)
+		o.content.add_child(row)
+		var nl := UI.label("%d. %s" % [i + 1, s["name"]], 15, c.lightened(0.3) if not st.skill_auto_off.has(id) else UI.DIM)
+		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nl.clip_text = true
+		row.add_child(nl)
+		var up := UI.button("Up", func(): st.move_priority(id, -1); _fill_auto(m, o, st))
+		var dn := UI.button("Down", func(): st.move_priority(id, 1); _fill_auto(m, o, st))
+		var tg := UI.button("Auto ON" if not st.skill_auto_off.has(id) else "Auto OFF", func(): st.toggle_skill_auto(id); _fill_auto(m, o, st))
+		up.disabled = i == 0
+		dn.disabled = i == order.size() - 1
+		for b in [up, dn, tg]:
+			b.custom_minimum_size = Vector2(0, UI.TAP)
+			row.add_child(b)
+	var reset := UI.button("Reset to default order", func():
+		st.skill_priority = []
+		st.skill_auto_off = {}
+		st.save_game()
+		_fill_auto(m, o, st))
+	reset.custom_minimum_size = Vector2(0, UI.TAP)
+	o.content.add_child(reset)

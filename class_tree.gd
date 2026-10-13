@@ -1,6 +1,6 @@
 class_name ClassTree
 extends RefCounted
-## The class family trees (v0.10).
+## The Evolution Tree (v0.10, renamed in v0.11).
 ##
 ## Every starting class splits in two at level 15, each of those in two at
 ## level 35 and each of those in two at level 60: 1 > 2 > 4 > 8.
@@ -697,7 +697,12 @@ static func _take(g: GameState, n: Dictionary) -> void:
 
 static func _on_new_class(g: GameState, n: Dictionary) -> void:
 	var r := rank_of(n)
-	g.events.append({"type": "class_up", "name": n["name"], "role": n["role_text"], "rank": r, "side": n["side"], "color": g.class_info().get("color", "#ffffff")})
+	var sig := Signatures.id_of(String(n["id"]))
+	g.sig_slot = sig
+	g.skill_cds.erase(sig)
+	g.events.append({"type": "class_up", "name": n["name"], "role": n["role_text"], "rank": r, "side": n["side"], "color": g.class_info().get("color", "#ffffff"),
+		"skill": SkillData.skill_name(sig), "skill_text": SkillData.info(sig).get("text", ""), "tier": int(n["tier"])})
+	g.say("[color=#fde047]New signature skill: %s![/color] %s" % [SkillData.skill_name(sig), SkillData.info(sig).get("text", "")])
 	if r != "":
 		g.codex.add("unique_classes")
 		g.say("[color=%s]*** UNIQUE CLASS: %s (%s rank) ***[/color] %s" % [RANK_COLORS[r], n["name"], r, n["role_text"]])
@@ -875,6 +880,10 @@ static func bonus_sources(g: GameState) -> Array:
 	var out: Array = []
 	for n in path_nodes(g):
 		out.append(passive(n))
+	var dv := divinity(g)
+	if dv > 0:
+		var b := 1.0 + dv * DIVINITY_BONUS
+		out.append({"atk": b, "hp": b, "def": b})
 	var u := unique_class(g)
 	if not u.is_empty():
 		var sb := stat_bonus(g)
@@ -1388,3 +1397,61 @@ static func from_save(g: GameState, d: Dictionary) -> void:
 	g.class_path = keep
 	if g.class_branch != "" and node(g.class_branch).is_empty():
 		g.class_branch = ""
+
+# =====================================================================
+# God trials: once you're a God rank class, three very hard trials a week
+# =====================================================================
+
+const GOD_TRIALS := {
+	"titan_chain": {"name": "The Chained Titan", "art": "boss_surtr", "lore": "Bound beneath the world since before the first dawn. Break its chains, or be broken.", "hp": 14.0, "atk": 2.2},
+	"drowned_god": {"name": "The Drowned God", "art": "boss_charybdis", "lore": "Every sea remembers it. It does not forgive.", "hp": 12.0, "atk": 2.4, "no_potions": true},
+	"first_flame": {"name": "The First Flame", "art": "boss_fafnir", "lore": "The fire that lit the first forge, still burning, still hungry.", "hp": 13.0, "atk": 2.5},
+	"hollow_crown": {"name": "The Hollow Crown", "art": "boss_dullahan", "lore": "A king who outlived his kingdom, his name, and his head.", "hp": 16.0, "atk": 2.0},
+	"mother_of_monsters": {"name": "Echidna Unbound", "art": "boss_echidna", "lore": "Every monster you've ever killed was one of her children.", "hp": 15.0, "atk": 2.3},
+	"queen_below": {"name": "The Queen Below", "art": "boss_hel", "lore": "Half of her face is living. Neither half is kind.", "hp": 13.0, "atk": 2.6, "no_potions": true},
+	"sword_saint": {"name": "The Last Sword Saint", "art": "boss_sword_spirit", "lore": "He has not lost a duel in a thousand years. He would like to.", "hp": 11.0, "atk": 3.0},
+	"father_of_storms": {"name": "Typhon Ascendant", "art": "boss_typhon", "lore": "A hundred heads, and every one of them has learned your name.", "hp": 18.0, "atk": 2.2},
+	"seraph_judge": {"name": "The Seraph Judge", "art": "boss_seraphiel", "lore": "It does not hate you. It has simply weighed you, and found you wanting.", "hp": 14.0, "atk": 2.4},
+}
+const GOD_TRIAL_ORDER := ["titan_chain", "drowned_god", "first_flame", "hollow_crown", "mother_of_monsters", "queen_below", "sword_saint", "father_of_storms", "seraph_judge"]
+const DIVINITY_MAX := 30
+const DIVINITY_BONUS := 0.01   # +1% Attack, HP and Defense per point of Divinity
+
+static func god_week() -> int:
+	var days := floori(Time.get_unix_time_from_system() / 86400.0)
+	return floori((days + 3) / 7.0)
+
+## This week's three god trials.
+static func god_trials_now() -> Array:
+	var w := god_week()
+	var out: Array = []
+	for i in 3:
+		out.append(GOD_TRIAL_ORDER[posmod(w * 3 + i, GOD_TRIAL_ORDER.size())])
+	return out
+
+static func god_trials_open(g: GameState) -> bool:
+	var u := unique_class(g)
+	return not u.is_empty() and rank_of(u) == "God"
+
+static func god_trial_done(g: GameState, id: String) -> bool:
+	return int(g.ctrack.get("godtrial_%d_%s" % [god_week(), id], 0)) > 0
+
+static func divinity(g: GameState) -> int:
+	return int(g.ctrack.get("divinity", 0))
+
+static func start_god_trial(g: GameState, id: String) -> bool:
+	if not god_trials_open(g) or god_trial_done(g, id) or not id in god_trials_now():
+		return false
+	var info: Dictionary = GOD_TRIALS[id]
+	return g.start_special_trial(info, "god_rotation", {"trial": id, "week": god_week(), "no_potions": info.get("no_potions", false)})
+
+static func god_trial_won(g: GameState, data: Dictionary) -> void:
+	var id := String(data.get("trial", ""))
+	g.ctrack["godtrial_%d_%s" % [int(data.get("week", god_week())), id]] = 1
+	count(g, "god_trials")
+	var d := mini(DIVINITY_MAX, divinity(g) + 1)
+	g.ctrack["divinity"] = d
+	var m := GameData.zone_index(g.best_floor)
+	g.materials[m] = int(g.materials[m]) + 10
+	g.say("[color=#fde047]*** %s falls! ***[/color] Divinity %d (+%d%% Attack, HP and Defense), +10 %s." % [GOD_TRIALS[id]["name"], d, int(d * DIVINITY_BONUS * 100), GameData.MATERIALS[m]])
+	g.events.append({"type": "achievement", "name": "God trial won", "text": GOD_TRIALS[id]["name"], "title": ""})

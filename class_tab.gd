@@ -1,8 +1,10 @@
 class_name ClassTab
 extends ScrollContainer
-## Character > Class: your class family tree. Shows the whole tree (1 > 2 > 4 > 8),
-## the class you can pick next, the branch-offs of your current class with
-## their progress, the Wanderer's items, and the hidden classes.
+## Character > Class: your Evolution Tree. Shows the shape of the tree
+## (1 > 2 > 4 > 8) but only names the classes you've reached and the ones you
+## can choose right now; the rest stay "???" until you get there. Also your
+## signature skills, the branch-offs of your current class, the Wanderer's
+## items, the god trials and the hidden classes.
 
 var main
 var state: GameState
@@ -24,6 +26,7 @@ func refresh() -> void:
 	var key := "%s|%s|%d|%d|%s|%s|%s|%s|%s|%s|%s|%d|%s|%d" % [state.hero_class, str(state.class_path), state.level, int(state.faith), state.class_branch,
 		str(state.class_items), selected, state.dev_mode, str(state.hidden), state.hidden_class, str(state.hidden_stage),
 		int(state.ctrack.get("kills", 0)) / 25, sn, int(state.unique_value(sn)) if sn != "" else 0]
+	key += "|%s|%d|%s|%s" % [state.sig_slot, ClassTree.divinity(state), state.trial_active, state.enemy_is_boss]
 	if key == shown:
 		return
 	shown = key
@@ -35,6 +38,8 @@ func refresh() -> void:
 	_pick_panel()
 	_tree()
 	_detail()
+	_signatures()
+	_god_trials()
 	_branches()
 	if state.hero_class == "Wanderer":
 		_items()
@@ -90,8 +95,8 @@ func _header() -> void:
 	var sn := ClassTree.stat_name(state)
 	if sn != "":
 		var st := UI.rich(12)
-		st.text = "[color=%s]Special stat:[/color] [b]%s %.1f[/b]  [color=%s](grows with every kill, rare monster and boss; stat points add 0.1 each in the Hero tab)[/color]\n[color=%s]It gives you:[/color] %s" % [
-			UI.hex(UI.DIM), sn, state.unique_value(sn), UI.hex(UI.DIM), UI.hex(UI.DIM), ClassTree.stat_text(state)]
+		st.text = "[color=%s]Special stat:[/color] [b]%s %.1f[/b]  [color=%s](grows when you %s, and from every boss)[/color]\n[color=%s]It gives you:[/color] %s" % [
+			UI.hex(UI.DIM), sn, state.unique_value(sn), UI.hex(UI.DIM), ClassTree.grow_text(state), UI.hex(UI.DIM), ClassTree.stat_text(state)]
 		cv.add_child(st)
 	var faith := UI.rich(11)
 	faith.text = "[color=%s]Faith %+d. Holy skills, bosses and good deeds raise it; Shadow and Blood skills and dark bargains lower it. At %+d you count as Good, at %d as Evil.%s[/color]" % [
@@ -174,7 +179,7 @@ static func class_card(m, n: Dictionary, with_button: bool, on_pick: Callable) -
 # =====================================================================
 
 func _tree() -> void:
-	box.add_child(UI.heading("Your family tree"))
+	UI.section(box, "Evolution Tree", "Your class evolves at levels 15, 35 and 60. Classes you haven't reached stay hidden until you get there.")
 	var tv := TreeView.new()
 	tv.state = state
 	tv.selected = selected
@@ -184,17 +189,94 @@ func _tree() -> void:
 		refresh())
 	box.add_child(tv)
 	var legend := UI.rich(11)
-	legend.text = "[color=%s]Border: [color=%s]Good[/color], [color=%s]Neutral[/color], [color=%s]Evil[/color]. Gold = your path. Level 60 classes are unique classes with a rank; [color=%s]* God[/color] rank needs a god trial. Tap a class to see it.[/color]" % [
-		UI.hex(UI.DIM), ClassTree.ALIGN_COLORS["G"], ClassTree.ALIGN_COLORS["N"], ClassTree.ALIGN_COLORS["E"], ClassTree.RANK_COLORS["God"]]
+	legend.text = "[color=%s]Gold = your path. Border color shows a class's side: [color=%s]Good[/color], [color=%s]Neutral[/color], [color=%s]Evil[/color]. Level 60 classes are unique classes with a rank. Tap a class you've revealed to see it.[/color]" % [
+		UI.hex(UI.DIM), ClassTree.ALIGN_COLORS["G"], ClassTree.ALIGN_COLORS["N"], ClassTree.ALIGN_COLORS["E"]]
 	box.add_child(legend)
 
 func _detail() -> void:
 	if selected == "":
 		return
 	var n := ClassTree.node(selected)
-	if n.is_empty() or n["cls"] != state.hero_class:
+	if n.is_empty() or n["cls"] != state.hero_class or not revealed(state, n):
 		return
 	box.add_child(class_card(main, n, false, func(): pass))
+
+## Is this class shown by name? Yes if you've been it, if you can choose it
+## right now, or in Dev Mode. Everything else on the tree is "???".
+static func revealed(g: GameState, n: Dictionary) -> bool:
+	if g.dev_mode or String(n["id"]) in g.class_path or g.discovered.has(n["name"]):
+		return true
+	if ClassTree.pick_tier(g) >= 0:
+		return ClassTree.options(g).any(func(o): return String(o["id"]) == String(n["id"]))
+	return false
+
+# =====================================================================
+# Signature skills
+# =====================================================================
+
+func _signatures() -> void:
+	var owned := Signatures.owned(state)
+	if owned.is_empty():
+		return
+	UI.section(box, "Signature skills", "Every class you evolve into teaches one. The one in your Signature slot is your 4th skill button in fights.")
+	for id in owned:
+		var s := SkillData.info(String(id))
+		var on: bool = state.sig_slot == id
+		var c := UI.card(Color(Signatures.COLOR) if on else UI.BORDER, Color("#221d0e") if on else UI.INSET, 4)
+		box.add_child(c[0])
+		var h := UI.hbox(8)
+		c[1].add_child(h)
+		var nl := UI.label(String(s["name"]), 15, Color(Signatures.COLOR) if on else UI.TEXT)
+		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(nl)
+		h.add_child(UI.chip(String(s["class"]), Color(Classes.tag_color(String(s["tags"][0])))))
+		if on:
+			h.add_child(UI.chip("IN SLOT", Color(Signatures.COLOR)))
+		else:
+			var sid: String = id
+			var b := UI.button("Use", func(): state.set_signature(sid); main.refresh())
+			b.custom_minimum_size = Vector2(64, UI.TAP)
+			h.add_child(b)
+		var t := UI.rich(12)
+		var els: Array = []
+		for tg in s["tags"]:
+			els.append("[color=%s]%s[/color]" % [Classes.tag_color(tg), tg])
+		t.text = "%s  [color=%s](cooldown %d, %s)[/color]" % [s["text"], UI.hex(UI.DIM), int(s["cd"]), " ".join(els)]
+		c[1].add_child(t)
+
+# =====================================================================
+# God trials (God rank classes only)
+# =====================================================================
+
+func _god_trials() -> void:
+	if not ClassTree.god_trials_open(state):
+		return
+	UI.section(box, "God trials", "Three new trials every week, only for God rank classes. Each win is worth a point of Divinity (+1%% Attack, HP and Defense, up to %d)." % ClassTree.DIVINITY_MAX)
+	box.add_child(UI.label("Divinity: %d / %d" % [ClassTree.divinity(state), ClassTree.DIVINITY_MAX], 14, Color(ClassTree.RANK_COLORS["God"])))
+	for id in ClassTree.god_trials_now():
+		var info: Dictionary = ClassTree.GOD_TRIALS[id]
+		var done := ClassTree.god_trial_done(state, id)
+		var c := UI.card(UI.GREEN if done else Color(ClassTree.RANK_COLORS["God"]), UI.INSET, 4)
+		box.add_child(c[0])
+		var h := UI.hbox(8)
+		c[1].add_child(h)
+		var nl := UI.label(String(info["name"]), 15, UI.TEXT)
+		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(nl)
+		if info.get("no_potions", false):
+			h.add_child(UI.chip("NO POTIONS", UI.RED))
+		c[1].add_child(UI.wrap(String(info["lore"]), 12, UI.DIM))
+		if done:
+			c[1].add_child(UI.label("Beaten this week.", 12, UI.GREEN))
+		else:
+			var tid: String = id
+			var b := UI.primary("Face the trial", func():
+				if ClassTree.start_god_trial(state, tid):
+					main.sfx.play("boss_intro")
+				main.refresh(), Color(ClassTree.RANK_COLORS["God"]))
+			b.disabled = state.enemy_is_boss or state.trial_active
+			b.custom_minimum_size = Vector2(0, UI.TAP)
+			c[1].add_child(b)
 
 # =====================================================================
 # Branch-offs of your current class
@@ -243,7 +325,7 @@ func _branches() -> void:
 			var bname: String = b["name"]
 			var brank: String = b["rank"]
 			v.add_child(UI.primary("Become a %s (ends your tree)" % bname, func():
-				main.confirm("Take %s?" % bname, "Your family tree ends here: you won't pick classes at later levels. You keep everything you have and gain a %s rank unique class." % brank, "Take it", func():
+				main.confirm("Take %s?" % bname, "Your Evolution Tree ends here: you won't pick classes at later levels. You keep everything you have and gain a %s rank unique class." % brank, "Take it", func():
 					ClassTree.take_branch(state, bid)
 					main.refresh()), rc))
 
@@ -425,10 +507,11 @@ class TreeView extends Control:
 			var n := ClassTree.node(id)
 			var side_c := Color(ClassTree.ALIGN_COLORS[n["side"]])
 			var r := ClassTree.rank_of(n)
-			var label := String(n["name"])
-			if r == "God":
+			var shown := ClassTab.revealed(state, n)
+			var label := String(n["name"]) if shown else "???"
+			if r == "God" and shown:
 				label = "* " + label
-			_box(rects[id], label, side_c, id in on_path, _reachable(n), id == selected, r, font)
+			_box(rects[id], label, side_c if shown else Color("#475569"), id in on_path, _reachable(n) and shown, id == selected, r if shown else "", font)
 
 	## Classes on a branch you didn't take, or locked by your side, are drawn faded.
 	func _reachable(n: Dictionary) -> bool:
@@ -480,7 +563,7 @@ class TreeView extends Control:
 			return
 		var pos: Vector2 = event.position
 		for id in rects:
-			if id != "root" and (rects[id] as Rect2).has_point(pos):
+			if id != "root" and (rects[id] as Rect2).has_point(pos) and ClassTab.revealed(state, ClassTree.node(id)):
 				picked.emit(id)
 				accept_event()
 				return
