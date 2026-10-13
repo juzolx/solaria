@@ -159,6 +159,7 @@ var swing := 0.0         # weapon swing: -1 wind-up, +1 strike
 var lpc_anim := "combat_idle"  # LPC heroes: the animation playing (lpc.gd)
 var lpc_t := 0.0
 var pet_lunge := 0.0
+var beams: Array = []   # loot beams: {"x", "color", "t", "life", "w"} (Rare and better)
 var fx_sprites: Array = []   # sprite effects: {"name", "pos", "t", "scale", "flip"} (art/fx)
 static var _fx_tex := {}
 static var _fx_frames := {}
@@ -706,6 +707,11 @@ func _loot_pop(e: Dictionary) -> void:
 		var lp := _lane_for(pos, 14 + mini(r, 5) * 2, true)
 		floaters.append({"text": e["name"], "pos": lp[0], "base": lp[0], "t": 0.0, "lane": lp[1], "color": color, "size": 14 + mini(r, 5) * 2, "life": 1.8, "keep": true})
 	_burst(pos, color, 8 + r * 6, 140.0 + r * 50.0)
+	# A beam of light marks good drops; the rarer, the wider and longer
+	if r >= 2:
+		beams.append({"x": pos.x + randf_range(-12, 12), "color": color, "t": 0.0, "life": 0.9 + 0.35 * mini(r, 5), "w": 2.0 + mini(r, 5)})
+		if beams.size() > 6:
+			beams.pop_front()
 	# Better than what you wear? Say so right away, whatever the rarity
 	var up := float(e.get("up", 0.0))
 	if up >= 0.5:
@@ -796,6 +802,9 @@ func _process(delta: float) -> void:
 	bob += delta
 	shake = move_toward(shake, 0.0, delta * 40.0)
 	lpc_t += delta
+	for bm in beams:
+		bm["t"] = float(bm["t"]) + delta
+	beams = beams.filter(func(bm): return float(bm["t"]) < float(bm["life"]))
 	for fx in fx_sprites:
 		fx["t"] = float(fx["t"]) + delta
 	fx_sprites = fx_sprites.filter(func(fx): return float(fx["t"]) * FX_FPS < float(_fx_frames.get(fx["name"], 1)))
@@ -1166,6 +1175,18 @@ func _draw() -> void:
 		_draw_enemy_info(er, font)
 	_draw_hero_status(hr, font)
 
+	# Loot beams: a column of light that grows in, pulses and fades
+	for bm in beams:
+		var bt: float = float(bm["t"]) / float(bm["life"])
+		var a := minf(1.0, bt * 6.0) * (1.0 - bt)
+		var bw := float(bm["w"]) * _u() * 2.0
+		var bx := float(bm["x"])
+		var gy2 := _ground()
+		var top := gy2 - (gy2 - 20.0) * minf(1.0, bt * 4.0)
+		var bc: Color = bm["color"]
+		draw_rect(Rect2(_snap(Vector2(bx - bw * 1.5, top)), Vector2(bw * 3.0, gy2 - top)), Color(bc, 0.16 * a))
+		draw_rect(Rect2(_snap(Vector2(bx - bw / 2.0, top)), Vector2(bw, gy2 - top)), Color(bc.lightened(0.4), 0.55 * a))
+		draw_rect(Rect2(_snap(Vector2(bx - bw * 2.5, gy2 - _u() * 2.0)), Vector2(bw * 5.0, _u() * 3.0)), Color(bc.lightened(0.5), 0.7 * a))
 	# Sprite effects (slashes, bursts, spells) over the fighters
 	for fx in fx_sprites:
 		var tex: Texture2D = _fx_tex.get(fx["name"])

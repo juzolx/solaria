@@ -57,6 +57,15 @@ func _initialize() -> void:
 	main.refresh()
 	await create_timer(0.5).timeout
 	var k := 0
+	if args.size() > 3 and args[3] == "loot":
+		st.events.append({"type": "loot", "name": "Rare Sword", "rarity": 2})
+		st.events.append({"type": "loot", "name": "Epic Helm", "rarity": 3})
+		st.events.append({"type": "loot", "name": "Legendary Blade of Doom", "rarity": 4})
+		main.refresh()
+		for i in 20:
+			await create_timer(0.05).timeout
+			root.get_texture().get_image().save_png("/root/shots/fightgif/f%03d.png" % k)
+			k += 1
 	for turn in 5:
 		st.take_turn()
 		st.path_offer.clear()
