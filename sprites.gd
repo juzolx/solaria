@@ -451,6 +451,15 @@ static func enemy(enemy_name: String, boss: bool) -> Dictionary:
 static func enemy_by_key(key: String) -> Dictionary:
 	if _cache.has("e_" + key):
 		return _cache["e_" + key]
+	if USE_LPC and Lpc.available() and Lpc.MONSTERS.has(key):
+		var built := Lpc.build(Lpc.monster_spec(key))
+		var still: Image = built["still"]
+		var used := still.get_used_rect()
+		var lo := {"tex": ImageTexture.create_from_image(still), "white": ImageTexture.create_from_image(_silhouette(still)),
+			"size": Vector2(still.get_size()), "foot": float(used.end.y - 1), "lpc": built["anims"],
+			"attack": Lpc.MONSTERS[key].get("attack", "slash")}
+		_cache["e_" + key] = lo
+		return lo
 	var img := _img("enemies/%s.png" % key)
 	var out := {}
 	if img:

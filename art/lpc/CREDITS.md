@@ -20,6 +20,7 @@ Source: https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character
 - **body/bodies/male**: bluecarrot16, JaidynReiman, Benjamin K. Smith (BenCreating), Evert, Eliza Wyatt (ElizaWy), TheraHedwig, MuffinElZangano, Durrani, Johannes Sjölund (wulax), Stephen Challener (Redshrike) (OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0)
 - **body/bodies/muscular**: bluecarrot16, JaidynReiman, Evert, TheraHedwig, MuffinElZangano, Durrani, Sander Frenken (castelonia), Benjamin K. Smith (BenCreating), Eliza Wyatt (ElizaWy), dalonedrau, Stephen Challener (Redshrike) (CC-BY-SA 3.0, GPL 3.0)
 - **body/bodies/pregnant**: bluecarrot16, JaidynReiman, Evert, TheraHedwig, MuffinElZangano, Durrani, Benjamin K. Smith (BenCreating), Pierre Vigier (pvigier), Eliza Wyatt (ElizaWy), Matthew Krohn (makrohn), Johannes Sjölund (wulax), Stephen Challener (Redshrike) (CC-BY-SA 3.0, GPL 3.0)
+- **body/bodies/skeleton**: bluecarrot16, Napsio, JaidynReiman, Johannes Sjölund (wulax), Stephen Challener (Redshrike) (OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0)
 - **body/bodies/teen**: bluecarrot16, Evert, TheraHedwig, Benjamin K. Smith (BenCreating), MuffinElZangano, Durrani, Pierre Vigier (pvigier), Eliza Wyatt (ElizaWy), Matthew Krohn (makrohn), Johannes Sjölund (wulax), Stephen Challener (Redshrike) (OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0)
 - **body/tail/lizard**: Nila122, bluecarrot16, JaidynReiman (OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0)
 - **body/tail/wolf**: JaidynReiman (OGA-BY 3.0+, CC-BY 3.0+, GPL 3.0)

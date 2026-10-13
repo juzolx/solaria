@@ -18,6 +18,9 @@ func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	if not args.is_empty():
 		prefix = args[0]
+	var force_art := ""
+	if args.size() > 1:
+		force_art = args[1]
 	DirAccess.make_dir_recursive_absolute("/root/shots/tour")
 	seed(11)
 	GameState.delete_saves()
@@ -63,8 +66,12 @@ func _initialize() -> void:
 		main.refresh()
 		await create_timer(0.12).timeout
 	await close_overlays()
+	st.path_offer.clear()
+	if force_art != "":
+		st.enemy_art = force_art
+		st.enemy_name = force_art.capitalize()
 	main.refresh()
-	await shot("1_fight", 0.3)
+	await shot("1_fight", 1.2)
 	var names := ["2_hero", "3_class", "4_race", "5_skills", "6_party"]
 	for k in names.size():
 		main.show_tab(0, k)

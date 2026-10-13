@@ -27,6 +27,7 @@ def add(i, path, **kw):
     C[i] = dict(def_path=path, **kw)
 
 add("body", "body/body.json")
+add("body_skeleton", "body/special/body_skeleton.json")
 for k, p in {"human_m": "human/heads_human_male", "human_f": "human/heads_human_female", "orc_m": "fantasy/heads_orc_male",
              "orc_f": "fantasy/heads_orc_female", "goblin": "fantasy/heads_goblin", "troll": "fantasy/heads_troll",
              "lizard_m": "reptile/heads_lizard_male", "lizard_f": "reptile/heads_lizard_female", "wolf_m": "beast/heads_wolf_male",
@@ -146,6 +147,38 @@ def find_file(d, anim, variant, custom):
     return None
 
 
+PALS = {}
+
+
+def load_pals():
+    for mat in ["body", "cloth", "hair", "metal", "eye", "wood"]:
+        p = {}
+        for f in sorted(os.listdir(os.path.join(SRC, "palette_definitions", mat))):
+            if f.startswith(mat + "_"):
+                p.update(json.load(open(os.path.join(SRC, "palette_definitions", mat, f))))
+        PALS[mat] = {k: [tuple(int(c.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)) for c in v] for k, v in p.items()}
+
+
+def source_palette(img, mat):
+    """Which of the material's palettes this sheet was drawn in (most pixels matching)."""
+    if mat not in PALS:
+        return ""
+    counts = {}
+    for n, c in img.getcolors(1 << 20) or []:
+        if c[3] == 0:
+            continue
+        counts[c[:3]] = counts.get(c[:3], 0) + n
+    best, best_n = "", -1
+    for name, ramp in PALS[mat].items():
+        hit = 0
+        for c, n in counts.items():
+            if any(abs(c[0] - r[0]) + abs(c[1] - r[1]) + abs(c[2] - r[2]) <= 12 for r in ramp):
+                hit += n
+        if hit > best_n:
+            best, best_n = name, hit
+    return best
+
+
 def right_row(path, size):
     im = Image.open(path).convert("RGBA")
     rows = im.height // size
@@ -156,7 +189,11 @@ def right_row(path, size):
     return strip
 
 
+SRCPAL = {}
+
+
 def main():
+    load_pals()
     os.makedirs(os.path.join(OUT, "f"), exist_ok=True)
     manifest = {"items": {}, "anims": ANIMS}
     credits = {}
@@ -204,6 +241,11 @@ def main():
                     if written[key]:
                         name = CUSTOM[a][0] if custom else a
                         files[name] = {"file": written[key], "size": size}
+                        if mat:
+                            sk = written[key] + "|" + mat
+                            if sk not in SRCPAL:
+                                SRCPAL[sk] = source_palette(Image.open(os.path.join(OUT, written[key])).convert("RGBA"), mat)
+                            files[name]["src"] = SRCPAL[sk]
                 if files:
                     layer["files"][body] = files
             if layer["files"]:

@@ -158,6 +158,8 @@ var hero_art_key := ""
 var swing := 0.0         # weapon swing: -1 wind-up, +1 strike
 var lpc_anim := "combat_idle"  # LPC heroes: the animation playing (lpc.gd)
 var lpc_t := 0.0
+var enemy_lpc_anim := "combat_idle"  # LPC monsters: the animation playing
+var enemy_lpc_t := 0.0
 var recoil := 0.0        # hero knocked back when hit
 var enemy_recoil := 0.0
 var projectiles: Array[Dictionary] = []
@@ -549,6 +551,12 @@ func _hero_attack(e: Dictionary) -> void:
 		_float("x2", target + Vector2(40, -10), Color("#fbbf24"), 16)
 
 func _enemy_attack(e: Dictionary) -> void:
+	var eart := _enemy_art(state.enemy_is_boss)
+	if eart.has("lpc"):
+		var an: String = eart.get("attack", "slash")
+		if (eart["lpc"] as Dictionary).has(an):
+			enemy_lpc_anim = an
+			enemy_lpc_t = 0.0
 	_pose_enemy([["windup", 0.1], ["strike", 0.07], ["follow", 0.12]])
 	_later(0.08, func(): _pose_hero([["hit1", 0.07], ["hit2", 0.14]]))
 	var t := create_tween()
@@ -743,6 +751,12 @@ func _process(delta: float) -> void:
 	bob += delta
 	shake = move_toward(shake, 0.0, delta * 40.0)
 	lpc_t += delta
+	enemy_lpc_t += delta
+	if enemy_lpc_anim != "combat_idle":
+		var ea: Dictionary = _enemy_art(state.enemy_is_boss).get("lpc", {}).get(enemy_lpc_anim, {}) if state != null else {}
+		if ea.is_empty() or enemy_lpc_t >= float((ea["tex"] as Array).size()) / float(ea["fps"]):
+			enemy_lpc_anim = "combat_idle"
+			enemy_lpc_t = 0.0
 	if lpc_anim != "combat_idle" and hero_art.has("lpc"):
 		var la: Dictionary = hero_art["lpc"].get(lpc_anim, {})
 		if la.is_empty() or lpc_t >= float((la["tex"] as Array).size()) / float(la["fps"]):
@@ -954,6 +968,9 @@ func _rect_for(art: Dictionary, boss: bool, scale_mult: float) -> Rect2:
 	if art.is_empty():
 		var s := _sprite_size(boss)
 		return Rect2(x - s / 2.0, _ground() - s + sin(bob * 2.4 + 1.0) * 2.0, s, s)
+	# LPC monsters are drawn smaller (about 48 of 64 pixels): one size up, on whole pixels
+	if art.has("lpc"):
+		ui = maxf(ui, roundf(ui * 4.0 / 3.0))
 	# Big bosses never take more than ~45% of the width
 	ui = maxf(1.0, minf(ui, floorf(size.x * 0.46 * sc / maxf(1.0, (art["size"] as Vector2).x))))
 	u = ui / sc
@@ -1047,16 +1064,30 @@ func _draw() -> void:
 			_draw_aura(er, Color("#fbbf24") if state.enemy_goblin else Color(Monsters.tier_color(state.enemy_tier)), state.enemy_tier)
 		draw_ellipse_shadow(er)
 		# Pose frames (breathing, attacking, getting hit) are made from whole pixels
-		var epose: Dictionary = _enemy_poses(art).get(enemy_pose, {})
-		if not epose.is_empty():
-			etex = epose["tex"]
-			ewhite = epose["white"]
 		var local := er
+		if art.has("lpc"):
+			# LPC monsters play real frames (bigger frames for weapon swings are centered on the body)
+			var anims: Dictionary = art["lpc"]
+			var an: Dictionary = anims.get(enemy_lpc_anim, anims.get("combat_idle", {}))
+			if not an.is_empty():
+				var n := (an["tex"] as Array).size()
+				var fi := int(enemy_lpc_t * float(an["fps"]))
+				fi = fi % n if enemy_lpc_anim == "combat_idle" else mini(fi, n - 1)
+				etex = an["tex"][fi]
+				ewhite = an["white"][fi]
+				var fs := float(an["size"])
+				var uu := er.size.x / (art["size"] as Vector2).x
+				local = Rect2(er.position - Vector2(fs - (art["size"] as Vector2).x, fs - (art["size"] as Vector2).y) * 0.5 * uu, Vector2(fs, fs) * uu)
+		else:
+			var epose: Dictionary = _enemy_poses(art).get(enemy_pose, {})
+			if not epose.is_empty():
+				etex = epose["tex"]
+				ewhite = epose["white"]
 		var etint := Color(1, 1, 1, enemy_alpha)
 		var rank := GameData.zone_rank(state.floor_num)
 		if rank > 0:
 			etint = Color(1.0 - 0.08 * rank, 0.9 - 0.1 * rank, 1.0 - 0.02 * rank, enemy_alpha)
-		draw_texture_rect(ewhite, Rect2(local.position + Vector2(0, -local.size.y / maxf(1.0, (art.get("size", Vector2(64, 64)) as Vector2).y)), local.size), false, Color(_rim_color(), 0.38 * enemy_alpha))
+		draw_texture_rect(ewhite, Rect2(local.position + Vector2(0, -er.size.y / maxf(1.0, (art.get("size", Vector2(64, 64)) as Vector2).y)), local.size), false, Color(_rim_color(), 0.38 * enemy_alpha))
 		draw_texture_rect(etex, local, false, etint)
 		if enemy_flash > 0.0:
 			draw_texture_rect(ewhite, local, false, Color(1, 1, 1, enemy_flash * 0.85 * enemy_alpha))
