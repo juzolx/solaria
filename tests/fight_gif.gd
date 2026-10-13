@@ -73,6 +73,13 @@ func _initialize() -> void:
 			await create_timer(0.05).timeout
 			root.get_texture().get_image().save_png("/root/shots/fightgif/f%03d.png" % k)
 			k += 1
+	if args.size() > 3 and args[3] == "crit":
+		main.battle._float("CRIT 4821", main.battle._enemy_center(), Color("#fbbf24"), 26)
+		main.battle._float("312", main.battle._enemy_center() + Vector2(-20, 30), Color.WHITE, 20)
+		for i in 16:
+			await create_timer(0.04).timeout
+			root.get_texture().get_image().save_png("/root/shots/fightgif/f%03d.png" % k)
+			k += 1
 	for turn in 5:
 		st.take_turn()
 		st.path_offer.clear()

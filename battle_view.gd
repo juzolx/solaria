@@ -840,6 +840,13 @@ func _lane_for(pos: Vector2, font_size: int, stack := false) -> Array:
 	base.y = maxf(base.y, 64.0)
 	return [base, lane]
 
+## "crit" (CRIT 123), "num" (123, -45, +60) or "word" (DODGE, STUNNED...).
+func _float_kind(text: String) -> String:
+	if text.begins_with("CRIT ") and text.substr(5).is_valid_int():
+		return "crit"
+	var t := text.trim_prefix("-").trim_prefix("+")
+	return "num" if t.is_valid_int() else "word"
+
 ## A floating number or word. Numbers near each other stack into lanes so they
 ## never pile on top of each other; each one pops in, holds so you can read it,
 ## then drifts up and fades (see _process).
@@ -849,7 +856,19 @@ func _float(text: String, pos: Vector2, color: Color, font_size: int) -> void:
 	var lp := _lane_for(pos, font_size)
 	var base: Vector2 = lp[0]
 	var lane: int = lp[1]
-	floaters.append({"text": text, "base": base, "pos": base, "color": color, "size": font_size, "life": 1.15, "t": 0.0, "lane": lane})
+	var kind := _float_kind(text)
+	var f := {"text": text, "base": base, "pos": base, "color": color, "size": font_size, "life": 1.15, "t": 0.0, "lane": lane, "kind": kind}
+	if kind == "crit":
+		# Crits split into a small CRIT tag over a big number, tilt and shake for a beat
+		f["text"] = text.substr(5)
+		f["tag"] = "CRIT"
+		f["size"] = font_size + 6
+		f["life"] = 1.4
+		f["tilt"] = randf_range(-0.12, -0.05)
+	elif kind == "num":
+		# Numbers fly a little sideways in an arc, away from the middle of the fight
+		f["vx"] = randf_range(10.0, 26.0) * (1.0 if base.x >= size.x * 0.5 else -1.0)
+	floaters.append(f)
 	if floaters.size() > 16:
 		for i in floaters.size():
 			if not floaters[i].get("keep", false):
@@ -900,7 +919,8 @@ func _process(delta: float) -> void:
 		var ft: float = f["t"]
 		# fast rise, a short hold, then a slow drift
 		var rise := 26.0 * (1.0 - pow(1.0 - minf(ft / 0.22, 1.0), 3.0)) + maxf(0.0, ft - 0.5) * 34.0
-		f["pos"] = (f["base"] as Vector2) - Vector2(0, rise)
+		var side := float(f.get("vx", 0.0)) * minf(ft, 0.9)
+		f["pos"] = (f["base"] as Vector2) - Vector2(-side, rise)
 	floaters = floaters.filter(func(f): return f["life"] > 0.0)
 	for p in particles:
 		p["life"] -= delta
@@ -1291,16 +1311,35 @@ func _draw() -> void:
 			draw_circle(pp, r, pc)
 			draw_circle(pp, r * 0.5, Color.WHITE)
 
-	# Damage numbers: pop in big, settle, fade
+	# Damage numbers: flash white, pop in big, settle, fade. Numbers get a bevel
+	# (a darker copy just below the fill); crits tilt, shake and carry a CRIT tag.
 	for f in floaters:
 		var a := clampf(f["life"] * 2.2, 0.0, 1.0)
 		var c: Color = f["color"]
-		var pop := 1.0 + 0.45 * maxf(0.0, 1.0 - float(f["t"]) / 0.12)
+		var ft := float(f["t"])
+		var kind := String(f.get("kind", "word"))
+		var crit := kind == "crit"
+		var pop := 1.0 + (0.7 if crit else 0.45 if kind == "num" else 0.25) * maxf(0.0, 1.0 - ft / (0.16 if crit else 0.12))
 		var fs := int(float(f["size"]) * pop)
-		var p: Vector2 = (f["pos"] as Vector2).round() - Vector2(200, 0)
-		draw_string_outline(font, p + Vector2(0, 2), f["text"], HORIZONTAL_ALIGNMENT_CENTER, 400, fs, 6, Color(0, 0, 0, a * 0.6))
-		draw_string_outline(font, p, f["text"], HORIZONTAL_ALIGNMENT_CENTER, 400, fs, 5, Color(0.04, 0.03, 0.06, a))
-		draw_string(font, p, f["text"], HORIZONTAL_ALIGNMENT_CENTER, 400, fs, Color(c, a))
+		var flash := clampf(1.0 - ft / 0.09, 0.0, 1.0) if kind != "word" else 0.0
+		var fill := c.lerp(Color.WHITE, flash)
+		var ctr: Vector2 = (f["pos"] as Vector2).round()
+		if crit and ft < 0.22:
+			ctr += Vector2(randf_range(-2.0, 2.0), randf_range(-1.5, 1.5)).round()
+		var tilt := float(f.get("tilt", 0.0)) * clampf(ft / 0.1, 0.0, 1.0)
+		draw_set_transform(ctr + _off, tilt)
+		var p := Vector2(-200, 0)
+		draw_string_outline(font, p + Vector2(0, 2), f["text"], HORIZONTAL_ALIGNMENT_CENTER, 400, fs, 7 if crit else 6, Color(0, 0, 0, a * 0.6))
+		draw_string_outline(font, p, f["text"], HORIZONTAL_ALIGNMENT_CENTER, 400, fs, 6 if crit else 5, Color(0.04, 0.03, 0.06, a))
+		if kind != "word":
+			draw_string(font, p + Vector2(0, maxf(1.0, fs / 14.0)), f["text"], HORIZONTAL_ALIGNMENT_CENTER, 400, fs, Color(c.darkened(0.45), a))
+		draw_string(font, p, f["text"], HORIZONTAL_ALIGNMENT_CENTER, 400, fs, Color(fill, a))
+		if crit:
+			var ts := maxi(11, int(fs * 0.5))
+			var tp := Vector2(-200, -fs * 0.82)
+			draw_string_outline(font, tp, String(f["tag"]), HORIZONTAL_ALIGNMENT_CENTER, 400, ts, 4, Color(0.04, 0.03, 0.06, a))
+			draw_string(font, tp, String(f["tag"]), HORIZONTAL_ALIGNMENT_CENTER, 400, ts, Color(Color("#fff1c2"), a))
+	draw_set_transform(_off)
 
 	draw_set_transform(Vector2.ZERO)
 
