@@ -5,7 +5,7 @@ Juzo is not a coder: talk in plain words, show screenshots, ask before big desig
 
 ## Never
 - Touch saved passwords or any credential store (Juzo's one hard rule).
-- Install to Juzo's PC unless he says "install it" (or plainly asks for the files on his PC).
+- Install to Juzo's PC unless he asked. (For 0.13 he did: install each finished, tested part as you go.)
 - Reveal hidden classes or their unlock rules in game text (rumors only).
 - Add offline progress (nothing advances while the game is closed).
 - Commit stage 2 work to `master`. `master` / tag `stage1-0.12` is what's installed (0.12 "The Deep"). Stage 2 lives on branch `stage2`.

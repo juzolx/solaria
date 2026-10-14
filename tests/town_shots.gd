@@ -120,6 +120,8 @@ func _initialize() -> void:
 		if c is Overlay:
 			c.queue_free()
 	st.set_party([2, 3])
+	st.horde_left = 3
+	st.horde_pack = true
 	main.refresh()
 	await shot(prefix + "_8_team", 0.6)
 	st.enemy_hp = 99999999

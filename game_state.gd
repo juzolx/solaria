@@ -211,6 +211,7 @@ var boss_ready_at := {}     # boss floor (as text) -> unix time it can be fought
 var floors_since_event := 0
 var deaths_here := 0        # deaths in a row on this floor (3 = step back a floor to get stronger)
 var horde_left := 0         # monster horde: fights left
+var horde_pack := false     # 0.13: a small pack (2-3 of a kind) rather than an event horde
 var horde_total := 0
 var curse_turns := 0        # cursed shrine: tougher monsters, better loot
 var luck_turns := 0         # Scroll of Luck
@@ -1289,6 +1290,12 @@ func spawn_enemy() -> void:
 			hunt_spawns -= 1
 			boost = GameData.HUNT_RARE_BOOST
 		enemy_tier = Monsters.roll_tier(hardcore, boost * (1.6 if curses.has("swarm") else 1.0))
+		# 0.13: sometimes they come in packs of 2-3 (shown standing together)
+		if horde_left == 0 and not trial_active and floor_num >= GameData.PACK_FROM and randf() * 100.0 < GameData.PACK_MON_CHANCE:
+			horde_left = randi_range(2, 3)
+			horde_total = horde_left
+			horde_pack = true
+			say("[color=#f87171]A pack of %d![/color]" % horde_left)
 		if horde_left > 0:
 			hp = int(hp * GameData.HORDE_HP)
 			enemy_tier = mini(enemy_tier, 1)
@@ -1887,6 +1894,12 @@ func _add_gold(amount: int) -> void:
 	ClassTree.grow(self, "gold", float(amount) / (2.0 + floor_num))
 
 func _finish_horde() -> void:
+	if horde_pack:
+		horde_pack = false
+		var pg := (2 + floor_num) * 3
+		_add_gold(pg)
+		say("[color=#fbbf24]The pack is beaten.[/color] +%d gold" % pg)
+		return
 	var g := (5 + floor_num * 6) * GameData.HORDE_CHEST_GOLD
 	_add_gold(g)
 	say("[color=#fbbf24]The horde is beaten! You find their chest.[/color] +%d gold" % g)
@@ -3032,6 +3045,7 @@ func save_game() -> void:
 		"boss_ready_at": boss_ready_at,
 		"floors_since_event": floors_since_event,
 		"horde_left": horde_left,
+		"horde_pack": horde_pack,
 		"curse_turns": curse_turns,
 		"luck_turns": luck_turns,
 		"hunt_spawns": hunt_spawns,
@@ -3276,6 +3290,7 @@ func load_game() -> bool:
 	boss_ready_at = data.get("boss_ready_at", {})
 	floors_since_event = int(data.get("floors_since_event", 0))
 	horde_left = int(data.get("horde_left", 0))
+	horde_pack = bool(data.get("horde_pack", false))
 	horde_total = maxi(horde_left, GameData.HORDE_SIZE)
 	curse_turns = int(data.get("curse_turns", 0))
 	luck_turns = int(data.get("luck_turns", 0))
@@ -3527,6 +3542,7 @@ func start_event(kind: String) -> void:
 		"horde":
 			horde_left = GameData.HORDE_SIZE
 			horde_total = GameData.HORDE_SIZE
+			horde_pack = false
 			say("[color=#f87171]A monster horde! Beat all %d for their chest.[/color]" % GameData.HORDE_SIZE)
 			events.append({"type": "mini_event", "kind": "horde", "title": "MONSTER HORDE!", "sub": "Beat all %d" % GameData.HORDE_SIZE})
 		"shrine":

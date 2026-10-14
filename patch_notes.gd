@@ -8,6 +8,8 @@ const VERSION := "0.13"
 const NOTES := [
 	{"version": "0.13", "name": "The Halls Below", "lines": [
 		"Every monster, boss and companion has new dark fantasy art (Dungeon Crawl Stone Soup, CC0).",
+		"Fights are now back to front: your team from behind at the bottom, the monsters facing you at the top. Room for three heroes, pets and summons.",
+		"Monsters sometimes come in packs of 2 or 3.",
 		"Work in progress: more of The Halls Below arrives part by part.",
 	]},
 	{"version": "0.12", "name": "The Deep", "lines": [

@@ -525,7 +525,7 @@ func _initialize() -> void:
 	for _k in GameData.HORDE_SIZE:
 		z.enemy_hp = 0
 		z._enemy_defeated()
-	check(z.horde_left == 0 and z.codex.stat("hordes") == 1, "horde beaten")
+	check((z.horde_left == 0 or z.horde_pack) and z.codex.stat("hordes") == 1, "horde beaten")
 	z.start_event("shrine")
 	check(z.path_offer == ["shrine", "leave"], "shrine offers a choice")
 	z.choose_path("shrine")

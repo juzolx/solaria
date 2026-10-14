@@ -382,6 +382,30 @@ static func _hero_lpc(app: Dictionary, looks: Dictionary) -> Dictionary:
 		"weapon": null, "weapon_white": null, "weapon_type": wt, "pivot": Vector2.ZERO, "glow": glow,
 		"hand": Vector2(BODY_OFFSET) + Vector2(44, 38), "lpc": built["anims"]}
 
+## The hero seen from behind (0.13 back-to-front fights): same dictionary as hero().
+static func hero_back(app: Dictionary, looks: Dictionary) -> Dictionary:
+	var key := "back" + str(app) + str(looks)
+	if _cache.has(key):
+		return _cache[key]
+	if not (USE_LPC and Lpc.available()):
+		return hero(app, looks)
+	var sp := Lpc.spec(app, looks)
+	sp["dir"] = "up"
+	var built := Lpc.build(sp)
+	var canvas := Image.create(CANVAS, CANVAS, false, Image.FORMAT_RGBA8)
+	var still: Image = built["still"]
+	var s := still.get_width()
+	canvas.blend_rect(still, Rect2i(0, 0, s, s), BODY_OFFSET - Vector2i((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2))
+	var front := hero(app, looks)
+	var out := front.duplicate()
+	out["body_img"] = canvas
+	out["body"] = ImageTexture.create_from_image(canvas)
+	out["body_white"] = ImageTexture.create_from_image(_silhouette(canvas))
+	out["lpc"] = built["anims"]
+	out["hand"] = Vector2(BODY_OFFSET) + Vector2(32, 34)
+	_cache[key] = out
+	return out
+
 ## A small picture of an item on its own (for item cards and the collection).
 ## Icons for things that aren't gear: potions, elixirs, scrolls, the mystery box,
 ## the backpack (art/consumables/<id>.png). Null if there's no picture.

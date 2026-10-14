@@ -483,7 +483,7 @@ func _update_hero_art() -> void:
 	var key := str(state.appearance) + str(looks)
 	if key != hero_art_key:
 		hero_art_key = key
-		hero_art = Sprites.hero(state.appearance, looks)
+		hero_art = Sprites.hero_back(state.appearance, looks)
 
 ## A companion's attack, skill or getting hit.
 func _party_anim(e: Dictionary, kind: String) -> void:
@@ -984,8 +984,13 @@ func _snap(v: Vector2) -> Vector2:
 func _px() -> float:
 	return _u() * Sprites.HD
 
+## Where the monsters stand (the back of the scene). 0.13: fights are back to front.
 func _ground() -> float:
-	return size.y * 0.72
+	return size.y * 0.58
+
+## Where your team stands (the front, close to you, seen from behind).
+func _team_ground() -> float:
+	return size.y * 0.9
 
 func _sprite_size(boss: bool) -> float:
 	return 32.0 * _px() * (1.5 if boss else 1.0)
@@ -994,8 +999,8 @@ func _sprite_size(boss: bool) -> float:
 func _hero_canvas() -> Rect2:
 	var u := _hu()
 	var s := Sprites.CANVAS * u
-	var x := size.x * _leader_x() - s / 2.0 + hero_lunge * size.x * 0.1 - recoil * u * 4.0 * Sprites.HD
-	var y := _ground() - (Sprites.HERO_FOOT + 1) * u + roundf(sin(bob * 3.0)) * u
+	var x := size.x * _leader_x() - s / 2.0
+	var y := _team_ground() - (Sprites.HERO_FOOT + 1) * u + roundf(sin(bob * 3.0)) * u - hero_lunge * size.y * 0.14 + recoil * u * 4.0 * Sprites.HD
 	return Rect2(_snap(Vector2(x, y)), Vector2(s, s))
 
 ## With companions around, everyone is drawn a size smaller so the group fits.
@@ -1005,22 +1010,23 @@ func _hero_unit() -> int:
 	# keeps them as big as the monsters while staying on whole pixels
 	if hero_art.has("lpc"):
 		un = maxi(un, roundi(un * 4.0 / 3.0))
-	return un
+	# Your leader is closest to you (back-to-front): a size bigger than everyone else
+	return un + 1
 
 func _party_members() -> Array:
 	return state.party.members if state != null and state.party != null else []
 
 ## With a party the leader stands a little further forward.
 func _leader_x() -> float:
-	return 0.27 + 0.04 * _party_members().size()
+	return 0.5
 
 ## Companions stand behind the leader, a size smaller (they're further back).
 func _member_canvas(i: int) -> Rect2:
 	var u := float(maxi(1, _unit() - 1)) / _scr()
 	var s := Sprites.CANVAS * u
 	var fx: Dictionary = party_fx.get(i, {})
-	var x := size.x * (_leader_x() - 0.13 * (i + 1)) - s / 2.0 + float(fx.get("lunge", 0.0)) * size.x * 0.06
-	var y := _ground() - size.y * 0.05 * (1 - i % 2) - (Sprites.HERO_FOOT + 1) * u + roundf(sin(bob * 3.0 + i + 1.0)) * u
+	var x := size.x * (0.19 if i % 2 == 0 else 0.81) - s / 2.0
+	var y := _team_ground() - size.y * (0.05 + 0.03 * floorf(i / 2.0)) - (Sprites.HERO_FOOT + 1) * u + roundf(sin(bob * 3.0 + i + 1.0)) * u - float(fx.get("lunge", 0.0)) * size.y * 0.1
 	return Rect2(x, y, s, s)
 
 func _member_center(slot: int) -> Vector2:
@@ -1043,12 +1049,30 @@ func _draw_members() -> void:
 	for i in range(members.size() - 1, -1, -1):
 		var m = members[i]
 		var g: GameState = m.hero
-		var art := Sprites.hero(g.appearance, g.hero_looks())
+		var art := Sprites.hero_back(g.appearance, g.hero_looks())
 		var c := _member_canvas(i)
 		var u := c.size.x / Sprites.CANVAS
 		var a := 0.35 if m.knocked_out else 1.0
 		var body_r := Rect2(c.position + Vector2(8, 12) * Sprites.HD * u, Vector2(32, 32) * Sprites.HD * u)
 		draw_ellipse_shadow(body_r)
+		var fx0: Dictionary = party_fx.get(i, {})
+		if art.has("lpc"):
+			# Seen from behind, like the leader: a real LPC frame (kneeling = faded)
+			var anims: Dictionary = art["lpc"]
+			var striking := float(fx0.get("lunge", 0.0)) > 0.3
+			var an: Dictionary = anims.get("slash" if striking and anims.has("slash") else "combat_idle", {})
+			if not an.is_empty():
+				var n: int = (an["tex"] as Array).size()
+				var fi := (int(bob * float(an["fps"]) + i * 3) % n) if not striking else mini(n - 1, int((1.0 - float(fx0.get("lunge", 0.0))) * n))
+				var sz: int = an["size"]
+				var off := Vector2(Sprites.BODY_OFFSET) - Vector2((sz - Lpc.CORE) / 2, (sz - Lpc.CORE) / 2)
+				var r := Rect2(c.position + off * u, Vector2(sz, sz) * u)
+				draw_texture_rect(an["white"][fi], Rect2(r.position + Vector2(0, -u), r.size), false, Color(_rim_color(), 0.42 * a))
+				draw_texture_rect(an["tex"][fi], r, false, Color(1, 1, 1, a))
+				if float(fx0.get("flash", 0.0)) > 0.0:
+					draw_texture_rect(an["white"][fi], r, false, Color(1.0, 0.2, 0.2, float(fx0["flash"]) * 0.75))
+			_member_plate(m, g, c, u)
+			continue
 		var poses := Sprites.poses_for("m" + str((str(g.appearance) + str(g.hero_looks())).hash()), art["body_img"], 1, int(art["hand"].y))
 		var fx: Dictionary = party_fx.get(i, {})
 		var pose_name := "kneel2" if m.knocked_out else ("strike" if float(fx.get("lunge", 0.0)) > 0.3 else ("idle1" if fmod(bob + i * 0.2, 0.9) > 0.45 else "idle0"))
@@ -1062,7 +1086,11 @@ func _draw_members() -> void:
 			draw_set_transform(_off + hand, ang, Vector2(u, u))
 			draw_texture(art["weapon"], -(art["pivot"] as Vector2), Color(1, 1, 1, a))
 			draw_set_transform(_off)
-		# A small health bar and name over the head
+		_member_plate(m, g, c, u)
+
+## A companion's small health bar and name over their head.
+func _member_plate(m, g: GameState, c: Rect2, u: float) -> void:
+	if true:
 		var bw := 32.0 * Sprites.HD * u
 		var bx := c.position.x + 8.0 * Sprites.HD * u
 		var by := c.position.y + 8.0 * Sprites.HD * u
@@ -1117,21 +1145,24 @@ func _rect_for(art: Dictionary, boss: bool, scale_mult: float) -> Rect2:
 		# Whole screen pixels only, so the sprite stays crisp; Legendary and up are always a size bigger
 		ui = maxf(ui + (1.0 if scale_mult >= 1.28 else 0.0), roundf(ui * scale_mult))
 	var u := ui / sc
-	var x := size.x * 0.73 - enemy_lunge * size.x * 0.1 + enemy_recoil * u * 3.0 * Sprites.HD
+	var x := size.x * 0.5
+	var gy := _ground() + enemy_lunge * size.y * 0.16 - enemy_recoil * u * 3.0 * Sprites.HD
 	if art.is_empty():
 		var s := _sprite_size(boss)
-		return Rect2(x - s / 2.0, _ground() - s + sin(bob * 2.4 + 1.0) * 2.0, s, s)
+		return Rect2(x - s / 2.0, gy - s + sin(bob * 2.4 + 1.0) * 2.0, s, s)
 	# LPC monsters are drawn smaller (about 48 of 64 pixels): one size up, on whole pixels
 	if art.has("lpc"):
 		ui = maxf(ui, roundf(ui * (2.0 if art.get("lpc_boss", false) else 4.0 / 3.0)))
 	# Big bosses never take more than ~45% of the width
 	# (LPC frames are padded for big weapon swings, so measure the ~48-pixel body instead)
 	var span: float = Lpc.CORE * 0.75 if art.has("lpc") else (art["size"] as Vector2).x
-	ui = maxf(1.0, minf(ui, floorf(size.x * 0.46 * sc / maxf(1.0, span))))
+	ui = maxf(1.0, minf(ui, floorf(size.x * 0.56 * sc / maxf(1.0, span))))
+	# ...and never taller than the space above the team
+	ui = maxf(1.0, minf(ui, floorf(_ground() * 0.92 * sc / maxf(1.0, float(art["foot"]) + 1.0))))
 	u = ui / sc
 	var sz: Vector2 = art["size"] * u
 	var foot: float = art["foot"]
-	return Rect2(_snap(Vector2(x - sz.x / 2.0, _ground() - (foot + 1.0) * u)), sz)
+	return Rect2(_snap(Vector2(x - sz.x / 2.0, gy - (foot + 1.0) * u)), sz)
 
 func _hero_center() -> Vector2:
 	var r := _hero_rect()
@@ -1178,28 +1209,7 @@ func _draw() -> void:
 	_off = Vector2(randf_range(-sh, sh), randf_range(-sh, sh))
 	draw_set_transform(_off)
 
-	# Hero
 	var hr := _hero_rect()
-	draw_ellipse_shadow(hr)
-	if cast_glow > 0.0 and (profile == null or profile.flashes):
-		var cc := Vector2(hr.get_center().x, _ground() + 2) + _off
-		draw_set_transform(cc, 0.0, Vector2(1.0, 0.3))
-		draw_arc(Vector2.ZERO, hr.size.x * (0.5 + 0.2 * (1.0 - cast_glow)), 0.0, TAU, 32, Color(cast_color, cast_glow), 3.0)
-		draw_arc(Vector2.ZERO, hr.size.x * (0.35 + 0.15 * (1.0 - cast_glow)), 0.0, TAU, 24, Color(cast_color, cast_glow * 0.6), 2.0)
-		draw_set_transform(_off)
-	_draw_members()
-	_draw_pet()
-	_draw_hero()
-	var hero_name := "HERO" if state.hero_class == "" else "%s  Lv %d" % [state.title(), state.level]
-	_draw_bar(hr, hero_name, state.hero_hp, state.get_max_hp(), Color("#22c55e"), Color("#e5e7eb"))
-	# Thin XP bar under the health bar
-	var xbr := _bar_rect(hr)
-	var xbw := xbr.size.x
-	var xbx := xbr.position.x
-	var xby := xbr.end.y + 1.0
-	var xp_pct := clampf(float(state.xp) / maxf(1.0, GameData.xp_to_next(state.level)), 0.0, 1.0)
-	draw_rect(Rect2(xbx, xby, xbw, 5), Color(0.03, 0.03, 0.05, 0.9))
-	draw_rect(Rect2(xbx + 1, xby + 1, (xbw - 2) * xp_pct, 3), Color("#e8b14a"))
 
 	# Dying enemy fading out
 	if dying.has("tex"):
@@ -1207,6 +1217,17 @@ func _draw() -> void:
 		dr.position.y += (1.0 - float(dying["alpha"])) * 20.0
 		draw_texture_rect(dying["tex"], dr, false, Color(1, 1, 1, dying["alpha"]))
 
+	# A pack (horde): the ones still waiting stand behind, either side
+	if state.horde_left > 1 and enemy_alpha > 0.0 and not state.enemy_is_boss:
+		var pr := _enemy_rect(false)
+		var part := _enemy_art(false)
+		if part.has("tex"):
+			for k in mini(2, state.horde_left - 1):
+				var side := -1.0 if k == 0 else 1.0
+				var rr := Rect2(pr.position + Vector2(side * pr.size.x * 0.62, -pr.size.y * 0.1), pr.size * 0.78)
+				rr.position.x += pr.size.x * 0.11
+				draw_ellipse_shadow(rr)
+				draw_texture_rect(part["tex"], rr, false, Color(0.62, 0.6, 0.66, 0.9 * enemy_alpha))
 	# Current enemy
 	if enemy_alpha > 0.0:
 		var boss := state.enemy_is_boss
@@ -1280,13 +1301,34 @@ func _draw() -> void:
 		if state.enemy_goblin:
 			label += "  (%d turns)" % state.goblin_turns
 		if state.horde_left > 0 and not boss:
-			label += "  [Horde %d/%d]" % [state.horde_total - state.horde_left + 1, state.horde_total]
+			label += "  [%s %d/%d]" % ["Pack" if state.horde_pack else "Horde", state.horde_total - state.horde_left + 1, state.horde_total]
 		_draw_bar(er, label, state.enemy_hp, state.enemy_max_hp, bar_color, Color(name_color, enemy_alpha))
 		if state.enemy_shield > 0:
 			_draw_shield(er)
 		if not state.enemy_mods.is_empty() and not veiled:
 			_draw_mods(er)
 		_draw_enemy_info(er, font)
+	# Your team, in front (drawn after the monster)
+	draw_ellipse_shadow(hr)
+	if cast_glow > 0.0 and (profile == null or profile.flashes):
+		var cc := Vector2(hr.get_center().x, hr.end.y) + _off
+		draw_set_transform(cc, 0.0, Vector2(1.0, 0.3))
+		draw_arc(Vector2.ZERO, hr.size.x * (0.5 + 0.2 * (1.0 - cast_glow)), 0.0, TAU, 32, Color(cast_color, cast_glow), 3.0)
+		draw_arc(Vector2.ZERO, hr.size.x * (0.35 + 0.15 * (1.0 - cast_glow)), 0.0, TAU, 24, Color(cast_color, cast_glow * 0.6), 2.0)
+		draw_set_transform(_off)
+	_draw_members()
+	_draw_pet()
+	_draw_hero()
+	var hero_name := "HERO" if state.hero_class == "" else "%s  Lv %d" % [state.title(), state.level]
+	_draw_bar(hr, hero_name, state.hero_hp, state.get_max_hp(), Color("#22c55e"), Color("#e5e7eb"))
+	# Thin XP bar under the health bar
+	var xbr := _bar_rect(hr)
+	var xbw := xbr.size.x
+	var xbx := xbr.position.x
+	var xby := xbr.end.y + 1.0
+	var xp_pct := clampf(float(state.xp) / maxf(1.0, GameData.xp_to_next(state.level)), 0.0, 1.0)
+	draw_rect(Rect2(xbx, xby, xbw, 5), Color(0.03, 0.03, 0.05, 0.9))
+	draw_rect(Rect2(xbx + 1, xby + 1, (xbw - 2) * xp_pct, 3), Color("#e8b14a"))
 	_draw_hero_status(hr, font)
 
 	_draw_chest()
@@ -1482,8 +1524,8 @@ func _draw_pet() -> void:
 	var pu := float(maxi(1, _unit() - 1)) / _scr()
 	var s := 64.0 * pu
 	var hc := _hero_canvas()
-	var x := hc.position.x + 30.0 * _hu() - s * 0.85 + pet_lunge * size.x * 0.06
-	var y := _ground() - 63.0 * pu + roundf(sin(bob * 3.4 + 1.3)) * pu
+	var x := hc.position.x + hc.size.x * 0.62
+	var y := _team_ground() - 70.0 * pu + roundf(sin(bob * 3.4 + 1.3)) * pu - pet_lunge * size.y * 0.1
 	draw_texture_rect(tex, Rect2(_snap(Vector2(x, y)), Vector2(s, s)), false, Color(1, 1, 1, hero_alpha))
 
 ## An LPC hero: the current animation frame, with rim light, weapon glow and hit flash.
@@ -1641,7 +1683,7 @@ func _rim_color() -> Color:
 	return zc.lerp(Color("#fff4d6"), 0.55)
 
 func draw_ellipse_shadow(r: Rect2) -> void:
-	var c := Vector2(r.get_center().x, _ground() + 2)
+	var c := Vector2(r.get_center().x, (_ground() + 2.0) if r.get_center().y < size.y * 0.62 else r.end.y)
 	draw_set_transform(c + _off, 0.0, Vector2(1.0, 0.25))
 	draw_circle(Vector2.ZERO, r.size.x * 0.38, Color(0, 0, 0, 0.35))
 	draw_set_transform(_off)
@@ -1651,6 +1693,9 @@ func draw_ellipse_shadow(r: Rect2) -> void:
 func _bar_rect(r: Rect2) -> Rect2:
 	var bw := clampf(r.size.x * 0.85, 130.0, size.x * 0.4)
 	var bx := clampf(r.get_center().x - bw / 2.0, 6.0, size.x - bw - 6.0)
+	# Monsters (at the back) get theirs under their feet; your team (in front) above their heads
+	if r.get_center().y > size.y * 0.62:
+		return Rect2(bx, minf(r.end.y + 8.0, size.y - 34.0), bw, 12.0)
 	return Rect2(bx, _ground() + 9.0, bw, 12.0)
 
 func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color, label_color: Color) -> void:
