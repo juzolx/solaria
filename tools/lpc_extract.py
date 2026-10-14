@@ -207,10 +207,17 @@ def auto_palette(counts, mat):
     return name
 
 
-def right_row(path, size):
+# Which rows to keep: "" = facing right (the default), "up" = the back (heroes
+# in back-to-front fights and walking away), "down" = the front (walking toward you).
+DIR_ROWS = {"": 3, "up": 0, "down": 2}
+DIR_ANIMS = {"": None, "up": None, "down": ["walk", "idle", "combat_idle"]}  # None = every animation
+
+def right_row(path, size, direction=""):
     im = Image.open(path).convert("RGBA")
     rows = im.height // size
-    r = 3 if rows >= 4 else 0
+    if rows < 4 and direction:
+        return None  # a one-row sheet only faces one way
+    r = DIR_ROWS[direction] if rows >= 4 else 0
     strip = im.crop((0, r * size, im.width, r * size + size))
     if strip.getbbox() is None:
         return None
@@ -251,14 +258,17 @@ def main():
                     rel = rel.replace("${head}", "female" if body == "female" else "male")
                 files = {}
                 anims = [custom] if custom else ANIMS
-                for a in anims:
+                for a, direction in [(a, dr) for dr in DIR_ROWS for a in anims]:
+                    base_anim = CUSTOM[a][0] if custom else a
+                    if DIR_ANIMS[direction] is not None and base_anim not in DIR_ANIMS[direction]:
+                        continue
                     src = find_file(rel, a, opt.get("variant"), bool(custom))
                     if not src:
                         continue
                     size = frame_info(a) if custom else 64
-                    key = src + "|" + str(size)
+                    key = src + "|" + str(size) + ("|" + direction if direction else "")
                     if key not in written:
-                        strip = right_row(src, size)
+                        strip = right_row(src, size, direction)
                         if strip is None:
                             written[key] = None
                             continue
@@ -267,7 +277,7 @@ def main():
                         written[key] = "f/%s.png" % h
                         total += 1
                     if written[key]:
-                        name = CUSTOM[a][0] if custom else a
+                        name = (CUSTOM[a][0] if custom else a) + ("@" + direction if direction else "")
                         files[name] = {"file": written[key], "size": size}
                         if mat and opt.get("src_palette"):
                             pn = "item_" + item

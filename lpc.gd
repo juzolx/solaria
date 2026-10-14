@@ -134,28 +134,31 @@ static func _match(k: int, maps: Array) -> int:
 
 ## spec = {"body": "male"/"female"/"muscular", "parts": [{"id", "ramp": [6 colors] or [], "eyes": [3 colors]}]}
 ## Returns {"anims": {name: {"tex": [ImageTexture], "white": [ImageTexture], "size": px, "fps": n}}, "still": Image (64x64)}
+## spec "dir": "" (facing right), "up" (seen from behind) or "down" (facing you).
 static func build(spec: Dictionary) -> Dictionary:
 	var key := str(spec)
 	var flip: bool = spec.get("flip", false)
+	var dir: String = spec.get("dir", "")
 	if _built.has(key):
 		return _built[key]
 	var layers := _layers(spec)
 	var out := {"anims": {}}
 	for anim in BUILD:
-		var a := _compose(layers, anim, flip)
+		var a := _compose(layers, anim, flip, dir)
 		if not a.is_empty():
 			out["anims"][anim] = a
 	if not out["anims"].has("combat_idle"):
-		out["anims"]["combat_idle"] = _compose(layers, "walk", flip)
+		out["anims"]["combat_idle"] = _compose(layers, "walk", flip, dir)
 	var idle: Dictionary = out["anims"]["combat_idle"]
 	out["still"] = (idle["img"][0] as Image)
 	_built[key] = out
 	return out
 
-## Walking and standing frames for a townsperson (right-facing): {"walk": {...}, "idle": {...}}.
-static func build_walker(spec: Dictionary) -> Dictionary:
+## Walking and standing frames for a townsperson: {"walk": {...}, "idle": {...}}.
+## dir: "" faces right (flip it for left), "up" walks away from you, "down" toward you.
+static func build_walker(spec: Dictionary, dir := "") -> Dictionary:
 	var layers := _layers(spec)
-	return {"walk": _compose(layers, "walk", false), "idle": _compose(layers, "idle", false)}
+	return {"walk": _compose(layers, "walk", false, dir), "idle": _compose(layers, "idle", false, dir)}
 
 ## The spec's parts as sorted layers: [z, order, files dict, info].
 static func _layers(spec: Dictionary) -> Array:
@@ -190,16 +193,17 @@ static func _layers(spec: Dictionary) -> Array:
 
 ## One animation: every layer's strip for it (or its standing frame when a part
 ## has no such animation), stacked frame by frame.
-static func _compose(layers: Array, anim: String, flip := false) -> Dictionary:
+static func _compose(layers: Array, anim: String, flip := false, dir := "") -> Dictionary:
 	var size := CORE
 	var frames := 0
 	var parts: Array = []  # [image, frame size, own frames, animated]
+	var sfx := ("@" + dir) if dir != "" else ""
 	for L in layers:
 		var files: Dictionary = L[2]
-		var f: Dictionary = files.get(anim, {})
+		var f: Dictionary = files.get(anim + sfx, {})
 		var animated := not f.is_empty()
 		if not animated:
-			f = files.get("combat_idle", files.get("idle", files.get("walk", {})))
+			f = files.get("combat_idle" + sfx, files.get("idle" + sfx, files.get("walk" + sfx, {})))
 		if f.is_empty():
 			continue
 		var im := _recolor(f["file"], _maps(L[3], f.get("src", "")))

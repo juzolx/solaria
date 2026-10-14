@@ -1007,6 +1007,12 @@ func _initialize() -> void:
 	check(eg2.pets.size() == 1 and eg2.pets_out.size() == 1, "pets are saved")
 	GameState.delete_slot(7)
 	check(Hidden.info("beast_tamer")["need"].any(func(n): return n[1] == "sure_escapes"), "Beast Tamer: 100 sure escapes")
+	# ---------- 0.13 LPC back and front views ----------
+	var dsp := Lpc.spec({"body": "masc", "skin": 1, "hair": "Long", "hair_color": 0, "eyes": 4, "race": "Human"}, {})
+	dsp["dir"] = "up"
+	var back := Lpc.build(dsp)
+	check((back["anims"] as Dictionary).has("combat_idle") and (back["anims"] as Dictionary).has("slash"), "heroes have a back view")
+	check(not Lpc.build_walker(dsp, "down")["walk"].is_empty(), "heroes can walk toward you")
 	# ---------- 0.12 Calamities and bound items ----------
 	var ca := GameState.new()
 	ca.codex.path = ""
