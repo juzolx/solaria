@@ -159,6 +159,10 @@ var path_rooms_on := true   # off = never offer room choices
 var enemy_elite := false
 var path_wait := 0
 var path_hold := false  # "Wait for me": the fork doesn't pick by itself
+var exploring := false     # 0.13: standing in the room between fights (tap a monster, or Auto engages)
+var explore_wait := 0
+var room_count := 0         # rooms entered this run (seeds each room's layout)
+var doors: Array = []      # 0.13: what's behind the 3 blank doors of a cleared room (hidden until you walk through)
 
 # ---------- Current enemy ----------
 var enemy_name := ""
@@ -1398,6 +1402,15 @@ func enemy_scale() -> float:
 func take_turn() -> void:
 	if run_over or in_town:
 		return
+	if exploring and (enemy_goblin or horde_left > 0 or enemy_calamity > 0 or trial_active):
+		exploring = false   # these come at you: no time to look around
+	if exploring and path_offer.is_empty():
+		# In the room: Auto walks up to the next monster after a moment
+		if autoplay:
+			explore_wait += 1
+			if explore_wait >= GameData.EXPLORE_WAIT_TURNS:
+				engage()
+		return
 	if not path_offer.is_empty():
 		# Waiting for you to pick a room; after a few turns it picks the first choice by itself
 		if not path_hold and auto_paths and autoplay:
@@ -1830,8 +1843,10 @@ func _enemy_defeated() -> void:
 	elif not was_goblin:
 		fight += 1
 	if was_boss or fight > GameData.FIGHTS_PER_FLOOR:
-		_next_floor()
-	spawn_enemy()
+		_room_cleared(was_boss)
+	if not door_pending():
+		spawn_enemy()
+		_enter_room_pause()
 	_check_codex()
 	save_game()
 
@@ -1975,10 +1990,7 @@ func _next_floor() -> void:
 		Realms.offer_portals(self)
 	elif GameData.realm_of(floor_num) != "" and GameData.zone_floor(floor_num - 1) == GameData.MID_BOSS_FLOOR:
 		Realms.offer_camp(self)
-	elif GameData.zone_floor(floor_num - 1) in [GameData.MID_BOSS_FLOOR, GameData.ZONE_FLOORS]:
-		_offer_merchant()
-	else:
-		_maybe_offer_path()
+	# (0.13: forks and the post-boss merchant fork are now the room's three blank doors)
 	Realms.note_seen(self)
 	if path_offer.is_empty():
 		_maybe_start_event()
@@ -3551,8 +3563,79 @@ func start_event(kind: String) -> void:
 			say("[color=#c084fc]A cursed shrine pulses in the dark.[/color]")
 			events.append({"type": "mini_event", "kind": "shrine", "title": "CURSED SHRINE", "sub": "Accept its curse?"})
 
+# =====================================================================
+# 0.13 The Halls Below: one room per floor, three blank doors out
+# =====================================================================
+
+const DOOR_KEYS := ["door_l", "door_m", "door_r"]
+const DOOR_NAMES := ["Left door", "Middle door", "Right door"]
+
+## Back to looking at the room before the next fight (only when rooms are shown).
+func _enter_room_pause() -> void:
+	if path_rooms_on and not in_town and not enemy_goblin and horde_left <= 0 and enemy_calamity == 0 and not trial_active:
+		exploring = true
+		explore_wait = 0
+
+## Walk up to the monster: the fight starts.
+func engage() -> void:
+	if not exploring:
+		return
+	exploring = false
+	explore_wait = 0
+	events.append({"type": "engage"})
+
+## The room is cleared: three blank doors (or straight on if you're heading home).
+func _room_cleared(was_boss := false) -> void:
+	if go_home_after or not path_rooms_on or in_town:
+		_next_floor()
+		return
+	doors = roll_doors(was_boss)
+	path_offer = DOOR_KEYS.duplicate()
+	path_wait = 0
+	path_hold = false
+	events.append({"type": "doors"})
+	tip("doors", "The room is clear. Three blank doors: pick one. Some classes can read what's behind them.")
+
+## What's behind each door. After a boss, one door always hides Snik.
+func roll_doors(was_boss := false) -> Array:
+	var out: Array = []
+	for i in 3:
+		var roll := randf() * 100.0
+		var kind := "fight"
+		if roll < 12.0:
+			kind = "treasure"
+		elif roll < 22.0:
+			kind = "rest"
+		elif roll < 38.0:
+			kind = "elite"
+		elif roll < 38.0 + minf(20.0, floor_num * GameData.GOBLIN_ROAM_PER_FLOOR):
+			kind = "merchant"
+		out.append(kind)
+	if was_boss and not "merchant" in out:
+		out[randi() % 3] = "merchant"
+	return out
+
+func door_pending() -> bool:
+	return not doors.is_empty() and not path_offer.is_empty() and String(path_offer[0]) == "door_l"
+
+## Walk through a door: the next floor, and whatever was behind it.
+func _through_door(i: int) -> void:
+	var kind: String = doors[clampi(i, 0, doors.size() - 1)] if not doors.is_empty() else "fight"
+	doors = []
+	codex.add("doors")
+	room_count += 1
+	_next_floor()
+	if in_town:
+		return
+	spawn_enemy()
+	_enter_room_pause()
+	if kind != "fight":
+		_apply_path(kind)
+
 ## What gets picked if you don't choose in time.
 func auto_path() -> String:
+	if door_pending():
+		return String(DOOR_KEYS.pick_random())
 	for k in ["cenc_yes", "leave", "fight", "pass", "revent_no"]:
 		if k in path_offer:
 			return k
@@ -3560,6 +3643,8 @@ func auto_path() -> String:
 
 ## Name, text and color of a path choice.
 func path_info(kind: String) -> Dictionary:
+	if kind in DOOR_KEYS:
+		return {"name": DOOR_NAMES[DOOR_KEYS.find(kind)], "text": "A blank door. Who knows what's behind it.", "color": "#94a3b8"}
 	if kind.begins_with("cenc_"):
 		return ClassTree.path_info(kind, self)
 	if World.EVENT_PATHS.has(kind):
@@ -3573,6 +3658,15 @@ func choose_path(kind: String) -> void:
 	if path_offer.is_empty():
 		return
 	path_offer = []
+	if kind in DOOR_KEYS:
+		_through_door(DOOR_KEYS.find(kind))
+		_check_codex()
+		save_game()
+		return
+	_apply_path(kind)
+
+## The effect of a path room (also what a door leads into).
+func _apply_path(kind: String) -> void:
 	if kind.begins_with("portal:"):
 		Realms.enter(self, kind.substr(7))
 		events.append({"type": "portal"})

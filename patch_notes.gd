@@ -10,6 +10,7 @@ const NOTES := [
 		"Every monster, boss and companion has new dark fantasy art (Dungeon Crawl Stone Soup, CC0).",
 		"Fights are now back to front: your team from behind at the bottom, the monsters facing you at the top. Room for three heroes, pets and summons.",
 		"Monsters sometimes come in packs of 2 or 3.",
+		"One room per floor, seen from above: see the monsters waiting, tap one to fight (Auto walks up by itself). Clear the room and pick one of three blank doors: anything could be behind them. Every region has its own walls, floors, light and drifting mood.",
 		"Work in progress: more of The Halls Below arrives part by part.",
 	]},
 	{"version": "0.12", "name": "The Deep", "lines": [

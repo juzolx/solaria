@@ -74,6 +74,9 @@ var potion_label: Label
 
 # Fight panel
 var battle: BattleView
+var room_view: RoomView
+var _room_ready := false
+var _room_waiting := false
 var log_label: RichTextLabel
 var ui_root: MarginContainer
 var goal_label: Label
@@ -311,6 +314,20 @@ func _show_creator(new_hero: bool) -> void:
 		refresh(), title, false, {}, new_hero or state.hero_name == "")
 
 ## A fork in the dungeon: pick the next room (shown over the fight).
+## Room view: walk up to the waiting monster.
+func engage_monster() -> void:
+	sfx.play("click")
+	state.engage()
+	refresh()
+
+## Room view: through one of the three doors.
+func pick_door(i: int) -> void:
+	if not state.door_pending():
+		return
+	sfx.play("click")
+	state.choose_path(GameState.DOOR_KEYS[i])
+	refresh()
+
 func _show_path_choice() -> void:
 	path_panel = UI.panel(Color(UI.PANEL, 0.97), UI.GOLD, 10, 12, 2)
 	path_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
@@ -719,6 +736,11 @@ func _build_fight(parent: Control) -> void:
 	battle = BattleView.new()
 	battle.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	frame.add_child(battle)
+	room_view = RoomView.new()
+	room_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	room_view.setup(self)
+	room_view.visible = false
+	frame.add_child(room_view)
 	_build_town(parent)
 
 	var panel := UI.panel(UI.PANEL, UI.BORDER, 10, 10)
@@ -1186,7 +1208,23 @@ func refresh() -> void:
 	_handle_events()
 	battle.play(state.events)
 	state.events.clear()
-	if not state.path_offer.is_empty() and path_panel == null:
+	# 0.13: between fights you look at the room; doors are tapped there too
+	var in_room := not state.in_town and (state.exploring or state.door_pending())
+	if not in_room:
+		_room_ready = false
+		room_view.visible = false
+		battle.visible = true
+	elif not _room_ready and not _room_waiting:
+		# Let the last blow, the death and the loot play out before the room shows
+		_room_waiting = true
+		get_tree().create_timer(1.1).timeout.connect(func():
+			_room_waiting = false
+			_room_ready = true
+			refresh())
+	elif _room_ready:
+		room_view.visible = true
+		battle.visible = false
+	if not state.path_offer.is_empty() and path_panel == null and not state.door_pending():
 		_show_path_choice()
 	elif state.path_offer.is_empty() and path_panel != null:
 		path_panel.queue_free()

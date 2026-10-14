@@ -68,7 +68,7 @@ const FLOOR_BLOCK := "You can only head home between floors."
 ## True when you're between floors: nothing on this floor has been fought yet
 ## (you just cleared the last one, woke at a checkpoint, or came down from town).
 static func floor_clear(g: GameState) -> bool:
-	return g.fight == 1 and g.enemy_hp >= g.enemy_max_hp
+	return g.door_pending() or (g.fight == 1 and g.enemy_hp >= g.enemy_max_hp)
 
 ## Reads a Return Scroll: home right now, even mid-fight. Returns false if you have none.
 static func use_return(g: GameState) -> bool:
@@ -102,6 +102,7 @@ static func enter(g: GameState, floor_done := false) -> bool:
 		g.packs_carried = 0
 		g.bag_version += 1
 	g.path_offer.clear()
+	g.doors.clear()
 	g.buffs.clear()
 	g.hero_status.clear()
 	g.shield_hp = 0

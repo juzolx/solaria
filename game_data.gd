@@ -116,6 +116,7 @@ const GOBLIN_RARITY := 20
 const HORDE_SIZE := 5
 const PACK_MON_CHANCE := 7.0  # % per fight: a pack of 2-3 instead of one monster (0.13)
 const PACK_FROM := 3           # no packs on the first floors
+const EXPLORE_WAIT_TURNS := 2  # Auto looks at the room this many turns before walking up to the next monster
 const HORDE_HP := 0.5
 const HORDE_CHEST_GOLD := 4
 const HORDE_RARITY := 15

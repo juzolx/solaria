@@ -147,6 +147,21 @@ func _initialize() -> void:
 	Calamity.knockout(st)
 	main.refresh()
 	await shot(prefix + "_12_blackout", 2.0)
+	# 0.13 rooms: the room between fights, then the three doors, in a few regions
+	main.timer.stop()
+	for f in [5, 60, 160, 280]:
+		st.floor_num = f
+		st.room_count += 1
+		st.fight = 1
+		st.horde_left = 0
+		st.spawn_enemy()
+		st.exploring = true
+		main.refresh()
+		await shot(prefix + "_14_room_%d" % f, 1.6)
+	st.exploring = false
+	st._room_cleared()
+	main.refresh()
+	await shot(prefix + "_15_doors", 1.6)
 	print("went to floor ", st.floor_num)
 	print("town shots ok, in_town=", st.in_town)
 	GameState.delete_saves()
