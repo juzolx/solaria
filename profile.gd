@@ -6,6 +6,9 @@ extends RefCounted
 
 const PATH := "user://profile.dat"
 const MAX_RUNS := 20
+## Bump this to wipe every hero for a fresh start (settings and the online login stay).
+## 12 = Solaria 0.12: the dungeon revamp (Juzo said all saves can be reset).
+const SAVE_EPOCH := 12
 
 var last_mode := ""          # "regular", "hardcore" or "" before you've picked
 var sound_on := true
@@ -32,6 +35,7 @@ var show_recap := true       # show what killed you after a defeat
 var mail_seen: Array = []  # news letters (mail.gd NEWS) already delivered
 var calamities := {}       # region index (str) -> {"hero", "slot", "date"}: Calamities this account has slain (the server owns this once online)
 var colorblind := false      # spell out what colors mean (rarity, weak / resist)
+var save_epoch := 0          # the SAVE_EPOCH these saves were made under
 
 static func load_profile() -> Profile:
 	var p := Profile.new()
@@ -69,6 +73,7 @@ func _from(d: Dictionary) -> void:
 	colorblind = bool(d.get("colorblind", false))
 	mail_seen = d.get("mail_seen", [])
 	calamities = d.get("calamities", {})
+	save_epoch = int(d.get("save_epoch", 0))
 
 func save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
@@ -79,8 +84,27 @@ func save() -> void:
 		"fullscreen": fullscreen, "dev_mode": dev_mode, "hc_best": hc_best, "hc_runs": hc_runs,
 		"player_name": player_name, "online": online, "path_choice": path_choice,
 		"active_slot": active_slot, "max_floor": max_floor, "stash": stash, "stash_level": stash_level,
-		"shake": shake, "damage_numbers": damage_numbers, "flashes": flashes, "text_size": text_size, "notes_seen": notes_seen, "skill_book": skill_book, "show_recap": show_recap, "colorblind": colorblind, "mail_seen": mail_seen, "calamities": calamities,
+		"shake": shake, "damage_numbers": damage_numbers, "flashes": flashes, "text_size": text_size, "notes_seen": notes_seen, "skill_book": skill_book, "show_recap": show_recap, "colorblind": colorblind, "mail_seen": mail_seen, "calamities": calamities, "save_epoch": save_epoch,
 	})
+
+## True when saves from an older epoch exist and must be wiped.
+func fresh_start_due() -> bool:
+	return save_epoch < SAVE_EPOCH
+
+## Clears all progress but keeps settings and the online login.
+func reset_progress() -> void:
+	hc_best = 0
+	hc_runs = []
+	active_slot = 1
+	max_floor = 0
+	stash = []
+	stash_level = 0
+	skill_book = {}
+	mail_seen = []
+	calamities = {}
+	last_mode = ""
+	notes_seen = ""
+	save_epoch = SAVE_EPOCH
 
 ## How many hero slots are open (GameData.SLOT_UNLOCKS: the 2nd at floor 10, up to the 9th at 500).
 func slots_open() -> int:

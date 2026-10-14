@@ -6,7 +6,7 @@ extends RefCounted
 const VERSION := "0.12"
 
 const NOTES := [
-	{"version": "0.12", "name": "The Mailbox", "lines": [
+	{"version": "0.12", "name": "The Deep", "lines": [
 		"The Mailbox: every reward now arrives by mail. Bounties pay the moment you finish them, and deeds pay as soon as you earn them. Collect your letters in town with the Mail button. Mail is always safe, and gear that doesn't fit in your bag waits in its letter.",
 		"News and gifts from the maker arrive in the Mailbox too.",
 		"The Bank: when you head down, choose how much gold to carry (none, a quarter, half or all). The rest stays safe in the Bank, and everything you carry home is banked for you.",

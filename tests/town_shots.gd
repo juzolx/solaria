@@ -15,6 +15,7 @@ func _initialize() -> void:
 	Profile.delete()
 	Codex.delete()
 	var prof := Profile.new()
+	prof.save_epoch = Profile.SAVE_EPOCH
 	prof.max_floor = 300
 	prof.save()
 	var g := GameState.new()

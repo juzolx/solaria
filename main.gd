@@ -114,6 +114,7 @@ func _ready() -> void:
 	profile = Profile.load_profile()
 	codex = Codex.load_codex()
 	state.codex = codex
+	_fresh_start_check()
 	_migrate_old_saves()
 	online = Online.new()
 	online.setup(profile)
@@ -130,6 +131,34 @@ func _ready() -> void:
 		play_slot(int(action["play"]))
 	else:
 		show_title()
+
+var fresh_start_notice := false
+
+## A new save epoch (0.12): every hero is wiped once. Settings and the online login stay.
+func _fresh_start_check() -> void:
+	if not profile.fresh_start_due():
+		return
+	var had_saves := FileAccess.file_exists(Profile.PATH) or FileAccess.file_exists(GameState.SAVE_PATH) \
+		or FileAccess.file_exists(GameState.HC_SAVE_PATH) or FileAccess.file_exists(Codex.PATH)
+	for n in range(1, GameData.MAX_HEROES + 1):
+		had_saves = had_saves or GameState.has_slot(n)
+	if had_saves:
+		GameState.delete_saves()
+		Codex.delete()
+		codex = Codex.load_codex()
+		state.codex = codex
+		profile.reset_progress()
+		fresh_start_notice = true
+	profile.save_epoch = Profile.SAVE_EPOCH
+	profile.save()
+
+func _show_fresh_start() -> void:
+	fresh_start_notice = false
+	var o := Overlay.new().open(self, "A fresh start", 440.0, UI.GOLD)
+	o.content.add_child(UI.wrap("Solaria %s rebuilds the dungeon: 1,000 floors, the Bank, a roster of 9 heroes, pets and much more. Every hero has been reset so everyone starts fresh. Your settings are kept." % PatchNotes.VERSION, 14, UI.TEXT))
+	var b := UI.primary("Begin", o.close, UI.GOLD)
+	b.custom_minimum_size = Vector2(0, 44)
+	o.content.add_child(b)
 
 ## Older versions had one Regular and one Hardcore save: move them into hero slots.
 func _migrate_old_saves() -> void:
@@ -150,6 +179,8 @@ func _migrate_old_saves() -> void:
 func show_title() -> void:
 	timer.stop()
 	TitleScreen.new().show_for(self)
+	if fresh_start_notice:
+		_show_fresh_start.call_deferred()
 
 ## Saves and goes back to the title screen (to switch heroes).
 func back_to_title() -> void:
