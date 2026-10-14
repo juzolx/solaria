@@ -20,6 +20,8 @@ const NOTES := [
 		"Return Scrolls: tap Town mid-fight to read one and escape home with everything you carry. Without one, tapping Town means you'll head home once the floor is cleared.",
 		"Loot is rarer and means more: a blue is exciting, a purple is a big moment and a Legendary is lucky. Legendaries get likelier the deeper you go, and higher rarities are much stronger than before.",
 		"A roster of 9 heroes: new slots open at floors 10, 25, 50, 100, 150, 250, 350 and 500. Take any 3 Regular heroes down together, and all of them walk around town.",
+		"Pets: a new Pets tab (Hero > Pets). Ranger, Knight, Mage, Wanderer and Bard keep their class companion. Eggs are rare (mostly from quests) and hatch into a random pet that any hero can keep. Pets are never lost: they come home hurt and rest, or get healed at the new Clinic in town, where they play in the pen.",
+		"Bards can now become something new on the Troubadour road.",
 		"Team falls: a hero who falls loses only their own worn gear (Soulbound and Account-bound items stay) and gets back up on the next floor. If you fall, your companions fight on. The run fails only when all three are down.",
 	]},
 	{"version": "0.11", "name": "Evolution", "lines": [

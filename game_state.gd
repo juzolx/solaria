@@ -123,6 +123,9 @@ var _upgrade_cache := {}
 var gold := 0             # in town: all your money. In the dungeon: only what you carried in (at risk)
 var bank := 0             # gold left safe at home while you're in the dungeon
 var return_scrolls := 0    # carried Return Scrolls: escape home any time, even mid-fight
+var pets: Array = []       # owned pets (Menagerie): caught, hatched, or from a Calamity
+var pets_out: Array = []   # ids of the pets coming on runs (3 for a Beast Tamer, else 1)
+var eggs: Array = []       # unhatched eggs (safe at home; they hatch as you clear floors)
 var go_home_after := false  # tapped Town mid-floor: head home as soon as this floor is cleared
 var carry_pick := 0       # how much gold you last chose to carry down: 0 none, 1 a quarter, 2 half, 3 all
 var scrap := 0
@@ -1451,6 +1454,7 @@ func take_turn() -> void:
 		events.append({"type": "summon_hit", "dmg": sd, "name": summon_name})
 	if enemy_hp > 0:
 		World.pet_turn(self)
+	Menagerie.turn(self)
 	var pal := Hidden.companion_power(self)
 	if pal > 0.0 and enemy_hp > 0:
 		last_hit = "hit"
@@ -1711,6 +1715,7 @@ func _enemy_defeated() -> void:
 	gain_xp(xp_gain)
 	if party != null:
 		party.on_kill(xp_gain)
+	Menagerie.on_kill(self)
 	var gold_gain := (2 + floor_num) * (10 if was_boss else 1)
 	gold_gain = int(gold_gain * float(t["gold"]) * (1.0 + (effect_total("gold_find") + bonus_pct + World.curse_gold(self)) / 100.0) * GameData.event_bonus("gold"))
 	if curse_turns > 0:
@@ -1895,6 +1900,7 @@ func _next_floor() -> void:
 	Lineage.gain(self, "floor")
 	Lineage.on_floor(self)
 	get_up(Party.REVIVE_HP)
+	Menagerie.on_floor(self)
 	if party != null and party.size() > 0:
 		party.on_floor()
 		if autosave:
@@ -1925,7 +1931,7 @@ func _next_floor() -> void:
 		_page("elements")
 	if floor_num >= 10 or best_floor >= World.CURSE_UNLOCK:
 		_page("milestones")
-	if level >= World.PET_LEVEL:
+	if World.pet_stage(self) >= 0 or not pets.is_empty() or not eggs.is_empty():
 		_page("pets")
 	if floor_num >= 3:
 		_page("escape")
@@ -2010,6 +2016,9 @@ func _hero_died() -> void:
 	# The death penalty (0.12): you lose what you carried in and fall back to the
 	# start of this 25-floor stretch. Soulbound and Account-bound items are never lost.
 	var lost := _death_losses()
+	var hurt_pets := Menagerie.on_wipe(self)
+	if hurt_pets != "":
+		say("[color=#d9a066]%s.[/color] Pets are never lost; they rest for %d floors or get healed at the Clinic." % [hurt_pets, Menagerie.HEAL_FLOORS])
 	var back := checkpoint_start(floor_num)
 	last_death["lost"] = lost
 	last_death["woke"] = back
@@ -2044,6 +2053,7 @@ func _down_turn() -> void:
 	var line := ""
 	if party != null:
 		line = party.act(self).trim_prefix(". ")
+	Menagerie.turn(self)
 	if enemy_hp <= 0:
 		say(line + ".")
 		_enemy_defeated()
@@ -2296,6 +2306,10 @@ func give_reward(r: Dictionary) -> String:
 		parts.append("+%d %s" % [int(r["mats"]), GameData.MATERIALS[m]])
 	if r.has("scroll"):
 		parts.append(use_scroll(str(r["scroll"])))
+	if r.has("egg"):
+		for _e in int(r["egg"]):
+			Menagerie.give_egg(self, "reward")
+		parts.append("an egg")
 	if r.has("look"):
 		var cd: Dictionary = Realms.COSMETICS.get(r["look"], {})
 		if not cd.is_empty():
@@ -2921,6 +2935,9 @@ func save_game() -> void:
 		"carry_pick": carry_pick,
 		"go_home_after": go_home_after,
 		"return_scrolls": return_scrolls,
+		"pets": pets,
+		"pets_out": pets_out,
+		"eggs": eggs,
 		"scrap": scrap,
 		"potions": potions,
 		"bag_level": bag_level,
@@ -3176,6 +3193,9 @@ func load_game() -> bool:
 	carry_pick = int(data.get("carry_pick", 0))
 	go_home_after = bool(data.get("go_home_after", false))
 	return_scrolls = int(data.get("return_scrolls", 0))
+	pets = data.get("pets", [])
+	pets_out = data.get("pets_out", [])
+	eggs = data.get("eggs", [])
 	checkpoint = int(data.get("checkpoint", 0))
 	curses = data.get("curses", {})
 	pet_on = bool(data.get("pet_on", true))
@@ -3579,6 +3599,7 @@ const SCROLLS := {
 	"box": {"name": "Mystery Box", "text": "Epic or Legendary gear, gold or materials"},
 	"tome": {"name": "Tome of Forgetting", "text": "Your next stat respec is free"},
 	"return": {"name": "Return Scroll", "text": "Read it any time, even mid-fight, to escape home with everything you carry"},
+	"egg": {"name": "Strange Egg", "text": "Something is moving inside. It hatches after a few floors"},
 }
 
 func scroll_text(id: String) -> String:
@@ -3613,6 +3634,9 @@ func _make_merchant() -> void:
 	scrolls.shuffle()
 	var id: String = scrolls[0]
 	merchant.append({"kind": "scroll", "id": id, "price": price(here * {"box": 5, "key": 2, "tome": 3}.get(id, 2)), "sold": false})
+	# Very rarely Snik has an egg (nobody asks where he got it)
+	if randf() * 100.0 < Menagerie.EGG_SNIK_CHANCE:
+		merchant.append({"kind": "scroll", "id": "egg", "price": price(here * 8), "sold": false})
 
 ## What Snik would pay for your junk: unlocked Common and Uncommon gear in the bag.
 func goblin_junk() -> Array:
@@ -3677,6 +3701,9 @@ func buy_merchant(i: int) -> bool:
 ## Uses a scroll (or opens a box) right away. Returns what happened.
 func use_scroll(id: String) -> String:
 	match id:
+		"egg":
+			Menagerie.give_egg(self, "snik")
+			return "[color=#fde68a]A Strange Egg![/color] It hatches after %d floors." % Menagerie.EGG_FLOORS
 		"return":
 			return_scrolls += 1
 			tip("return", "A Return Scroll! Tap Town any time, even mid-fight, to read it and escape home with everything you carry.")

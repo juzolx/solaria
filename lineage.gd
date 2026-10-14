@@ -370,7 +370,10 @@ static func try_escape(g: GameState) -> bool:
 		return false
 	g.feats["escapes"] = int(g.feats.get("escapes", 0)) + 1
 	g.feats["clean_streak"] = 0
+	var sure := escape_chance(g) >= 100.0
 	if randf() * 100.0 < escape_chance(g):
+		if sure:
+			Hidden.count(g, "sure_escapes")
 		g.say("[color=#a3e635]You slip away from the %s.[/color] (No XP or loot from it.)" % g.enemy_name)
 		ClassTree.count(g, "escapes")
 		g.events.append({"type": "escaped"})
@@ -408,6 +411,10 @@ static func spare(g: GameState) -> bool:
 	if g.enemy_people != "":
 		change_rep(g, g.enemy_people, Races.REP_SPARE)
 	g.xp += int(GameData.xp_for_kill(g.floor_num, false) * 0.5)
+	# A spared wild beast sometimes leaves something behind
+	if g.enemy_people == "" and randf() * 100.0 < Menagerie.EGG_SPARE_CHANCE:
+		g.say("[color=#fde68a]Where it stood, half-buried in the dirt: an egg.[/color]")
+		Menagerie.give_egg(g, "spared")
 	_move_on(g)
 	return true
 

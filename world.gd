@@ -270,19 +270,16 @@ static func curse_gold(g: GameState) -> float:
 	return t
 
 # =====================================================================
-# Companions: a pet that fights beside you and evolves with you
+# Companions: a pet that fights beside you and evolves with you.
+# 0.12: only classes where a pet fits keep one (Ranger, Knight, Mage, Wanderer, Bard).
 # =====================================================================
 
 const PET_LEVEL := 5           # you meet your companion at this level
 const PET_POWER := [0.12, 0.2, 0.3, 0.45]   # x your Attack every turn, by stage
 const PETS := {
-	"Warrior": {"stages": ["War Pup", "Battle Mastiff", "Iron Warg", "Fenris-Born"], "kind": "beast", "color": "#a8a29e", "perk": "bite", "text": "Bites hard. At its last stage its bites can stun."},
 	"Knight": {"stages": ["Gryphon Chick", "Young Gryphon", "Gryphon", "Royal Gryphon"], "kind": "bird", "color": "#e8b14a", "perk": "guard", "text": "Guards you: blocks some damage each turn."},
 	"Wanderer": {"stages": ["Spirit Fox", "Two-Tailed Fox", "Five-Tailed Fox", "Nine-Tailed Fox"], "kind": "fox", "color": "#fb923c", "perk": "fire", "text": "Fox fire: its attacks burn."},
-	"Cleric": {"stages": ["Wisp", "Lantern Sprite", "Seraph Light", "Choir of Lights"], "kind": "light", "color": "#fde68a", "perk": "heal", "text": "Heals you a little every turn instead of only fighting."},
-	"Acolyte": {"stages": ["Candle Imp", "Censer Spirit", "Votive Wraith", "Reliquary Angel"], "kind": "light", "color": "#a78bfa", "perk": "curse", "text": "Its hits curse the monster (Holy combos!)."},
 	"Mage": {"stages": ["Spark Familiar", "Elemental Mote", "Elemental", "Primal Elemental"], "kind": "mote", "color": "#8b5cf6", "perk": "element", "text": "Hits with a random element, so it finds weaknesses."},
-	"Trickster": {"stages": ["Pocket Monkey", "Mischief Raccoon", "Shadow Cat", "Phantom Cat"], "kind": "cat", "color": "#a8ca58", "perk": "steal", "text": "Steals gold now and then."},
 	"Ranger": {"stages": ["Hawk", "Falcon", "Storm Falcon", "Thunderbird"], "kind": "bird", "color": "#38bdf8", "perk": "first", "text": "Strikes first: it hits before you every new fight."},
 	"Bard": {"stages": ["Songbird", "Nightingale", "Phoenix Chick", "Phoenix"], "kind": "bird", "color": "#f472b6", "perk": "song", "text": "Its song keeps a small Attack buff on you."},
 }
@@ -291,7 +288,7 @@ static func pet_info(g: GameState) -> Dictionary:
 	return PETS.get(g.hero_class, {})
 
 static func pet_stage(g: GameState) -> int:
-	if g.hero_class == "" or g.level < PET_LEVEL:
+	if g.hero_class == "" or g.level < PET_LEVEL or not PETS.has(g.hero_class):
 		return -1
 	return clampi(g.class_path.size() + (1 if g.class_branch != "" else 0), 0, 3)
 

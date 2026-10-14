@@ -13,7 +13,7 @@ uniform vec4 tint : source_color = vec4(1.0);
 uniform float sat = 1.0;
 uniform float dark = 0.0;
 void fragment() {
-	vec4 c = texture(TEXTURE, UV);
+	vec4 c = texture(TEXTURE, UV) * COLOR;  // COLOR: shapes drawn on the map (shadows, the pen) keep their own color
 	float l = dot(c.rgb, vec3(0.299, 0.587, 0.114));
 	vec3 g = mix(vec3(l), c.rgb, sat) * tint.rgb;
 	g = mix(g, g * vec3(0.42, 0.48, 0.72), dark);
@@ -42,6 +42,28 @@ var locked := {}       # building id -> why it's closed ("" = open)
 var notes := {}        # building id -> short line under the name
 var people: Control    # townsfolk walking the square (drawn on the map, so they share its color grade)
 var folk: Array = []
+var hidden_spots := {}  # building id -> true while it isn't in town yet (the Clinic before your first pet)
+var pen_pets: Array = []  # your pets wandering the Clinic's pen: {"tex", "x", "y", "to", "wait", "flip", "t"}
+
+## The buildings you can see and tap.
+func _spots() -> Array:
+	return data.get("spots", []).filter(func(sp): return not hidden_spots.has(String(sp["id"])))
+
+## The Clinic's pen (the old garden plots) in map pixels.
+const PEN := Rect2(462, 916, 160, 160)
+
+## Your pets in the pen: a list of textures. Rebuilt only when `key` changes.
+var pets_key := ""
+func set_pets(texs: Array, key: String) -> void:
+	if key == pets_key:
+		return
+	pets_key = key
+	pen_pets.clear()
+	for tx in texs:
+		if tx == null:
+			continue
+		pen_pets.append({"tex": tx, "x": randf_range(PEN.position.x + 16, PEN.end.x - 16), "y": randf_range(PEN.position.y + 24, PEN.end.y - 8),
+			"to": Vector2.ZERO, "wait": randf_range(0.5, 3.0), "flip": randf() < 0.5, "t": randf() * 3.0})
 
 ## Where townsfolk stroll: [feet y, min x, max x] in map pixels (kept clear of things they'd walk through).
 const LANES := [[384, 150, 390], [700, 200, 470], [800, 300, 400], [470, 400, 470]]
@@ -146,12 +168,12 @@ func to_map(p: Vector2) -> Vector2:
 func _spot_at(p: Vector2) -> String:
 	var m := to_map(p)
 	# Plates first (they sit above the roofs), then the buildings themselves
-	for s in data.get("spots", []):
+	for s in _spots():
 		if _plate_rect(s).has_point(p):
 			return s["id"]
 	var best := ""
 	var best_area := INF
-	for s in data.get("spots", []):
+	for s in _spots():
 		var r: Array = s["rect"]
 		var rect := Rect2(r[0], r[1], r[2], r[3])
 		if rect.has_point(m) and rect.get_area() < best_area:
@@ -246,6 +268,25 @@ func set_heroes(list: Array, key: String) -> void:
 			"flip": randf() < 0.5, "t": randf() * 3.0, "hero": true, "you": bool(e[2])})
 
 func _step_folk(delta: float) -> void:
+	for p in pen_pets:
+		p["t"] = float(p["t"]) + delta
+		if float(p["wait"]) > 0.0:
+			p["wait"] = float(p["wait"]) - delta
+			if float(p["wait"]) <= 0.0:
+				p["to"] = Vector2(randf_range(PEN.position.x + 16, PEN.end.x - 16), randf_range(PEN.position.y + 24, PEN.end.y - 8))
+			continue
+		var at := Vector2(float(p["x"]), float(p["y"]))
+		var to: Vector2 = p["to"]
+		var stp := 22.0 * delta
+		p["flip"] = to.x < at.x
+		if at.distance_to(to) <= stp:
+			p["x"] = to.x
+			p["y"] = to.y
+			p["wait"] = randf_range(1.5, 5.0)
+		else:
+			var nx := at + (to - at).normalized() * stp
+			p["x"] = nx.x
+			p["y"] = nx.y
 	for f in folk:
 		f["t"] = float(f["t"]) + delta
 		if float(f["wait"]) > 0.0:
@@ -266,6 +307,8 @@ func _step_folk(delta: float) -> void:
 
 func _draw_people() -> void:
 	people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
+	if not hidden_spots.has("clinic"):
+		_draw_pen()
 	var sorted := folk.duplicate()
 	sorted.sort_custom(func(a, b): return float(a["y"]) < float(b["y"]))
 	for f in sorted:
@@ -289,6 +332,47 @@ func _draw_people() -> void:
 			people.draw_colored_polygon(PackedVector2Array([top + Vector2(-7, -9), top + Vector2(7, -9), top + Vector2(0, 1)]), Color(0.05, 0.03, 0.08, 0.85))
 			people.draw_colored_polygon(PackedVector2Array([top + Vector2(-5, -8), top + Vector2(5, -8), top + Vector2(0, -1)]), col)
 	people.draw_set_transform(Vector2.ZERO)
+
+## The Clinic's pen: a wooden fence around the plots, a little sign, and your pets.
+func _draw_pen() -> void:
+	var wood := Color("#6b4423")
+	var light := Color("#a0703c")
+	var r := PEN
+	# Rails
+	for y in [r.position.y + 6.0, r.end.y - 6.0]:
+		people.draw_rect(Rect2(r.position.x, y - 3.0, r.size.x, 3.0), wood)
+		people.draw_rect(Rect2(r.position.x, y - 3.0, r.size.x, 1.0), light)
+	for x in [r.position.x, r.end.x - 3.0]:
+		people.draw_rect(Rect2(x, r.position.y + 6.0, 3.0, r.size.y - 12.0), wood)
+	# Posts
+	var px := r.position.x
+	while px <= r.end.x:
+		for y in [r.position.y, r.end.y - 12.0]:
+			people.draw_rect(Rect2(px - 2.0, y, 5.0, 12.0), wood.darkened(0.25))
+			people.draw_rect(Rect2(px - 2.0, y, 5.0, 2.0), light)
+		px += 32.0
+	# The sign: a white board with a green cross
+	var sp := Vector2(r.get_center().x, r.position.y - 4.0)
+	people.draw_rect(Rect2(sp.x - 2.0, sp.y - 6.0, 4.0, 14.0), wood.darkened(0.3))
+	people.draw_rect(Rect2(sp.x - 10.0, sp.y - 20.0, 20.0, 15.0), Color("#e8e0c8"))
+	people.draw_rect(Rect2(sp.x - 10.0, sp.y - 20.0, 20.0, 15.0), wood, false, 1.0)
+	people.draw_rect(Rect2(sp.x - 2.0, sp.y - 18.0, 4.0, 11.0), Color("#3ca85a"))
+	people.draw_rect(Rect2(sp.x - 6.0, sp.y - 14.5, 12.0, 4.0), Color("#3ca85a"))
+	# Pets
+	var sorted := pen_pets.duplicate()
+	sorted.sort_custom(func(a, b): return float(a["y"]) < float(b["y"]))
+	for p in sorted:
+		var tx: Texture2D = p["tex"]
+		var sz := Vector2(tx.get_size())
+		var k := 34.0 / maxf(sz.x, sz.y)
+		var hop := absf(sin(float(p["t"]) * 6.0)) * 2.0 if float(p["wait"]) <= 0.0 else 0.0
+		var dst := Vector2(sz.x * k, sz.y * k)
+		var pos := Vector2(float(p["x"]) - dst.x / 2.0, float(p["y"]) - dst.y - hop)
+		people.draw_circle(Vector2(float(p["x"]), float(p["y"]) - 1.0), 7.0, Color(0.04, 0.03, 0.08, 0.25))
+		if p["flip"]:
+			people.draw_set_transform(Vector2(float(p["x"]) * 2.0 * scale_f, 0), 0.0, Vector2(-scale_f, scale_f))
+		people.draw_texture_rect(tx, Rect2(pos, dst), false)
+		people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
 
 # =====================================================================
 # Glow and weather
@@ -408,7 +492,7 @@ func _font_size() -> int:
 func _draw_labels() -> void:
 	var font := get_theme_default_font()
 	var fs := _font_size()
-	for s in data.get("spots", []):
+	for s in _spots():
 		var id := String(s["id"])
 		var rect := _plate_rect(s)
 		var why := String(locked.get(id, ""))

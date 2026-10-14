@@ -221,7 +221,7 @@ const ESCAPE_BASE := 35.0
 const ESCAPE_PER_AGI := 0.6
 const ESCAPE_PER_TIER := 7.0
 const ESCAPE_MIN := 10.0
-const ESCAPE_MAX := 90.0
+const ESCAPE_MAX := 100.0  # 100% is possible but takes real Agility (0.12: the tamer's road)
 const SPARE_AT := 0.25   # a monster under 25% HP can be spared (befriended)
 
 static func info(race: String) -> Dictionary:

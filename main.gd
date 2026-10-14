@@ -50,9 +50,12 @@ var bounty_tab: BountyTab
 var guide_tab: GuideTab
 var stash_tab: StashTab
 var party_tab: PartyTab
+var pet_tab: PetTab
+var clinic_tab: ClinicTab
 var race_tab: RaceTab
 var moment_queue: Array = []
 var escape_button: Button
+var catch_button: Button
 var spare_button: Button
 var wheel_tab: WheelTab
 
@@ -94,7 +97,7 @@ var nav_bar: PanelContainer   # phone layout: the bottom navigation (Fight, Hero
 var nav_buttons: Array[Button] = []
 var nav_page := 0              # 0 = the fight, 1.. = a tab group (1 + its index)
 var is_tall := false
-const TOWN_PAGES := ["Shop", "Blacksmith", "Tavern", "Inn", "Vault", "Bounty Board", "Guild Hall", "Mailbox"]
+const TOWN_PAGES := ["Shop", "Blacksmith", "Tavern", "Inn", "Vault", "Bounty Board", "Guild Hall", "Mailbox", "Clinic"]
 const NAV := [["Fight", "sword"], ["Hero", "person"], ["Items", "bag"], ["Town", "house"], ["Codex", "book"], ["Online", "globe"]]
 var left_panel: VBoxContainer
 var title_label: Label
@@ -524,6 +527,8 @@ func _build_ui() -> void:
 	craft_tab = CraftTab.new()
 	stash_tab = StashTab.new()
 	party_tab = PartyTab.new()
+	pet_tab = PetTab.new()
+	clinic_tab = ClinicTab.new()
 	race_tab = RaceTab.new()
 	wheel_tab = WheelTab.new()
 	bestiary_tab = BestiaryTab.new()
@@ -534,10 +539,10 @@ func _build_ui() -> void:
 	inn_tab = InnTab.new()
 	mail_tab = MailTab.new()
 	guide_tab = GuideTab.new()
-	for pair in [[char_tabs, hero_tab], [char_tabs, class_tab], [char_tabs, race_tab], [char_tabs, skills_tab], [char_tabs, party_tab],
+	for pair in [[char_tabs, hero_tab], [char_tabs, class_tab], [char_tabs, race_tab], [char_tabs, skills_tab], [char_tabs, party_tab], [char_tabs, pet_tab],
 			[item_tabs, gear_tab], [item_tabs, bag_tab],
 			[town_tabs, shop_tab], [town_tabs, craft_tab], [town_tabs, wheel_tab], [town_tabs, inn_tab], [town_tabs, stash_tab],
-			[town_tabs, bounty_tab], [town_tabs, achievements_tab], [town_tabs, mail_tab],
+			[town_tabs, bounty_tab], [town_tabs, achievements_tab], [town_tabs, mail_tab], [town_tabs, clinic_tab],
 			[codex_tabs, bestiary_tab], [codex_tabs, collection_tab],
 			[codex_tabs, stats_tab], [codex_tabs, guide_tab],
 			[online_tabs, leaderboard_tab], [online_tabs, guild_tab], [online_tabs, raid_tab]]:
@@ -753,12 +758,19 @@ func _build_fight(parent: Control) -> void:
 			sfx.play("buff")
 		refresh())
 	spare_button.tooltip_text = "Let a beaten monster go. It remembers you (half XP, no loot)."
+	catch_button = UI.button("Catch", func():
+		if Menagerie.try_catch(state):
+			sfx.play("unique")
+		refresh())
+	catch_button.tooltip_text = "Tame this monster. It becomes your pet (no XP or loot from it)."
+	catch_button.add_theme_color_override("font_color", Color("#d9a066"))
+	catch_button.visible = false
 	for b in [potion_button, auto_potion_button, floors_button, speed_button]:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		buttons.add_child(b)
 	var run_row := UI.hbox(6)
 	col.add_child(run_row)
-	for b in [escape_button, spare_button]:
+	for b in [escape_button, catch_button, spare_button]:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		run_row.add_child(b)
 
@@ -865,6 +877,16 @@ func _town_heroes() -> void:
 	var looks := state.hero_looks()
 	var key := "%d|%s|%s|%d" % [state.slot, str(state.appearance), str(looks), _roster_cache.size()]
 	town_view.set_heroes([[state.appearance, looks, true]] + _roster_cache, key)
+	# Your pets live in the Clinic's pen (your class companion too, if you have one)
+	var texs: Array = []
+	var pkey := ""
+	if World.pet_stage(state) >= 0:
+		texs.append(Pets.portrait(state))
+		pkey += "c%d" % World.pet_stage(state)
+	for p in state.pets:
+		texs.append(Menagerie.texture(p))
+		pkey += "|%d" % int(p["id"])
+	town_view.set_pets(texs, "%d:%s" % [state.slot, pkey])
 
 ## Map or fight, town look, plates and the leave button.
 func _sync_town() -> void:
@@ -903,7 +925,9 @@ func _sync_town() -> void:
 		"tavern": "" if state.gamble_unlocked() else "Opens at floor %d" % GameData.GAMBLE_UNLOCK_FLOOR,
 		"stash": "" if not state.hardcore else "Hardcore heroes can't use the Vault",
 	}
-	town_view.badges = {"bounty": Town.ready_count(state), "guild": codex.deeds.size(), "mail": Mail.waiting(state),
+	town_view.hidden_spots = {} if Menagerie.has_any(state) else {"clinic": true}
+	var hurt_pets := state.pets.filter(func(p): return int(p["hurt"]) > 0).size()
+	town_view.badges = {"bounty": Town.ready_count(state), "guild": codex.deeds.size(), "mail": Mail.waiting(state), "clinic": hurt_pets,
 		"inn": 1 if state.hero_hp < state.get_max_hp() * 0.6 else 0}
 
 # =====================================================================
@@ -1270,6 +1294,9 @@ func _refresh_fight() -> void:
 	if why != "":
 		escape_button.tooltip_text = why
 	spare_button.visible = Lineage.can_spare(state)
+	catch_button.visible = Menagerie.can_catch(state) and state.path_offer.is_empty()
+	if catch_button.visible:
+		catch_button.text = "Catch (%d%%)" % int(Menagerie.catch_chance(state))
 
 # =====================================================================
 # Phone layout: bottom navigation
@@ -1370,6 +1397,7 @@ func _refresh_tabs() -> void:
 	town_tabs.set_tab_hidden(1, not state.craft_unlocked())
 	town_tabs.set_tab_hidden(2, not state.gamble_unlocked())
 	town_tabs.set_tab_hidden(4, state.hardcore)
+	town_tabs.set_tab_hidden(8, not Menagerie.has_any(state))
 	for i in TOWN_PAGES.size():
 		town_tabs.set_tab_title(i, TOWN_PAGES[i])
 	# On a wide screen, picking the Town tab means walking to town

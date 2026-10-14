@@ -101,6 +101,8 @@ static func summary(l: Dictionary) -> String:
 				parts.append("a scroll")
 			"look":
 				parts.append("a new look")
+			"egg":
+				parts.append("an egg")
 			_:
 				parts.append(String(k))
 	var n: int = (l["items"] as Array).size()

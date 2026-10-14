@@ -69,7 +69,7 @@ func _initialize() -> void:
 	Town.leave(tg)
 	tg._make_merchant()
 	var kinds: Array = tg.merchant.map(func(e): return String(e["kind"]) + ":" + String(e.get("id", "")))
-	check("potions:" in kinds and "scroll:return" in kinds and tg.merchant.size() == 5, "Snik sells gear, potions, a Return Scroll and a scroll")
+	check("potions:" in kinds and "scroll:return" in kinds and tg.merchant.size() in [5, 6], "Snik sells gear, potions, a Return Scroll and a scroll (sometimes an egg)")
 	tg.bag.append(GameData.make_item("Chest", 0, 10, tg._new_id()))
 	var g0 := tg.gold
 	var junkv := tg.goblin_junk_value()

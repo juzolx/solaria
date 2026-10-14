@@ -62,6 +62,11 @@ func _initialize() -> void:
 	var st: GameState = main.state
 	st.codex.stats["guide_skip"] = 1
 	st.codex.deeds = ["f25", "lv25", "k100"]
+	# Pets: a hatched pet, a caught one and an egg (the Clinic and its pen appear)
+	Menagerie.make_pet(st, "Barghest", Sprites.enemy_key("Barghest", false), 2, "egg")
+	var hurt := Menagerie.make_pet(st, "Will-o'-Wisp", Sprites.enemy_key("Will-o'-Wisp", false), 1, "caught")
+	hurt["hurt"] = 6
+	st.eggs.append({"id": st._new_id(), "floors": 4, "from": "reward"})
 	main.go_to_town()
 	main.refresh()
 	await shot(prefix + "_1_map", 1.0)
@@ -75,10 +80,16 @@ func _initialize() -> void:
 	Mail.post(st, "The Bounty Board", "Bounty paid: Kobold hunt", "Contract done. Here is what you were promised.", {"gold": 100, "item": {"slot": "Weapon", "rarity": 3}})
 	Mail.post(st, "The Guild Hall", "Deed: Into the Deep", "Reach floor 25. Well done! Here is your reward.", {"gold": 500, "potions": 2, "item": {"slot": "Chest", "rarity": 4}})
 	main.refresh()
-	var pages := ["shop", "smith", "tavern", "inn", "stash", "bounty", "guild", "mail"]
+	var pages := ["shop", "smith", "tavern", "inn", "stash", "bounty", "guild", "mail", "clinic"]
 	for id in pages:
 		main._on_building(id)
 		await shot(prefix + "_2_" + id, 0.4)
+	# Hero > Pets
+	main.nav_page = 1
+	main._apply_nav()
+	main.char_tabs.current_tab = 5
+	main.refresh()
+	await shot(prefix + "_2_pets", 0.5)
 	# other zones' looks
 	main.nav_page = 0
 	main._apply_nav()

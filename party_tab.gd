@@ -27,7 +27,6 @@ func refresh() -> void:
 		return
 	shown = key
 	OnlineUI.clear(box)
-	_pet_card()
 	box.add_child(UI.label("YOUR PARTY", 15, UI.GOLD))
 	var note := UI.label("Take a team of 3: you plus up to 2 of your other Regular heroes. They use their own gear, stats and skills, level up with you, and share one skill book. Monsters get tougher with a bigger team and aim mostly at tanks (Warrior, Knight). A hero who falls loses only their own worn gear (bound items stay) and gets back up on the next floor. The run fails only when all three are down. Leave gear you love at home, or send a team with nothing to lose.", 12, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -127,58 +126,3 @@ func _member_card(mem) -> PanelContainer:
 	h.add_child(rm)
 	return p
 
-## Your companion: what it is, what it does, and what it becomes.
-func _pet_card() -> void:
-	var info := World.pet_info(state)
-	if info.is_empty():
-		return
-	var st := World.pet_stage(state)
-	var col := Color(info["color"])
-	UI.section(box, "Companion", "A companion joins you at level %d. It fights every turn and evolves when your class does. Charisma makes it stronger." % World.PET_LEVEL)
-	var c := UI.card(col if st >= 0 else UI.BORDER)
-	box.add_child(c[0])
-	if st < 0:
-		c[1].add_child(UI.label("Someone is watching you from the shadows... (level %d)" % World.PET_LEVEL, 13, UI.DIM))
-		return
-	var h := UI.hbox(8)
-	c[1].add_child(h)
-	var pic := TextureRect.new()
-	pic.texture = Pets.portrait(state)
-	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(64, 64)
-	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	h.add_child(pic)
-	var v := UI.vbox(2)
-	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h.add_child(v)
-	v.add_child(UI.label(World.pet_name(state), 17, col.lightened(0.3)))
-	v.add_child(UI.label("%s, stage %d of 4" % [World.pet_species(state), st + 1], 12, UI.DIM))
-	var tog := UI.button("Fighting" if state.pet_on else "Resting", func():
-		state.pet_on = not state.pet_on
-		state.save_game()
-		shown = ""
-		main.refresh())
-	tog.custom_minimum_size = Vector2(90, UI.TAP)
-	h.add_child(tog)
-	c[1].add_child(UI.wrap("%s Hits for %d%% of your Attack every turn." % [info["text"], int(float(World.PET_POWER[st]) * state.party_mult() * 100)], 12, UI.TEXT))
-	var stages: Array = []
-	for i in 4:
-		stages.append(String(info["stages"][i]) if i <= st or state.dev_mode else "???")
-	c[1].add_child(UI.wrap("Evolves: " + "  >  ".join(stages), 12, UI.DIM))
-	var nrow := UI.hbox(6)
-	c[1].add_child(nrow)
-	var le := LineEdit.new()
-	le.placeholder_text = "Give it a name"
-	le.text = state.pet_name
-	le.max_length = 18
-	le.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	le.custom_minimum_size = Vector2(0, UI.TAP)
-	nrow.add_child(le)
-	var sv := UI.button("Name it", func():
-		state.pet_name = le.text.strip_edges()
-		state.save_game()
-		shown = ""
-		main.refresh())
-	sv.custom_minimum_size = Vector2(0, UI.TAP)
-	nrow.add_child(sv)

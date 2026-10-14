@@ -648,7 +648,7 @@ func _initialize() -> void:
 			check(sk.has("cd") and (sk.has("power") or sk.has("buff") or sk.has("shield") or sk.has("summon") or sk.has("song") or sk.has("wild")), "active skill does something: " + sid)
 	print("Skills: %d active, %d passive" % [SkillData.all_of("active").size(), SkillData.all_of("passive").size()])
 	check(ClassTree.all_nodes().size() == 9 * 14 + ClassTree.BRANCHES.size(), "every class name is unique (%d nodes)" % ClassTree.all_nodes().size())
-	check(ClassTree.BRANCHES.size() == 115, "115 branch-offs (got %d)" % ClassTree.BRANCHES.size())
+	check(ClassTree.BRANCHES.size() == 116, "116 branch-offs (got %d)" % ClassTree.BRANCHES.size())
 	for itk in ClassTree.ITEMS:
 		check(not ClassTree.node(ClassTree.ITEMS[itk]["node"]).is_empty() and not ClassTree.node(ClassTree.ITEMS[itk]["at"]).is_empty(), "item nodes exist: " + itk)
 	var gods := 0
@@ -930,6 +930,81 @@ func _initialize() -> void:
 	check(pl.potions == 0 and pl.return_scrolls == 0, "potions and scrolls are lost on death")
 	check(GameData.MAX_HEROES == 9 and GameData.SLOT_UNLOCKS.size() == 9, "roster of 9")
 	check(pl.meta().has("looks"), "save meta keeps looks for town walkers")
+	# ---------- 0.12 pets ----------
+	check(World.PETS.has("Ranger") and World.PETS.has("Bard") and not World.PETS.has("Warrior") and not World.PETS.has("Cleric"), "class pets only where they fit")
+	var wr := GameState.new()
+	wr.codex.path = ""
+	wr.new_game()
+	wr.choose_class("Warrior")
+	wr.level = 20
+	check(World.pet_stage(wr) == -1, "warriors have no class pet")
+	check(ClassTree.node("beast_whisperer").get("parent", "") == "troubadour", "Bard's Beast Whisperer branch")
+	check(Races.ESCAPE_MAX >= 100.0, "a sure escape is possible")
+	var bt := GameState.new()
+	bt.codex.path = ""
+	bt.new_game()
+	bt.choose_class("Ranger")
+	bt.level = 70
+	bt.floor_num = 3
+	bt.spawn_enemy()
+	check(not Menagerie.can_catch(bt), "only a tamer can catch")
+	bt.hidden_class = "beast_tamer"
+	bt.enemy_is_boss = false
+	bt.enemy_people = ""
+	bt.enemy_goblin = false
+	bt.horde_left = 0
+	bt.stats["AGI"] = 400
+	check(Lineage.escape_chance(bt) > Menagerie.CATCH_AT, "strong tamer: run-away chance over 80%")
+	check(Menagerie.can_catch(bt), "tamer can catch a weak monster")
+	var caught := false
+	for _k in 60:
+		if bt.enemy_is_boss or bt.enemy_people != "" or bt.enemy_goblin or bt.horde_left > 0:
+			bt.spawn_enemy()
+			continue
+		if Menagerie.try_catch(bt):
+			caught = true
+		bt.hero_hp = bt.get_max_hp()
+		bt.path_offer = []
+		if bt.pets.size() >= 4:
+			break
+	check(caught and bt.pets.size() >= 1, "caught a pet")
+	check(bt.pets_out.size() <= Menagerie.TAMER_OUT, "a tamer brings up to 3")
+	var pet0: Dictionary = bt.pets[0]
+	bt.spawn_enemy()
+	var pet_hp0 := bt.enemy_hp
+	Menagerie.turn(bt)
+	check(bt.enemy_hp < pet_hp0, "pets fight")
+	var hurt_txt := Menagerie.on_wipe(bt)
+	check(hurt_txt != "" and int(pet0["hurt"]) == Menagerie.HEAL_FLOORS and bt.pets.size() >= 1, "pets come home hurt, never lost")
+	check(Menagerie.out(bt).is_empty(), "hurt pets stay home")
+	bt.gold = 10
+	check(not Menagerie.heal(bt, int(pet0["id"])), "Clinic needs gold")
+	bt.gold = 999999
+	check(Menagerie.heal(bt, int(pet0["id"])) and int(pet0["hurt"]) == 0, "Clinic heals")
+	Menagerie.on_wipe(bt)
+	for _f in Menagerie.HEAL_FLOORS:
+		Menagerie.on_floor(bt)
+	check(int(pet0["hurt"]) == 0, "pets heal by resting")
+	var eg := GameState.new()
+	eg.codex.path = ""
+	eg.new_game()
+	eg.choose_class("Warrior")
+	eg.give_reward({"egg": 1})
+	check(eg.eggs.size() == 1 and Menagerie.has_any(eg), "eggs come from rewards")
+	for _f in Menagerie.EGG_FLOORS:
+		Menagerie.on_floor(eg)
+	check(eg.eggs.is_empty() and eg.pets.size() == 1 and String(eg.pets[0]["from"]) == "egg", "an egg hatches into a random pet")
+	check(Menagerie.max_out(eg) == 1 and eg.pets_out.size() == 1, "non-tamers bring one pet")
+	check(Menagerie.texture(eg.pets[0]) != null, "hatched pet has art")
+	eg.slot = 7
+	eg.save_game()
+	var eg2 := GameState.new()
+	eg2.slot = 7
+	eg2.codex.path = ""
+	eg2.load_game()
+	check(eg2.pets.size() == 1 and eg2.pets_out.size() == 1, "pets are saved")
+	GameState.delete_slot(7)
+	check(Hidden.info("beast_tamer")["need"].any(func(n): return n[1] == "sure_escapes"), "Beast Tamer: 100 sure escapes")
 	pl.hardcore = true
 	pl.set_party([2, 3])
 	check(pl.party == null and pl.party_slots.is_empty(), "hardcore fights alone")

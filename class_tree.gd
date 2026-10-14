@@ -353,6 +353,7 @@ const BRANCHES := [
 	["Skald", "Saga Keeper", "Saga", "atk:.5 boss:.5", [["boss_kills", 100]], "Beat 100 bosses", false],
 	["Skald", "Drummer", "Rhythm", "atk:.5 double_strike:.5", [["songs", 5000]], "Use buff songs 5,000 times", false],
 	["Troubadour", "Heartstring", "Charm", "charm:.5 regen:.5", [["live:friendly_races", 8]], "Be Friendly or better with 8 races at once", false],
+	["Troubadour", "Beast Whisperer", "Calm", "charm:.6 regen:.4", [["spare_beasts", 150]], "Calm 150 wild monsters by sparing them", false],
 	["Troubadour", "Ballad Knight", "Ballad", "atk:.5 def:.5", [["boss_song", 50]], "Win 50 boss fights with a song active", false],
 	["Siren", "Tide Witch", "Lure", "charm:.5 skill:.5", [["kill_friendly_people", 300]], "Kill 300 people of races that were Friendly to you", false],
 	["Siren", "Banshee", "Wail", "skill:.6 execute:.4", [["kill_debuffed", 1000]], "Kill 1,000 enemies while they're weakened, stunned or charmed", false],
@@ -1256,6 +1257,8 @@ static func on_camp(g: GameState, realm: String) -> void:
 
 static func on_spare(g: GameState) -> void:
 	count(g, "spares")
+	if g.enemy_people == "":
+		count(g, "spare_beasts")
 	if g.enemy_people != "" and Races.rep_index(Lineage.rep(g, g.enemy_people)) == 0:
 		count(g, "spare_hated")
 
