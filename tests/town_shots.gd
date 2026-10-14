@@ -55,8 +55,10 @@ func _initialize() -> void:
 		Town.take(st, int(c["id"]))
 	st.contracts[0]["have"] = st.contracts[0]["need"]
 	st.contracts[0]["done"] = true
+	Mail.post(st, "The Bounty Board", "Bounty paid: Kobold hunt", "Contract done. Here is what you were promised.", {"gold": 100, "item": {"slot": "Weapon", "rarity": 3}})
+	Mail.post(st, "The Guild Hall", "Deed: Into the Deep", "Reach floor 25. Well done! Here is your reward.", {"gold": 500, "potions": 2, "item": {"slot": "Chest", "rarity": 4}})
 	main.refresh()
-	var pages := ["shop", "smith", "tavern", "inn", "stash", "bounty", "guild"]
+	var pages := ["shop", "smith", "tavern", "inn", "stash", "bounty", "guild", "mail"]
 	for id in pages:
 		main._on_building(id)
 		await shot(prefix + "_2_" + id, 0.4)

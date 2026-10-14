@@ -3,9 +3,15 @@ extends RefCounted
 ## What changed in each version. Shown on the title screen.
 ## Add the newest version at the top of NOTES.
 
-const VERSION := "0.11"
+const VERSION := "0.12"
 
 const NOTES := [
+	{"version": "0.12", "name": "The Mailbox", "lines": [
+		"The Mailbox: every reward now arrives by mail. Bounties pay the moment you finish them, and deeds pay as soon as you earn them. Collect your letters in town with the Mail button. Mail is always safe, and gear that doesn't fit in your bag waits in its letter.",
+		"News and gifts from the maker arrive in the Mailbox too.",
+		"Beastkin choose a fur color instead of hair.",
+		"The wandering merchant says why you can't buy something (bag full, or how much gold you still need).",
+	]},
 	{"version": "0.11", "name": "Evolution", "lines": [
 		"The Family Tree is now the Evolution Tree. Classes you haven't reached show as ???, and every evolution has a big moment and teaches a signature skill for a new 4th skill slot.",
 		"8 stats: STR, VIT, AGI, DEX, INT, WIS, LUK and CHA, at 5 points a level. Your old points were converted. Suggested builds, Auto-spend, respec tomes and 3 saved builds (stats, skills and gear).",

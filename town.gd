@@ -5,8 +5,8 @@ class_name Town
 ##
 ## Bounty Board (contracts): monster-specific hunts posted for the zone you're in,
 ## with the reward shown up front (gold, gear, or a weapon for your class). Take
-## up to MAX_TAKEN, hunt in the dungeon, and turn them in back at the board.
-## Guild Hall (deeds): achievements are claimed here for real rewards.
+## up to MAX_TAKEN and hunt in the dungeon; finished contracts pay into the Mailbox (mail.gd).
+## Guild Hall (deeds): achievement rewards are mailed when earned (mail.gd).
 
 const MAX_TAKEN := 3
 const POSTED := 4
@@ -319,25 +319,6 @@ static func reward_item(g: GameState, slot: String, rarity: int) -> Dictionary:
 				break
 			item = GameData.make_item(slot, rarity, g.best_floor, g._new_id())
 	return item
-
-## Hands out {"gold", "item": {"slot", "rarity"}, ...}; items go to your bag.
-static func give(g: GameState, r: Dictionary) -> String:
-	var plain := r.duplicate()
-	plain.erase("item")
-	var parts: Array = []
-	var text := g.give_reward(plain) if not plain.is_empty() else ""
-	if text != "":
-		parts.append(text)
-	if r.has("item"):
-		var it: Dictionary = r["item"]
-		var item := reward_item(g, String(it["slot"]), int(it["rarity"]))
-		g.add_to_wardrobe(item)
-		g.codex.found_item(item)
-		g.bag.append(item)
-		g.bag_version += 1
-		g.events.append({"type": "loot", "name": GameData.display_name(item), "rarity": int(item["rarity"]), "up": g.compare_pct(item)})
-		parts.append(g._tag(item))
-	return ", ".join(parts)
 
 # =====================================================================
 # Guild Hall: deeds (achievement rewards are claimed here)

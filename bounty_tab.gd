@@ -2,7 +2,7 @@ class_name BountyTab
 extends ScrollContainer
 ## Town > Bounty Board: monster contracts for the zone you're in. Each posting
 ## shows its reward up front (gold, gear, or a weapon for your class). Take up to
-## Town.MAX_TAKEN, hunt in the dungeon, and turn them in here.
+## Town.MAX_TAKEN and hunt in the dungeon; the reward is mailed the moment you finish.
 
 var main
 var box: VBoxContainer
@@ -50,7 +50,7 @@ func refresh() -> void:
 	for c in posted:
 		box.add_child(_card(c, false))
 	var streak := int(main.codex.login.get("streak", 0))
-	var note := UI.label("Hunts pay gold or gear. Elite contracts want Rare or stronger monsters. WANTED posters name a boss and pay with a weapon for your class. Login streak: %d day%s." % [streak, "" if streak == 1 else "s"], 11, UI.DIM)
+	var note := UI.label("Hunts pay gold or gear. Elite contracts want Rare or stronger monsters. WANTED posters name a boss and pay with a weapon for your class. Rewards arrive in your Mailbox the moment a contract is done. Login streak: %d day%s." % [streak, "" if streak == 1 else "s"], 11, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(note)
 

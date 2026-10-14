@@ -1,7 +1,7 @@
 class_name AchievementsTab
 extends VBoxContainer
 ## Town > Guild Hall: your deeds (achievements). Each one's reward (gold and a
-## piece of gear by how hard it was) is claimed here. Some give a title you can
+## piece of gear by how hard it was) is sent to the Mailbox as soon as you earn it. Some give a title you can
 ## show next to your hero's name.
 
 var main
