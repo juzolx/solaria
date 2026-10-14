@@ -68,6 +68,10 @@ static func enter(g: GameState) -> bool:
 		g.say(why)
 		return false
 	g.in_town = true
+	# Everything you carried home goes back in the Bank (in town all your gold is in one purse)
+	var carried := g.gold
+	g.gold += g.bank
+	g.bank = 0
 	g.path_offer.clear()
 	g.buffs.clear()
 	g.hero_status.clear()
@@ -77,19 +81,32 @@ static func enter(g: GameState) -> bool:
 	# Traders follow the roads: new zone, new wares
 	if g.shop_zone != GameData.zone_index(maxi(1, g.floor_num)):
 		g.restock_shop()
-	g.say("[color=#e8b14a]You head back to town.[/color] Nothing can attack you here.")
+	g.say("[color=#e8b14a]You head back to town.[/color] Nothing can attack you here.%s" % (" You bank the %d gold you carried home." % carried if carried > 0 else ""))
 	g.tip("town", "Welcome to town! Tap a building to go in. Take contracts at the Bounty Board, collect your rewards from the Mailbox, and rest at the Inn. Head back down through the cave when you're ready.")
 	g.events.append({"type": "town", "in": true})
 	g.save_game()
 	return true
 
+## How much of your gold each carry choice takes down (the rest stays in the Bank).
+const CARRY_SHARES := [0.0, 0.25, 0.5, 1.0]
+const CARRY_NAMES := ["None", "A quarter", "Half", "All"]
+
+static func carry_amount(g: GameState, pick: int) -> int:
+	return int(floor(float(g.total_gold()) * float(CARRY_SHARES[clampi(pick, 0, CARRY_SHARES.size() - 1)])))
+
 static func leave(g: GameState) -> void:
 	if not g.in_town:
 		return
 	g.in_town = false
+	# Split your purse: what you carry is at risk down there, the rest is safe in the Bank
+	var total := g.total_gold()
+	var carry := carry_amount(g, g.carry_pick)
+	g.gold = carry
+	g.bank = total - carry
 	g.fight = 1
 	g.spawn_enemy()
-	g.say("[color=#e8b14a]Back into the dungeon: floor %d.[/color]" % g.floor_num)
+	g.say("[color=#e8b14a]Back into the dungeon: floor %d.[/color] You carry %d gold; %d stays safe in the Bank." % [g.floor_num, g.gold, g.bank])
+	g.tip("bank", "Gold you carry into the dungeon can be lost if you fall. Gold in the Bank is always safe. Everything you carry home is banked for you.")
 	g.events.append({"type": "town", "in": false})
 	g.save_game()
 

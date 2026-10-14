@@ -12,6 +12,8 @@ var zone_bar: HFlowContainer
 var boss_buttons := {}  # floor -> Button (negative floor = the big "Fight" button)
 var tick := Timer.new()
 var from_town := false   # picking where to go down to from town (main._leave_town)
+var carry_buttons: Array = []
+var carry_note: Label
 
 ## From town: the same picker, plus quick picks, and choosing a floor takes you down.
 func show_from_town(main_node) -> void:
@@ -36,6 +38,22 @@ func show_for(main_node) -> void:
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			b.custom_minimum_size = Vector2(0, UI.TAP)
 			quick.add_child(b)
+		# How much gold to take down: the rest stays safe in the Bank
+		content.add_child(UI.label("GOLD TO CARRY", 11, UI.DIM))
+		var carry := UI.hbox(6)
+		content.add_child(carry)
+		carry_buttons.clear()
+		for i in Town.CARRY_NAMES.size():
+			var cb := UI.button("", _pick_carry.bind(i))
+			cb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			cb.custom_minimum_size = Vector2(0, UI.TAP)
+			cb.toggle_mode = true
+			carry.add_child(cb)
+			carry_buttons.append(cb)
+		carry_note = UI.label("", 11, UI.DIM)
+		carry_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		content.add_child(carry_note)
+		_show_carry()
 	var sub := UI.rich(13)
 	sub.text = "[color=%s]Travel to any floor you've reached. Red floors are bosses: go back to farm them for uniques. You're on [color=#e8b14a]floor %d[/color] (%s).[/color]" % [UI.hex(UI.DIM), state.floor_num, GameData.sub_name(state.floor_num)]
 	content.add_child(sub)
@@ -137,6 +155,20 @@ func _update_cooldowns() -> void:
 		else:
 			b.text = str(f) if cd <= 0 else "%ds" % cd
 		b.disabled = cd > 0 or f > state.best_floor
+
+func _pick_carry(i: int) -> void:
+	state.carry_pick = i
+	m.sfx.play("click")
+	_show_carry()
+
+func _show_carry() -> void:
+	for i in carry_buttons.size():
+		var b: Button = carry_buttons[i]
+		b.text = "%s\n%d" % [Town.CARRY_NAMES[i], Town.carry_amount(state, i)]
+		b.set_pressed_no_signal(i == state.carry_pick)
+		b.add_theme_color_override("font_color", UI.GOLD if i == state.carry_pick else UI.TEXT)
+	var c := Town.carry_amount(state, state.carry_pick)
+	carry_note.text = "You take %d gold down; %d stays safe in the Bank. Carried gold is lost if you fall, and banked when you come home." % [c, state.total_gold() - c]
 
 func _show_zone(zb: int) -> void:
 	zone_shown = zb

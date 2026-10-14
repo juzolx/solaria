@@ -27,6 +27,14 @@ const EDGE := Color("#64759b")  # edges of things you can press: 3:1 contrast or
 const MIN_FONT := 12
 static var colorblind := false  # set from the settings: adds words and symbols where color carries meaning
 
+## 9680 -> "9680", 12400 -> "12.4k", 3500000 -> "3.5M": short numbers for tight spots.
+static func short(n: int) -> String:
+	if absi(n) < 10000:
+		return str(n)
+	if absi(n) < 1000000:
+		return "%.1fk" % (n / 1000.0)
+	return "%.1fM" % (n / 1000000.0)
+
 static func hex(c: Color) -> String:
 	return "#" + c.to_html(false)
 

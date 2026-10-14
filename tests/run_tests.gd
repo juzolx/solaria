@@ -945,6 +945,25 @@ func _initialize() -> void:
 	Profile.delete()
 	tg.hero_hp = 1
 	check(Town.rest(tg) and tg.hero_hp == tg.get_max_hp(), "inn heals fully")
+	# The Bank: carry a share down, bank it all on the way home
+	tg.gold = 1000
+	tg.bank = 0
+	tg.carry_pick = 1
+	Town.leave(tg)
+	check(tg.gold == 250 and tg.bank == 750 and not tg.in_town, "leaving town carries a quarter, banks the rest")
+	tg.gold += 40
+	Town.enter(tg)
+	check(tg.gold == 1040 and tg.bank == 0 and tg.in_town, "coming home banks what you carried")
+	tg.carry_pick = 0
+	Town.leave(tg)
+	check(tg.gold == 0 and tg.bank == 1040, "carry nothing: all gold stays in the Bank")
+	tg.save_game()
+	var t_bk := GameState.new()
+	t_bk.slot = tg.slot
+	t_bk.codex.path = ""
+	t_bk.load_game()
+	check(t_bk.bank == 1040 and t_bk.gold == 0, "the Bank is saved")
+	Town.enter(tg)
 	tg.save_game()
 	var t_tg2 := GameState.new()
 	t_tg2.slot = 1

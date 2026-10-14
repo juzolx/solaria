@@ -119,7 +119,9 @@ var _upgrade_key := ""
 var _upgrade_cache := {}
 
 # ---------- Resources ----------
-var gold := 0
+var gold := 0             # in town: all your money. In the dungeon: only what you carried in (at risk)
+var bank := 0             # gold left safe at home while you're in the dungeon
+var carry_pick := 0       # how much gold you last chose to carry down: 0 none, 1 a quarter, 2 half, 3 all
 var scrap := 0
 var potions := GameData.START_POTIONS
 var bag_level := 0
@@ -792,6 +794,10 @@ func unique_chance() -> float:
 
 func bag_capacity() -> int:
 	return GameData.BAG_START + bag_level * GameData.BAG_STEP
+
+## All your gold: what you carry plus what's in the Bank.
+func total_gold() -> int:
+	return gold + bank
 
 func bag_full() -> bool:
 	return bag.size() >= bag_capacity()
@@ -2745,6 +2751,8 @@ func save_game() -> void:
 		"best_floor": best_floor,
 		"hero_hp": hero_hp,
 		"gold": gold,
+		"bank": bank,
+		"carry_pick": carry_pick,
 		"scrap": scrap,
 		"potions": potions,
 		"bag_level": bag_level,
@@ -2985,6 +2993,14 @@ func load_game() -> bool:
 	unique = data.get("unique", {})
 	auto_stats = bool(data.get("auto_stats", false))
 	auto_potion_at = float(data.get("auto_potion_at", GameData.AUTO_POTION_AT))
+	# The Bank (0.12): older saves kept all their gold on the hero. Put it in the
+	# Bank so none of it is at risk in the dungeon.
+	if data.has("bank"):
+		bank = int(data.get("bank", 0))
+	elif not bool(data.get("in_town", false)):
+		bank = gold
+		gold = 0
+	carry_pick = int(data.get("carry_pick", 0))
 	checkpoint = int(data.get("checkpoint", 0))
 	curses = data.get("curses", {})
 	pet_on = bool(data.get("pet_on", true))

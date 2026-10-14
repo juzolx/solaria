@@ -1177,7 +1177,11 @@ func _refresh_top() -> void:
 		var st := UI.style(UI.GOLD if done else Color(0, 0, 0, 0), UI.GOLD if (done or current) else UI.EMPTY, 5, 0, 2 if current else 1)
 		pips[i].add_theme_stylebox_override("panel", st)
 	best_label.text = "Best %d" % state.best_floor
-	gold_label.text = "Gold  %d" % state.gold
+	# In the dungeon: what you carry (at risk) over what's safe in the Bank
+	var two := not state.in_town and state.bank > 0
+	gold_label.text = "Gold  %s\nBank  %s" % [UI.short(state.gold), UI.short(state.bank)] if two else "Gold  %d" % state.gold
+	gold_label.add_theme_font_size_override("font_size", 11 if two else 15)
+	gold_label.get_parent().tooltip_text = "Carried gold: %d (lost if you fall)\nBank: %d (always safe)" % [state.gold, state.bank] if two else "Gold: from enemies and selling. Spend it in Town."
 	scrap_label.text = "Scrap  %d" % state.scrap
 	potion_label.text = "Potions  %d" % state.potions
 
