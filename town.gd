@@ -89,6 +89,7 @@ static func enter(g: GameState, floor_done := false) -> bool:
 		g.say(why)
 		return false
 	g.in_town = true
+	g.get_up(1.0)
 	# Everything you carried home goes back in the Bank (in town all your gold is in one purse)
 	var carried := g.gold
 	g.gold += g.bank

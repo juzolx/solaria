@@ -227,6 +227,24 @@ func _make_folk() -> void:
 		folk.append({"walk": anims["walk"]["tex"], "idle": anims["idle"]["tex"] if not anims["idle"].is_empty() else anims["walk"]["tex"].slice(0, 1),
 			"x": randf_range(lane[1], lane[2]), "y": float(lane[0]), "lane": lane, "to": -1.0, "wait": randf_range(0.5, 4.0), "flip": randf() < 0.5, "t": randf() * 3.0})
 
+## Your own heroes stroll the square too: [[appearance, looks, is_you], ...].
+## Rebuilt only when `key` changes (a new hero, new gear).
+var heroes_key := ""
+func set_heroes(list: Array, key: String) -> void:
+	if key == heroes_key:
+		return
+	heroes_key = key
+	folk = folk.filter(func(f): return not f.get("hero", false))
+	for i in list.size():
+		var e: Array = list[i]
+		var anims := Lpc.build_walker(Lpc.spec(e[0], e[1]))
+		if anims["walk"].is_empty():
+			continue
+		var lane: Array = LANES[(i + 1) % LANES.size()]
+		folk.append({"walk": anims["walk"]["tex"], "idle": anims["idle"]["tex"] if not anims["idle"].is_empty() else anims["walk"]["tex"].slice(0, 1),
+			"x": randf_range(lane[1], lane[2]), "y": float(lane[0]) + randf_range(-6.0, 6.0), "lane": lane, "to": -1.0, "wait": randf_range(0.5, 3.0),
+			"flip": randf() < 0.5, "t": randf() * 3.0, "hero": true, "you": bool(e[2])})
+
 func _step_folk(delta: float) -> void:
 	for f in folk:
 		f["t"] = float(f["t"]) + delta
@@ -263,6 +281,13 @@ func _draw_people() -> void:
 		if f["flip"]:
 			people.draw_set_transform(Vector2((float(f["x"]) * 2.0) * scale_f, 0), 0.0, Vector2(-scale_f, scale_f))
 		people.draw_texture(tx, pos)
+		if f.get("hero", false):
+			# A small marker over your heroes (brighter over the one you're playing)
+			people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
+			var top := Vector2(float(f["x"]), pos.y + w * 0.1 + sin(float(f["t"]) * 3.0) * 1.5)
+			var col := Color("#fbbf24") if f.get("you", false) else Color("#d6c9a0")
+			people.draw_colored_polygon(PackedVector2Array([top + Vector2(-7, -9), top + Vector2(7, -9), top + Vector2(0, 1)]), Color(0.05, 0.03, 0.08, 0.85))
+			people.draw_colored_polygon(PackedVector2Array([top + Vector2(-5, -8), top + Vector2(5, -8), top + Vector2(0, -1)]), col)
 	people.draw_set_transform(Vector2.ZERO)
 
 # =====================================================================

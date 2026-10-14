@@ -154,7 +154,7 @@ func show_for(m) -> void:
 			b.add_theme_color_override("font_color", UI.PINK)
 			b.add_theme_font_size_override("font_size", 12)
 			grid.add_child(b)
-	var slots_b := UI.button("Open all 3 hero slots", func():
+	var slots_b := UI.button("Open all %d hero slots" % GameData.MAX_HEROES, func():
 		profile.max_floor = maxi(profile.max_floor, int(GameData.SLOT_UNLOCKS[-1]))
 		profile.save()
 		_update())

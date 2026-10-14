@@ -416,7 +416,7 @@ func _initialize() -> void:
 	check(counts[0] > 11000 and counts[0] < 13000 and counts[5] > 40 and counts[5] < 180, "tier roll matches odds")
 	var odds := GameData.rarity_odds(0, 0.4)
 	check(absf(odds[0] + odds[1] + odds[2] + odds[3] + odds[4] - 100.0) < 0.01 and absf(odds[3] - 0.3984) < 0.001, "rarity odds")
-	check(Codex.ACHIEVEMENTS.size() == 87, "87 achievements (got %d)" % Codex.ACHIEVEMENTS.size())
+	check(Codex.ACHIEVEMENTS.size() == 88, "88 achievements (got %d)" % Codex.ACHIEVEMENTS.size())
 	var ids := {}
 	for a in Codex.ACHIEVEMENTS:
 		check(not ids.has(a["id"]), "achievement id unique " + a["id"])
@@ -872,6 +872,61 @@ func _initialize() -> void:
 	pl.party.members[1].knocked_out = true
 	pl.party.on_floor()
 	check(not pl.party.members[1].knocked_out and pl.party.members[1].hp > 0, "knocked-out companions get back up")
+	# 0.12 roster: a fallen hero loses only their own worn gear; the run fails when all 3 are down
+	var c0: Party.Member = pl.party.members[0]
+	c0.hero.equipped["Helmet"] = GameData.make_item("Helmet", 1, 20, 5)
+	var bound_it := GameData.make_item("Chest", 1, 20, 6)
+	bound_it["bound"] = "soul"
+	c0.hero.equipped["Chest"] = bound_it
+	pl.enemy_attack = 999999
+	pl.enemy_weaken_turns = 0
+	c0.hp = 1
+	pl.party.hit_member(pl, c0)
+	check(c0.knocked_out and not c0.hero.equipped.has("Helmet") and c0.hero.equipped.has("Chest"), "fallen companion loses unbound worn gear only")
+	var c0_saved := GameState.new()
+	c0_saved.slot = c0.slot
+	c0_saved.codex.path = ""
+	c0_saved.load_game()
+	check(not c0_saved.equipped.has("Helmet"), "companion's loss is saved")
+	pl.party.on_floor()
+	pl.equipped["Helmet"] = GameData.make_item("Helmet", 1, 20, 7)
+	pl.gold = 500
+	pl.bag.append(GameData.make_item("Feet", 1, 20, 8))
+	var fl_before := pl.floor_num
+	pl.hero_hp = 0
+	pl._hero_died()
+	check(pl.leader_down and not pl.equipped.has("Helmet"), "leader falls, loses worn gear")
+	check(pl.gold == 500 and pl.bag.size() >= 1 and pl.floor_num == fl_before, "team fights on: gold, bag and floor kept")
+	pl.use_potion()
+	check(pl.hero_hp == 0, "no potions while down")
+	pl.enemy_attack = 1
+	pl.enemy_hp = 1
+	pl.fight = 1
+	pl.take_turn()
+	check(pl.leader_down, "still down after a won fight")
+	pl.next_floor()
+	check(not pl.leader_down and pl.hero_hp > 0, "back up on the next floor")
+	pl.spawn_enemy()
+	pl.hero_hp = 0
+	pl._hero_died()
+	for mem in pl.party.members:
+		mem.hp = 1
+	pl.enemy_hp = 999999999
+	pl.enemy_max_hp = pl.enemy_hp
+	pl.enemy_attack = 999999
+	pl.enemy_stun = 0
+	pl.enemy_frozen = 0
+	pl.gold = 300
+	var wiped := false
+	for _k in 20:
+		pl.take_turn()
+		if not pl.leader_down:
+			wiped = true
+			break
+	check(wiped and pl.gold == 0 and pl.floor_num == GameState.checkpoint_start(pl.floor_num), "all three down: the run fails")
+	check(pl.hero_hp == pl.get_max_hp(), "wake at full HP after a wipe")
+	check(GameData.MAX_HEROES == 9 and GameData.SLOT_UNLOCKS.size() == 9, "roster of 9")
+	check(pl.meta().has("looks"), "save meta keeps looks for town walkers")
 	pl.hardcore = true
 	pl.set_party([2, 3])
 	check(pl.party == null and pl.party_slots.is_empty(), "hardcore fights alone")

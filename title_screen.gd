@@ -240,7 +240,7 @@ func _free_slot() -> int:
 func _locked_text() -> String:
 	var p: Profile = m.profile
 	if p.slots_open() >= GameData.MAX_HEROES:
-		return "All 3 hero slots are in use. Delete one in Heroes to make room."
+		return "All %d hero slots are in use. Delete one in Heroes to make room." % GameData.MAX_HEROES
 	return "Your next hero slot opens when any hero reaches floor %d." % int(GameData.SLOT_UNLOCKS[p.slots_open()])
 
 func _fill_side() -> void:

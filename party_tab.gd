@@ -29,7 +29,7 @@ func refresh() -> void:
 	OnlineUI.clear(box)
 	_pet_card()
 	box.add_child(UI.label("YOUR PARTY", 15, UI.GOLD))
-	var note := UI.label("Up to 2 of your other Regular heroes can fight beside you. They use their own gear, stats and skills, level up with you, and share one skill book. Monsters get tougher with a bigger party and aim mostly at tanks (Warrior, Knight). Fallen companions get back up on the next floor.", 12, UI.DIM)
+	var note := UI.label("Take a team of 3: you plus up to 2 of your other Regular heroes. They use their own gear, stats and skills, level up with you, and share one skill book. Monsters get tougher with a bigger team and aim mostly at tanks (Warrior, Knight). A hero who falls loses only their own worn gear (bound items stay) and gets back up on the next floor. The run fails only when all three are down. Leave gear you love at home, or send a team with nothing to lose.", 12, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(note)
 	if state.hardcore:
@@ -50,7 +50,7 @@ func refresh() -> void:
 		options.append([n, meta])
 	box.add_child(UI.heading("Bring along"))
 	if options.is_empty():
-		var t := UI.label("No other Regular heroes yet. Make more from the title screen: hero slot 2 opens at floor 25 and slot 3 at floor 50.", 12, UI.DIM)
+		var t := UI.label("No other Regular heroes yet. Make more from the title screen: your roster grows to %d heroes as you go deeper (slot 2 opens at floor %d)." % [GameData.MAX_HEROES, int(GameData.SLOT_UNLOCKS[1])], 12, UI.DIM)
 		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(t)
 	for o in options:

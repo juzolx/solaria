@@ -32,6 +32,22 @@ func _initialize() -> void:
 	g.auto_spend()
 	g.hero_hp = g.get_max_hp() / 2
 	g.save_game()
+	# A few more heroes in the roster (they walk around town too)
+	var others := [[2, "Cleric", {"body": "fem", "skin": 3, "hair": "Long", "hair_color": 4, "eyes": 2, "race": "Elf"}, "Lysa"],
+		[3, "Knight", {"body": "masc", "skin": 0, "hair": "Short", "hair_color": 8, "eyes": 1, "race": "Dwarf"}, "Brom"],
+		[4, "Mage", {"body": "fem", "skin": 5, "hair": "Bun", "hair_color": 12, "eyes": 3, "race": "Human"}, "Ivi"]]
+	for o in others:
+		var h := GameState.new()
+		h.slot = int(o[0])
+		h.codex.path = ""
+		h.appearance = o[2]
+		h.hero_name = o[3]
+		h.new_game()
+		h.choose_class(o[1])
+		h.level = 25
+		h.equipped["Chest"] = GameData.make_item("Chest", 3, 30, 100 + int(o[0]))
+		h.equipped["Helmet"] = GameData.make_item("Helmet", 2, 30, 200 + int(o[0]))
+		h.save_game()
 	main = load("res://main.tscn").instantiate()
 	root.add_child(main)
 	await process_frame
@@ -49,6 +65,7 @@ func _initialize() -> void:
 	main.go_to_town()
 	main.refresh()
 	await shot(prefix + "_1_map", 1.0)
+	print("town walkers: ", main.town_view.folk.size(), " heroes: ", main.town_view.folk.filter(func(f): return f.get("hero", false)).size())
 	# take two contracts and finish one
 	Town.refresh_board(st)
 	for c in st.contracts.slice(0, 2):
@@ -82,6 +99,24 @@ func _initialize() -> void:
 	st._make_merchant()
 	MerchantPopup.new().show_for(main)
 	await shot(prefix + "_6_goblin", 0.6)
+	for c in main.get_children():
+		if c is Overlay:
+			c.queue_free()
+	HeroSelect.new().show_for(main)
+	await shot(prefix + "_7_heroes", 0.6)
+	for c in main.get_children():
+		if c is Overlay:
+			c.queue_free()
+	st.set_party([2, 3])
+	main.refresh()
+	await shot(prefix + "_8_team", 0.6)
+	st.enemy_hp = 99999999
+	st.enemy_max_hp = st.enemy_hp
+	st.hero_hp = 0
+	st._hero_died()
+	main.refresh()
+	await shot(prefix + "_9_down", 1.2)
+	print("leader down: ", st.leader_down)
 	print("went to floor ", st.floor_num)
 	print("town shots ok, in_town=", st.in_town)
 	GameState.delete_saves()

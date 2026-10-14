@@ -19,6 +19,8 @@ const NOTES := [
 		"Snik the goblin trader replaces the wandering merchant. Cheap gear, potions and Return Scrolls, paid with the gold you carry, and he buys your junk. He shows up more often the deeper you go.",
 		"Return Scrolls: tap Town mid-fight to read one and escape home with everything you carry. Without one, tapping Town means you'll head home once the floor is cleared.",
 		"Loot is rarer and means more: a blue is exciting, a purple is a big moment and a Legendary is lucky. Legendaries get likelier the deeper you go, and higher rarities are much stronger than before.",
+		"A roster of 9 heroes: new slots open at floors 10, 25, 50, 100, 150, 250, 350 and 500. Take any 3 Regular heroes down together, and all of them walk around town.",
+		"Team falls: a hero who falls loses only their own worn gear (Soulbound and Account-bound items stay) and gets back up on the next floor. If you fall, your companions fight on. The run fails only when all three are down.",
 	]},
 	{"version": "0.11", "name": "Evolution", "lines": [
 		"The Family Tree is now the Evolution Tree. Classes you haven't reached show as ???, and every evolution has a big moment and teaches a signature skill for a new 4th skill slot.",

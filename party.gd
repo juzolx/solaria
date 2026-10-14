@@ -1,9 +1,10 @@
 class_name Party
 extends RefCounted
 ## Your party: the hero you're playing plus up to 2 of your other Regular
-## heroes as companions. Companions fight with their own gear, stats and
-## skills, earn XP alongside you, and get knocked out (not killed) if they
-## fall; they get back up on the next floor. Monsters get tougher with a
+## heroes as companions (a team of 3 from a roster of up to 9). Companions fight
+## with their own gear, stats and skills and earn XP alongside you. A hero who
+## falls loses only their own worn gear (bound items stay) and gets back up on
+## the next floor; the run fails only when all three are down. Monsters get tougher with a
 ## bigger party, and they aim mostly at tanks.
 ## Hardcore heroes always fight alone.
 
@@ -82,7 +83,7 @@ func atk_mult() -> float:
 
 ## Who the monster swings at: "" = the leader, otherwise a Member.
 func pick_target(leader: GameState) -> Variant:
-	var options: Array = [[null, TANK_WEIGHT if leader.hero_class in TANK_CLASSES else 1.0]]
+	var options: Array = [] if leader.leader_down else [[null, TANK_WEIGHT if leader.hero_class in TANK_CLASSES else 1.0]]
 	for m in living():
 		options.append([m, TANK_WEIGHT if m.is_tank() else 1.0])
 	var total := 0.0
@@ -93,7 +94,7 @@ func pick_target(leader: GameState) -> Variant:
 		roll -= float(o[1])
 		if roll < 0.0:
 			return o[0]
-	return null
+	return null if options.is_empty() else options[-1][0]
 
 ## The monster hits a companion. Returns a log line.
 func hit_member(leader: GameState, m: Member) -> String:
@@ -114,6 +115,12 @@ func hit_member(leader: GameState, m: Member) -> String:
 		m.hp = 0
 		m.knocked_out = true
 		leader.events.append({"type": "party_down", "slot": m.slot})
+		# A hero who falls loses their own worn gear (bound items stay)
+		var lost := g.lose_worn_gear()
+		g.save_game()
+		m.hp = 0
+		if lost > 0:
+			return ". The %s knocks out %s! %s loses their worn gear (%d item%s)" % [leader.enemy_name, m.name, m.name, lost, "" if lost == 1 else "s"]
 		return ". The %s knocks out %s!" % [leader.enemy_name, m.name]
 	return ". The %s hits %s for %d" % [leader.enemy_name, m.name, dmg]
 
@@ -183,7 +190,8 @@ func _use_a_skill(leader: GameState, m: Member) -> String:
 		if heals:
 			var pct := (float(s.get("heal", 0)) + float(s.get("song", {}).get("regen", 0)) * 3.0) * rk * g.heal_mult()
 			_heal(leader, lowest[0], pct)
-			bits.append("heals %s" % ("you" if lowest[0] == null else lowest[0].name))
+			if lowest[0] != null or not leader.leader_down:
+				bits.append("heals %s" % ("you" if lowest[0] == null else lowest[0].name))
 		if s.has("shield"):
 			leader.shield_hp += int(leader.get_max_hp() * float(s["shield"]) * rk / 100.0)
 			bits.append("shields you")
@@ -212,7 +220,7 @@ func _use_a_skill(leader: GameState, m: Member) -> String:
 ## [member or null for the leader, HP fraction] of whoever is hurt the most.
 func _lowest(leader: GameState) -> Array:
 	var best: Variant = null
-	var frac := float(leader.hero_hp) / maxf(1.0, leader.get_max_hp())
+	var frac := 9.0 if leader.leader_down else float(leader.hero_hp) / maxf(1.0, leader.get_max_hp())
 	for m in living():
 		var f := float(m.hp) / maxf(1.0, m.max_hp())
 		if f < frac:
@@ -222,6 +230,8 @@ func _lowest(leader: GameState) -> Array:
 
 func _heal(leader: GameState, who: Variant, pct: float) -> void:
 	if who == null:
+		if leader.leader_down:
+			return   # a fallen leader only gets up on the next floor
 		var amt := int(leader.get_max_hp() * pct / 100.0)
 		leader.hero_hp = mini(leader.get_max_hp(), leader.hero_hp + amt)
 		leader.events.append({"type": "heal", "amount": amt})

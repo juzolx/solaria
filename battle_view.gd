@@ -421,6 +421,12 @@ func play(events: Array[Dictionary]) -> void:
 				_later(delay + 0.05, _enemy_died)
 			"hero_dead":
 				_later(delay, _hero_died)
+			"leader_down":
+				_later(delay, func():
+					_sfx("death")
+					_pose_hero([["hit1", 0.08], ["kneel1", 0.16], ["kneel2", 0.7]])
+					shake = maxf(shake, 8.0)
+					_float("YOU'RE DOWN", _hero_rect().get_center() + Vector2(0, -40), Color("#f87171"), 18))
 			"element":
 				var weak: bool = e["kind"] == "weak"
 				var ec := Color(Combat.ELEMENT_COLORS.get(e["element"], "#ffffff"))
@@ -1374,6 +1380,11 @@ func _draw_hero() -> void:
 	var c := _hero_canvas()
 	var u := _hu()
 	var a := hero_alpha
+	if state.leader_down:
+		# Fallen: kneeling and faded while the team fights on
+		a *= 0.4
+		if hero_seq.is_empty():
+			hero_pose = "kneel2"
 	if hero_art.is_empty():
 		draw_texture_rect(hero_tex, _hero_rect(), false, Color(1, 1, 1, a))
 		return

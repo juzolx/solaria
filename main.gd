@@ -858,12 +858,28 @@ func go_to_town() -> bool:
 	sfx.play("click")
 	return true
 
+var _roster_cache: Array = []
+
+## Every hero in your roster walks around town (the one you play first).
+func _town_heroes() -> void:
+	var looks := state.hero_looks()
+	var key := "%d|%s|%s|%d" % [state.slot, str(state.appearance), str(looks), _roster_cache.size()]
+	town_view.set_heroes([[state.appearance, looks, true]] + _roster_cache, key)
+
 ## Map or fight, town look, plates and the leave button.
 func _sync_town() -> void:
 	var inside := state.in_town
 	if inside != _was_in_town:
 		_was_in_town = inside
 		_apply_nav()
+		_roster_cache = []
+		if inside:
+			# Your other heroes (read once each visit; their saves don't change while you're here)
+			for n in range(1, GameData.MAX_HEROES + 1):
+				if n != state.slot and GameState.has_slot(n):
+					var meta := GameState.slot_meta(n)
+					if not meta.is_empty():
+						_roster_cache.append([meta.get("appearance", {}), meta.get("looks", {}), false])
 	fight_frame.visible = not inside
 	fight_panel.visible = not inside
 	town_frame.visible = inside
@@ -871,6 +887,7 @@ func _sync_town() -> void:
 	if not inside:
 		return
 	town_view.set_look(Town.look(state))
+	_town_heroes()
 	town_leave.text = "Into the dungeon"
 	var mw := Mail.waiting(state)
 	town_mail.text = "✉ Mail (%d)" % mw if mw > 0 else "✉ Mail"
@@ -1204,7 +1221,7 @@ func _refresh_top() -> void:
 
 func _refresh_fight() -> void:
 	potion_button.text = "Potion (%d)" % state.potions
-	potion_button.disabled = state.potions <= 0 or state.hero_hp >= state.get_max_hp()
+	potion_button.disabled = state.potions <= 0 or state.hero_hp >= state.get_max_hp() or state.leader_down
 	auto_potion_button.text = "Auto-heal %s" % ("ON" if state.auto_potion else "OFF")
 	speed_button.text = "Speed %s" % ("2x" if state.fast_mode else "1x")
 	floors_button.disabled = state.best_floor <= 1

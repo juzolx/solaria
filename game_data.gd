@@ -141,8 +141,8 @@ static func can_gamble(item: Dictionary) -> bool:
 # ---------- Loot ----------
 const FAVORED_SLOT_CHANCE := 0.6  # a monster's drop is one of its 2 favorite slots this often
 # ---------- Heroes ----------
-const MAX_HEROES := 3
-const SLOT_UNLOCKS := [0, 25, 50]  # deepest floor any hero has reached to open slot 1, 2, 3
+const MAX_HEROES := 9  # your roster; any 3 Regular heroes go down together
+const SLOT_UNLOCKS := [0, 10, 25, 50, 100, 150, 250, 350, 500]  # deepest floor any hero has reached to open slot 1..9
 const STASH_START := 20
 const STASH_STEP := 5
 const STASH_MAX_LEVEL := 8

@@ -9,7 +9,7 @@ const TEMP_PATH := "user://save.tmp"
 const HC_SAVE_PATH := "user://save_hc.dat"
 const HC_BACKUP_PATH := "user://save_hc.bak"
 const HC_TEMP_PATH := "user://save_hc.tmp"
-const SLOT_PATH := "user://hero_%d.dat"   # one save per hero slot (1-3)
+const SLOT_PATH := "user://hero_%d.dat"   # one save per hero slot (1-9)
 const SLOT_BACKUP := "user://hero_%d.bak"
 const SLOT_TEMP := "user://hero_%d.tmp"
 const BASE_ATTACK := 10
@@ -102,6 +102,7 @@ var quest := {}             # the camp quest board's current job
 var merchant_who := ""      # "" = the wandering merchant, otherwise a race's merchant
 var trial_data := {}
 var party: Party = null      # loaded companions (main sets this up)
+var leader_down := false     # you fell but a companion still stands: they fight on until the floor ends
 var enemy_stun := 0     # Earthshatter
 var enemy_weaken := 1.0 # Frost Nova
 var enemy_weaken_turns := 0
@@ -1383,6 +1384,9 @@ func take_turn() -> void:
 		if path_wait >= GameData.PATH_WAIT_TURNS:
 			choose_path(auto_path())
 		return
+	if leader_down:
+		_down_turn()
+		return
 	codex.add("turns")
 	ClassTree.on_turn(self)
 	if auto_potion and potions > 0 and hero_hp < get_max_hp() * auto_potion_at and not (trial_active and trial_data.get("no_potions", false)):
@@ -1890,6 +1894,7 @@ func _next_floor() -> void:
 	deaths_here = 0
 	Lineage.gain(self, "floor")
 	Lineage.on_floor(self)
+	get_up(Party.REVIVE_HP)
 	if party != null and party.size() > 0:
 		party.on_floor()
 		if autosave:
@@ -1952,6 +1957,13 @@ func _next_floor() -> void:
 			Town.enter(self, true)
 
 func _hero_died() -> void:
+	# With a team, you only go down: the run fails when all three have fallen
+	if not hardcore and not trial_active and party != null and not party.living().is_empty():
+		hero_hp = 0
+		if not leader_down:
+			_leader_falls()
+		return
+	leader_down = false
 	last_death = Combat.recap(self)
 	events.append({"type": "death_recap"})
 	hero_status.clear()
@@ -2010,6 +2022,79 @@ func _hero_died() -> void:
 	spawn_enemy()
 	save_game()
 
+## You fell but your companions still stand. Only your worn gear is lost
+## (bound items stay); they fight on, and you get back up on the next floor.
+func _leader_falls() -> void:
+	leader_down = true
+	hero_hp = 0
+	buffs.clear()
+	shield_hp = 0
+	summon_turns = 0
+	song_turns = 0
+	kill_streak = 0
+	var n := lose_worn_gear()
+	codex.add("falls")
+	events.append({"type": "leader_down"})
+	events.append({"type": "toast", "text": "You're down! Your team fights on."})
+	say("[color=#f87171]You fall![/color] Your companions fight on. You get back up on the next floor.%s" % ((" Your worn gear is lost (%d item%s)." % [n, "" if n == 1 else "s"]) if n > 0 else ""))
+	tip("fall", "In a team, a hero who falls loses only their own worn gear. The run fails when all three are down.")
+
+## A turn while you're down: your companions fight, the monster hits them.
+func _down_turn() -> void:
+	var line := ""
+	if party != null:
+		line = party.act(self).trim_prefix(". ")
+	if enemy_hp <= 0:
+		say(line + ".")
+		_enemy_defeated()
+		return
+	if enemy_goblin:
+		goblin_turns -= 1
+		if goblin_turns <= 0:
+			say("[color=#fbbf24]The treasure goblin escapes with its loot![/color]")
+			events.append({"type": "goblin_escaped"})
+			enemy_goblin = false
+			spawn_enemy()
+			save_game()
+		return
+	line += Combat.boss_turn(self)
+	if enemy_stun > 0 or enemy_frozen > 0:
+		enemy_stun = maxi(0, enemy_stun - 1)
+		enemy_frozen = maxi(0, enemy_frozen - 1)
+		line += ". The %s is stunned!" % enemy_name
+	elif party != null:
+		var target = party.pick_target(self)
+		if target != null:
+			line += party.hit_member(self, target)
+	if enemy_weaken_turns > 0:
+		enemy_weaken_turns -= 1
+	say(line.trim_prefix(". ") + ".")
+	if enemy_hp <= 0:
+		_enemy_defeated()
+	elif party == null or party.living().is_empty():
+		say("[color=#f87171]Your whole team is down.[/color]")
+		_hero_died()
+
+## Back on your feet (a new floor, or home).
+func get_up(frac: float) -> void:
+	if not leader_down:
+		return
+	leader_down = false
+	hero_hp = maxi(1, int(get_max_hp() * frac))
+	say("[color=#4ade80]You get back on your feet.[/color]")
+
+## Takes off and loses every worn item that isn't Soulbound or Account-bound.
+## Returns how many were lost.
+func lose_worn_gear() -> int:
+	var n := 0
+	for slot in equipped.keys():
+		if not is_bound(equipped[slot]):
+			equipped.erase(slot)
+			n += 1
+	if n > 0:
+		bag_version += 1
+	return n
+
 ## The first floor of the 25-floor stretch a floor is in (1, 26, 51...): where you wake after falling.
 static func checkpoint_start(f: int) -> int:
 	return floori((maxi(1, f) - 1) / float(GameData.BOSS_EVERY)) * GameData.BOSS_EVERY + 1
@@ -2044,10 +2129,7 @@ func _death_losses() -> String:
 		else:
 			lost_items += 1
 	bag = kept
-	for slot in equipped.keys():
-		if not is_bound(equipped[slot]):
-			equipped.erase(slot)
-			lost_items += 1
+	lost_items += lose_worn_gear()
 	if lost_items > 0:
 		parts.append("%d item%s" % [lost_items, "" if lost_items == 1 else "s"])
 		bag_version += 1
@@ -2091,6 +2173,9 @@ func retreat() -> void:
 	go_to_floor(floor_num - 1)
 
 func use_potion() -> void:
+	if leader_down:
+		say("You're down. Your companions are fighting for you.")
+		return
 	if potions <= 0:
 		say("You're out of potions.")
 		return
@@ -2928,7 +3013,8 @@ func save_game() -> void:
 func meta() -> Dictionary:
 	return {"name": hero_name, "title": title() if hero_class != "" else "New hero", "class": hero_class, "level": level,
 		"floor": floor_num, "best": best_floor, "hardcore": hardcore, "appearance": appearance.duplicate(),
-		"zone": GameData.zone_for_floor(floor_num)["name"], "date": Time.get_date_string_from_system()}
+		"zone": GameData.zone_for_floor(floor_num)["name"], "date": Time.get_date_string_from_system(),
+		"looks": hero_looks() if hero_class != "" else {}}
 
 ## [save, backup, temp] for this hero's slot.
 func save_paths() -> Array:

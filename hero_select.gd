@@ -1,7 +1,8 @@
 class_name HeroSelect
 extends Overlay
-## Your heroes: up to 3 slots. The 2nd opens when any hero reaches floor 25,
-## the 3rd at floor 50. Play, delete, or make a new hero in an empty slot.
+## Your roster: up to 9 heroes. Slots open as any hero reaches deeper floors
+## (GameData.SLOT_UNLOCKS). Play, delete, or make a new hero in an open slot.
+## Any 3 Regular heroes can go down together (you plus 2 companions).
 
 var m
 var title_screen
@@ -10,14 +11,35 @@ func show_for(main_node, from_title = null) -> void:
 	m = main_node
 	title_screen = from_title
 	open(m, "Your heroes", 860.0)
-	content.add_child(UI.label("Switch heroes any time from Menu > Title screen. Regular heroes share the stash; the Codex is shared by everyone.", 13, UI.DIM))
+	var p: Profile = m.profile
+	var count := 0
+	for n in range(1, GameData.MAX_HEROES + 1):
+		if GameState.has_slot(n):
+			count += 1
+	var note := UI.label("Roster %d / %d  ·  %d slots open. Pick any 3 Regular heroes to go down together from the Party page. Regular heroes share the stash; the Codex is shared by everyone." % [count, GameData.MAX_HEROES, p.slots_open()], 13, UI.DIM)
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(note)
 	var row := HFlowContainer.new()
 	row.add_theme_constant_override("h_separation", 12)
-	row.add_theme_constant_override("v_separation", 12)
+	row.add_theme_constant_override("v_separation", 10)
 	content.add_child(row)
-	var p: Profile = m.profile
+	var shown_empty := false
+	var locked: Array = []
 	for n in range(1, GameData.MAX_HEROES + 1):
-		row.add_child(_card(n, n <= p.slots_open()))
+		var open_slot := n <= p.slots_open()
+		if GameState.has_slot(n):
+			row.add_child(_card(n, true))
+		elif open_slot and not shown_empty:
+			shown_empty = true   # one empty slot is enough to make a hero in
+			row.add_child(_card(n, true))
+		elif not open_slot:
+			locked.append(n)
+	if not locked.is_empty():
+		var n0: int = locked[0]
+		var more := UI.label("Slot %d opens when any hero reaches floor %d.%s" % [n0, int(GameData.SLOT_UNLOCKS[n0 - 1]),
+			(" %d more open deeper down (last at floor %d)." % [locked.size() - 1, int(GameData.SLOT_UNLOCKS[-1])]) if locked.size() > 1 else ""], 12, UI.DIM)
+		more.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		content.add_child(more)
 
 ## One line about a hero for menus: name, level, class, mode and depth.
 static func describe(meta: Dictionary) -> String:
@@ -33,31 +55,38 @@ static func describe(meta: Dictionary) -> String:
 func _card(n: int, open_slot: bool) -> PanelContainer:
 	var meta := GameState.slot_meta(n)
 	var active: bool = m.profile.active_slot == n and not meta.is_empty()
-	var card := UI.panel(UI.INSET, UI.GOLD if active else UI.BORDER, 10, 12, 2 if active else 1)
-	card.custom_minimum_size = Vector2(250, 250)
-	var v := UI.vbox(8)
-	card.add_child(v)
-	v.add_child(UI.label("SLOT %d" % n, 11, UI.DIM))
+	var card := UI.panel(UI.INSET, UI.GOLD if active else UI.BORDER, 10, 10, 2 if active else 1)
+	card.custom_minimum_size = Vector2(minf(400.0, get_viewport().get_visible_rect().size.x - 64.0), 0)
+	var h := UI.hbox(10)
+	card.add_child(h)
 	if meta.is_empty():
-		var msg := "Empty slot" if open_slot else "Locked: any hero must reach floor %d" % int(GameData.SLOT_UNLOCKS[n - 1])
-		var l := UI.label(msg, 14, UI.TEXT if open_slot else UI.DIM)
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		v.add_child(l)
-		var gap := Control.new()
-		gap.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		v.add_child(gap)
+		var v0 := UI.vbox(6)
+		v0.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(v0)
+		v0.add_child(UI.label("SLOT %d" % n, 11, UI.DIM))
+		v0.add_child(UI.label("Empty slot" if open_slot else "Locked", 14, UI.TEXT if open_slot else UI.DIM))
 		var b := UI.primary("New hero", func(): close(); NewHeroPicker.new().show_for(m, n), UI.GREEN)
 		b.disabled = not open_slot
-		b.custom_minimum_size = Vector2(0, 40)
-		v.add_child(b)
+		b.custom_minimum_size = Vector2(120, UI.TAP)
+		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(b)
 		return card
 	var pic := TextureRect.new()
-	pic.texture = Sprites.portrait(meta.get("appearance", {}))
+	pic.texture = Sprites.portrait(meta.get("appearance", {}), meta.get("looks", {}))
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT) * 2
+	pic.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	v.add_child(pic)
+	pic.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	h.add_child(pic)
+	var v := UI.vbox(6)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(v)
+	var top := UI.hbox(6)
+	v.add_child(top)
+	top.add_child(UI.label("SLOT %d" % n, 11, UI.DIM))
+	if m.started and m.state != null and n in m.state.party_slots:
+		top.add_child(UI.chip("IN TEAM", UI.GREEN, 10))
 	var info := UI.rich(13)
 	info.text = describe(meta)
 	v.add_child(info)
@@ -66,6 +95,7 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 	var play := UI.primary("Playing" if (m.started and active) else "Play", func(): _play(n), UI.GOLD)
 	play.disabled = m.started and active
 	play.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	play.custom_minimum_size = Vector2(0, UI.TAP)
 	row.add_child(play)
 	var del := UI.button("Delete", func():
 		m.confirm("Delete %s?" % str(meta.get("name", "this hero")), "This hero, their gear and gold are gone for good. The Codex and the shared stash are kept.", "Delete hero", func():
@@ -78,6 +108,7 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 				title_screen.refresh_menu()
 			HeroSelect.new().show_for(m, title_screen)))
 	del.add_theme_color_override("font_color", UI.RED)
+	del.custom_minimum_size = Vector2(0, UI.TAP)
 	row.add_child(del)
 	return card
 

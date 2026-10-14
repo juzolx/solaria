@@ -80,6 +80,7 @@ const ACHIEVEMENTS := [
 	{"id": "hc50", "name": "Brave", "text": "Reach floor 50 with a Hardcore hero", "key": "hc_floor", "target": 50, "reward": {"gold": 1500}},
 	{"id": "hc100", "name": "Deathless", "text": "Reach floor 100 with a Hardcore hero", "key": "hc_floor", "target": 100, "reward": {"gold": 4000}, "title": "Deathless"},
 	{"id": "party", "name": "Full Party", "text": "Have 3 heroes at once", "key": "heroes", "target": 3, "reward": {"gold": 1000}},
+	{"id": "roster9", "name": "Full Roster", "text": "Have 9 heroes at once", "key": "heroes", "target": 9, "reward": {"gold": 6000}, "title": "Guildmaster"},
 	# Realms, races and hidden classes (0.9)
 	{"id": "f350", "name": "Halfway to Nowhere", "text": "Reach floor 350", "key": "best_floor", "target": 350, "reward": {"gold": 4000}},
 	{"id": "f500", "name": "The Bottom of the World", "text": "Reach floor 500", "key": "best_floor", "target": 500, "reward": {"gold": 8000}, "title": "Rootbreaker"},
@@ -251,6 +252,12 @@ func value(key: String, state: GameState = null) -> int:
 	if key.begins_with("realmdone:"):
 		return Realms.completion(state, key.substr(10)) if state else 0
 	match key:
+		"heroes":
+			var h := 0
+			for n in range(1, GameData.MAX_HEROES + 1):
+				if GameState.has_slot(n):
+					h += 1
+			return h
 		"seen":
 			var n := 0
 			for m in Monsters.all_monsters():

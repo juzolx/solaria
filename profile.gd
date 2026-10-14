@@ -80,7 +80,7 @@ func save() -> void:
 		"shake": shake, "damage_numbers": damage_numbers, "flashes": flashes, "text_size": text_size, "notes_seen": notes_seen, "skill_book": skill_book, "show_recap": show_recap, "colorblind": colorblind, "mail_seen": mail_seen,
 	})
 
-## How many hero slots are open (the 2nd at floor 25, the 3rd at floor 50).
+## How many hero slots are open (GameData.SLOT_UNLOCKS: the 2nd at floor 10, up to the 9th at 500).
 func slots_open() -> int:
 	var n := 0
 	for need in GameData.SLOT_UNLOCKS:
