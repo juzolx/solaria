@@ -362,6 +362,11 @@ func _show_recap() -> void:
 			recap_panel.queue_free())
 	close.custom_minimum_size = Vector2(56, UI.TAP)
 	head.add_child(close)
+	if r.has("woke"):
+		var lost_l := UI.rich(13)
+		lost_l.text = "[color=#f87171]Lost: %s.[/color] [color=%s]You woke at the checkpoint on floor %d. The Bank, Vault and Mailbox are safe.[/color]" % [
+			String(r.get("lost", "")) if String(r.get("lost", "")) != "" else "nothing (you carried nothing in)", UI.hex(UI.DIM), int(r["woke"])]
+		v.add_child(lost_l)
 	var taken: Dictionary = r.get("taken", {})
 	var total := maxf(1.0, float(r.get("total", 0)))
 	var names := {"hits": "its hits", "burning": "burning", "burn": "burns", "poison": "poison", "minions": "minions", "realm": "the realm"}
@@ -835,7 +840,11 @@ func go_to_town() -> bool:
 		return true
 	if not Town.enter(state):
 		var why := Town.blocked(state)
-		if why != "":
+		if why == Town.FLOOR_BLOCK:
+			# Mid-floor: you'll walk home the moment this floor is cleared
+			state.go_home_after = not state.go_home_after
+			toast("Heading home as soon as this floor is cleared." if state.go_home_after else "You'll keep going after this floor.")
+		elif why != "":
 			toast(why)
 		return false
 	sfx.play("click")

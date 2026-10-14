@@ -27,12 +27,11 @@ func show_for(main_node) -> void:
 	if from_town:
 		var quick := UI.hbox(8)
 		content.add_child(quick)
-		var picks: Array = [["Where you left off: %d" % state.floor_num, state.floor_num]]
-		if state.best_floor != state.floor_num:
-			picks.append(["Deepest: %d" % state.best_floor, state.best_floor])
-		var cp := maxi(1, state.checkpoint)
-		if cp != state.floor_num and cp != state.best_floor and cp > 1:
-			picks.append(["Checkpoint: %d" % cp, cp])
+		# Dives start at a checkpoint: floor 1, or just past a boss you've beaten
+		var top := last_start()
+		var picks: Array = [["Last checkpoint: floor %d" % top, top]]
+		if top > 1:
+			picks.append(["From the top: floor 1", 1])
 		for p in picks:
 			var b := UI.primary(String(p[0]), _go.bind(int(p[1])), UI.GOLD)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -55,7 +54,10 @@ func show_for(main_node) -> void:
 		content.add_child(carry_note)
 		_show_carry()
 	var sub := UI.rich(13)
-	sub.text = "[color=%s]Travel to any floor you've reached. Red floors are bosses: go back to farm them for uniques. You're on [color=#e8b14a]floor %d[/color] (%s).[/color]" % [UI.hex(UI.DIM), state.floor_num, GameData.sub_name(state.floor_num)]
+	if from_town:
+		sub.text = "[color=%s]Dives start at a checkpoint: floor 1, or the floor after any boss you've beaten (26, 51, 76...). Bright floors are checkpoints you can start from.[/color]" % UI.hex(UI.DIM)
+	else:
+		sub.text = "[color=%s]Travel to any floor you've reached. Red floors are bosses: go back to farm them for uniques. You're on [color=#e8b14a]floor %d[/color] (%s).[/color]" % [UI.hex(UI.DIM), state.floor_num, GameData.sub_name(state.floor_num)]
 	content.add_child(sub)
 	if World.curses_unlocked(state):
 		var cb := UI.button("Curses (%d on): harder climb, better loot" % state.curses.size(), func(): curses_popup(m))
@@ -119,7 +121,7 @@ func _build() -> void:
 		for f in range(start, start + GameData.SUB_FLOORS):
 			var b := UI.button(str(f), _go.bind(f))
 			b.custom_minimum_size = Vector2(44, 36)
-			b.disabled = f > state.best_floor
+			b.disabled = not _allowed(f)
 			if GameData.is_boss_floor(f):
 				b.add_theme_stylebox_override("normal", UI.style(Color("#3a1414"), UI.RED, 6, 4))
 				b.add_theme_stylebox_override("hover", UI.style(Color("#4d1a1a"), Color("#fca5a5"), 6, 4))
@@ -135,7 +137,7 @@ func _build() -> void:
 	var bosses := UI.hbox(8)
 	rows.add_child(bosses)
 	for f in [first_floor + GameData.MID_BOSS_FLOOR - 1, first_floor + GameData.ZONE_FLOORS - 1]:
-		if f > state.best_floor:
+		if not _allowed(f):
 			continue
 		var b := UI.primary("", _go.bind(f), UI.RED)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -154,7 +156,18 @@ func _update_cooldowns() -> void:
 			b.text = ("Fight %s" % GameData.boss_name(f)) + ("  (resting %ds)" % cd if cd > 0 else "")
 		else:
 			b.text = str(f) if cd <= 0 else "%ds" % cd
-		b.disabled = cd > 0 or f > state.best_floor
+		b.disabled = cd > 0 or not _allowed(f)
+
+## The deepest checkpoint you can start a dive from: just past the last boss you beat.
+func last_start() -> int:
+	return GameState.checkpoint_start(mini(state.best_floor, state.checkpoint + 1))
+
+## Floors you can pick: anywhere you've reached while in the dungeon; from town,
+## only checkpoint floors (1, 26, 51...) up to your last checkpoint.
+func _allowed(f: int) -> bool:
+	if from_town:
+		return f == GameState.checkpoint_start(f) and f <= last_start()
+	return f <= state.best_floor
 
 func _pick_carry(i: int) -> void:
 	state.carry_pick = i

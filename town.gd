@@ -51,19 +51,29 @@ static func look(g: GameState) -> Dictionary:
 # =====================================================================
 
 ## Why you can't go to town right now ("" if you can).
-static func blocked(g: GameState) -> String:
+static func blocked(g: GameState, floor_done := false) -> String:
 	if g.trial_active:
 		return "Finish the trial first."
 	if g.run_over:
 		return "This hero's run is over."
 	if not g.shop_unlocked():
 		return "The town opens once you reach floor %d." % GameData.SHOP_UNLOCK_FLOOR
+	if not g.in_town and not floor_done and not floor_clear(g):
+		return FLOOR_BLOCK
 	return ""
 
-static func enter(g: GameState) -> bool:
+const FLOOR_BLOCK := "You can only head home between floors."
+
+## True when you're between floors: nothing on this floor has been fought yet
+## (you just cleared the last one, woke at a checkpoint, or came down from town).
+static func floor_clear(g: GameState) -> bool:
+	return g.fight == 1 and g.enemy_hp >= g.enemy_max_hp
+
+## floor_done: you just cleared a floor, so the between-floors rule is met.
+static func enter(g: GameState, floor_done := false) -> bool:
 	if g.in_town:
 		return true
-	var why := blocked(g)
+	var why := blocked(g, floor_done)
 	if why != "":
 		g.say(why)
 		return false

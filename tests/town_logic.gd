@@ -77,6 +77,15 @@ func _initialize() -> void:
 	tg.carry_pick = 0
 	Town.leave(tg)
 	check(tg.gold == 0 and tg.bank == 1040, "carry nothing: all gold stays in the Bank")
+	tg.fight = 1
+	tg.enemy_hp = tg.enemy_max_hp
+	check(Town.blocked(tg) == "", "can head home between floors")
+	tg.enemy_hp = maxi(0, tg.enemy_max_hp - 1)
+	check(Town.blocked(tg) == Town.FLOOR_BLOCK, "can't head home mid-fight")
+	tg.go_home_after = true
+	tg.next_floor()
+	check(tg.in_town and not tg.go_home_after, "asked to go home mid-floor: walk home once it's cleared")
+	Town.leave(tg)
 	tg.save_game()
 	var bk := GameState.new()
 	bk.slot = tg.slot

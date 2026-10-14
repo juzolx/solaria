@@ -75,7 +75,7 @@ func _initialize() -> void:
 	await shot(prefix + "_4_pick_floor", 0.6)
 	for c in main.get_children():
 		if c is FloorPicker:
-			c._go(20)
+			c._go(c.last_start())
 	await shot(prefix + "_5_left", 0.6)
 	print("went to floor ", st.floor_num)
 	print("town shots ok, in_town=", st.in_town)

@@ -121,6 +121,7 @@ var _upgrade_cache := {}
 # ---------- Resources ----------
 var gold := 0             # in town: all your money. In the dungeon: only what you carried in (at risk)
 var bank := 0             # gold left safe at home while you're in the dungeon
+var go_home_after := false  # tapped Town mid-floor: head home as soon as this floor is cleared
 var carry_pick := 0       # how much gold you last chose to carry down: 0 none, 1 a quarter, 2 half, 3 all
 var scrap := 0
 var potions := GameData.START_POTIONS
@@ -1926,6 +1927,12 @@ func _next_floor() -> void:
 		_maybe_start_event()
 	World.on_floor(self)
 
+	# You asked to go home during the last floor: now's the time
+	if go_home_after and not in_town:
+		go_home_after = false
+		if Town.blocked(self, true) == "":
+			Town.enter(self, true)
+
 func _hero_died() -> void:
 	last_death = Combat.recap(self)
 	events.append({"type": "death_recap"})
@@ -1974,6 +1981,8 @@ func _hero_died() -> void:
 	# start of this 25-floor stretch. Soulbound and Account-bound items are never lost.
 	var lost := _death_losses()
 	var back := checkpoint_start(floor_num)
+	last_death["lost"] = lost
+	last_death["woke"] = back
 	deaths_here = 0
 	say("[color=#f87171]You fell on floor %d.[/color] You wake at the checkpoint on floor %d.%s" % [floor_num, back, (" Lost: " + lost) if lost != "" else ""])
 	floor_num = back
@@ -2782,6 +2791,7 @@ func save_game() -> void:
 		"gold": gold,
 		"bank": bank,
 		"carry_pick": carry_pick,
+		"go_home_after": go_home_after,
 		"scrap": scrap,
 		"potions": potions,
 		"bag_level": bag_level,
@@ -3030,6 +3040,7 @@ func load_game() -> bool:
 		bank = gold
 		gold = 0
 	carry_pick = int(data.get("carry_pick", 0))
+	go_home_after = bool(data.get("go_home_after", false))
 	checkpoint = int(data.get("checkpoint", 0))
 	curses = data.get("curses", {})
 	pet_on = bool(data.get("pet_on", true))
