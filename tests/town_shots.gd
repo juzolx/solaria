@@ -77,6 +77,11 @@ func _initialize() -> void:
 		if c is FloorPicker:
 			c._go(c.last_start())
 	await shot(prefix + "_5_left", 0.6)
+	st.gold = 4000
+	st.bag.append(GameData.make_item("Chest", 0, 20, st._new_id()))
+	st._make_merchant()
+	MerchantPopup.new().show_for(main)
+	await shot(prefix + "_6_goblin", 0.6)
 	print("went to floor ", st.floor_num)
 	print("town shots ok, in_town=", st.in_town)
 	GameState.delete_saves()

@@ -69,6 +69,17 @@ const FLOOR_BLOCK := "You can only head home between floors."
 static func floor_clear(g: GameState) -> bool:
 	return g.fight == 1 and g.enemy_hp >= g.enemy_max_hp
 
+## Reads a Return Scroll: home right now, even mid-fight. Returns false if you have none.
+static func use_return(g: GameState) -> bool:
+	if g.return_scrolls <= 0 or g.in_town:
+		return false
+	if blocked(g, true) != "":
+		return false
+	g.return_scrolls -= 1
+	g.go_home_after = false
+	g.say("[color=#c4b5fd]You read a Return Scroll.[/color] The dungeon fades away...")
+	return enter(g, true)
+
 ## floor_done: you just cleared a floor, so the between-floors rule is met.
 static func enter(g: GameState, floor_done := false) -> bool:
 	if g.in_town:

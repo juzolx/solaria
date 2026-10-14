@@ -65,6 +65,19 @@ func _initialize() -> void:
 	Profile.delete()
 	tg.hero_hp = 1
 	check(Town.rest(tg) and tg.hero_hp == tg.get_max_hp(), "inn heals fully")
+	# Snik the goblin trader and Return Scrolls
+	Town.leave(tg)
+	tg._make_merchant()
+	var kinds: Array = tg.merchant.map(func(e): return String(e["kind"]) + ":" + String(e.get("id", "")))
+	check("potions:" in kinds and "scroll:return" in kinds and tg.merchant.size() == 5, "Snik sells gear, potions, a Return Scroll and a scroll")
+	tg.bag.append(GameData.make_item("Chest", 0, 10, tg._new_id()))
+	var g0 := tg.gold
+	var junkv := tg.goblin_junk_value()
+	check(junkv > 0 and tg.goblin_buy_junk() == junkv and tg.gold == g0 + junkv and tg.goblin_junk().is_empty(), "Snik buys your junk for carried gold")
+	tg.return_scrolls = 1
+	tg.fight = 2
+	check(Town.blocked(tg) == Town.FLOOR_BLOCK, "can't walk home mid-floor")
+	check(Town.use_return(tg) and tg.in_town and tg.return_scrolls == 0, "a Return Scroll gets you home mid-floor")
 	# Backpacks: only kept once you get them home
 	Town.leave(tg)
 	var cap0 := tg.bag_capacity()

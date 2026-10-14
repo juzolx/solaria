@@ -14,7 +14,8 @@ const NOTES := [
 		"Falling now costs what you carried in: the gold on you, your bag and the gear you wore. You wake at the start of that 25-floor stretch (floor 1, 26, 51...). The Bank, Vault and Mailbox are always safe.",
 		"Dives start at a checkpoint: floor 1, or the floor after any boss you've beaten. You can head home between floors; tap Town mid-floor and you'll walk home as soon as that floor is cleared.",
 		"Beastkin choose a fur color instead of hair.",
-		"The wandering merchant says why you can't buy something (bag full, or how much gold you still need).",
+		"Snik the goblin trader replaces the wandering merchant. Cheap gear, potions and Return Scrolls, paid with the gold you carry, and he buys your junk. He shows up more often the deeper you go.",
+		"Return Scrolls: tap Town mid-fight to read one and escape home with everything you carry. Without one, tapping Town means you'll head home once the floor is cleared.",
 		"Loot is rarer and means more: a blue is exciting, a purple is a big moment and a Legendary is lucky. Legendaries get likelier the deeper you go, and higher rarities are much stronger than before.",
 	]},
 	{"version": "0.11", "name": "Evolution", "lines": [

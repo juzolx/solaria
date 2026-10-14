@@ -214,9 +214,10 @@ func _refresh_wanderer() -> void:
 		return
 	wander_shown = key
 	OnlineUI.clear(wander_box)
-	if state.merchant.is_empty():
+	# Snik only trades down in the dungeon; race merchants still follow you to town
+	if state.merchant.is_empty() or state.merchant_who == "":
 		return
-	wander_box.add_child(UI.heading("Wandering merchant  -  leaves after the next boss"))
+	wander_box.add_child(UI.heading("%s merchant  -  leaves after the next boss" % state.merchant_who))
 	MerchantPopup.rows(main, wander_box, func(): wander_shown = ""; main.refresh())
 
 func refresh() -> void:

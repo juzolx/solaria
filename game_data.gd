@@ -98,7 +98,7 @@ const PATHS := {
 	"treasure": {"name": "Treasure room", "text": "A chest with gold and an item (better odds).", "color": "#fbbf24"},
 	"rest": {"name": "Campfire", "text": "Heal to full, abilities ready, +15% Attack for 20 turns.", "color": "#4ade80"},
 	"elite": {"name": "Elite monster", "text": "The next monster is at least Epic: tougher, with modifiers, and much better loot.", "color": "#f87171"},
-	"merchant": {"name": "Wandering merchant", "text": "Epic and Legendary gear, mystery boxes and rare scrolls.", "color": "#e8b14a"},
+	"merchant": {"name": "Goblin trader", "text": "Snik sells cheap gear, potions and Return Scrolls for the gold you carry, and buys your junk.", "color": "#a3e635"},
 	"shrine": {"name": "Touch the shrine", "text": "Cursed for 40 turns: monsters 30% tougher, but double gold and much better loot.", "color": "#c084fc"},
 	"leave": {"name": "Walk past", "text": "Leave it alone and keep going.", "color": "#cbd5e1"},
 }
@@ -120,7 +120,10 @@ const CURSE_POWER := 1.3
 const CURSE_LOOT := 25
 # ---------- Wandering merchant and scrolls ----------
 const MERCHANT_LEGENDARY_CHANCE := 10.0
-const MERCHANT_PRICE_MULT := 2.5
+const MERCHANT_PRICE_MULT := 0.6   # the goblin trader (and race merchants) sell cheap: 60% of shop price
+const GOBLIN_NAME := "Snik"
+const GOBLIN_JUNK_SHARE := 0.5     # the goblin pays half the sell value for your junk
+const GOBLIN_ROAM_PER_FLOOR := 0.02 # % per floor of depth that a fork has the goblin in it (max 20%)
 const LUCK_TURNS := 60
 const LUCK_BONUS := 20
 const HUNT_SPAWNS := 15

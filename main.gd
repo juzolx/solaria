@@ -840,7 +840,12 @@ func go_to_town() -> bool:
 		return true
 	if not Town.enter(state):
 		var why := Town.blocked(state)
-		if why == Town.FLOOR_BLOCK:
+		if why == Town.FLOOR_BLOCK and state.return_scrolls > 0:
+			confirm("Read a Return Scroll?", "You escape home right now with everything you carry. You have %d." % state.return_scrolls, "Read it", func():
+				if Town.use_return(state):
+					sfx.play("click")
+					refresh())
+		elif why == Town.FLOOR_BLOCK:
 			# Mid-floor: you'll walk home the moment this floor is cleared
 			state.go_home_after = not state.go_home_after
 			toast("Heading home as soon as this floor is cleared." if state.go_home_after else "You'll keep going after this floor.")

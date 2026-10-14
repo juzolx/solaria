@@ -121,6 +121,7 @@ var _upgrade_cache := {}
 # ---------- Resources ----------
 var gold := 0             # in town: all your money. In the dungeon: only what you carried in (at risk)
 var bank := 0             # gold left safe at home while you're in the dungeon
+var return_scrolls := 0    # carried Return Scrolls: escape home any time, even mid-fight
 var go_home_after := false  # tapped Town mid-floor: head home as soon as this floor is cleared
 var carry_pick := 0       # how much gold you last chose to carry down: 0 none, 1 a quarter, 2 half, 3 all
 var scrap := 0
@@ -2809,6 +2810,7 @@ func save_game() -> void:
 		"bank": bank,
 		"carry_pick": carry_pick,
 		"go_home_after": go_home_after,
+		"return_scrolls": return_scrolls,
 		"scrap": scrap,
 		"potions": potions,
 		"bag_level": bag_level,
@@ -3062,6 +3064,7 @@ func load_game() -> bool:
 		gold = 0
 	carry_pick = int(data.get("carry_pick", 0))
 	go_home_after = bool(data.get("go_home_after", false))
+	return_scrolls = int(data.get("return_scrolls", 0))
 	checkpoint = int(data.get("checkpoint", 0))
 	curses = data.get("curses", {})
 	pet_on = bool(data.get("pet_on", true))
@@ -3312,6 +3315,9 @@ func _maybe_offer_path() -> void:
 	var others := ["treasure", "rest", "elite"]
 	others.shuffle()
 	path_offer = ["fight", others[0], others[1]]
+	# Snik the goblin roams the deep: the deeper you are, the likelier he's at a fork
+	if randf() * 100.0 < minf(20.0, floor_num * GameData.GOBLIN_ROAM_PER_FLOOR):
+		path_offer[2] = "merchant"
 	path_wait = 0
 	path_hold = false
 	tip("paths", "A fork in the dungeon! Pick the next room, or it picks Fight on by itself in a few seconds.")
@@ -3461,6 +3467,7 @@ const SCROLLS := {
 	"key": {"name": "Boss Key", "text": "Every boss is ready to fight again right now"},
 	"box": {"name": "Mystery Box", "text": "Epic or Legendary gear, gold or materials"},
 	"tome": {"name": "Tome of Forgetting", "text": "Your next stat respec is free"},
+	"return": {"name": "Return Scroll", "text": "Read it any time, even mid-fight, to escape home with everything you carry"},
 }
 
 func scroll_text(id: String) -> String:
@@ -3474,18 +3481,55 @@ func scroll_text(id: String) -> String:
 func _gold_scale() -> int:
 	return 30 + best_floor * 12
 
+## Snik the goblin trader: cheap gear, potions and a Return Scroll, paid for with
+## the gold you carry. Deeper down his gear gets better.
 func _make_merchant() -> void:
 	merchant = []
 	merchant_who = ""
 	for _i in 2:
-		var r := GameData.LEGENDARY if randf() * 100.0 < GameData.MERCHANT_LEGENDARY_CHANCE else 3
-		var item := GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, best_floor, _new_id())
+		var r := 2
+		if randf() * 100.0 < GameData.MERCHANT_LEGENDARY_CHANCE * GameData.depth_legendary(floor_num):
+			r = GameData.LEGENDARY
+		elif randf() < 0.25 + floor_num / 2000.0:
+			r = 3
+		var item := GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, floor_num, _new_id())
 		merchant.append({"kind": "item", "item": item, "price": price(int(GameData.shop_price(item) * GameData.MERCHANT_PRICE_MULT)), "sold": false})
-	merchant.append({"kind": "scroll", "id": "box", "price": price(_gold_scale() * 8), "sold": false})
-	var scrolls := ["luck", "hunt", "key", "tome"]
+	merchant.append({"kind": "potions", "amount": 3, "price": price(int(potion_cost() * 3 * GameData.MERCHANT_PRICE_MULT)), "sold": false})
+	# Priced for where you are now, like everything else Snik sells
+	var here := 30 + floor_num * 12
+	merchant.append({"kind": "scroll", "id": "return", "price": price(here * 2), "sold": false})
+	var scrolls := ["box", "luck", "hunt", "key", "tome"]
 	scrolls.shuffle()
-	for id in scrolls.slice(0, 2):
-		merchant.append({"kind": "scroll", "id": id, "price": price(_gold_scale() * {"key": 2, "tome": 4}.get(id, 3)), "sold": false})
+	var id: String = scrolls[0]
+	merchant.append({"kind": "scroll", "id": id, "price": price(here * {"box": 5, "key": 2, "tome": 3}.get(id, 2)), "sold": false})
+
+## What Snik would pay for your junk: unlocked Common and Uncommon gear in the bag.
+func goblin_junk() -> Array:
+	var junk: Array = []
+	for it in bag:
+		if int(it["rarity"]) <= 1 and not it.get("locked", false) and not is_bound(it):
+			junk.append(it)
+	return junk
+
+func goblin_junk_value() -> int:
+	var v := 0
+	for it in goblin_junk():
+		v += int(GameData.sell_value(it) * GameData.GOBLIN_JUNK_SHARE)
+	return v
+
+## Sells all your junk to Snik for carried gold. Returns the gold paid.
+func goblin_buy_junk() -> int:
+	var junk := goblin_junk()
+	if junk.is_empty():
+		return 0
+	var paid := goblin_junk_value()
+	for it in junk:
+		bag.erase(it)
+	bag_version += 1
+	_add_gold(paid)
+	say("[color=#a3e635]%s takes your junk[/color] (%d items) for %d gold." % [GameData.GOBLIN_NAME, junk.size(), paid])
+	save_game()
+	return paid
 
 func buy_merchant(i: int) -> bool:
 	if i < 0 or i >= merchant.size():
@@ -3510,6 +3554,9 @@ func buy_merchant(i: int) -> bool:
 		bag_version += 1
 		say("Bought %s from the merchant." % _tag(item))
 		events.append({"type": "loot", "name": GameData.display_name(item), "rarity": int(item["rarity"])})
+	elif m["kind"] == "potions":
+		potions += int(m["amount"])
+		say("Bought %d potions." % int(m["amount"]))
 	else:
 		say(use_scroll(m["id"]))
 	_check_codex()
@@ -3519,6 +3566,10 @@ func buy_merchant(i: int) -> bool:
 ## Uses a scroll (or opens a box) right away. Returns what happened.
 func use_scroll(id: String) -> String:
 	match id:
+		"return":
+			return_scrolls += 1
+			tip("return", "A Return Scroll! Tap Town any time, even mid-fight, to read it and escape home with everything you carry.")
+			return "[color=#c4b5fd]Return Scroll[/color] tucked away (%d). Tap Town to use it." % return_scrolls
 		"luck":
 			luck_turns += GameData.LUCK_TURNS
 			events.append({"type": "buff", "name": "Scroll of Luck"})
