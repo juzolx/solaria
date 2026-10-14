@@ -287,6 +287,9 @@ static func claim(g: GameState, id: int) -> String:
 	for i in g.contracts.size():
 		var c: Dictionary = g.contracts[i]
 		if int(c["id"]) == id and c.get("done", false):
+			if no_room(g, c["reward"]):
+				g.say("Your bag is full. Make room before turning in this bounty.")
+				return ""
 			g.contracts.remove_at(i)
 			var got := give(g, c["reward"])
 			g.codex.add("bounties")
@@ -314,7 +317,11 @@ static func reward_item(g: GameState, slot: String, rarity: int) -> Dictionary:
 			item = GameData.make_item(slot, rarity, g.best_floor, g._new_id())
 	return item
 
-## Hands out {"gold", "item": {"slot", "rarity"}, ...}; items always reach your bag.
+## True when a reward has gear but the bag has no room for it (claims wait until it does).
+static func no_room(g: GameState, r: Dictionary) -> bool:
+	return r.has("item") and g.bag_full()
+
+## Hands out {"gold", "item": {"slot", "rarity"}, ...}; items go to your bag.
 static func give(g: GameState, r: Dictionary) -> String:
 	var plain := r.duplicate()
 	plain.erase("item")
@@ -359,6 +366,9 @@ static func claim_deed(g: GameState, id: String) -> String:
 			a = x
 	if a.is_empty():
 		g.codex.deeds.erase(id)
+		return ""
+	if no_room(g, deed_reward(a)):
+		g.say("Your bag is full. Make room before claiming this reward.")
 		return ""
 	g.codex.deeds.erase(id)
 	g.codex.dirty = true

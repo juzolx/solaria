@@ -923,6 +923,11 @@ func _initialize() -> void:
 	check(Town.claim(tg, int(t_c0["id"])) != "" and tg.bag.size() == t_bag0 + 1 and tg.gold > t_gold0, "contract pays gold and a weapon")
 	check(String(tg.bag[-1]["type"]) == String(tg.class_info().get("look", {}).get("Weapon", "")), "reward weapon fits the class (%s)" % tg.bag[-1]["type"])
 	tg.codex.deeds = ["f25"]
+	var t_saved_bag: Array = tg.bag.duplicate()
+	while not tg.bag_full():
+		tg.bag.append(GameData.make_item("Ring", 0, 1, tg._new_id()))
+	check(Town.claim_deed(tg, "f25") == "" and tg.codex.deeds == ["f25"] and tg.bag.size() == tg.bag_capacity(), "full bag: deed waits, bag never overflows")
+	tg.bag = t_saved_bag
 	check(Town.claim_deed(tg, "f25") != "" and tg.codex.deeds.is_empty(), "deed claimed at the Guild Hall")
 	tg.hero_hp = 1
 	check(Town.rest(tg) and tg.hero_hp == tg.get_max_hp(), "inn heals fully")

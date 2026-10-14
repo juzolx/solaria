@@ -19,7 +19,7 @@ func setup(m) -> void:
 func refresh() -> void:
 	var g: GameState = main.state
 	Town.refresh_board(g)
-	var key := str(g.contracts) + str(g.gold / 50) + str(g.in_town)
+	var key := str(g.contracts) + str(g.gold / 50) + str(g.in_town) + str(g.bag_full())
 	if key == shown:
 		return
 	shown = key
@@ -87,13 +87,16 @@ func _card(c: Dictionary, taken: bool) -> PanelContainer:
 	h.add_child(right)
 	var id := int(c["id"])
 	if done:
-		var b := UI.primary("Turn in", func():
+		var full := Town.no_room(g, c["reward"])
+		var b := UI.primary("Bag full" if full else "Turn in", func():
 			if Town.claim(g, id) != "":
 				main.sfx.play("buy")
 			shown = ""
 			main.refresh(), UI.GREEN)
 		b.custom_minimum_size = Vector2(110, UI.TAP)
-		b.disabled = not g.in_town
+		b.disabled = not g.in_town or full
+		if full:
+			b.tooltip_text = "Sell, salvage or stash something to make room for the reward."
 		right.add_child(b)
 	elif taken:
 		var drop := UI.button("Drop", func():
