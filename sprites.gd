@@ -462,7 +462,8 @@ static func enemy(enemy_name: String, boss: bool) -> Dictionary:
 static func enemy_by_key(key: String) -> Dictionary:
 	if _cache.has("e_" + key):
 		return _cache["e_" + key]
-	if USE_LPC and Lpc.available() and Lpc.MONSTERS.has(key):
+	# Monsters drawn from the Dungeon Crawl tiles (0.13) win over the older LPC-built ones
+	if USE_LPC and Lpc.available() and Lpc.MONSTERS.has(key) and not ResourceLoader.exists("res://art/enemies/%s.png" % key):
 		var built := Lpc.build(Lpc.monster_spec(key))
 		var still: Image = built["still"]
 		var used := still.get_used_rect()

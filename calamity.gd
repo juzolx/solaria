@@ -20,16 +20,16 @@ const ITEM_FLOOR := 2000       # its gear is made as if from this floor
 
 ## [name, art, color, lore, title, pet, unique item slot, unique item name]
 const LIST := [
-	["The Hollow Saint", "gashadokuro", "#e2e8f0", "It walked out of a church that was never built, wearing the bones of everyone who prayed there.", "Saintbreaker", "Hollow Acolyte", "Weapon", "The Last Rite"],
-	["Ashmaw, the Burning Hunger", "hellmaw", "#f97316", "It has eaten seven kingdoms. It is still hungry.", "Ashwalker", "Ember Whelp", "Chest", "Heart of the Hunger"],
-	["Nidhogg, Root-Gnawer", "abyssal_worm", "#65a30d", "It chews at the roots of the world. One day it will finish.", "Rootkeeper", "Root Grub", "Off Hand", "The Gnawed Root"],
-	["The Pale Tide", "umibozu", "#7dd3fc", "When the water goes out and doesn't come back, it is already here.", "Tidebreaker", "Drowned Pup", "Helmet", "Crown of the Low Tide"],
-	["Morrowgrave", "nuckelavee", "#a78bfa", "It rides tomorrow's dead to today's funerals.", "Gravewarden", "Morrow Foal", "Legs", "Tomorrow's Shroud"],
-	["The Thousand-Eyed", "eye_of_judgement", "#fde047", "Every eye has seen you die. Most of them twice.", "Unseen", "Blinking Mote", "Helmet", "The Last Eye"],
-	["Skorvald, the Endless Winter", "wendigo", "#bae6fd", "Spring was a rumor it ate.", "Thawbringer", "Frostling", "Feet", "Treads of the Long Thaw"],
-	["The Weeping Colossus", "slag_golem", "#94a3b8", "It cries molten stone for the city it was built to guard.", "Colossus-Felled", "Pebble Golem", "Off Hand", "The Last Tear"],
-	["Vhal'gor, Eater of Stars", "sky_serpent", "#c084fc", "There were more stars once.", "Starkeeper", "Star Wyrmling", "Weapon", "Vhal'gor's Fang"],
-	["The Last Night", "chimera", "#1e1b4b", "Every night is shorter than the one before it. This one is not.", "Dawnbringer", "Nightling", "Chest", "The Final Dawn"],
+	["The Hollow Saint", "calamity_0", "#e2e8f0", "It walked out of a church that was never built, wearing the bones of everyone who prayed there.", "Saintbreaker", "Hollow Acolyte", "Weapon", "The Last Rite"],
+	["Ashmaw, the Burning Hunger", "calamity_1", "#f97316", "It has eaten seven kingdoms. It is still hungry.", "Ashwalker", "Ember Whelp", "Chest", "Heart of the Hunger"],
+	["Nidhogg, Root-Gnawer", "calamity_2", "#65a30d", "It chews at the roots of the world. One day it will finish.", "Rootkeeper", "Root Grub", "Off Hand", "The Gnawed Root"],
+	["The Pale Tide", "calamity_3", "#7dd3fc", "When the water goes out and doesn't come back, it is already here.", "Tidebreaker", "Drowned Pup", "Helmet", "Crown of the Low Tide"],
+	["Morrowgrave", "calamity_4", "#a78bfa", "It rides tomorrow's dead to today's funerals.", "Gravewarden", "Morrow Foal", "Legs", "Tomorrow's Shroud"],
+	["The Thousand-Eyed", "calamity_5", "#fde047", "Every eye has seen you die. Most of them twice.", "Unseen", "Blinking Mote", "Helmet", "The Last Eye"],
+	["Skorvald, the Endless Winter", "calamity_6", "#bae6fd", "Spring was a rumor it ate.", "Thawbringer", "Frostling", "Feet", "Treads of the Long Thaw"],
+	["The Weeping Colossus", "calamity_7", "#94a3b8", "It cries molten stone for the city it was built to guard.", "Colossus-Felled", "Pebble Golem", "Off Hand", "The Last Tear"],
+	["Vhal'gor, Eater of Stars", "calamity_8", "#c084fc", "There were more stars once.", "Starkeeper", "Star Wyrmling", "Weapon", "Vhal'gor's Fang"],
+	["The Last Night", "calamity_9", "#1e1b4b", "Every night is shorter than the one before it. This one is not.", "Dawnbringer", "Nightling", "Chest", "The Final Dawn"],
 ]
 
 static func region_index(f: int) -> int:
