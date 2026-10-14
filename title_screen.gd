@@ -250,7 +250,7 @@ func _fill_side() -> void:
 		var up := UI.panel(Color("#2a1a2e"), Color("#e8b14a"), 8, 10, 2)
 		side_box.add_child(up)
 		var ut := UI.rich(13)
-		ut.text = "[color=#e8b14a][b]THE DEEP[/b][/color]  [color=%s]v%s[/color]\n1,000 floors, the Bank, a roster of 9 heroes, pets and eggs, Snik the goblin, and something in every region you should never fight." % [UI.hex(UI.DIM), PatchNotes.VERSION]
+		ut.text = "[color=#e8b14a][b]THE HALLS BELOW[/b][/color]  [color=%s]v%s[/color]\nNew dark fantasy monsters, and the dungeon is being rebuilt room by room. Built on The Deep: 1,000 floors, the Bank, 9 heroes, pets and eggs." % [UI.hex(UI.DIM), PatchNotes.VERSION]
 		up.add_child(ut)
 		var pulse := up.create_tween().set_loops()
 		pulse.tween_property(up, "modulate", Color(1.15, 1.1, 0.95), 0.9)

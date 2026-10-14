@@ -3,9 +3,13 @@ extends RefCounted
 ## What changed in each version. Shown on the title screen.
 ## Add the newest version at the top of NOTES.
 
-const VERSION := "0.12"
+const VERSION := "0.13"
 
 const NOTES := [
+	{"version": "0.13", "name": "The Halls Below", "lines": [
+		"Every monster, boss and companion has new dark fantasy art (Dungeon Crawl Stone Soup, CC0).",
+		"Work in progress: more of The Halls Below arrives part by part.",
+	]},
 	{"version": "0.12", "name": "The Deep", "lines": [
 		"The Mailbox: every reward now arrives by mail. Bounties pay the moment you finish them, and deeds pay as soon as you earn them. Collect your letters in town with the Mail button. Mail is always safe, and gear that doesn't fit in your bag waits in its letter.",
 		"News and gifts from the maker arrive in the Mailbox too.",
