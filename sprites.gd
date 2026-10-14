@@ -383,6 +383,17 @@ static func _hero_lpc(app: Dictionary, looks: Dictionary) -> Dictionary:
 		"hand": Vector2(BODY_OFFSET) + Vector2(44, 38), "lpc": built["anims"]}
 
 ## A small picture of an item on its own (for item cards and the collection).
+## Icons for things that aren't gear: potions, elixirs, scrolls, the mystery box,
+## the backpack (art/consumables/<id>.png). Null if there's no picture.
+static func consumable_icon(id: String) -> Texture2D:
+	var key := "c_" + id
+	if _cache.has(key):
+		return _cache[key]
+	var path := "res://art/consumables/%s.png" % id
+	var tex: Texture2D = load(path) if ResourceLoader.exists(path) else null
+	_cache[key] = tex
+	return tex
+
 static func item_icon(item: Dictionary) -> ImageTexture:
 	var lk := gear_look(item)
 	var key := "i" + str(lk)

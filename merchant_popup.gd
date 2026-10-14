@@ -51,10 +51,16 @@ static func rows(main_node, parent: Control, on_change: Callable) -> void:
 			pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			h.add_child(pic)
-		elif e["kind"] == "potions":
-			t.text = "[color=#f472b6][b]%d Health Potions[/b][/color]\nHalf the town price." % int(e["amount"])
 		else:
-			t.text = "[color=#c4b5fd][b]%s[/b][/color]\n%s" % [GameState.SCROLLS[e["id"]]["name"], st.scroll_text(e["id"])]
+			if e["kind"] == "potions":
+				t.text = "[color=#f472b6][b]%d Health Potions[/b][/color]\nCheaper than in town." % int(e["amount"])
+			else:
+				t.text = "[color=#c4b5fd][b]%s[/b][/color]\n%s" % [GameState.SCROLLS[e["id"]]["name"], st.scroll_text(e["id"])]
+			var ic := Sprites.consumable_icon("potion" if e["kind"] == "potions" else String(e["id"]))
+			if ic != null:
+				var cpic := ItemGrid.picture(40)
+				cpic.texture = ic
+				h.add_child(cpic)
 		h.add_child(t)
 		# Say why you can't buy it instead of a button that does nothing
 		var need := int(e["price"]) - st.gold

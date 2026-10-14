@@ -727,6 +727,9 @@ func _build_fight(parent: Control) -> void:
 	buttons.add_theme_constant_override("h_separation", 6)
 	col.add_child(buttons)
 	potion_button = UI.button("", func(): state.use_potion(); refresh())
+	potion_button.icon = Sprites.consumable_icon("potion")
+	potion_button.expand_icon = false
+	potion_button.add_theme_constant_override("icon_max_width", 20)
 	potion_button.tooltip_text = "Heal 40% of your max HP"
 	auto_potion_button = UI.button("", func():
 		state.auto_potion = not state.auto_potion

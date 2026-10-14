@@ -148,7 +148,16 @@ func _supply_card(parent: Control, id: String, title: String, text: String, colo
 	parent.add_child(card)
 	var cv := UI.vbox(4)
 	card.add_child(cv)
-	cv.add_child(UI.label(title, 14, color))
+	var top := UI.hbox(6)
+	cv.add_child(top)
+	var ic := Sprites.consumable_icon(id)
+	if ic != null:
+		var pic := ItemGrid.picture(28)
+		pic.texture = ic
+		top.add_child(pic)
+	var tl := UI.label(title, 14, color)
+	tl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(tl)
 	var lbl := UI.rich(12)
 	lbl.custom_minimum_size = Vector2(0, 32)
 	lbl.text = "[color=%s]%s[/color]" % [UI.hex(UI.DIM), text]

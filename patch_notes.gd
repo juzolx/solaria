@@ -10,6 +10,7 @@ const NOTES := [
 		"The Mailbox: every reward now arrives by mail. Bounties pay the moment you finish them, and deeds pay as soon as you earn them. Collect your letters in town with the Mail button. Mail is always safe, and gear that doesn't fit in your bag waits in its letter.",
 		"News and gifts from the maker arrive in the Mailbox too.",
 		"The Bank: when you head down, choose how much gold to carry (none, a quarter, half or all). The rest stays safe in the Bank, and everything you carry home is banked for you.",
+		"Potions, elixirs, scrolls, the mystery box and backpacks have their own pictures now.",
 		"Backpacks: rare finds in the dungeon (bosses drop them more). Carry one home and your bag grows by 2 slots for good; fall first and it's lost.",
 		"Falling now costs what you carried in: the gold on you, your bag and the gear you wore. You wake at the start of that 25-floor stretch (floor 1, 26, 51...). The Bank, Vault and Mailbox are always safe.",
 		"Dives start at a checkpoint: floor 1, or the floor after any boss you've beaten. You can head home between floors; tap Town mid-floor and you'll walk home as soon as that floor is cleared.",
