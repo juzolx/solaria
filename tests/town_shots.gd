@@ -128,6 +128,22 @@ func _initialize() -> void:
 	main.refresh()
 	await shot(prefix + "_9_down", 1.2)
 	print("leader down: ", st.leader_down)
+	# A Calamity: the choice, the fight, the blackout
+	st.get_up(1.0)
+	st.spawn_enemy()
+	Calamity.appear(st, Calamity.region_index(st.floor_num))
+	main.refresh()
+	await shot(prefix + "_10_calamity", 1.0)
+	for c in main.get_children():
+		if c is Overlay:
+			c.queue_free()
+	Calamity.fight(st)
+	main.timer.stop()   # hold the moment (it would knock everyone out in a turn or two)
+	main.refresh()
+	await shot(prefix + "_11_calamity_fight", 1.5)
+	Calamity.knockout(st)
+	main.refresh()
+	await shot(prefix + "_12_blackout", 2.0)
 	print("went to floor ", st.floor_num)
 	print("town shots ok, in_town=", st.in_town)
 	GameState.delete_saves()

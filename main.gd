@@ -190,6 +190,7 @@ func _start(is_new: bool) -> void:
 		state.new_game()
 		state.say("Your descent begins..." if not state.hardcore else "[color=#f87171]Hardcore: one life. Make it count.[/color]")
 	state.dev_mode = profile.dev_mode
+	state.profile_ref = profile
 	state.path_rooms_on = profile.path_choice != "fight"
 	Mail.sync(state, profile)
 	_share_skill_book()
@@ -949,6 +950,61 @@ func confirm(title: String, text: String, yes_text: String, on_yes: Callable) ->
 		b.custom_minimum_size = Vector2(0, 40)
 		row.add_child(b)
 
+## A Calamity appears: the screen darkens and you choose to fight or run.
+func _show_calamity(e: Dictionary) -> void:
+	sfx.play("boss_intro")
+	var col := Color(String(e.get("color", "#e43b44")))
+	var o := Overlay.new().open(self, "A CALAMITY APPROACHES", 460.0, Color("#e43b44"), false)
+	var nm := UI.label(String(e["name"]), 24, col.lightened(0.2))
+	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	o.content.add_child(nm)
+	o.content.add_child(UI.wrap(String(e["lore"]), 13, UI.DIM))
+	o.content.add_child(UI.wrap("Nothing in this dungeon is stronger. If it beats you, you only pass out: you wake on this floor with everything you carried, and it doesn't count as a death. Running works about half the time.", 13, UI.TEXT))
+	var row := UI.hbox(8)
+	o.content.add_child(row)
+	var run_b := UI.button("Run", func():
+		o.close()
+		Calamity.run(state)
+		refresh())
+	var fight_b := UI.primary("Fight", func():
+		o.close()
+		Calamity.fight(state)
+		refresh(), Color("#e43b44"))
+	for b in [run_b, fight_b]:
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size = Vector2(0, 48)
+		row.add_child(b)
+
+## The Calamity won: everything goes black, then you wake up.
+func _blackout(who: String) -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 90
+	add_child(layer)
+	var black := ColorRect.new()
+	black.color = Color(0, 0, 0, 0)
+	black.mouse_filter = Control.MOUSE_FILTER_STOP
+	black.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(black)
+	var txt := UI.label("Everything goes black...", 18, Color("#94a3b8"))
+	txt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	txt.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	txt.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	txt.modulate.a = 0.0
+	layer.add_child(txt)
+	timer.stop()
+	var t := create_tween()
+	t.tween_property(black, "color:a", 1.0, 0.6)
+	t.tween_property(txt, "modulate:a", 1.0, 0.5)
+	t.tween_interval(1.6)
+	t.tween_callback(func(): txt.text = "You wake up. %s is gone.\nYou still have everything you carried." % who)
+	t.tween_interval(2.0)
+	t.tween_property(black, "color:a", 0.0, 0.8)
+	t.parallel().tween_property(txt, "modulate:a", 0.0, 0.6)
+	t.tween_callback(func():
+		layer.queue_free()
+		timer.start())
+
 func _show_class_picker() -> void:
 	class_overlay = Overlay.new().open(self, "Choose your class", 920.0, UI.GOLD, false)
 	var sub := UI.label("Your class sets your strengths, your first skills and your look. Any class can use any skill stone, but skills sharing your class's tags hit harder.", 13, UI.DIM)
@@ -1131,6 +1187,10 @@ func _handle_events() -> void:
 					GuideBook.open_book(self, e["id"], true)
 			"merchant":
 				MerchantPopup.new().show_for(self)
+			"calamity":
+				_show_calamity.call_deferred(e)
+			"blackout":
+				_blackout.call_deferred(String(e["name"]))
 			"class_pick":
 				_show_tree_picker.call_deferred()
 			"class_up":

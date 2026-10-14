@@ -1214,7 +1214,13 @@ func _draw() -> void:
 		var art := _enemy_art(boss)
 		var etex: Texture2D = art.get("tex", _enemy_tex(state.enemy_shape, state.enemy_color))
 		var ewhite: Texture2D = art.get("white", _enemy_tex(state.enemy_shape, state.enemy_color, true))
-		if boss:
+		if state.enemy_calamity > 0:
+			# The world dims around it; a slow crimson pulse
+			draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.0, 0.03, 0.45 * enemy_alpha))
+			var cp := 0.18 + 0.1 * sin(bob * 1.6)
+			for i in 3:
+				draw_circle(er.get_center(), er.size.x * (0.5 + 0.12 * i), Color(0.89, 0.23, 0.27, cp * (1.0 - i * 0.3) * enemy_alpha))
+		elif boss:
 			var pulse := 0.10 + 0.05 * sin(bob * 3.0)
 			draw_circle(er.get_center(), er.size.x * 0.55, Color(0.98, 0.75, 0.14, pulse * enemy_alpha))
 		elif (state.enemy_tier > 0 and not Realms.hides_tier(state)) or state.enemy_goblin:
@@ -1244,7 +1250,14 @@ func _draw() -> void:
 		var rank := GameData.zone_rank(state.floor_num)
 		if rank > 0:
 			etint = Color(1.0 - 0.08 * rank, 0.9 - 0.1 * rank, 1.0 - 0.02 * rank, enemy_alpha)
-		draw_texture_rect(ewhite, Rect2(local.position + Vector2(0, -er.size.y / maxf(1.0, (art.get("size", Vector2(64, 64)) as Vector2).y)), local.size), false, Color(_rim_color(), 0.38 * enemy_alpha))
+		if state.enemy_calamity > 0:
+			# A shape of darkness with a burning crimson edge
+			etint = Color(0.16, 0.05, 0.12, enemy_alpha)
+			var glow := Color(0.95, 0.2, 0.25, (0.55 + 0.25 * sin(bob * 2.4)) * enemy_alpha)
+			for off in [Vector2(-2, 0), Vector2(2, 0), Vector2(0, -2), Vector2(0, 2)]:
+				draw_texture_rect(ewhite, Rect2(local.position + off, local.size), false, glow)
+		else:
+			draw_texture_rect(ewhite, Rect2(local.position + Vector2(0, -er.size.y / maxf(1.0, (art.get("size", Vector2(64, 64)) as Vector2).y)), local.size), false, Color(_rim_color(), 0.38 * enemy_alpha))
 		draw_texture_rect(etex, local, false, etint)
 		if enemy_flash > 0.0:
 			draw_texture_rect(ewhite, local, false, Color(1, 1, 1, enemy_flash * 0.85 * enemy_alpha))
@@ -1259,6 +1272,9 @@ func _draw() -> void:
 		if veiled:
 			name_color = Color("#f9a8d4")
 			label = "??? " + state.enemy_name
+		elif state.enemy_calamity > 0:
+			label = "CALAMITY: " + state.enemy_name
+			name_color = Color("#ff6b6b")
 		elif state.enemy_tier > 0 and not boss:
 			label = "%s %s" % [Monsters.tier_name(state.enemy_tier), state.enemy_name]
 		if state.enemy_goblin:

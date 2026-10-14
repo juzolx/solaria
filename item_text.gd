@@ -28,6 +28,17 @@ static func describe(state: GameState, item: Dictionary) -> String:
 		GameData.item_power(item), item["stat"]]
 	if item.get("locked", false):
 		text += "  [color=#e8b14a](locked)[/color]"
+	match String(item.get("bound", "")):
+		"soul":
+			text += "\n[color=#e43b44]Soulbound:[/color] [color=%s]never lost when you fall. Can't be sold or salvaged; any of your heroes can wear it.[/color]" % dim
+		"account":
+			text += "\n[color=#ffffff]Account-bound[/color][color=%s] to %s: never lost when you fall, and it stays with that hero. It holds a seat in the Hall of Fame.[/color]" % [dim, String(item.get("registered", "its hero"))]
+	var hist: Array = item.get("history", [])
+	if not hist.is_empty():
+		var lines: Array = []
+		for h in hist.slice(-4):
+			lines.append("%s %s (%s)" % [h.get("who", "?"), h.get("what", "held it"), h.get("date", "")])
+		text += "\n[color=%s]History: %s[/color]" % [dim, "; ".join(lines)]
 	if item["effect"] != "":
 		text += "\n[color=#fbbf24]Special: %s[/color]" % GameData.effect_text(item["effect"], int(item["effect_value"]))
 	if String(item.get("effect2", "")) != "":

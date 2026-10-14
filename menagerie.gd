@@ -99,7 +99,7 @@ static func catch_block(g: GameState) -> String:
 		return "Only a tamer can catch monsters"
 	if g.enemy_hp <= 0 or g.hero_hp <= 0 or g.leader_down:
 		return "Not now"
-	if g.enemy_is_boss or g.enemy_goblin or g.horde_left > 0:
+	if g.enemy_calamity > 0 or g.enemy_is_boss or g.enemy_goblin or g.horde_left > 0:
 		return "It won't be caught"
 	if g.enemy_people != "":
 		return "People can't be tamed"

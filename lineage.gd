@@ -345,7 +345,7 @@ static func enemy_attack_mult(g: GameState) -> float:
 
 ## Chance (%) to get away from this fight, or 0 if you can't run.
 static func escape_chance(g: GameState) -> float:
-	if g.enemy_is_boss or g.enemy_hp <= 0 or g.enemy_goblin or g.horde_left > 0:
+	if g.enemy_calamity > 0 or g.enemy_is_boss or g.enemy_hp <= 0 or g.enemy_goblin or g.horde_left > 0:
 		return 0.0
 	var c := Races.ESCAPE_BASE + g.stat("AGI") * Races.ESCAPE_PER_AGI - g.enemy_tier * Races.ESCAPE_PER_TIER
 	if g.enemy_people != "" and Races.rep_index(rep(g, g.enemy_people)) >= 3:
@@ -354,6 +354,8 @@ static func escape_chance(g: GameState) -> float:
 	return clampf(c, Races.ESCAPE_MIN, Races.ESCAPE_MAX + ClassTree.escape_bonus(g) * 0.5)
 
 static func escape_block(g: GameState) -> String:
+	if g.enemy_calamity > 0:
+		return "There's no running now"
 	if g.enemy_is_boss:
 		return "You can't run from a boss"
 	if g.enemy_goblin:
@@ -391,7 +393,7 @@ static func try_escape(g: GameState) -> bool:
 
 ## A beaten monster (under 25% HP) can be let go: it becomes a friend.
 static func can_spare(g: GameState) -> bool:
-	return not g.enemy_is_boss and not g.enemy_goblin and g.enemy_hp > 0 and g.enemy_hp <= g.enemy_max_hp * Races.SPARE_AT and g.horde_left <= 0
+	return g.enemy_calamity == 0 and not g.enemy_is_boss and not g.enemy_goblin and g.enemy_hp > 0 and g.enemy_hp <= g.enemy_max_hp * Races.SPARE_AT and g.horde_left <= 0
 
 static func spare(g: GameState) -> bool:
 	if not can_spare(g):

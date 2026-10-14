@@ -22,6 +22,8 @@ const NOTES := [
 		"A roster of 9 heroes: new slots open at floors 10, 25, 50, 100, 150, 250, 350 and 500. Take any 3 Regular heroes down together, and all of them walk around town.",
 		"Pets: a new Pets tab (Hero > Pets). Ranger, Knight, Mage, Wanderer and Bard keep their class companion. Eggs are rare (mostly from quests) and hatch into a random pet that any hero can keep. Pets are never lost: they come home hurt and rest, or get healed at the new Clinic in town, where they play in the pen.",
 		"Bards can now become something new on the Troubadour road.",
+		"Something walks each 100-floor region that nothing should ever fight. If you meet one, you choose: fight or run. It never counts as a death.",
+		"Soulbound and Account-bound gear: never lost when you fall, and can't be sold. Mythic gear keeps a history of everyone who held it.",
 		"Team falls: a hero who falls loses only their own worn gear (Soulbound and Account-bound items stay) and gets back up on the next floor. If you fall, your companions fight on. The run fails only when all three are down.",
 	]},
 	{"version": "0.11", "name": "Evolution", "lines": [

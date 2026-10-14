@@ -102,6 +102,9 @@ var quest := {}             # the camp quest board's current job
 var merchant_who := ""      # "" = the wandering merchant, otherwise a race's merchant
 var trial_data := {}
 var party: Party = null      # loaded companions (main sets this up)
+var profile_ref: Profile = null  # the account (main sets it); Calamities check it
+var enemy_calamity := 0     # 1-10 while a Calamity is the monster (0 = none)
+var calamity_pending := false  # it just appeared: waiting for you to fight or run
 var leader_down := false     # you fell but a companion still stands: they fight on until the floor ends
 var enemy_stun := 0     # Earthshatter
 var enemy_weaken := 1.0 # Frost Nova
@@ -1243,6 +1246,8 @@ func _frozen_crit() -> bool:
 	return enemy_frozen > 0
 
 func spawn_enemy() -> void:
+	enemy_calamity = 0
+	calamity_pending = false
 	enemy_boss_kind = GameData.boss_kind(floor_num)
 	enemy_is_boss = enemy_boss_kind != ""
 	enemy_tier = 0
@@ -1325,6 +1330,10 @@ func spawn_enemy() -> void:
 		codex.meet(enemy_species)
 	if enemy_tier >= 1:
 		_page("monster_tiers")
+	if Calamity.maybe_appear(self, profile_ref):
+		enemy_weak = []
+		enemy_resist = []
+		return
 	ClassTree.on_fight_start(self)
 	_setup_fight()
 	if pierce_carry > 0:
@@ -1375,6 +1384,8 @@ func enemy_scale() -> float:
 	var s := float(Monsters.TIERS[clampi(enemy_tier, 0, 5)]["scale"])
 	if has_mod("Giant"):
 		s *= 1.12
+	if enemy_calamity > 0:
+		s *= 1.35
 	return s
 
 func take_turn() -> void:
@@ -1387,6 +1398,8 @@ func take_turn() -> void:
 		if path_wait >= GameData.PATH_WAIT_TURNS:
 			choose_path(auto_path())
 		return
+	if calamity_pending:
+		return   # fight or run? (main shows the choice)
 	if leader_down:
 		_down_turn()
 		return
@@ -1676,6 +1689,8 @@ func _give_materials(count: int, zone_i := -1) -> void:
 	tip("materials", "Materials! Use them in the Craft tab to make Set items and bigger bags.")
 
 func _enemy_defeated() -> void:
+	if enemy_calamity > 0:
+		Calamity.on_slain(self, profile_ref)
 	var was_boss := enemy_is_boss
 	var was_goblin := enemy_goblin
 	var tier := enemy_tier
@@ -1963,6 +1978,10 @@ func _next_floor() -> void:
 			Town.enter(self, true)
 
 func _hero_died() -> void:
+	# A Calamity never kills: you pass out and wake with everything
+	if enemy_calamity > 0:
+		Calamity.knockout(self)
+		return
 	# With a team, you only go down: the run fails when all three have fallen
 	if not hardcore and not trial_active and party != null and not party.living().is_empty():
 		hero_hp = 0
@@ -2380,6 +2399,9 @@ func sell(id: int) -> void:
 	if found.is_empty() or found["where"] != "bag":
 		return
 	var item: Dictionary = found["item"]
+	if is_bound(item):
+		say("%s is bound to you. It can't be sold." % _tag(item))
+		return
 	if item.get("locked", false):
 		say("%s is locked. Unlock it first." % _tag(item))
 		return
@@ -2400,6 +2422,9 @@ func salvage(id: int) -> void:
 	if found.is_empty() or found["where"] != "bag":
 		return
 	var item: Dictionary = found["item"]
+	if is_bound(item):
+		say("%s is bound to you. It can't be salvaged." % _tag(item))
+		return
 	if item.get("locked", false):
 		say("%s is locked. Unlock it first." % _tag(item))
 		return
@@ -2492,7 +2517,7 @@ func toggle_lock(id: int) -> void:
 func salvage_all_count(rarity: int) -> int:
 	var n := 0
 	for item in bag:
-		if int(item["rarity"]) == rarity and not item.get("locked", false) and not is_upgrade(item):
+		if int(item["rarity"]) == rarity and not item.get("locked", false) and not is_bound(item) and not is_upgrade(item):
 			n += 1
 	return n
 
@@ -2501,7 +2526,7 @@ func salvage_all(rarity: int) -> void:
 	var count := 0
 	var total := 0
 	for item in bag.duplicate():
-		if int(item["rarity"]) == rarity and not item.get("locked", false) and not is_upgrade(item):
+		if int(item["rarity"]) == rarity and not item.get("locked", false) and not is_bound(item) and not is_upgrade(item):
 			total += GameData.scrap_value(item)
 			bag.erase(item)
 			count += 1
@@ -2625,7 +2650,7 @@ func sell_all(rarity: int) -> void:
 	var count := 0
 	var total := 0
 	for item in bag.duplicate():
-		if int(item["rarity"]) == rarity and not item.get("locked", false) and not is_upgrade(item):
+		if int(item["rarity"]) == rarity and not item.get("locked", false) and not is_bound(item) and not is_upgrade(item):
 			total += sell_price(item)
 			bag.erase(item)
 			count += 1
@@ -3765,6 +3790,9 @@ func to_stash(id: int, stash: Array, capacity: int) -> bool:
 		say("The stash is full.")
 		return false
 	var item: Dictionary = found["item"]
+	if String(item.get("bound", "")) == "account":
+		say("%s is Account-bound to its hero. It stays with them." % _tag(item))
+		return false
 	bag.remove_at(int(found["index"]))
 	stash.append(item)
 	bag_version += 1

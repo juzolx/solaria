@@ -366,7 +366,7 @@ static func reward_item(g: GameState, slot: String, rarity: int) -> Dictionary:
 	var want := String(g.class_info().get("look", {}).get("Weapon", ""))
 	var item := GameData.make_item(slot, rarity, g.best_floor, g._new_id())
 	if slot == "Weapon" and want != "":
-		for i in 16:
+		for i in 64:
 			if String(item.get("type", "")) == want:
 				break
 			item = GameData.make_item(slot, rarity, g.best_floor, g._new_id())

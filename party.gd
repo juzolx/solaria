@@ -115,8 +115,8 @@ func hit_member(leader: GameState, m: Member) -> String:
 		m.hp = 0
 		m.knocked_out = true
 		leader.events.append({"type": "party_down", "slot": m.slot})
-		# A hero who falls loses their own worn gear (bound items stay)
-		var lost := g.lose_worn_gear()
+		# A hero who falls loses their own worn gear (bound items stay). A Calamity only knocks out.
+		var lost := g.lose_worn_gear() if leader.enemy_calamity == 0 else 0
 		g.save_game()
 		m.hp = 0
 		if lost > 0:

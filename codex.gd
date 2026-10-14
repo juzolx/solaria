@@ -144,6 +144,7 @@ var collection := {}    # Unique / Signature / Set item name -> date found
 var achievements := {}  # id -> date unlocked
 var title := ""         # the achievement title you're showing ("" = your class)
 var bounties := {"day": "", "daily": [], "week": "", "weekly": []}
+var extra_titles: Array = []  # titles from feats, not deeds (a slain Calamity)
 var deeds: Array = []   # achievement ids whose rewards wait at the Guild Hall
 var login := {"last": "", "streak": 0}
 var guide := {}         # guide page id -> true (unlocked)
@@ -173,6 +174,7 @@ func _from(d: Dictionary) -> void:
 	login = d.get("login", login)
 	guide = d.get("guide", {})
 	deeds = d.get("deeds", [])
+	extra_titles = d.get("extra_titles", [])
 
 func save() -> void:
 	dirty = false
@@ -182,7 +184,7 @@ func save() -> void:
 	if f == null:
 		return
 	f.store_var({"bestiary": bestiary, "stats": stats, "collection": collection, "achievements": achievements,
-		"title": title, "bounties": bounties, "login": login, "guide": guide, "deeds": deeds})
+		"title": title, "bounties": bounties, "login": login, "guide": guide, "deeds": deeds, "extra_titles": extra_titles})
 
 static func delete() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))
@@ -331,6 +333,9 @@ func titles() -> Array:
 	for a in ACHIEVEMENTS:
 		if achievements.has(a["id"]) and a.has("title"):
 			out.append(a["title"])
+	for t in extra_titles:
+		if not t in out:
+			out.append(t)
 	return out
 
 # =====================================================================

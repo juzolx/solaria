@@ -6,16 +6,18 @@ extends RefCounted
 const SAVE_VERSION := 2
 
 # ---------- Rarities ----------
-const RARITY_NAMES := ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Unique", "Set", "Signature"]
-const RARITY_COLORS := ["#bbbbbb", "#4ade80", "#60a5fa", "#c084fc", "#fb923c", "#fbbf24", "#2dd4bf", "#ff6b9d"]
-const RARITY_MULTS := [1.0, 1.35, 1.85, 2.6, 3.6, 4.0, 3.4, 4.3]
-const SELL_MULTS := [1, 2, 4, 8, 16, 40, 20, 80]
-const SCRAP_VALUES := [1, 2, 4, 8, 16, 40, 20, 80]
+const RARITY_NAMES := ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Unique", "Set", "Signature", "Mythic", "Unique Mythic"]
+const RARITY_COLORS := ["#bbbbbb", "#4ade80", "#60a5fa", "#c084fc", "#fb923c", "#fbbf24", "#2dd4bf", "#ff6b9d", "#e43b44", "#ffffff"]
+const RARITY_MULTS := [1.0, 1.35, 1.85, 2.6, 3.6, 4.0, 3.4, 4.3, 6.0, 7.5]
+const SELL_MULTS := [1, 2, 4, 8, 16, 40, 20, 80, 0, 0]  # Mythics can never be sold
+const SCRAP_VALUES := [1, 2, 4, 8, 16, 40, 20, 80, 0, 0]
 const REROLL_CHANCES := [50, 40, 30, 5]  # % chance to go up a tier, by current rarity (Epic -> Legendary is brutal)
 const LEGENDARY := 4
 const UNIQUE := 5
 const SET_RARITY := 6  # crafted set items
 const SIGNATURE := 7   # a monster's 1-in-1,000 drop
+const MYTHIC := 8      # a Calamity's gear (Soulbound)
+const UNIQUE_MYTHIC := 9  # one per Calamity, Account-bound, holds a Hall of Fame seat
 
 # ---------- Dungeon ----------
 const FIGHTS_PER_FLOOR := 3
@@ -369,7 +371,7 @@ const SOUL_POWER := 0.04
 const SOUL_MAX := 5
 
 static func is_living(item: Dictionary) -> bool:
-	return int(item.get("rarity", 0)) in [LEGENDARY, UNIQUE, SIGNATURE]
+	return int(item.get("rarity", 0)) in [LEGENDARY, UNIQUE, SIGNATURE, MYTHIC, UNIQUE_MYTHIC]
 
 static func soul_level(item: Dictionary) -> int:
 	var k := int(item.get("soul", 0))
@@ -593,7 +595,7 @@ static func make_item(slot: String, rarity: int, floor_num: int, id: int) -> Dic
 		"effect": "",
 		"effect_value": 0,
 	}
-	if rarity == LEGENDARY:
+	if rarity == LEGENDARY or rarity >= MYTHIC:
 		add_legendary_effect(item)
 	return item
 

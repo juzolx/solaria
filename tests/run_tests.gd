@@ -971,6 +971,8 @@ func _initialize() -> void:
 	check(bt.pets_out.size() <= Menagerie.TAMER_OUT, "a tamer brings up to 3")
 	var pet0: Dictionary = bt.pets[0]
 	bt.spawn_enemy()
+	for pp in bt.pets:
+		pp["hurt"] = 0   # a failed catch can knock the tamer out (and send pets home hurt)
 	var pet_hp0 := bt.enemy_hp
 	Menagerie.turn(bt)
 	check(bt.enemy_hp < pet_hp0, "pets fight")
@@ -1005,6 +1007,79 @@ func _initialize() -> void:
 	check(eg2.pets.size() == 1 and eg2.pets_out.size() == 1, "pets are saved")
 	GameState.delete_slot(7)
 	check(Hidden.info("beast_tamer")["need"].any(func(n): return n[1] == "sure_escapes"), "Beast Tamer: 100 sure escapes")
+	# ---------- 0.12 Calamities and bound items ----------
+	var ca := GameState.new()
+	ca.codex.path = ""
+	ca.new_game()
+	ca.choose_class("Warrior")
+	ca.level = 30
+	ca.floor_num = 40
+	ca.spawn_enemy()
+	ca.equipped["Helmet"] = GameData.make_item("Helmet", 2, 40, ca._new_id())
+	ca.gold = 777
+	ca.potions = 5
+	ca.auto_potion = false
+	var deaths0 := ca.codex.stat("deaths")
+	Calamity.appear(ca, Calamity.region_index(ca.floor_num))
+	check(ca.enemy_calamity == 1 and ca.calamity_pending, "a Calamity appears and waits for your choice")
+	var hp_c := ca.enemy_hp
+	ca.take_turn()
+	check(ca.enemy_hp == hp_c, "nothing happens until you choose")
+	check(Lineage.escape_block(ca) != "" and not Lineage.can_spare(ca), "no normal running or sparing")
+	check(ca.enemy_max_hp > 1000000000 and ca.enemy_attack >= ca.get_max_hp(), "Calamities are overwhelming")
+	Calamity.fight(ca)
+	for _k in 20:
+		if ca.enemy_calamity == 0:
+			break
+		ca.take_turn()
+	check(ca.enemy_calamity == 0 and ca.floor_num == 40, "it knocks you out on the same floor")
+	check(ca.gold == 777 and ca.potions == 5 and ca.equipped.has("Helmet"), "a knockout loses nothing")
+	check(ca.codex.stat("deaths") == deaths0 and ca.hero_hp == ca.get_max_hp(), "a knockout isn't a death")
+	var ran := 0
+	var caught_run := 0
+	for _k in 40:
+		Calamity.appear(ca, 0)
+		if Calamity.run(ca):
+			ran += 1
+		else:
+			caught_run += 1
+	check(ran > 5 and caught_run > 5 and ca.enemy_calamity == 0, "running works about half the time (%d/%d)" % [ran, caught_run])
+	Calamity.appear(ca, 0)
+	Calamity.fight(ca)
+	ca.enemy_hp = 1
+	ca.mail = []
+	ca._enemy_defeated()
+	var letter: Dictionary = ca.mail.filter(func(l): return (l["items"] as Array).size() == GameData.SLOT_ORDER.size())[0] if not ca.mail.is_empty() else {}
+	check(not letter.is_empty(), "its gear arrives by mail")
+	var souls := 0
+	var accts := 0
+	for cit in letter.get("items", []):
+		if String(cit.get("bound", "")) == "soul" and int(cit["rarity"]) == GameData.MYTHIC:
+			souls += 1
+		if String(cit.get("bound", "")) == "account" and int(cit["rarity"]) == GameData.UNIQUE_MYTHIC:
+			accts += 1
+	check(souls == GameData.SLOT_ORDER.size() - 1 and accts == 1, "a Mythic set plus one Unique Mythic")
+	check(ca.pets.any(func(pp): return String(pp["from"]) == "calamity"), "a Calamity pet")
+	check(Calamity.info(0)[4] in ca.codex.titles(), "a Calamity title")
+	check(Races.ORDER.all(func(r): return Lineage.rep(ca, r) >= Races.REP_MAX - 0.01), "max friendliness with every race")
+	var cp := Profile.new()
+	cp.calamities = {"0": {"hero": "x"}}
+	check(not Calamity.maybe_appear(ca, cp, true) or Calamity.region_index(ca.floor_num) != 0, "a slain Calamity never returns")
+	ca.floor_num = 50
+	check(not Calamity.maybe_appear(ca, cp, true) and Calamity.region_index(50) == 0, "gone forever in its region")
+	# Bound items: never lost, never sold
+	ca.spawn_enemy()
+	var mythic: Dictionary = letter["items"][1]
+	ca.bag.append(mythic)
+	ca.equipped["Chest"] = letter["items"][3]
+	ca.sell(int(mythic["id"]))
+	check(ca.find_item(int(mythic["id"])).size() > 0, "bound items can't be sold")
+	ca.salvage(int(mythic["id"]))
+	check(ca.find_item(int(mythic["id"])).size() > 0, "or salvaged")
+	ca._death_losses()
+	check(ca.find_item(int(mythic["id"])).size() > 0 and ca.equipped.has("Chest"), "bound items survive death")
+	check(GameData.RARITY_NAMES.size() == 10 and GameData.RARITY_MULTS.size() == 10 and GameData.SELL_MULTS.size() == 10, "Mythic rarities")
+	check(ItemText.describe(ca, mythic).contains("Soulbound") and ItemText.describe(ca, mythic).contains("History"), "items show binding and history")
 	pl.hardcore = true
 	pl.set_party([2, 3])
 	check(pl.party == null and pl.party_slots.is_empty(), "hardcore fights alone")
