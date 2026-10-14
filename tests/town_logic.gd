@@ -65,6 +65,15 @@ func _initialize() -> void:
 	Profile.delete()
 	tg.hero_hp = 1
 	check(Town.rest(tg) and tg.hero_hp == tg.get_max_hp(), "inn heals fully")
+	# Backpacks: only kept once you get them home
+	Town.leave(tg)
+	var cap0 := tg.bag_capacity()
+	tg.packs_carried = 1
+	tg._death_losses()
+	check(tg.packs_carried == 0 and tg.bag_capacity() == cap0, "a backpack is lost if you fall")
+	tg.packs_carried = 2
+	Town.enter(tg)
+	check(tg.packs_carried == 0 and tg.bag_capacity() == cap0 + 2 * GameData.PACK_SLOTS, "backpacks brought home grow the bag")
 	# The Bank: carry a share down, bank it all on the way home
 	tg.gold = 1000
 	tg.bank = 0

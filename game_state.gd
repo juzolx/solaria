@@ -126,6 +126,8 @@ var carry_pick := 0       # how much gold you last chose to carry down: 0 none, 
 var scrap := 0
 var potions := GameData.START_POTIONS
 var bag_level := 0
+var bonus_bag := 0         # backpacks brought home (each adds GameData.PACK_SLOTS slots)
+var packs_carried := 0     # backpacks found this dive: lost if you fall, kept when you get home
 var next_id := 1
 
 # ---------- Settings ----------
@@ -794,7 +796,7 @@ func unique_chance() -> float:
 	return minf(100.0, GameData.UNIQUE_DROP_CHANCE + GameData.UNIQUE_PITY_STEP * bosses_since_unique)
 
 func bag_capacity() -> int:
-	return GameData.BAG_START + bag_level * GameData.BAG_STEP
+	return GameData.BAG_START + bag_level * GameData.BAG_STEP + bonus_bag * GameData.PACK_SLOTS
 
 ## All your gold: what you carry plus what's in the Bank.
 func total_gold() -> int:
@@ -1705,6 +1707,7 @@ func _enemy_defeated() -> void:
 	if was_goblin:
 		gold_gain = (2 + floor_num) * GameData.GOBLIN_GOLD
 	_add_gold(gold_gain)
+	_maybe_find_pack(was_boss)
 
 	# Ability stones: rare, but rarer monsters and bosses drop them more
 	stones_since += 1
@@ -2000,6 +2003,17 @@ static func checkpoint_start(f: int) -> int:
 static func is_bound(item: Dictionary) -> bool:
 	return String(item.get("bound", "")) in ["soul", "account"]
 
+## A rare backpack: it only counts once you carry it home.
+func _maybe_find_pack(was_boss: bool) -> void:
+	if bonus_bag + packs_carried >= GameData.PACK_MAX:
+		return
+	if randf() * 100.0 >= (GameData.PACK_CHANCE_BOSS if was_boss else GameData.PACK_CHANCE):
+		return
+	packs_carried += 1
+	say("[color=#60a5fa]You found a backpack![/color] Carry it home and your bag grows by %d slots for good." % GameData.PACK_SLOTS)
+	events.append({"type": "toast", "text": "A backpack! Get it home to keep it."})
+	tip("pack", "Backpacks only count once you bring them home. Fall before then and it's lost.")
+
 ## Takes away what a fallen hero carried: gold on you, the bag and worn gear
 ## (bound items stay). Returns a short description of the losses ("" if none).
 func _death_losses() -> String:
@@ -2022,6 +2036,9 @@ func _death_losses() -> String:
 	if lost_items > 0:
 		parts.append("%d item%s" % [lost_items, "" if lost_items == 1 else "s"])
 		bag_version += 1
+	if packs_carried > 0:
+		parts.append("%d backpack%s" % [packs_carried, "" if packs_carried == 1 else "s"])
+		packs_carried = 0
 	hero_hp = mini(hero_hp, get_max_hp())
 	return ", ".join(parts)
 
@@ -2795,6 +2812,8 @@ func save_game() -> void:
 		"scrap": scrap,
 		"potions": potions,
 		"bag_level": bag_level,
+		"bonus_bag": bonus_bag,
+		"packs_carried": packs_carried,
 		"next_id": next_id,
 		"auto_potion": auto_potion,
 		"autoplay": autoplay,
@@ -2996,6 +3015,8 @@ func load_game() -> bool:
 	scrap = int(data.get("scrap", 0))
 	potions = int(data.get("potions", GameData.START_POTIONS))
 	bag_level = int(data.get("bag_level", 0))
+	bonus_bag = int(data.get("bonus_bag", 0))
+	packs_carried = int(data.get("packs_carried", 0))
 	next_id = int(data.get("next_id", 1))
 	auto_potion = bool(data.get("auto_potion", true))
 	autoplay = bool(data.get("autoplay", true))

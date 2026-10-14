@@ -56,6 +56,11 @@ const ENEMY_GROWTH := 1.025  # enemies get 2.5% stronger per floor on top of nor
 const BAG_START := 10
 const BAG_STEP := 3
 const BAG_MAX_LEVEL := 20
+# Backpacks: rare dungeon finds. Carry one home and your bag grows for good.
+const PACK_SLOTS := 2               # slots each backpack adds
+const PACK_MAX := 10                # most backpacks that count
+const PACK_CHANCE := 0.15           # % per kill
+const PACK_CHANCE_BOSS := 4.0       # % per boss
 const BAG_BASE_COST := 10.0
 const BAG_COST_GROWTH := 1.5
 

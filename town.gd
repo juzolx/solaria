@@ -82,6 +82,12 @@ static func enter(g: GameState, floor_done := false) -> bool:
 	var carried := g.gold
 	g.gold += g.bank
 	g.bank = 0
+	# Backpacks you got home are yours for good
+	if g.packs_carried > 0:
+		g.bonus_bag = mini(GameData.PACK_MAX, g.bonus_bag + g.packs_carried)
+		g.say("[color=#60a5fa]You brought %d backpack%s home.[/color] Your bag now holds %d." % [g.packs_carried, "" if g.packs_carried == 1 else "s", g.bag_capacity()])
+		g.packs_carried = 0
+		g.bag_version += 1
 	g.path_offer.clear()
 	g.buffs.clear()
 	g.hero_status.clear()

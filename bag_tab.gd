@@ -204,6 +204,8 @@ func _sorted_items() -> Array:
 
 func refresh() -> void:
 	title.text = "BAG  %d / %d" % [state.bag.size(), state.bag_capacity()]
+	if state.packs_carried > 0:
+		title.text += "   +%d backpack%s to bring home" % [state.packs_carried, "" if state.packs_carried == 1 else "s"]
 	title.add_theme_color_override("font_color", UI.RED if state.bag_full() else UI.TEXT)
 	var salvage_names := ["Off", "Commons", "Uncommon and below", "Rare and below", "Epic and below"]
 	auto_salvage_button.text = "Auto-salvage new drops: %s" % salvage_names[state.auto_salvage + 1]
