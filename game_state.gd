@@ -2399,6 +2399,7 @@ func buy_featured() -> bool:
 	gold -= price
 	var item := featured
 	featured = {}
+	add_to_wardrobe(item)
 	bag.append(item)
 	bag_version += 1
 	shop_version += 1
@@ -2469,6 +2470,7 @@ func buy_shop(index: int) -> bool:
 	gold -= price
 	shop.remove_at(index)
 	shop_version += 1
+	add_to_wardrobe(item)
 	bag.append(item)
 	bag_version += 1
 	say("Bought %s for %d gold." % [_tag(item), price])
@@ -2718,6 +2720,8 @@ func craft_gear(slot: String) -> void:
 		return
 	scrap -= GameData.CRAFT_GEAR_SCRAP
 	var item := GameData.make_item(slot, GameData.roll_rarity(GameData.CRAFT_RARITY_BONUS, GameData.LEGENDARY_CHANCE_CRAFT), best_floor, _new_id())
+	add_to_wardrobe(item)
+	codex.found_item(item)
 	bag.append(item)
 	bag_version += 1
 	say("Crafted %s (+%d %s)." % [_tag(item), GameData.item_power(item), item["stat"]])
