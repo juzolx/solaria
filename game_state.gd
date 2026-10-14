@@ -162,6 +162,8 @@ var path_hold := false  # "Wait for me": the fork doesn't pick by itself
 var exploring := false     # 0.13: standing in the room between fights (tap a monster, or Auto engages)
 var explore_wait := 0
 var room_count := 0         # rooms entered this run (seeds each room's layout)
+var room_trap := {}         # 0.13: this room's trap {kind, spotted, done, x, y} ({} = none)
+var door_traps: Array = []  # which of the 3 doors are trapped
 var doors: Array = []      # 0.13: what's behind the 3 blank doors of a cleared room (hidden until you walk through)
 
 # ---------- Current enemy ----------
@@ -1637,6 +1639,9 @@ func _basic_attack() -> Dictionary:
 	if Realms.misses(self):
 		events.append({"type": "blink"})
 		return {"line": "Your attack is lost in the mist", "dealt": 0}
+	if hero_status.has("blind") and randf() < Halls.BLIND_MISS:
+		events.append({"type": "blink"})
+		return {"line": "Blinded, you swing at nothing", "dealt": 0}
 	if World.dark_miss(self):
 		events.append({"type": "blink"})
 		return {"line": "You swing at shadows", "dealt": 0}
@@ -3058,6 +3063,10 @@ func save_game() -> void:
 		"floors_since_event": floors_since_event,
 		"horde_left": horde_left,
 		"horde_pack": horde_pack,
+		"doors": doors,
+		"door_traps": door_traps,
+		"room_trap": room_trap,
+		"room_count": room_count,
 		"curse_turns": curse_turns,
 		"luck_turns": luck_turns,
 		"hunt_spawns": hunt_spawns,
@@ -3303,6 +3312,10 @@ func load_game() -> bool:
 	floors_since_event = int(data.get("floors_since_event", 0))
 	horde_left = int(data.get("horde_left", 0))
 	horde_pack = bool(data.get("horde_pack", false))
+	doors = data.get("doors", [])
+	door_traps = data.get("door_traps", [])
+	room_trap = data.get("room_trap", {})
+	room_count = int(data.get("room_count", 0))
 	horde_total = maxi(horde_left, GameData.HORDE_SIZE)
 	curse_turns = int(data.get("curse_turns", 0))
 	luck_turns = int(data.get("luck_turns", 0))
@@ -3582,6 +3595,7 @@ func engage() -> void:
 		return
 	exploring = false
 	explore_wait = 0
+	Halls.on_engage(self)
 	events.append({"type": "engage"})
 
 ## The room is cleared: three blank doors (or straight on if you're heading home).
@@ -3590,6 +3604,10 @@ func _room_cleared(was_boss := false) -> void:
 		_next_floor()
 		return
 	doors = roll_doors(was_boss)
+	door_traps = []
+	for _i in 3:
+		door_traps.append(floor_num >= Halls.TRAP_FROM and randf() * 100.0 < Halls.DOOR_TRAP_CHANCE)
+	Halls.on_doors_shown(self)
 	path_offer = DOOR_KEYS.duplicate()
 	path_wait = 0
 	path_hold = false
@@ -3621,7 +3639,14 @@ func door_pending() -> bool:
 ## Walk through a door: the next floor, and whatever was behind it.
 func _through_door(i: int) -> void:
 	var kind: String = doors[clampi(i, 0, doors.size() - 1)] if not doors.is_empty() else "fight"
+	var trapped: bool = i < door_traps.size() and bool(door_traps[i])
 	doors = []
+	door_traps = []
+	if trapped:
+		if randf() * 100.0 < Halls.spot_chance(self) or Halls.team_sense(self) >= 3:
+			say("[color=#fbbf24]The door is trapped. You ease it open without setting it off.[/color]")
+		else:
+			Halls.trigger(self, Halls.roll_trap())
 	codex.add("doors")
 	room_count += 1
 	_next_floor()
@@ -3629,6 +3654,7 @@ func _through_door(i: int) -> void:
 		return
 	spawn_enemy()
 	_enter_room_pause()
+	Halls.roll_room_trap(self)
 	if kind != "fight":
 		_apply_path(kind)
 
@@ -3644,7 +3670,9 @@ func auto_path() -> String:
 ## Name, text and color of a path choice.
 func path_info(kind: String) -> Dictionary:
 	if kind in DOOR_KEYS:
-		return {"name": DOOR_NAMES[DOOR_KEYS.find(kind)], "text": "A blank door. Who knows what's behind it.", "color": "#94a3b8"}
+		var rd := Halls.read_door(self, DOOR_KEYS.find(kind))
+		return {"name": DOOR_NAMES[DOOR_KEYS.find(kind)] + ((": " + String(rd["label"])) if String(rd["label"]) not in ["", "?"] else ""),
+			"text": rd["text"], "color": rd["color"] if String(rd["color"]) != "" else "#94a3b8"}
 	if kind.begins_with("cenc_"):
 		return ClassTree.path_info(kind, self)
 	if World.EVENT_PATHS.has(kind):

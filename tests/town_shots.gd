@@ -156,12 +156,20 @@ func _initialize() -> void:
 		st.horde_left = 0
 		st.spawn_enemy()
 		st.exploring = true
+		st.room_trap = {"kind": "spikes", "spotted": true, "done": false, "x": 0.45, "y": 0.55} if f == 60 else {}
 		main.refresh()
 		await shot(prefix + "_14_room_%d" % f, 1.6)
 	st.exploring = false
 	st._room_cleared()
 	main.refresh()
 	await shot(prefix + "_15_doors", 1.6)
+	# A seasoned Ranger reads the doors
+	var cls := st.hero_class
+	st.hero_class = "Ranger"
+	st.ctrack["doors_read"] = 100
+	main.refresh()
+	await shot(prefix + "_16_doors_read", 0.8)
+	st.hero_class = cls
 	print("went to floor ", st.floor_num)
 	print("town shots ok, in_town=", st.in_town)
 	GameState.delete_saves()

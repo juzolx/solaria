@@ -337,6 +337,7 @@ const BRANCHES := [
 	# ----- Ranger -----
 	["Hunter", "Trapper", "Snare", "atk:.5 execute:.5", [["kill_beast", 500]], "Kill 500 beasts", false],
 	["Hunter", "Bounty Hunter", "Bounty", "gold_find:.5 atk:.5", [["quests", 50]], "Finish 50 realm quests", false],
+	["Hunter", "Wayfinder", "Paths", "scout:.6 dodge:.4", [["doors_read", 150]], "Read 150 dungeon doors", false],
 	["Warden", "Forest Ward", "Ward", "hp:.5 thorns:.5", [["live:rep_honored:Beastkin", 1], ["live:rep_honored:Elf", 1]], "Reach Honored with the Beastkin and the Elves", false],
 	["Warden", "Elfsworn", "Leafsong", "regen:.5 crit:.5", [["live:world_tree", 1]], "Receive the World Tree's Blessing", false],
 	["Beastmaster", "Packmind", "Instinct", "double_strike:.6 hp:.4", [["kill_rare_beast", 100]], "Kill 100 elite beasts", false],

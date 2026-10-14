@@ -173,12 +173,20 @@ func _draw() -> void:
 		if dt:
 			draw_texture_rect(dt, rect, false)
 		if doors_open:
+			# A door reader on the team senses what's behind: a glow, later the room itself
+			var rd := Halls.read_door(state, i)
+			var col := Color(String(rd["color"])) if String(rd["color"]) != "" else Color(1.0, 0.85, 0.45)
 			var pulse := 0.45 + 0.35 * sin(t * 3.0 + i)
-			draw_rect(rect.grow(2), Color(1.0, 0.85, 0.45, pulse), false, 2.0)
+			if String(rd["color"]) != "":
+				draw_circle(rect.get_center(), px * 0.75, Color(col, 0.18 + 0.1 * sin(t * 2.0 + i)))
+			draw_rect(rect.grow(2), Color(col, pulse), false, 2.0)
 			hit["d%d" % i] = rect.grow(10)
 			var font := get_theme_default_font()
-			draw_string_outline(font, rect.position + Vector2(0, px + 16), "?", HORIZONTAL_ALIGNMENT_CENTER, px, 18, 4, Color(0, 0, 0, 0.9))
-			draw_string(font, rect.position + Vector2(0, px + 16), "?", HORIZONTAL_ALIGNMENT_CENTER, px, 18, Color("#f6d88f"))
+			var lab := String(rd["label"]) if String(rd["label"]) != "" else ""
+			var fs := 18 if lab == "?" else 11
+			if lab != "":
+				draw_string_outline(font, rect.position + Vector2(-20, px + 16), lab, HORIZONTAL_ALIGNMENT_CENTER, px + 40, fs, 4, Color(0, 0, 0, 0.9))
+				draw_string(font, rect.position + Vector2(-20, px + 16), lab, HORIZONTAL_ALIGNMENT_CENTER, px + 40, fs, col.lightened(0.3))
 	# Props (with a little shadow)
 	for r in rows:
 		for c in cols:
@@ -193,6 +201,15 @@ func _draw() -> void:
 		var tt := _tx("res://art/dungeon/torch.png")
 		if tt:
 			draw_texture_rect(tt, rect, false)
+	# A trap you've spotted (hidden ones stay hidden)
+	var tr: Dictionary = state.room_trap
+	if not tr.is_empty() and tr.get("spotted", false) and not tr.get("done", false) and not doors_open:
+		var tt2 := _tx("res://art/dungeon/trap_%s.png" % String(tr["kind"]))
+		var tp := origin + Vector2(cols * float(tr["x"]), rows * float(tr["y"])) * px
+		var trr := Rect2(tp - Vector2(px / 2.0, px / 2.0), Vector2(px, px))
+		if tt2:
+			draw_texture_rect(tt2, trr, false)
+		draw_rect(trr.grow(2), Color(1, 0.75, 0.2, 0.5 + 0.3 * sin(t * 5.0)), false, 2.0)
 	# Monsters still in the room
 	if not doors_open and not state.in_town:
 		var left := 1 if state.enemy_is_boss else maxi(1, GameData.FIGHTS_PER_FLOOR - state.fight + 1)

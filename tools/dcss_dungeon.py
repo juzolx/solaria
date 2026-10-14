@@ -25,7 +25,9 @@ THEMES = [
 PROPS = {"door_closed": "doors/closed_door", "door_open": "doors/open_door", "door_runed": "doors/runed_door",
          "chest": "chest_2_closed", "chest_open": "chest_2_open", "boulder": "boulder", "fountain": "blue_fountain",
          "blood_fountain": "blood_fountain", "sarcophagus": "sarcophagus_open", "box": "large_box",
-         "pillar": "zot_pillar", "torch": "wall/torches/torch_1"}
+         "pillar": "zot_pillar", "torch": "wall/torches/torch_1",
+         "trap_spikes": "traps/trap_spear", "trap_darts": "traps/trap_dart", "trap_flames": "traps/trap_zot",
+         "trap_frost": "traps/trap_magical", "trap_smoke": "traps/gas_trap", "trap_alarm": "traps/trap_alarm"}
 
 def pick(patterns, n=4):
     files = []

@@ -195,6 +195,7 @@ const STATUS_INFO := {
 	"poison": {"name": "Poisoned", "color": "#a3e635"},
 	"burn": {"name": "Burning", "color": "#fb923c"},
 	"chill": {"name": "Chilled", "color": "#7fd0f0"},
+	"blind": {"name": "Blinded", "color": "#9ca3af"},
 }
 
 ## The monster puts a status on you. Wisdom shortens it.
