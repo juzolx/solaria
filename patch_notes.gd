@@ -11,6 +11,7 @@ const NOTES := [
 		"News and gifts from the maker arrive in the Mailbox too.",
 		"Beastkin choose a fur color instead of hair.",
 		"The wandering merchant says why you can't buy something (bag full, or how much gold you still need).",
+		"Loot is rarer and means more: a blue is exciting, a purple is a big moment and a Legendary is lucky. Legendaries get likelier the deeper you go, and higher rarities are much stronger than before.",
 	]},
 	{"version": "0.11", "name": "Evolution", "lines": [
 		"The Family Tree is now the Evolution Tree. Classes you haven't reached show as ???, and every evolution has a big moment and teaches a signature skill for a new 4th skill slot.",

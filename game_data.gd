@@ -8,7 +8,7 @@ const SAVE_VERSION := 2
 # ---------- Rarities ----------
 const RARITY_NAMES := ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Unique", "Set", "Signature"]
 const RARITY_COLORS := ["#bbbbbb", "#4ade80", "#60a5fa", "#c084fc", "#fb923c", "#fbbf24", "#2dd4bf", "#ff6b9d"]
-const RARITY_MULTS := [1.0, 1.3, 1.7, 2.2, 3.0, 3.4, 2.9, 3.7]
+const RARITY_MULTS := [1.0, 1.35, 1.85, 2.6, 3.6, 4.0, 3.4, 4.3]
 const SELL_MULTS := [1, 2, 4, 8, 16, 40, 20, 80]
 const SCRAP_VALUES := [1, 2, 4, 8, 16, 40, 20, 80]
 const REROLL_CHANCES := [50, 40, 30, 5]  # % chance to go up a tier, by current rarity (Epic -> Legendary is brutal)
@@ -20,7 +20,7 @@ const SIGNATURE := 7   # a monster's 1-in-1,000 drop
 # ---------- Dungeon ----------
 const FIGHTS_PER_FLOOR := 3
 const BOSS_LOOT_DROPS := 3
-const BOSS_RARITY_BONUS := 12
+const BOSS_RARITY_BONUS := 8
 const UNIQUE_DROP_CHANCE := 5.0  # % per boss kill to start with...
 const UNIQUE_PITY_STEP := 5.0    # ...plus this much for every boss kill without one
 
@@ -74,7 +74,7 @@ const SHOP_RARITY_BONUS := 5
 const SHOP_PRICE_MULT := 4
 const SHOP_RESTOCK_GOLD := 30
 const MERCHANT_NAME := "Grimble's Wares"
-const FEATURED_LEGENDARY_CHANCE := 10.0  # % the featured deal is Legendary instead of Epic
+const FEATURED_LEGENDARY_CHANCE := 4.0  # % the featured deal is Legendary instead of Epic
 const FEATURED_PRICE_MULT := 3            # on top of the normal shop price
 const GREATER_POTION_GOLD := 90           # heals to full
 # Elixirs: temporary boosts that last a number of turns
@@ -105,16 +105,16 @@ const EVENT_CHANCE_STEP := 20.0 # ...then +20% chance every floor
 const GOBLIN_TURNS := 8         # turns before the treasure goblin escapes
 const GOBLIN_GOLD := 25         # x normal gold
 const GOBLIN_ITEMS := 2
-const GOBLIN_RARITY := 35
+const GOBLIN_RARITY := 20
 const HORDE_SIZE := 5
 const HORDE_HP := 0.5
 const HORDE_CHEST_GOLD := 4
-const HORDE_RARITY := 30
+const HORDE_RARITY := 15
 const CURSE_TURNS := 40
 const CURSE_POWER := 1.3
 const CURSE_LOOT := 25
 # ---------- Wandering merchant and scrolls ----------
-const MERCHANT_LEGENDARY_CHANCE := 30.0
+const MERCHANT_LEGENDARY_CHANCE := 10.0
 const MERCHANT_PRICE_MULT := 2.5
 const LUCK_TURNS := 60
 const LUCK_BONUS := 20
@@ -221,7 +221,7 @@ const INT_COOLDOWN := [40.0, 167.0]  # max % cooldown reduction
 const WIS_HEAL := [60.0, 170.0]      # % stronger heals, potions and song regen
 const WIS_REGEN := [1.5, 200.0]      # % of max HP healed every turn
 const WIS_RESIST := [60.0, 170.0]    # % less from burns, poison, chill and curses
-const LUK_LOOT := [25.0, 170.0]      # rarity bonus on drops
+const LUK_LOOT := [12.0, 170.0]      # rarity bonus on drops
 const LUK_GOLD := [60.0, 170.0]      # % more gold
 const LUK_CRIT_DMG := [60.0, 170.0]  # % more crit damage (crits do 2x + this)
 const LUK_EVENTS := [60.0, 170.0]    # % better odds of events, encounters and signature drops
@@ -518,26 +518,43 @@ static func color_of(rarity: int) -> String:
 	return RARITY_COLORS[rarity]
 
 ## Legendary is rolled on its own tiny chance; the bonus only improves Common..Epic odds.
+# Base chance (%) of each rarity per drop, before bonuses. Base luck is bad on
+# purpose: luck, gambling, crafting and deeper floors are how you beat it.
+# A blue is exciting, a purple is crazy, a Legendary is lucky.
+const EPIC_BASE := 0.4
+const RARE_BASE := 2.5
+const UNCOMMON_BASE := 22.0
+
+## Chances (%) of Uncommon, Rare and Epic with a rarity bonus. Bonuses multiply:
+## +10 doubles Rare and Epic odds, +20 triples them.
+static func rarity_chances(bonus: int) -> Array:
+	var m := maxf(0.0, 1.0 + bonus / 10.0)
+	return [minf(60.0, UNCOMMON_BASE * (1.0 + bonus / 20.0)), minf(30.0, RARE_BASE * m), minf(15.0, EPIC_BASE * m)]
+
 static func roll_rarity(bonus: int, legendary_chance: float) -> int:
 	if randf() * 100.0 < legendary_chance:
 		return LEGENDARY
-	var roll := randi_range(1, 100) + bonus
-	if roll > 90:
+	var c := rarity_chances(bonus)
+	var roll := randf() * 100.0
+	if roll < float(c[2]):
 		return 3
-	if roll > 75:
+	if roll < float(c[2]) + float(c[1]):
 		return 2
-	if roll > 50:
+	if roll < float(c[2]) + float(c[1]) + float(c[0]):
 		return 1
 	return 0
+
+## Legendaries get likelier the deeper you are: rare early, normal by floor 200,
+## twice as common at floor 400 and below.
+static func depth_legendary(floor_num: int) -> float:
+	return clampf(floor_num / 200.0, 0.1, 2.0)
 
 ## The real chance (%) of each rarity Common..Legendary for one drop (for the Bestiary).
 static func rarity_odds(bonus: int, legendary_chance: float) -> Array:
 	var rest := 1.0 - legendary_chance / 100.0
-	var epic := clampi(10 + bonus, 0, 100)
-	var rare := clampi(25 + bonus, 0, 100) - epic
-	var unc := clampi(50 + bonus, 0, 100) - epic - rare
-	var com := 100 - epic - rare - unc
-	return [com * rest, unc * rest, rare * rest, epic * rest, legendary_chance]
+	var c := rarity_chances(bonus)
+	var com := 100.0 - float(c[0]) - float(c[1]) - float(c[2])
+	return [com * rest, float(c[0]) * rest, float(c[1]) * rest, float(c[2]) * rest, legendary_chance]
 
 static func base_bonus(slot: String, floor_num: int) -> float:
 	var info: Dictionary = SLOT_INFO[slot]

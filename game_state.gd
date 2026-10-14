@@ -1006,7 +1006,7 @@ func use_skill(id: String) -> bool:
 		_add_gold(g)
 		parts.append("stole %d gold" % g)
 		if randf() < 0.1:
-			_give_item(GameData.make_item(_drop_slot(enemy_species), GameData.roll_rarity(_loot_bonus(), GameData.LEGENDARY_CHANCE_NORMAL), floor_num, _new_id()))
+			_give_item(GameData.make_item(_drop_slot(enemy_species), _rarity(_loot_bonus(), GameData.LEGENDARY_CHANCE_NORMAL), floor_num, _new_id()))
 	if s.get("reset", false):
 		for other in skill_cds:
 			if other != id:
@@ -1621,6 +1621,10 @@ func _basic_attack() -> Dictionary:
 	return {"line": line, "dealt": total_dmg}
 
 ## Loot rarity bonus right now (events, scrolls, the shrine's curse).
+## A rarity roll for loot found down here: legendaries scale with depth.
+func _rarity(bonus: int, legendary_chance: float) -> int:
+	return GameData.roll_rarity(bonus, legendary_chance * GameData.depth_legendary(floor_num))
+
 func _loot_bonus() -> int:
 	var b := int(GameData.event_bonus("rarity", 0.0)) + int(dim("LUK", GameData.LUK_LOOT))
 	if luck_turns > 0:
@@ -1717,7 +1721,7 @@ func _enemy_defeated() -> void:
 		_give_materials(randi_range(GameData.BOSS_MATERIAL_DROP[0], GameData.BOSS_MATERIAL_DROP[1]))
 		for _i in GameData.BOSS_LOOT_DROPS:
 			var slot: String = GameData.SLOT_ORDER.pick_random()
-			_give_item(GameData.make_item(slot, GameData.roll_rarity(GameData.BOSS_RARITY_BONUS + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS), floor_num, _new_id()))
+			_give_item(GameData.make_item(slot, _rarity(GameData.BOSS_RARITY_BONUS + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS), floor_num, _new_id()))
 		if randf() * 100.0 < unique_chance():
 			var uniques: Array = GameData.boss_for_floor(floor_num)["uniques"]
 			var def: Dictionary = uniques.pick_random()
@@ -1737,7 +1741,7 @@ func _enemy_defeated() -> void:
 	elif was_goblin:
 		say("[color=#fbbf24]You caught the treasure goblin![/color] +%d gold" % gold_gain)
 		for _i in GameData.GOBLIN_ITEMS:
-			var r := maxi(2, GameData.roll_rarity(GameData.GOBLIN_RARITY + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS))
+			var r := maxi(2, _rarity(GameData.GOBLIN_RARITY + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS))
 			_give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, floor_num, _new_id()))
 		_give_materials(randi_range(1, 2))
 		codex.add("goblins")
@@ -1749,14 +1753,14 @@ func _enemy_defeated() -> void:
 		var drops := 1 + int(t["extra"])
 		var leg := GameData.LEGENDARY_CHANCE_NORMAL if tier < Monsters.EPIC else GameData.LEGENDARY_CHANCE_BOSS
 		for i in drops:
-			var r := GameData.roll_rarity(int(t["loot"]) + _loot_bonus(), leg)
+			var r := _rarity(int(t["loot"]) + _loot_bonus(), leg)
 			if i > 0:
-				r = maxi(r, 2)
+				r = maxi(r, 1)
 			_give_item(GameData.make_item(_drop_slot(species), r, floor_num, _new_id()))
 		if party != null:
 			for _m in party.size():
 				if randf() < Party.LOOT_PER_MEMBER:
-					_give_item(GameData.make_item(_drop_slot(species), GameData.roll_rarity(int(t["loot"]) + _loot_bonus(), leg), floor_num, _new_id()))
+					_give_item(GameData.make_item(_drop_slot(species), _rarity(int(t["loot"]) + _loot_bonus(), leg), floor_num, _new_id()))
 		var mats: Array = t["mats"]
 		if int(mats[1]) > 0:
 			_give_materials(randi_range(int(mats[0]), int(mats[1])))
@@ -1845,7 +1849,7 @@ func _finish_horde() -> void:
 	var g := (5 + floor_num * 6) * GameData.HORDE_CHEST_GOLD
 	_add_gold(g)
 	say("[color=#fbbf24]The horde is beaten! You find their chest.[/color] +%d gold" % g)
-	var r := maxi(2, GameData.roll_rarity(GameData.HORDE_RARITY + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS))
+	var r := maxi(2, _rarity(GameData.HORDE_RARITY + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS))
 	_give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, floor_num, _new_id()))
 	_give_materials(randi_range(1, 2))
 	codex.add("hordes")
@@ -2379,7 +2383,7 @@ func restock_shop() -> void:
 	shop.clear()
 	for _i in GameData.SHOP_SIZE:
 		var slot: String = GameData.SLOT_ORDER.pick_random()
-		shop.append(Town.local_goods(self, GameData.make_item(slot, GameData.roll_rarity(GameData.SHOP_RARITY_BONUS, GameData.LEGENDARY_CHANCE_SHOP), best_floor, _new_id())))
+		shop.append(Town.local_goods(self, GameData.make_item(slot, _rarity(GameData.SHOP_RARITY_BONUS, GameData.LEGENDARY_CHANCE_SHOP), best_floor, _new_id())))
 	shop_zone = GameData.zone_index(maxi(1, floor_num))
 	shop_version += 1
 
@@ -2719,7 +2723,7 @@ func craft_gear(slot: String) -> void:
 		say("Your bag is full.")
 		return
 	scrap -= GameData.CRAFT_GEAR_SCRAP
-	var item := GameData.make_item(slot, GameData.roll_rarity(GameData.CRAFT_RARITY_BONUS, GameData.LEGENDARY_CHANCE_CRAFT), best_floor, _new_id())
+	var item := GameData.make_item(slot, _rarity(GameData.CRAFT_RARITY_BONUS, GameData.LEGENDARY_CHANCE_CRAFT), best_floor, _new_id())
 	add_to_wardrobe(item)
 	codex.found_item(item)
 	bag.append(item)
@@ -3333,7 +3337,7 @@ func choose_path(kind: String) -> void:
 		"treasure":
 			var g := (5 + floor_num * 6) * 3
 			_add_gold(g)
-			var item := GameData.make_item(GameData.SLOT_ORDER.pick_random(), GameData.roll_rarity(20 + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS), floor_num, _new_id())
+			var item := GameData.make_item(GameData.SLOT_ORDER.pick_random(), _rarity(20 + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS), floor_num, _new_id())
 			say("[color=#fbbf24]Treasure![/color] +%d gold" % g)
 			_give_item(item)
 			events.append({"type": "treasure"})
@@ -3458,7 +3462,7 @@ func use_scroll(id: String) -> String:
 
 func _open_box() -> String:
 	var roll := randf() * 100.0
-	if roll < 50.0:
+	if roll < 64.0:
 		var item := GameData.make_item(GameData.SLOT_ORDER.pick_random(), 3, best_floor, _new_id())
 		_give_item(item)
 		return "Mystery Box: %s!" % _tag(item)

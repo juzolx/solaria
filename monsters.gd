@@ -11,11 +11,11 @@ extends RefCounted
 const TIER_NAMES := ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"]
 const TIERS := [
 	{"color": "#cbd5e1", "weight": 60.0, "hp": 1.0, "atk": 1.0, "scale": 1.0, "mods": 0, "gold": 1.0, "xp": 1.0, "loot": 0, "extra": 0, "mats": [0, 0]},
-	{"color": "#4ade80", "weight": 25.0, "hp": 1.35, "atk": 1.12, "scale": 1.06, "mods": 1, "gold": 1.6, "xp": 1.5, "loot": 8, "extra": 0, "mats": [0, 0]},
-	{"color": "#60a5fa", "weight": 10.0, "hp": 2.0, "atk": 1.25, "scale": 1.12, "mods": 1, "gold": 2.5, "xp": 2.2, "loot": 18, "extra": 1, "mats": [1, 2]},
-	{"color": "#c084fc", "weight": 3.5, "hp": 3.2, "atk": 1.4, "scale": 1.2, "mods": 2, "gold": 4.0, "xp": 3.5, "loot": 30, "extra": 1, "mats": [1, 2]},
-	{"color": "#fb923c", "weight": 1.0, "hp": 4.5, "atk": 1.6, "scale": 1.28, "mods": 3, "gold": 7.0, "xp": 5.0, "loot": 45, "extra": 2, "mats": [1, 2]},
-	{"color": "#ff4d6d", "weight": 0.5, "hp": 6.5, "atk": 1.8, "scale": 1.36, "mods": 4, "gold": 12.0, "xp": 8.0, "loot": 60, "extra": 3, "mats": [2, 2]},
+	{"color": "#4ade80", "weight": 25.0, "hp": 1.35, "atk": 1.12, "scale": 1.06, "mods": 1, "gold": 1.6, "xp": 1.5, "loot": 4, "extra": 0, "mats": [0, 0]},
+	{"color": "#60a5fa", "weight": 10.0, "hp": 2.0, "atk": 1.25, "scale": 1.12, "mods": 1, "gold": 2.5, "xp": 2.2, "loot": 9, "extra": 1, "mats": [1, 2]},
+	{"color": "#c084fc", "weight": 3.5, "hp": 3.2, "atk": 1.4, "scale": 1.2, "mods": 2, "gold": 4.0, "xp": 3.5, "loot": 15, "extra": 1, "mats": [1, 2]},
+	{"color": "#fb923c", "weight": 1.0, "hp": 4.5, "atk": 1.6, "scale": 1.28, "mods": 3, "gold": 7.0, "xp": 5.0, "loot": 22, "extra": 2, "mats": [1, 2]},
+	{"color": "#ff4d6d", "weight": 0.5, "hp": 6.5, "atk": 1.8, "scale": 1.36, "mods": 4, "gold": 12.0, "xp": 8.0, "loot": 30, "extra": 3, "mats": [2, 2]},
 ]
 const RARE := 2
 const EPIC := 3

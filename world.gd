@@ -133,7 +133,7 @@ static func make_champion(g: GameState) -> void:
 static func champion_reward(g: GameState) -> void:
 	var gold := (10 + g.floor_num * 8) * 4
 	g._add_gold(gold)
-	var r := maxi(3, GameData.roll_rarity(30 + g._loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS * 1.5))
+	var r := maxi(3, g._rarity(30 + g._loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS * 1.5))
 	g._give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, g.floor_num, g._new_id()))
 	g._give_materials(randi_range(2, 3))
 	g.potions += 1
@@ -193,7 +193,7 @@ static func choose(g: GameState, kind: String) -> void:
 			g.events.append({"type": "buff", "name": "Blood altar"})
 			g._faith(-2.0)
 		"chest_open":
-			var r := maxi(3, GameData.roll_rarity(35 + g._loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS * 2.0))
+			var r := maxi(2, g._rarity(25 + g._loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS * 2.0))
 			g._give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, g.floor_num, g._new_id()))
 			if randf() < 0.5 - 0.3 * luck:
 				g.elixirs["hexed"] = 40

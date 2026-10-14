@@ -660,7 +660,7 @@ static func realm_event(g: GameState, yes: bool) -> void:
 			secret(g, id, "shrine")
 		"fairy":
 			if randf() < 0.6:
-				var item := GameData.make_item(GameData.SLOT_ORDER.pick_random(), maxi(3, GameData.roll_rarity(30, GameData.LEGENDARY_CHANCE_BOSS)), g.floor_num, g._new_id())
+				var item := GameData.make_item(GameData.SLOT_ORDER.pick_random(), maxi(3, g._rarity(30, GameData.LEGENDARY_CHANCE_BOSS)), g.floor_num, g._new_id())
 				g.say("[color=#f9a8d4]\"Correct!\" the fairy laughs, and drops a gift in your hands.[/color]")
 				g._give_item(item)
 				secret(g, id, "riddle")

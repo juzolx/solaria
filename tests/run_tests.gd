@@ -415,7 +415,7 @@ func _initialize() -> void:
 	print("Tier rolls of 20000: ", counts)
 	check(counts[0] > 11000 and counts[0] < 13000 and counts[5] > 40 and counts[5] < 180, "tier roll matches odds")
 	var odds := GameData.rarity_odds(0, 0.4)
-	check(absf(odds[0] + odds[1] + odds[2] + odds[3] + odds[4] - 100.0) < 0.01 and absf(odds[3] - 9.96) < 0.01, "rarity odds")
+	check(absf(odds[0] + odds[1] + odds[2] + odds[3] + odds[4] - 100.0) < 0.01 and absf(odds[3] - 0.3984) < 0.001, "rarity odds")
 	check(Codex.ACHIEVEMENTS.size() == 87, "87 achievements (got %d)" % Codex.ACHIEVEMENTS.size())
 	var ids := {}
 	for a in Codex.ACHIEVEMENTS:
