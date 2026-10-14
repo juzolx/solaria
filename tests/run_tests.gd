@@ -917,6 +917,8 @@ func _initialize() -> void:
 	pl.enemy_stun = 0
 	pl.enemy_frozen = 0
 	pl.gold = 300
+	pl.potions = 4
+	pl.return_scrolls = 1
 	var wiped := false
 	for _k in 20:
 		pl.take_turn()
@@ -925,6 +927,7 @@ func _initialize() -> void:
 			break
 	check(wiped and pl.gold == 0 and pl.floor_num == GameState.checkpoint_start(pl.floor_num), "all three down: the run fails")
 	check(pl.hero_hp == pl.get_max_hp(), "wake at full HP after a wipe")
+	check(pl.potions == 0 and pl.return_scrolls == 0, "potions and scrolls are lost on death")
 	check(GameData.MAX_HEROES == 9 and GameData.SLOT_UNLOCKS.size() == 9, "roster of 9")
 	check(pl.meta().has("looks"), "save meta keeps looks for town walkers")
 	pl.hardcore = true

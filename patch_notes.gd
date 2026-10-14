@@ -13,7 +13,7 @@ const NOTES := [
 		"Potions, elixirs, scrolls, the mystery box and backpacks have their own pictures now.",
 		"Backpacks: rare finds in the dungeon (bosses drop them more). Carry one home and your bag grows by 2 slots for good; fall first and it's lost.",
 		"The dungeon is 1,000 floors deep: 10 regions of 100. A boss every 25 floors opens a checkpoint, every 100th floor is a region boss, and walls at floors 250, 500, 750 and 1,000 are far tougher than anything near them.",
-		"Falling now costs what you carried in: the gold on you, your bag and the gear you wore. You wake at the start of that 25-floor stretch (floor 1, 26, 51...). The Bank, Vault and Mailbox are always safe.",
+		"Falling now costs what you carried in: the gold on you, your bag, the gear you wore, and your potions and scrolls. You wake at the start of that 25-floor stretch (floor 1, 26, 51...). The Bank, Vault and Mailbox are always safe.",
 		"Dives start at a checkpoint: floor 1, or the floor after any boss you've beaten. You can head home between floors; tap Town mid-floor and you'll walk home as soon as that floor is cleared.",
 		"Beastkin choose a fur color instead of hair.",
 		"Snik the goblin trader replaces the wandering merchant. Cheap gear, potions and Return Scrolls, paid with the gold you carry, and he buys your junk. He shows up more often the deeper you go.",

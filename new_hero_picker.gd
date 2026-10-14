@@ -9,7 +9,7 @@ func show_for(m, slot_n: int) -> void:
 	var row := UI.hbox(14)
 	content.add_child(row)
 	row.add_child(_card(m, slot_n, false, "REGULAR", UI.GREEN,
-		"The normal game. Fall and you lose what you carried in (gold on you, your bag and worn gear) and wake at the last checkpoint. The Bank and Vault are always safe.\n\nRegular heroes share a stash for trading gear."))
+		"The normal game. Fall and you lose what you carried in (gold on you, your bag, worn gear, potions and scrolls) and wake at the last checkpoint. The Bank and Vault are always safe.\n\nRegular heroes share a stash for trading gear."))
 	var hc_text := "One life. If your hero dies, it's gone for good, gear and all. Rare monsters show up more often, and how deep you got goes on the leaderboard."
 	if profile.hc_best > 0:
 		hc_text += "\n\nYour deepest Hardcore run: [color=#e8b14a]floor %d[/color]" % profile.hc_best

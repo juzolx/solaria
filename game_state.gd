@@ -2016,7 +2016,7 @@ func _hero_died() -> void:
 	deaths_here = 0
 	say("[color=#f87171]You fell on floor %d.[/color] You wake at the checkpoint on floor %d.%s" % [floor_num, back, (" Lost: " + lost) if lost != "" else ""])
 	floor_num = back
-	tip("death", "Falling costs everything you carried in: the gold on you, your bag and the gear you wore. The Bank, the Vault and the Mailbox are always safe. Leave after any cleared floor to keep what you found.")
+	tip("death", "Falling costs everything you carried in: the gold on you, your bag, the gear you wore, your potions and scrolls. The Bank, the Vault and the Mailbox are always safe. Leave after any cleared floor to keep what you found.")
 	hero_hp = get_max_hp()
 	fight = 1
 	spawn_enemy()
@@ -2114,7 +2114,8 @@ func _maybe_find_pack(was_boss: bool) -> void:
 	events.append({"type": "toast", "text": "A backpack! Get it home to keep it."})
 	tip("pack", "Backpacks only count once you bring them home. Fall before then and it's lost.")
 
-## Takes away what a fallen hero carried: gold on you, the bag and worn gear
+## Takes away what a fallen hero carried: gold on you, the bag, worn gear,
+## backpacks, potions, Return Scrolls and active elixirs/scroll effects
 ## (bound items stay). Returns a short description of the losses ("" if none).
 func _death_losses() -> String:
 	var parts: Array = []
@@ -2136,6 +2137,16 @@ func _death_losses() -> String:
 	if packs_carried > 0:
 		parts.append("%d backpack%s" % [packs_carried, "" if packs_carried == 1 else "s"])
 		packs_carried = 0
+	# Potions and scrolls are carried too (Juzo, 0.12)
+	if potions > 0:
+		parts.append("%d potion%s" % [potions, "" if potions == 1 else "s"])
+		potions = 0
+	if return_scrolls > 0:
+		parts.append("%d Return Scroll%s" % [return_scrolls, "" if return_scrolls == 1 else "s"])
+		return_scrolls = 0
+	elixirs.clear()
+	luck_turns = 0
+	hunt_spawns = 0
 	hero_hp = mini(hero_hp, get_max_hp())
 	return ", ".join(parts)
 
