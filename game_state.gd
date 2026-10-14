@@ -1970,22 +1970,51 @@ func _hero_died() -> void:
 	enemy_goblin = false
 	if enemy_is_boss:
 		boss_ready_at[str(floor_num)] = Time.get_unix_time_from_system() + float(GameData.BOSS_COOLDOWN[enemy_boss_kind])
-		var back := maxi(GameData.sub_start(floor_num), mini(checkpoint, floor_num - 1))
-		say("[color=#f87171]%s was too strong! You're pushed back to floor %d.[/color]" % [enemy_name, back])
-		floor_num = back
-	else:
-		deaths_here += 1
-		if deaths_here >= 3 and floor_num > 1 and floor_num - 1 >= checkpoint:
-			deaths_here = 0
-			floor_num -= 1
-			say("[color=#f87171]Defeated again. You fall back to floor %d to get stronger.[/color]" % floor_num)
-		else:
-			say("[color=#f87171]You were defeated on floor %d. Try again![/color]" % floor_num)
-	tip("death", "Defeated, but you keep everything! Better gear and upgrades will get you further.")
+	# The death penalty (0.12): you lose what you carried in and fall back to the
+	# start of this 25-floor stretch. Soulbound and Account-bound items are never lost.
+	var lost := _death_losses()
+	var back := checkpoint_start(floor_num)
+	deaths_here = 0
+	say("[color=#f87171]You fell on floor %d.[/color] You wake at the checkpoint on floor %d.%s" % [floor_num, back, (" Lost: " + lost) if lost != "" else ""])
+	floor_num = back
+	tip("death", "Falling costs everything you carried in: the gold on you, your bag and the gear you wore. The Bank, the Vault and the Mailbox are always safe. Leave after any cleared floor to keep what you found.")
 	hero_hp = get_max_hp()
 	fight = 1
 	spawn_enemy()
 	save_game()
+
+## The first floor of the 25-floor stretch a floor is in (1, 26, 51...): where you wake after falling.
+static func checkpoint_start(f: int) -> int:
+	return floori((maxi(1, f) - 1) / float(GameData.BOSS_EVERY)) * GameData.BOSS_EVERY + 1
+
+## True for items you can never lose (Soulbound or Account-bound).
+static func is_bound(item: Dictionary) -> bool:
+	return String(item.get("bound", "")) in ["soul", "account"]
+
+## Takes away what a fallen hero carried: gold on you, the bag and worn gear
+## (bound items stay). Returns a short description of the losses ("" if none).
+func _death_losses() -> String:
+	var parts: Array = []
+	if gold > 0:
+		parts.append("%d gold" % gold)
+		gold = 0
+	var kept: Array[Dictionary] = []
+	var lost_items := 0
+	for it in bag:
+		if is_bound(it):
+			kept.append(it)
+		else:
+			lost_items += 1
+	bag = kept
+	for slot in equipped.keys():
+		if not is_bound(equipped[slot]):
+			equipped.erase(slot)
+			lost_items += 1
+	if lost_items > 0:
+		parts.append("%d item%s" % [lost_items, "" if lost_items == 1 else "s"])
+		bag_version += 1
+	hero_hp = mini(hero_hp, get_max_hp())
+	return ", ".join(parts)
 
 ## Seconds until you can travel to fight this boss floor again (0 = ready).
 func boss_cooldown(f: int) -> int:

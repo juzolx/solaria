@@ -10,6 +10,7 @@ const NOTES := [
 		"The Mailbox: every reward now arrives by mail. Bounties pay the moment you finish them, and deeds pay as soon as you earn them. Collect your letters in town with the Mail button. Mail is always safe, and gear that doesn't fit in your bag waits in its letter.",
 		"News and gifts from the maker arrive in the Mailbox too.",
 		"The Bank: when you head down, choose how much gold to carry (none, a quarter, half or all). The rest stays safe in the Bank, and everything you carry home is banked for you.",
+		"Falling now costs what you carried in: the gold on you, your bag and the gear you wore. You wake at the start of that 25-floor stretch (floor 1, 26, 51...). The Bank, Vault and Mailbox are always safe.",
 		"Beastkin choose a fur color instead of hair.",
 		"The wandering merchant says why you can't buy something (bag full, or how much gold you still need).",
 		"Loot is rarer and means more: a blue is exciting, a purple is a big moment and a Legendary is lucky. Legendaries get likelier the deeper you go, and higher rarities are much stronger than before.",

@@ -462,8 +462,18 @@ func _initialize() -> void:
 	z.go_to_floor(25)
 	check(z.enemy_is_boss and z.enemy_boss_kind == "mid" and z.enemy_species == "Black Annis", "mid boss on 25")
 	z.hero_hp = 1
+	z.gold = 500
+	z.bank = 2000
+	var dz_keep := GameData.make_item("Helmet", 2, 25, z._new_id())
+	dz_keep["bound"] = "soul"
+	z.bag.append(GameData.make_item("Chest", 1, 25, z._new_id()))
+	z.bag.append(dz_keep)
+	z.equipped["Feet"] = GameData.make_item("Feet", 1, 25, z._new_id())
 	z._hero_died()
-	check(z.floor_num == 21, "boss loss -> area start (got %d)" % z.floor_num)
+	check(z.floor_num == 1, "fall on floor 25 -> wake at checkpoint floor 1 (got %d)" % z.floor_num)
+	check(z.gold == 0 and z.bank == 2000, "falling loses carried gold, the Bank is safe")
+	check(z.bag.size() == 1 and z.bag[0]["id"] == dz_keep["id"] and not z.equipped.has("Feet"), "falling loses bag and worn gear, bound items stay")
+	check(GameState.checkpoint_start(37) == 26 and GameState.checkpoint_start(50) == 26 and GameState.checkpoint_start(51) == 51, "checkpoints every 25 floors")
 	check(z.boss_cooldown(25) > 0 and not z.go_to_floor(25), "boss needs a rest before travel")
 	z.use_scroll("key")
 	check(z.boss_cooldown(25) == 0 and z.go_to_floor(25), "boss key resets the rest")
