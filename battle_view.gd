@@ -820,6 +820,10 @@ func _show_banner() -> void:
 	banner_text = "FLOOR %d" % state.floor_num
 	banner_color = Color("#fbbf24")
 	var boss_word := "MID BOSS: " if state.enemy_boss_kind == "mid" else "BOSS: "
+	if GameData.wall_mult(state.floor_num) > 1.0:
+		boss_word = "THE WALL: "
+	elif GameData.is_region_boss(state.floor_num):
+		boss_word = "REGION BOSS: "
 	banner_sub = (boss_word + state.enemy_name) if state.enemy_is_boss else "%s  -  %s" % [zone["name"], GameData.sub_name(state.floor_num)]
 	banner_alpha = 1.8
 

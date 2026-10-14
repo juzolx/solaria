@@ -1256,6 +1256,12 @@ func spawn_enemy() -> void:
 		enemy_art = def.get("art", "boss_" + GameData.art_key(def["name"]))
 		hp = int(hp * (GameData.ZONE_BOSS_HP if enemy_boss_kind == "zone" else GameData.MID_BOSS_HP))
 		atk = int(atk * GameData.BOSS_ATK)
+		# Region bosses close each 100 floors; walls (250, 500, 750, 1000) dwarf them
+		if GameData.is_region_boss(floor_num):
+			hp = int(hp * GameData.REGION_BOSS_MULT)
+		var wall := GameData.wall_mult(floor_num)
+		hp = int(hp * wall)
+		atk = int(atk * sqrt(wall))
 	elif enemy_goblin:
 		def = {"name": "Treasure Goblin", "shape": "humanoid", "color": "#fbbf24"}
 		enemy_name = "Treasure Goblin"
@@ -1872,6 +1878,14 @@ func next_floor() -> void:
 	_next_floor()
 
 func _next_floor() -> void:
+	# Floor 1,000 is the bottom of the dungeon
+	if floor_num >= GameData.MAX_FLOOR:
+		if not feats.has("conquered"):
+			feats["conquered"] = 1
+			say("[color=#fbbf24]You stand at the bottom of the dungeon. Floor %d is conquered.[/color]" % GameData.MAX_FLOOR)
+			events.append({"type": "mini_event", "kind": "milestone", "title": "THE BOTTOM", "sub": "Floor %d conquered" % GameData.MAX_FLOOR})
+		fight = 1
+		return
 	floor_num += 1
 	deaths_here = 0
 	Lineage.gain(self, "floor")

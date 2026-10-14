@@ -474,6 +474,21 @@ func _initialize() -> void:
 	check(z.gold == 0 and z.bank == 2000, "falling loses carried gold, the Bank is safe")
 	check(z.bag.size() == 1 and z.bag[0]["id"] == dz_keep["id"] and not z.equipped.has("Feet"), "falling loses bag and worn gear, bound items stay")
 	check(GameState.checkpoint_start(37) == 26 and GameState.checkpoint_start(50) == 26 and GameState.checkpoint_start(51) == 51, "checkpoints every 25 floors")
+	# 1,000 floors: region bosses every 100, walls at 250/500/750/1000, nothing below 1000
+	check(GameData.region_of(1) == 0 and GameData.region_of(100) == 0 and GameData.region_of(101) == 1 and GameData.region_of(1000) == 9, "10 regions of 100 floors")
+	var wz := GameState.new()
+	wz.codex.path = ""
+	wz.new_game()
+	wz.floor_num = 225
+	wz.spawn_enemy()
+	var w_mid := wz.enemy_max_hp
+	wz.floor_num = 250
+	wz.spawn_enemy()
+	check(wz.enemy_is_boss and wz.enemy_max_hp > w_mid * 2.5, "floor 250 is a wall (%d vs %d)" % [wz.enemy_max_hp, w_mid])
+	wz.floor_num = 1000
+	wz.best_floor = 1000
+	wz._next_floor()
+	check(wz.floor_num == 1000 and wz.feats.has("conquered"), "floor 1,000 is the bottom")
 	check(z.boss_cooldown(25) > 0 and not z.go_to_floor(25), "boss needs a rest before travel")
 	z.use_scroll("key")
 	check(z.boss_cooldown(25) == 0 and z.go_to_floor(25), "boss key resets the rest")

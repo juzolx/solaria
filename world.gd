@@ -139,9 +139,9 @@ static func champion_reward(g: GameState) -> void:
 	g.potions += 1
 	g.checkpoint = maxi(g.checkpoint, g.floor_num)
 	g.codex.add("champions")
-	g.say("[color=#e8b14a]The Champion falls! Its chest:[/color] +%d gold, a potion, and a checkpoint (you'll never be pushed back below floor %d)." % [gold, g.checkpoint])
+	g.say("[color=#e8b14a]The Champion falls! Its chest:[/color] +%d gold and a potion." % gold)
 	g.events.append({"type": "treasure"})
-	g.events.append({"type": "mini_event", "kind": "milestone", "title": "CHECKPOINT", "sub": "Floor %d reached for good" % g.floor_num})
+	g.events.append({"type": "mini_event", "kind": "milestone", "title": "CHAMPION", "sub": "Floor %d milestone" % g.floor_num})
 
 # =====================================================================
 # New events between fights

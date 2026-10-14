@@ -419,6 +419,13 @@ const BOSS_EVERY := 25              # some boss every 25 floors (mid boss, then 
 const MID_BOSS_HP := 3.0
 const ZONE_BOSS_HP := 3.8
 const BOSS_ATK := 1.2
+# The dungeon (0.12): 1,000 floors in 10 regions of 100. A boss every 25 floors
+# (mid at 25 and 75, the zone ruler at 50), a big region boss every 100 floors,
+# and walls at 250, 500, 750 and 1,000 that are far tougher than anything near them.
+const MAX_FLOOR := 1000
+const REGION_FLOORS := 100
+const REGION_BOSS_MULT := 1.4                       # extra HP for the boss closing each region
+const WALLS := {250: 2.0, 500: 3.5, 750: 5.0, 1000: 7.0}  # HP multiplier; attack grows with its square root
 const BOSS_COOLDOWN := {"mid": 15, "zone": 30}  # seconds before you can travel back to fight a boss again
 const LOCAL_MONSTER_WEIGHT := 10.0  # the sub-area's own creature is a bit rarer than the zone's 5 (18 each)
 const BASE_MONSTER_WEIGHT := 18.0
@@ -767,6 +774,18 @@ static func sub_name(floor_num: int) -> String:
 ## First floor of the sub-area a floor is in (where you go back to after losing to a boss).
 static func sub_start(floor_num: int) -> int:
 	return floor_num - ((zone_floor(floor_num) - 1) % SUB_FLOORS)
+
+## Region 0..9 (floors 1-100 are region 0).
+static func region_of(floor_num: int) -> int:
+	return floori((clampi(floor_num, 1, MAX_FLOOR) - 1) / float(REGION_FLOORS))
+
+## The boss that closes a region (every 100th floor).
+static func is_region_boss(floor_num: int) -> bool:
+	return floor_num % REGION_FLOORS == 0
+
+## How much tougher a wall boss is (1.0 on every other floor).
+static func wall_mult(floor_num: int) -> float:
+	return float(WALLS.get(floor_num, 1.0))
 
 ## "mid", "zone" or "" for a normal floor.
 static func boss_kind(floor_num: int) -> String:
