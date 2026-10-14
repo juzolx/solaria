@@ -38,7 +38,7 @@ func setup(m) -> void:
 	scroll.add_child(box)
 
 func refresh() -> void:
-	var key := hash(str(codex.deeds) + str(codex.achievements.size()) + str(codex.stat("kills")) + str(main.state.in_town) + str(main.state.bag_full()))
+	var key := hash(str(codex.deeds) + str(codex.achievements.size()) + str(codex.stat("kills")) + str(main.state.in_town))
 	if key == shown:
 		return
 	shown = key
@@ -116,17 +116,13 @@ func _claim_row(a: Dictionary) -> PanelContainer:
 	rw.text = "%s  -  [color=#f6d88f]%s[/color]" % [a["text"], Town.reward_text(Town.deed_reward(a), main.state)]
 	v.add_child(rw)
 	var id: String = a["id"]
-	var full := Town.no_room(main.state, Town.deed_reward(a))
-	var b := UI.primary("Bag full" if full else "Claim", func():
+	var b := UI.primary("Claim", func():
 		if Town.claim_deed(main.state, id) != "":
 			main.sfx.play("buy")
 		shown = 0
 		main.refresh(), UI.GREEN)
 	b.custom_minimum_size = Vector2(100, UI.TAP)
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	b.disabled = not main.state.in_town or full
-	if full:
-		b.tooltip_text = "Sell, salvage or stash something to make room for the reward."
 	h.add_child(b)
 	return card
 

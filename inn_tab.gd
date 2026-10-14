@@ -4,9 +4,9 @@ extends ScrollContainer
 ## and hear what the regulars are saying.
 
 const RUMORS := [
-	"\"Contracts on the Bounty Board pay out here, not down there. Come back to collect.\"",
+	"\"Finish a contract down there and the Board mails your pay. Check your Mailbox.\"",
 	"\"WANTED posters pay in steel. A boss's weapon is worth the walk back up.\"",
-	"\"Deeds you finish get you a reward at the Guild Hall. Don't leave them waiting.\"",
+	"\"Every deed you finish earns a reward from the Guild. It comes by mail.\"",
 	"\"The Blacksmith can turn materials into whole sets. Ask about bigger bags too.\"",
 	"\"Feeling lucky? The Tavern's wheel will bet on any of your spare gear.\"",
 	"\"Nothing down below can reach you in town. Rest up before a boss.\"",

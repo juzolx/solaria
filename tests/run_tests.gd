@@ -913,22 +913,36 @@ func _initialize() -> void:
 	t_c0["kind"] = "hunt"
 	t_c0["monster"] = "Kobold"
 	t_c0["need"] = 2
+	t_c0["reward"] = {"gold": 100, "item": {"slot": "Weapon", "rarity": 3}}
 	Town.on_kill(tg, "Kobold", 0, false, 0)
-	check(not t_c0["done"], "contract not done after 1 of 2")
+	check(not t_c0["done"] and tg.contracts.has(t_c0), "contract not done after 1 of 2")
+	var t_mail0 := tg.mail.size()
 	Town.on_kill(tg, "Kobold", 0, false, 0)
-	check(t_c0["done"], "contract done after 2 of 2")
+	check(not tg.contracts.has(t_c0) and tg.mail.size() > t_mail0 and tg.mail[t_mail0]["from"] == "The Bounty Board", "finished contract pays into the Mailbox")
+	var t_letter: Dictionary = tg.mail[t_mail0]
+	check(int(t_letter["gold"]) > 0 and (t_letter["items"] as Array).size() == 1, "bounty letter holds gold and a weapon")
+	check(String(t_letter["items"][0]["type"]) == String(tg.class_info().get("look", {}).get("Weapon", "")), "reward weapon fits the class (%s)" % t_letter["items"][0]["type"])
 	var t_bag0 := tg.bag.size()
 	var t_gold0 := tg.gold
-	t_c0["reward"] = {"gold": 100, "item": {"slot": "Weapon", "rarity": 3}}
-	check(Town.claim(tg, int(t_c0["id"])) != "" and tg.bag.size() == t_bag0 + 1 and tg.gold > t_gold0, "contract pays gold and a weapon")
-	check(String(tg.bag[-1]["type"]) == String(tg.class_info().get("look", {}).get("Weapon", "")), "reward weapon fits the class (%s)" % tg.bag[-1]["type"])
-	tg.codex.deeds = ["f25"]
 	var t_saved_bag: Array = tg.bag.duplicate()
 	while not tg.bag_full():
-		tg.bag.append(GameData.make_item("Ring", 0, 1, tg._new_id()))
-	check(Town.claim_deed(tg, "f25") == "" and tg.codex.deeds == ["f25"] and tg.bag.size() == tg.bag_capacity(), "full bag: deed waits, bag never overflows")
+		tg.bag.append(GameData.make_item("Helmet", 0, 1, tg._new_id()))
+	Mail.collect(tg, String(t_letter["id"]))
+	check(tg.gold > t_gold0 and tg.bag.size() == tg.bag_capacity() and (t_letter["items"] as Array).size() == 1, "full bag: gold collected, the weapon waits in the letter")
 	tg.bag = t_saved_bag
-	check(Town.claim_deed(tg, "f25") != "" and tg.codex.deeds.is_empty(), "deed claimed at the Guild Hall")
+	tg.bag_version += 1
+	check(Mail.collect(tg, String(t_letter["id"])) != "" and tg.bag.size() == t_bag0 + 1 and Mail.is_empty(t_letter), "collect again: weapon reaches the bag")
+	check(Mail.delete_empty(tg) >= 1 and not tg.mail.has(t_letter), "opened letters can be thrown away")
+	tg.codex.deeds = ["f25"]
+	var t_mail1 := tg.mail.size()
+	check(Town.claim_deed(tg, "f25") != "" and tg.codex.deeds.is_empty() and tg.mail.size() == t_mail1 + 1, "old deeds turn into mail")
+	var t_prof := Profile.new()
+	var t_mail2 := tg.mail.size()
+	Mail.sync(tg, t_prof)
+	check(tg.mail.size() == t_mail2 + Mail.NEWS.size() and t_prof.mail_seen.size() == Mail.NEWS.size(), "news letters delivered")
+	Mail.sync(tg, t_prof)
+	check(tg.mail.size() == t_mail2 + Mail.NEWS.size(), "news letters arrive only once")
+	Profile.delete()
 	tg.hero_hp = 1
 	check(Town.rest(tg) and tg.hero_hp == tg.get_max_hp(), "inn heals fully")
 	tg.save_game()

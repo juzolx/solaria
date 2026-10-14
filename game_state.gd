@@ -34,6 +34,7 @@ var hero_class := ""  # one of Classes.ORDER ("" until picked)
 var in_town := false     # in town (town.gd): no fighting until you leave
 var contracts: Array = []  # Bounty Board contracts, posted and taken (town.gd)
 var board_day := ""
+var mail: Array = []      # the Mailbox: letters holding rewards (mail.gd)
 var shop_zone := -1      # the zone the shop's wares came from (they follow where you are)
 var level := 1
 var xp := 0
@@ -2089,10 +2090,9 @@ func _check_codex() -> void:
 	if hardcore:
 		codex.at_least("hc_floor", best_floor)
 	for a in codex.check(self):
-		# The reward waits at the Guild Hall in town (town.gd deeds)
-		if not a["id"] in codex.deeds:
-			codex.deeds.append(a["id"])
-		var line := "[color=#fbbf24]Achievement: %s![/color] Claim your reward at the Guild Hall in town." % a["name"]
+		# The reward goes to the Mailbox (mail.gd)
+		Mail.post(self, "The Guild Hall", "Deed: %s" % a["name"], "%s. Well done! Here is your reward." % a["text"], Town.deed_reward(a))
+		var line := "[color=#fbbf24]Achievement: %s![/color] Your reward is in the Mailbox in town." % a["name"]
 		if a.has("title"):
 			line += "  New title: [color=#e8b14a]%s[/color]" % a["title"]
 		say(line)
@@ -2756,6 +2756,7 @@ func save_game() -> void:
 		"in_town": in_town,
 		"contracts": contracts,
 		"board_day": board_day,
+		"mail": mail,
 		"shop_zone": shop_zone,
 		"stats": stats,
 		"stat_points": stat_points,
@@ -2956,6 +2957,7 @@ func load_game() -> bool:
 	in_town = bool(data.get("in_town", false))
 	contracts = data.get("contracts", [])
 	board_day = str(data.get("board_day", ""))
+	mail = data.get("mail", [])
 	shop_zone = int(data.get("shop_zone", -1))
 	var saved_stats: Dictionary = data.get("stats", {})
 	for st in GameData.STAT_ORDER:

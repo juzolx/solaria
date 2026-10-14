@@ -27,6 +27,8 @@ var town_view: TownView
 var town_leave: Button
 var town_status: Label
 var inn_tab: InnTab
+var mail_tab: MailTab
+var town_mail: Button
 var _was_in_town := false
 var hero_tab: HeroTab
 var class_tab: ClassTab
@@ -92,7 +94,7 @@ var nav_bar: PanelContainer   # phone layout: the bottom navigation (Fight, Hero
 var nav_buttons: Array[Button] = []
 var nav_page := 0              # 0 = the fight, 1.. = a tab group (1 + its index)
 var is_tall := false
-const TOWN_PAGES := ["Shop", "Blacksmith", "Tavern", "Inn", "Vault", "Bounty Board", "Guild Hall"]
+const TOWN_PAGES := ["Shop", "Blacksmith", "Tavern", "Inn", "Vault", "Bounty Board", "Guild Hall", "Mailbox"]
 const NAV := [["Fight", "sword"], ["Hero", "person"], ["Items", "bag"], ["Town", "house"], ["Codex", "book"], ["Online", "globe"]]
 var left_panel: VBoxContainer
 var title_label: Label
@@ -186,6 +188,7 @@ func _start(is_new: bool) -> void:
 		state.say("Your descent begins..." if not state.hardcore else "[color=#f87171]Hardcore: one life. Make it count.[/color]")
 	state.dev_mode = profile.dev_mode
 	state.path_rooms_on = profile.path_choice != "fight"
+	Mail.sync(state, profile)
 	_share_skill_book()
 	if not state.hardcore and not state.party_slots.is_empty():
 		state.set_party(state.party_slots)
@@ -524,11 +527,12 @@ func _build_ui() -> void:
 	achievements_tab = AchievementsTab.new()
 	bounty_tab = BountyTab.new()
 	inn_tab = InnTab.new()
+	mail_tab = MailTab.new()
 	guide_tab = GuideTab.new()
 	for pair in [[char_tabs, hero_tab], [char_tabs, class_tab], [char_tabs, race_tab], [char_tabs, skills_tab], [char_tabs, party_tab],
 			[item_tabs, gear_tab], [item_tabs, bag_tab],
 			[town_tabs, shop_tab], [town_tabs, craft_tab], [town_tabs, wheel_tab], [town_tabs, inn_tab], [town_tabs, stash_tab],
-			[town_tabs, bounty_tab], [town_tabs, achievements_tab],
+			[town_tabs, bounty_tab], [town_tabs, achievements_tab], [town_tabs, mail_tab],
 			[codex_tabs, bestiary_tab], [codex_tabs, collection_tab],
 			[codex_tabs, stats_tab], [codex_tabs, guide_tab],
 			[online_tabs, leaderboard_tab], [online_tabs, guild_tab], [online_tabs, raid_tab]]:
@@ -771,6 +775,9 @@ func _build_town(parent: Control) -> void:
 	town_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	town_status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(town_status)
+	town_mail = UI.button("Mail", func(): _on_building("mail"))
+	town_mail.custom_minimum_size = Vector2(0, UI.TAP)
+	row.add_child(town_mail)
 	town_leave = UI.primary("Into the dungeon", _choose_floor, UI.RED)
 	town_leave.custom_minimum_size = Vector2(0, UI.TAP)
 	row.add_child(town_leave)
@@ -848,6 +855,9 @@ func _sync_town() -> void:
 		return
 	town_view.set_look(Town.look(state))
 	town_leave.text = "Into the dungeon"
+	var mw := Mail.waiting(state)
+	town_mail.text = "✉ Mail (%d)" % mw if mw > 0 else "✉ Mail"
+	town_mail.add_theme_color_override("font_color", UI.GOLD if Mail.unread(state) > 0 else UI.TEXT)
 	town_status.text = "HP %d / %d   ·   %s" % [state.hero_hp, state.get_max_hp(), Town.look(state)["name"]]
 	var notes := {}
 	for id in Town.BUILDINGS:
@@ -859,7 +869,7 @@ func _sync_town() -> void:
 		"tavern": "" if state.gamble_unlocked() else "Opens at floor %d" % GameData.GAMBLE_UNLOCK_FLOOR,
 		"stash": "" if not state.hardcore else "Hardcore heroes can't use the Vault",
 	}
-	town_view.badges = {"bounty": Town.ready_count(state), "guild": codex.deeds.size(),
+	town_view.badges = {"bounty": Town.ready_count(state), "guild": codex.deeds.size(), "mail": Mail.waiting(state),
 		"inn": 1 if state.hero_hp < state.get_max_hp() * 0.6 else 0}
 
 # =====================================================================
@@ -1342,10 +1352,11 @@ func _refresh_tabs() -> void:
 	char_tabs.set_tab_title(2, "Race (!)" if Lineage.awaken_block(state) in ["", "trial"] and state.hero_class != "" else "Race")
 	item_tabs.set_tab_title(0, "Gear (%d)" % ups if ups > 0 else "Gear")
 	item_tabs.set_tab_title(1, "Bag (full)" if state.bag_full() else "Bag")
-	var ready := Town.ready_count(state) + codex.deeds.size()
+	var ready := Town.ready_count(state) + codex.deeds.size() + Mail.waiting(state)
 	tabs.set_tab_title(2, "Town (%d)" % ready if ready > 0 else "Town")
 	town_tabs.set_tab_title(5, "Bounty Board (%d)" % Town.ready_count(state) if Town.ready_count(state) > 0 else TOWN_PAGES[5])
 	town_tabs.set_tab_title(6, "Guild Hall (%d)" % codex.deeds.size() if codex.deeds.size() > 0 else TOWN_PAGES[6])
+	town_tabs.set_tab_title(7, "Mailbox (%d)" % Mail.waiting(state) if Mail.waiting(state) > 0 else TOWN_PAGES[7])
 	if nav_buttons.size() == NAV.size():
 		var counts := [0, pts + sk, ups, ready, 0, 0]
 		for i in NAV.size():

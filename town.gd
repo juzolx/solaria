@@ -39,7 +39,8 @@ const BUILDINGS := {
 	"inn": [3, "Rest and heal"],
 	"stash": [4, "Your Vault (shared stash)"],
 	"bounty": [5, "Monster contracts"],
-	"guild": [6, "Claim your deeds"],
+	"guild": [6, "Your deeds"],
+	"mail": [7, "Your letters and rewards"],
 }
 
 static func look(g: GameState) -> Dictionary:
@@ -77,7 +78,7 @@ static func enter(g: GameState) -> bool:
 	if g.shop_zone != GameData.zone_index(maxi(1, g.floor_num)):
 		g.restock_shop()
 	g.say("[color=#e8b14a]You head back to town.[/color] Nothing can attack you here.")
-	g.tip("town", "Welcome to town! Tap a building to go in. Take contracts at the Bounty Board, claim deeds at the Guild Hall, and rest at the Inn. Head back down through the cave when you're ready.")
+	g.tip("town", "Welcome to town! Tap a building to go in. Take contracts at the Bounty Board, collect your rewards from the Mailbox, and rest at the Inn. Head back down through the cave when you're ready.")
 	g.events.append({"type": "town", "in": true})
 	g.save_game()
 	return true
@@ -266,8 +267,11 @@ static func on_kill(g: GameState, species: String, tier: int, was_boss: bool, zo
 			c["have"] = int(c["have"]) + 1
 			if int(c["have"]) >= int(c["need"]):
 				c["done"] = true
-				g.say("[color=#fbbf24]Contract complete:[/color] %s. Turn it in at the Bounty Board in town." % c["text"])
-				g.events.append({"type": "toast", "text": "Contract complete! Turn it in at the town's Bounty Board."})
+	# Finished contracts pay out by mail right away
+	for c in g.contracts.duplicate():
+		if c.get("done", false):
+			_pay(g, c)
+			g.say("[color=#fbbf24]Contract complete:[/color] %s. The reward is in your Mailbox." % c["text"])
 
 static func reward_text(r: Dictionary, g: GameState) -> String:
 	var parts: Array = []
@@ -281,25 +285,24 @@ static func reward_text(r: Dictionary, g: GameState) -> String:
 		parts.append("%s %s" % [GameData.RARITY_NAMES[int(it["rarity"])], what])
 	return " + ".join(parts)
 
+## Pays a finished contract into the Mailbox and takes it off the board.
+static func _pay(g: GameState, c: Dictionary) -> void:
+	g.contracts.erase(c)
+	Mail.post(g, "The Bounty Board", "Bounty paid: %s" % String(c["text"]).trim_prefix("WANTED: "),
+		"Contract done. Here is what you were promised.", c["reward"])
+	g.codex.add("bounties")
+	g._faith(Classes.FAITH["bounty"])
+	refresh_board(g)
+	g._check_codex()
+	g.codex.save()
+
+## Turns in a finished contract (older saves can still hold some). Returns its letter's title.
 static func claim(g: GameState, id: int) -> String:
-	if not g.in_town:
-		return ""
-	for i in g.contracts.size():
-		var c: Dictionary = g.contracts[i]
+	for c in g.contracts:
 		if int(c["id"]) == id and c.get("done", false):
-			if no_room(g, c["reward"]):
-				g.say("Your bag is full. Make room before turning in this bounty.")
-				return ""
-			g.contracts.remove_at(i)
-			var got := give(g, c["reward"])
-			g.codex.add("bounties")
-			g._faith(Classes.FAITH["bounty"])
-			g.say("[color=#fbbf24]Bounty paid![/color] %s" % got)
-			refresh_board(g)
-			g._check_codex()
-			g.codex.save()
+			_pay(g, c)
 			g.save_game()
-			return got
+			return "Bounty paid"
 	return ""
 
 # =====================================================================
@@ -316,10 +319,6 @@ static func reward_item(g: GameState, slot: String, rarity: int) -> Dictionary:
 				break
 			item = GameData.make_item(slot, rarity, g.best_floor, g._new_id())
 	return item
-
-## True when a reward has gear but the bag has no room for it (claims wait until it does).
-static func no_room(g: GameState, r: Dictionary) -> bool:
-	return r.has("item") and g.bag_full()
 
 ## Hands out {"gold", "item": {"slot", "rarity"}, ...}; items go to your bag.
 static func give(g: GameState, r: Dictionary) -> String:
@@ -358,7 +357,7 @@ static func deed_reward(a: Dictionary) -> Dictionary:
 	return r
 
 static func claim_deed(g: GameState, id: String) -> String:
-	if not g.in_town or not id in g.codex.deeds:
+	if not id in g.codex.deeds:
 		return ""
 	var a := {}
 	for x in Codex.ACHIEVEMENTS:
@@ -367,13 +366,9 @@ static func claim_deed(g: GameState, id: String) -> String:
 	if a.is_empty():
 		g.codex.deeds.erase(id)
 		return ""
-	if no_room(g, deed_reward(a)):
-		g.say("Your bag is full. Make room before claiming this reward.")
-		return ""
 	g.codex.deeds.erase(id)
 	g.codex.dirty = true
-	var got := give(g, deed_reward(a))
-	g.say("[color=#fbbf24]Deed rewarded: %s.[/color] %s" % [a["name"], got])
+	var l := Mail.post(g, "The Guild Hall", "Deed: %s" % a["name"], "%s. Well done! Here is your reward." % a["text"], deed_reward(a))
 	g.codex.save()
 	g.save_game()
-	return got
+	return String(l["title"])
