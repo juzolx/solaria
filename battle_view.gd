@@ -1518,6 +1518,14 @@ func _draw() -> void:
 				for off in [Vector2(-px, 0), Vector2(px, 0), Vector2(0, -px), Vector2(0, px)]:
 					draw_texture_rect(ewhite, Rect2(local.position + off, local.size), false, Color(tc, ta))
 		draw_texture_rect(etex, local, false, etint)
+		if Combat.winding(state) and state.enemy_calamity <= 0:
+			# telegraph: it glows and shows a "!" while it gathers a big blow
+			var wp := 0.5 + 0.5 * sin(bob * 12.0)
+			draw_texture_rect(ewhite, local, false, Color(1.0, 0.55, 0.1, (0.25 + 0.3 * wp) * enemy_alpha))
+			var fnt := get_theme_default_font()
+			var ex := Vector2(er.end.x - 44.0, er.position.y + er.size.y * 0.3 - 6.0 * wp)
+			draw_string_outline(fnt, ex, "!", HORIZONTAL_ALIGNMENT_CENTER, 80, 48, 10, Color(0, 0, 0, enemy_alpha))
+			draw_string(fnt, ex, "!", HORIZONTAL_ALIGNMENT_CENTER, 80, 48, Color(1.0, 0.7 + 0.3 * wp, 0.2, enemy_alpha))
 		if enemy_flash > 0.0:
 			draw_texture_rect(ewhite, local, false, Color(1, 1, 1, enemy_flash * 0.85 * enemy_alpha))
 		var name_color := Color("#fbbf24") if boss else Color("#fca5a5")
@@ -1658,8 +1666,11 @@ func _draw() -> void:
 		var slide := (1.0 - clampf((1.8 - banner_alpha) / 0.2, 0.0, 1.0)) * 40.0
 		# Just the words, heavily outlined: a band would hide the fighters' heads
 		var big_color := banner_color
-		draw_string_outline(font, Vector2(slide, 62), banner_text, HORIZONTAL_ALIGNMENT_CENTER, w, 26, 6, Color(0, 0, 0, a))
-		draw_string(font, Vector2(slide, 62), banner_text, HORIZONTAL_ALIGNMENT_CENTER, w, 26, Color(big_color, a))
+		var bfs := 26  # long names shrink to fit the screen
+		while bfs > 14 and font.get_string_size(banner_text, HORIZONTAL_ALIGNMENT_LEFT, -1, bfs).x > w - 20.0:
+			bfs -= 1
+		draw_string_outline(font, Vector2(slide, 62), banner_text, HORIZONTAL_ALIGNMENT_CENTER, w, bfs, 6, Color(0, 0, 0, a))
+		draw_string(font, Vector2(slide, 62), banner_text, HORIZONTAL_ALIGNMENT_CENTER, w, bfs, Color(big_color, a))
 		draw_string(font, Vector2(-slide, 79), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, w, 13, Color(1, 1, 1, 0.85 * a))
 
 	_draw_intro(font, w, h)
@@ -2098,7 +2109,7 @@ func _draw_enemy_info(r: Rect2, font: Font) -> void:
 		st.append(["Cursed", Color("#a78bfa")])
 	if state.enemy_stun > 0:
 		st.append(["Stunned", Color("#fde68a")])
-	if state.boss_phase.get("windup", false):
+	if Combat.winding(state):
 		st.append(["WINDING UP! Use a skill", Color("#f59e0b")])
 	var el := Combat.enrage_left(state)
 	if el > 0:

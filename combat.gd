@@ -257,11 +257,13 @@ const MECHANICS := {
 	"minions": {"name": "Minions", "color": "#a3a3a3", "text": "It calls minions that soak your damage and bite you each turn."},
 	"breath": {"name": "Breath", "color": "#fb923c", "text": "Every few turns it breathes poison, fire or frost on you (Wisdom helps)."},
 	"crush": {"name": "Crushing Blow", "color": "#f59e0b", "text": "Every few turns it winds up a blow that hits 3x as hard. Hit it with a skill while it winds up to stagger it."},
-	"windup": {"name": "Winding Up", "color": "#f59e0b", "text": "Use a skill now to stagger it!"},
+	"windup": {"name": "Winding Up", "color": "#f59e0b", "text": "It strikes next turn: use a skill or stun it to stagger it!"},
 	"stagger": {"name": "Staggered", "color": "#4ade80", "text": "You broke its crushing blow."},
 }
 const CRUSH_EVERY := 5     # turns between crushing blows
 const CRUSH_MULT := 3.0
+const HEAVY_EVERY := 4     # a Rare+ monster may wind up a heavy blow every few turns
+const HEAVY_MULT := 2.0
 const ENRAGE_TURNS := 18
 const ENRAGE_STEP := 0.12   # +12% Attack every turn after it enrages
 const SHIELD_PART := 0.25   # shield = 25% of its max HP
@@ -334,11 +336,11 @@ static func boss_turn(g: GameState) -> String:
 				note_damage(g, "minions", bite)
 				g.events.append({"type": "enemy_hit", "dmg": bite, "minion": true})
 				line += ". The minions bite you for %d" % bite
-	if "crush" in g.boss_mechanics and not ph.get("windup", false):
+	if "crush" in g.boss_mechanics and not winding(g) and g.enemy_stun <= 0 and g.enemy_frozen <= 0:
 		var tc := int(g.cfight.get("turns", 0))
 		if tc > 0 and tc % CRUSH_EVERY == CRUSH_EVERY - 1:
-			ph["windup"] = true
-			g.events.append({"type": "boss_mechanic", "id": "windup", "name": "%s winds up a crushing blow!" % g.enemy_name, "color": MECHANICS["crush"]["color"]})
+			start_windup(g, CRUSH_MULT)
+			ph = g.boss_phase
 			line += ". [color=#f59e0b]%s winds up a crushing blow! Use a skill to stagger it.[/color]" % g.enemy_name
 	if "enrage" in g.boss_mechanics:
 		var t := int(g.cfight.get("turns", 0))
@@ -348,21 +350,57 @@ static func boss_turn(g: GameState) -> String:
 	g.boss_phase = ph
 	return line
 
-## A winding-up boss's next hit lands 3x (then the wind-up is spent).
+## A winding-up boss's next hit lands 3x (then the wind-up is spent). The turn it winds
+## up it only gathers strength (Combat.charging), so you always get one turn to answer.
 static func crush_mult(g: GameState) -> float:
-	if not g.enemy_is_boss or not g.boss_phase.get("windup", false):
+	if not winding(g) or int(g.cfight.get("windup", -1)) >= int(g.cfight.get("turns", 0)):
 		return 1.0
+	var mult := float(g.cfight.get("windup_mult", CRUSH_MULT))
+	g.cfight["windup"] = -1
 	g.boss_phase.erase("windup")
-	g.events.append({"type": "boss_mechanic", "id": "crush", "name": "CRUSHING BLOW!", "color": MECHANICS["crush"]["color"]})
-	return CRUSH_MULT
+	g.events.append({"type": "boss_mechanic", "id": "crush", "name": "CRUSHING BLOW!" if g.enemy_is_boss else "HEAVY BLOW!", "color": MECHANICS["crush"]["color"]})
+	return mult
 
-## Any skill hit during the wind-up staggers the boss. Returns a log line.
+## Any skill hit during the wind-up staggers the monster. Returns a log line.
 static func try_stagger(g: GameState) -> String:
-	if not g.enemy_is_boss or not g.boss_phase.get("windup", false):
+	if not winding(g):
 		return ""
+	break_windup(g)
+	return ". [color=#4ade80]You stagger it and break its %s![/color]" % ("crushing blow" if g.enemy_is_boss else "heavy blow")
+
+## 0.13+: telegraphed attacks. True while a monster is winding up a big hit.
+static func winding(g: GameState) -> bool:
+	return int(g.cfight.get("windup", -1)) >= 0
+
+## True on the turn it starts winding up: it spends the turn gathering strength.
+static func charging(g: GameState) -> bool:
+	return winding(g) and int(g.cfight.get("windup", -1)) == int(g.cfight.get("turns", 0))
+
+static func start_windup(g: GameState, mult: float) -> void:
+	g.cfight["windup"] = int(g.cfight.get("turns", 0))
+	g.cfight["windup_mult"] = mult
+	g.boss_phase["windup"] = true
+	var what := "a crushing blow" if g.enemy_is_boss else "a heavy blow"
+	g.events.append({"type": "boss_mechanic", "id": "windup", "name": "%s COMING!" % what.trim_prefix("a ").to_upper(), "color": MECHANICS["crush"]["color"]})
+	g.tip("windup", "The orange ! means a monster is winding up a big blow. It hits next turn unless you use a skill on it or stun it. Auto does this for you when a skill is ready.")
+
+## A skill, a stun or a freeze breaks the wind-up.
+static func break_windup(g: GameState) -> void:
+	g.cfight["windup"] = -1
 	g.boss_phase.erase("windup")
 	g.events.append({"type": "boss_mechanic", "id": "stagger", "name": "STAGGERED!", "color": MECHANICS["stagger"]["color"]})
-	return ". [color=#4ade80]You stagger it and break its crushing blow![/color]"
+
+## Rare and tougher monsters (and elites) sometimes wind up a heavy blow too. Returns a log line.
+static func monster_turn(g: GameState) -> String:
+	if g.enemy_is_boss or g.enemy_hp <= 0 or winding(g) or g.enemy_goblin or g.enemy_stun > 0 or g.enemy_frozen > 0:
+		return ""
+	if g.enemy_tier < 2 and not g.enemy_elite:
+		return ""
+	var tc := int(g.cfight.get("turns", 0))
+	if tc > 0 and tc % HEAVY_EVERY == HEAVY_EVERY - 1 and randf() < 0.7:
+		start_windup(g, HEAVY_MULT)
+		return ". [color=#f59e0b]The %s winds up a heavy blow! Use a skill to stagger it.[/color]" % g.enemy_name
+	return ""
 
 ## The boss's attack multiplier from enrage.
 static func enrage_mult(g: GameState) -> float:

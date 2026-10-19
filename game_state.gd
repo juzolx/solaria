@@ -1094,6 +1094,16 @@ func _wild_card(s: Dictionary) -> Dictionary:
 ## Auto: picks the best skill to use right now.
 func _auto_skill() -> void:
 	var maxhp := get_max_hp()
+	# A monster winding up a big blow: stagger it with any ready hit or stun (a shield if that's all there is)
+	if Combat.winding(self):
+		for want in ["break", "shield"]:
+			for id in auto_order():
+				if not skill_ready(id) or skill_auto_off.has(id):
+					continue
+				var ws := SkillData.info(id)
+				if (want == "break" and (ws.has("power") or ws.has("stun"))) or (want == "shield" and ws.has("shield") and shield_hp <= 0):
+					use_skill(id)
+					return
 	var best := ""
 	var best_cd := -1
 	for id in auto_order():
@@ -1537,7 +1547,11 @@ func take_turn() -> void:
 
 	# Bosses: shields, minions, the enrage clock
 	line += Combat.boss_turn(self)
-	# Enemy attacks
+	line += Combat.monster_turn(self)  # Rare+ monsters telegraph heavy blows
+	# Enemy attacks (a stun or freeze breaks a wind-up)
+	if (enemy_frozen > 0 or enemy_stun > 0) and Combat.winding(self):
+		Combat.break_windup(self)
+		line += ". [color=#4ade80]It loses its wind-up![/color]"
 	if enemy_frozen > 0:
 		enemy_frozen -= 1
 		line += ". The %s is frozen solid!" % enemy_name
@@ -1546,6 +1560,8 @@ func take_turn() -> void:
 		enemy_stun -= 1
 		line += ". The %s is stunned!" % enemy_name
 		events.append({"type": "stunned"})
+	elif Combat.charging(self):
+		line += ". The %s gathers its strength..." % enemy_name  # your turn to answer the wind-up
 	elif charm_total() > 0.0 and randf() * 100.0 < charm_total():
 		line += ". The %s is charmed and forgets to attack" % enemy_name
 		ClassTree.grow(self, "charm")
@@ -2124,6 +2140,8 @@ func _down_turn() -> void:
 		enemy_stun = maxi(0, enemy_stun - 1)
 		enemy_frozen = maxi(0, enemy_frozen - 1)
 		line += ". The %s is stunned!" % enemy_name
+	elif Combat.charging(self):
+		line += ". The %s gathers its strength..." % enemy_name
 	elif party != null:
 		var target = party.pick_target(self)
 		if target != null:

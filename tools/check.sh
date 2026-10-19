@@ -24,7 +24,7 @@ run() {  # name, command
 run "main tests" "timeout 900 $G --headless --path . -s tests/run_tests.gd"
 run "town tests" "timeout 300 $G --headless --path . -s tests/town_logic.gd"
 run "fresh start" "timeout 300 $G --headless --path . -s tests/fresh_start.gd"
-for t in tests/stage2_*.gd; do [ -f "$t" ] && run "$(basename $t .gd)" "timeout 600 $G --headless --path . -s $t"; done
+for t in tests/stage[0-9]_*.gd; do [ -f "$t" ] && run "$(basename $t .gd)" "timeout 600 $G --headless --path . -s $t"; done
 if [ "$1" = "shots" ]; then
   # Every screen at phone size into shots/tour (needs a real window: run on the PC, or under xvfb-run on Linux)
   wrap=""; command -v xvfb-run >/dev/null 2>&1 && wrap="xvfb-run -a -s \"-screen 0 1400x1400x24\""

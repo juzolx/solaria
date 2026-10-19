@@ -104,6 +104,7 @@ func hit_member(leader: GameState, m: Member) -> String:
 		return ". %s dodges" % m.name
 	var atk := float(leader.enemy_attack)
 	var dmg := maxi(1, int(round(atk * atk / (atk + g.get_defense()))))
+	dmg = maxi(1, int(dmg * Combat.crush_mult(leader)))  # a telegraphed blow lands on whoever it hits
 	if leader.enemy_weaken_turns > 0:
 		dmg = maxi(1, int(dmg * leader.enemy_weaken))
 	m.hp -= dmg

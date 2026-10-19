@@ -1,9 +1,9 @@
 78098b89c88a74ebe8c20117b8754620
-::res://::1792422782
+::res://::1792423661
 achievements_tab.gd::GDScript::225817628144516105::1792399747::0::1::::AchievementsTab<>VBoxContainer<><>0<>0<><>::
 art_info.gd::GDScript::2121761137587333428::1792399749::0::1::::ArtInfo<>RefCounted<><>0<>0<><>::
 bag_tab.gd::GDScript::7963412957330005317::1792399749::0::1::::BagTab<>VBoxContainer<><>0<>0<><>::
-battle_view.gd::GDScript::1321114398721736239::1792421575::0::1::::BattleView<>Control<><>0<>0<><>::
+battle_view.gd::GDScript::1321114398721736239::1792423654::0::1::::BattleView<>Control<><>0<>0<><>::
 bestiary_tab.gd::GDScript::3473921906557743363::1792403813::0::1::::BestiaryTab<>HBoxContainer<><>0<>0<><>::
 bounty_tab.gd::GDScript::6266114143799082059::1792399749::0::1::::BountyTab<>ScrollContainer<><>0<>0<><>::
 calamity.gd::GDScript::1610204335130373049::1792399749::0::1::::Calamity<>RefCounted<><>0<>0<><>::
@@ -16,13 +16,13 @@ clinic_tab.gd::GDScript::1332373833977833578::1792399749::0::1::::ClinicTab<>Scr
 codex.gd::GDScript::8699120073566472490::1792399749::0::1::::Codex<>RefCounted<><>0<>0<><>::
 CODE_INDEX.md::TextFile::-1::1792399747::0::1::::<><><>0<>0<><>::
 collection_tab.gd::GDScript::3273171438237057211::1792399749::0::1::::CollectionTab<>ScrollContainer<><>0<>0<><>::
-combat.gd::GDScript::5978949549637127472::1792399749::0::1::::Combat<>RefCounted<><>0<>0<><>::
+combat.gd::GDScript::5978949549637127472::1792423661::0::1::::Combat<>RefCounted<><>0<>0<><>::
 craft_tab.gd::GDScript::6139851508629389909::1792417530::0::1::::CraftTab<>ScrollContainer<><>0<>0<><>::
 credits.gd::GDScript::4567747528896080687::1792418239::0::1::::Credits<>RefCounted<><>0<>0<><>::
 dark_grade.gd::GDScript::1981912469824197290::1792399784::0::1::::DarkGrade<>RefCounted<><>0<>0<><>::
 floor_picker.gd::GDScript::5370141465407826933::1792422782::0::1::::FloorPicker<>Overlay<><>0<>0<><>::
 game_data.gd::GDScript::560847022751701286::1792399749::0::1::::GameData<>RefCounted<><>0<>0<><>::
-game_state.gd::GDScript::1935207822301543411::1792419906::0::1::::GameState<>RefCounted<><>0<>0<><>::
+game_state.gd::GDScript::1935207822301543411::1792423431::0::1::::GameState<>RefCounted<><>0<>0<><>::
 gear_tab.gd::GDScript::452513172291051429::1792422722::0::1::::GearTab<>VBoxContainer<><>0<>0<><>::
 guide.gd::GDScript::3980021912403035507::1792399749::0::1::::Guide<>RefCounted<><>0<>0<><>::
 guide_book.gd::GDScript::6387689471949660813::1792403813::0::1::::GuideBook<>Overlay<><>0<>0<><>::
@@ -60,7 +60,7 @@ ONLINE_SETUP.md::TextFile::-1::1792399747::0::1::::<><><>0<>0<><>::
 online_ui.gd::GDScript::1234685795552808893::1792402856::0::1::::OnlineUI<>RefCounted<><>0<>0<><>::
 overlay.gd::GDScript::6515303991980239877::1792422772::0::1::::Overlay<>Control<><>0<>0<><>::
 override.cfg::TextFile::-1::1792399793::0::1::::<><><>0<>0<><>::
-party.gd::GDScript::4240755793783628207::1792399749::0::1::::Party<>RefCounted<><>0<>0<><>::
+party.gd::GDScript::4240755793783628207::1792423350::0::1::::Party<>RefCounted<><>0<>0<><>::
 party_tab.gd::GDScript::8710709347152546727::1792399749::0::1::::PartyTab<>ScrollContainer<><>0<>0<><>::
 patch_notes.gd::GDScript::1875155048585678515::1792399784::0::1::::PatchNotes<>RefCounted<><>0<>0<><>::
 pets.gd::GDScript::4749792959444787763::1792399784::0::1::::Pets<>RefCounted<><>0<>0<><>::
@@ -413,7 +413,7 @@ wendigo.png::CompressedTexture2D::3539028710970668443::1792399747::1792399747::1
 will_o_wisp.png::CompressedTexture2D::344750579107779160::1792399747::1792399747::1::::<><><>0<>0<>377ce78c562a0414016b972c83c078a8<>res://.godot/imported/will_o_wisp.png-4fdaadcde13ba5343acbe555d2ce6a91.ctex::
 wolpertinger.png::CompressedTexture2D::6592687161405397566::1792399747::1792399747::1::::<><><>0<>0<>57333c8d32c1b0f45bd716ceaf9d8f7e<>res://.godot/imported/wolpertinger.png-40b2b81313e6e423d7a159628daf70c7.ctex::
 woodwose.png::CompressedTexture2D::851988979980583167::1792399747::1792399747::1::::<><><>0<>0<>404e5e8aede427fabc83e02cf4f7c344<>res://.godot/imported/woodwose.png-4c022a35fd94e837f19d21e9b9d1b128.ctex::
-::res://art/fx/::1792418287
+::res://art/fx/::1792423048
 arcane.png::CompressedTexture2D::6138680416803908425::1792423022::1792418287::1::::<><><>0<>0<>d1586438427226237dde08008df8907c<>res://.godot/imported/arcane.png-dc8bf2c2c1e3caa8b083e20be8e0f16d.ctex::
 blood.png::CompressedTexture2D::5455530692510774731::1792423022::1792423048::1::::<><><>0<>0<>361b9f790646a393ad59f62076c81acb<>res://.godot/imported/blood.png-e865e5ea670b98d96759557aca3c49d2.ctex::
 burst.png::CompressedTexture2D::2438400716316290754::1792423022::1792418287::1::::<><><>0<>0<>d6fbe502c294a87bbac3540a37ddd209<>res://.godot/imported/burst.png-d055f0e68bc9992a15f3205d2f6a6868.ctex::
@@ -3336,7 +3336,7 @@ code-map.md::TextFile::-1::1792399484::0::1::::<><><>0<>0<><>::
 dungeon-revamp-design.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
 next-update-notes.md::TextFile::-1::1792399494::0::1::::<><><>0<>0<><>::
 stage1-progress.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
-stage2-progress.md::TextFile::-1::1792422969::0::1::::<><><>0<>0<><>::
+stage2-progress.md::TextFile::-1::1792423198::0::1::::<><><>0<>0<><>::
 study-and-implement-list.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
 ::res://proto/::1792399796
 room3d.gd::GDScript::9127945263395229099::1792399784::0::1::::<>Control<><>0<>0<><>::
@@ -3418,7 +3418,7 @@ trap.wav::AudioStreamWAV::5886903482315739742::1792420851::1792420925::1::::<><>
 unique.wav::AudioStreamWAV::8636343434808806334::1792399749::1792399749::1::::<><><>0<>0<>24b953901c641877be8bd90b0855e4f1<>res://.godot/imported/unique.wav-01a11a3f6299a52159d56bc3979efc29.sample::
 weak_hit.wav::AudioStreamWAV::274863471046238212::1792399749::1792399749::1::::<><><>0<>0<>97037ddd4d71eda073d42530b2de2f5c<>res://.godot/imported/weak_hit.wav-2b1222b25052fbed1eab50fdb4b254b0.sample::
 whoosh.wav::AudioStreamWAV::1026168785560146225::1792420851::1792420925::1::::<><><>0<>0<>ad513f44c1eb5c39d6cf2d945c9dd358<>res://.godot/imported/whoosh.wav-e4488afa67299d9e17083d9f3d4c308c.sample::
-::res://tests/::1792423031
+::res://tests/::1792423622
 _boss_shot.gd::GDScript::4379987889203406784::1792421528::0::1::::<>SceneTree<><>0<>0<><>::
 _dump.gd::GDScript::7543732177956544217::1792399749::0::1::::<>SceneTree<><>0<>0<><>::
 _ghost_shot.gd::GDScript::6178283616557847475::1792404861::0::1::::<>SceneTree<><>0<>0<><>::
@@ -3431,6 +3431,7 @@ _room3d_shot.gd::GDScript::1091020687373335100::1792419538::0::1::::<>SceneTree<
 _team_shot.gd::GDScript::4661515701742640833::1792421227::0::1::::<>SceneTree<><>0<>0<><>::
 _tier_shot.gd::GDScript::1374463898402426384::1792420561::0::1::::<>SceneTree<><>0<>0<><>::
 _ui_width.gd::GDScript::3555152043916074216::1792403336::0::1::::<>SceneTree<><>0<>0<><>::
+_windup_shot.gd::GDScript::6337145327715662068::1792423622::0::1::::<>SceneTree<><>0<>0<><>::
 art_gallery.gd::GDScript::1438500894231217281::1792399749::0::1::::<>SceneTree<><>0<>0<><>::
 balance11.gd::GDScript::7568462071271560971::1792399749::0::1::::<>SceneTree<><>0<>0<><>::
 balance.gd::GDScript::7512894210084085736::1792399749::0::1::::<>SceneTree<><>0<>0<><>::
@@ -3473,12 +3474,13 @@ stage2_lifecycle.gd::GDScript::8028843492769716758::1792417820::0::1::::<>SceneT
 stage2_props.gd::GDScript::8159381052196991971::1792405321::0::1::::<>SceneTree<><>0<>0<><>::
 stage2_rooms.gd::GDScript::1297776073196833453::1792399750::0::1::::<>SceneTree<><>0<>0<><>::
 stage2_traps.gd::GDScript::6021885088797283440::1792399750::0::1::::<>SceneTree<><>0<>0<><>::
+stage3_telegraph.gd::GDScript::9135106742571147591::1792423452::0::1::::<>SceneTree<><>0<>0<><>::
 test_hero.gd::GDScript::5236793819754762180::1792400133::0::1::::<>RefCounted<><>0<>0<><>::
 test_phase11.gd::GDScript::1098794001118079870::1792399750::0::1::::<>SceneTree<><>0<>0<><>::
 town_logic.gd::GDScript::411414503291107240::1792399750::0::1::::<>SceneTree<><>0<>0<><>::
 town_shots.gd::GDScript::1500613879200887237::1792399750::0::1::::<>SceneTree<><>0<>0<><>::
 ui_tour.gd::GDScript::9202209506045927083::1792405735::0::1::::<>SceneTree<><>0<>0<><>::
-::res://tools/::1792423022
+::res://tools/::1792423408
 make_brand.gd::GDScript::7684674594627054757::1792422465::0::1::::<>SceneTree<><>0<>0<><>::
 make_fx.gd::GDScript::1904977020089756828::1792423022::0::1::::<>SceneTree<><>0<>0<><>::
 make_sounds.gd::GDScript::6909498110548672774::1792420850::0::1::::<>SceneTree<><>0<>0<><>::
