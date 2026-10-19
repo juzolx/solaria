@@ -138,6 +138,7 @@ var bonus_bag := 0         # backpacks brought home (each adds GameData.PACK_SLO
 var packs_carried := 0     # backpacks found this dive: lost if you fall, kept when you get home
 var dive := {}              # what this dive set off with (Town.leave), for the "made it home" tally
 var grave := {}             # Stage 3: what you lost when you fell, guarded by your killer (grave.gd)
+var runs: Array = []         # 0.13+: run history, newest first (run_log.gd)
 var enemy_grave := false     # the monster on screen guards your grave
 var enemy_wanderer := false  # a rare wanderer (wanderers.gd): leaves after a few turns
 var enemy_peaceful := false  # friends of yours: they step aside on your next turn (peoples.gd)
@@ -2142,6 +2143,7 @@ func _hero_died() -> void:
 		boss_ready_at[str(floor_num)] = Time.get_unix_time_from_system() + float(GameData.BOSS_COOLDOWN[enemy_boss_kind])
 	# The death penalty (0.12): you lose what you carried in and fall back to the
 	# start of this 25-floor stretch. Soulbound and Account-bound items are never lost.
+	RunLog.add(self, "fell", 0, 0, enemy_name)
 	Grave.on_death(self)  # what you carried drops here; your killer guards it
 	var lost := _death_losses()
 	if lost != "" and not grave.is_empty() and int(grave["floor"]) == floor_num:
@@ -3094,6 +3096,7 @@ func save_game() -> void:
 		"packs_carried": packs_carried,
 		"dive": dive,
 		"grave": grave,
+		"runs": runs,
 		"next_id": next_id,
 		"auto_potion": auto_potion,
 		"autoplay": autoplay,
@@ -3311,6 +3314,7 @@ func load_game() -> bool:
 	packs_carried = int(data.get("packs_carried", 0))
 	dive = data.get("dive", {})
 	grave = data.get("grave", {})
+	runs = data.get("runs", [])
 	next_id = int(data.get("next_id", 1))
 	auto_potion = bool(data.get("auto_potion", true))
 	autoplay = bool(data.get("autoplay", true))

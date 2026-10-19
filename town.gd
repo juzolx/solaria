@@ -170,6 +170,7 @@ static func _home_tally(g: GameState, carried: int) -> void:
 			found += 1
 			if best.is_empty() or int(it.get("rarity", 0)) > int(best.get("rarity", 0)):
 				best = it
+	RunLog.add(g, "home", maxi(0, carried - int(g.dive.get("gold", 0))), found)
 	g.events.append({"type": "home_tally", "gold": maxi(0, carried - int(g.dive.get("gold", 0))), "items": found, "best": best,
 		"floors": maxi(0, g.floor_num - int(g.dive.get("floor", g.floor_num))), "kills": maxi(0, g.codex.stat("kills") - int(g.dive.get("kills", 0)))})
 	g.dive = {}

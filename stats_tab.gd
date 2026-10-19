@@ -58,4 +58,9 @@ func refresh() -> void:
 	for e in [["Deepest floor", c.stat("best_floor")], ["Highest level", c.stat("best_level")], ["Deepest Hardcore floor", c.stat("hc_floor")],
 			["Longest login streak", c.value("streak_best")], ["Monsters met", c.value("seen")], ["Achievements", c.achievements.size()]]:
 		lines.append(row.call(e[0], e[1]))
+	var runs := RunLog.lines(main.state)
+	if not runs.is_empty():
+		lines.append("")
+		lines.append("[font_size=16][color=#e8b14a]Recent dives[/color][/font_size]")
+		lines.append_array(runs)
 	text.text = "\n".join(lines)
