@@ -140,6 +140,7 @@ var dive := {}              # what this dive set off with (Town.leave), for the 
 var grave := {}             # Stage 3: what you lost when you fell, guarded by your killer (grave.gd)
 var enemy_grave := false     # the monster on screen guards your grave
 var enemy_wanderer := false  # a rare wanderer (wanderers.gd): leaves after a few turns
+var enemy_peaceful := false  # friends of yours: they step aside on your next turn (peoples.gd)
 var hazard := ""            # Stage 3: this room's hazard (hazards.gd), "" for none
 var next_id := 1
 
@@ -1282,6 +1283,7 @@ func spawn_enemy() -> void:
 	enemy_calamity = 0
 	enemy_grave = false
 	enemy_wanderer = false
+	enemy_peaceful = false
 	calamity_pending = false
 	enemy_boss_kind = GameData.boss_kind(floor_num)
 	enemy_is_boss = enemy_boss_kind != ""
@@ -1379,6 +1381,7 @@ func spawn_enemy() -> void:
 	Grave.make_guard(self)  # your killer, guarding what you lost
 	Hazards.roll(self)
 	Wanderers.maybe(self)  # once in a long while, a legend crosses your path
+	Peoples.on_spawn(self)  # a race that likes you may let you pass
 	ClassTree.on_fight_start(self)
 	_setup_fight()
 	if pierce_carry > 0:
@@ -1454,6 +1457,8 @@ func take_turn() -> void:
 		return   # fight or run? (main shows the choice)
 	if leader_down:
 		_down_turn()
+		return
+	if Peoples.part_ways(self):
 		return
 	codex.add("turns")
 	ClassTree.on_turn(self)

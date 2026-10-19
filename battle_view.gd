@@ -2146,6 +2146,8 @@ func _draw_enemy_info(r: Rect2, font: Font) -> void:
 		st.append(["Stunned", Color("#fde68a")])
 	if state.enemy_grave:
 		st.append(["Wears your gear", Color("#fbbf24")])
+	if state.enemy_peaceful:
+		st.append(["Friendly: they won't fight", Color("#4ade80")])
 	var wl := Wanderers.turns_left(state)
 	if wl >= 0:
 		st.append(["Wanders off in %d" % wl, Color("#fde68a")])
