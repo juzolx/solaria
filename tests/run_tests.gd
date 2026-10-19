@@ -852,11 +852,18 @@ func _initialize() -> void:
 	pl.choose_class("Mage")
 	pl.level = 20
 	pl.floor_num = 20
+	seed(4242)
+	pl.horde_left = 0
 	pl.spawn_enemy()
 	var solo_hp := pl.enemy_base_hp
 	pl.set_party([2, 3])
 	check(pl.party.size() == 2 and pl.party_slots == [2, 3], "party of 3")
-	check(pl.enemy_base_hp > solo_hp * 1.7, "monsters scale with the party")
+	# the same monster (same dice) with the party along
+	seed(4242)
+	pl.horde_left = 0
+	pl.spawn_enemy()
+	check(pl.enemy_base_hp > solo_hp * 1.7, "monsters scale with the party (%d vs %d solo)" % [pl.enemy_base_hp, solo_hp])
+	randomize()
 	check(pl.skill_rank("holy_light") >= 1 and pl.skill_rank("shield_bash") >= 1, "party shares one skill book")
 	var tanks := 0
 	for _k in 300:

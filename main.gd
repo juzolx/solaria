@@ -566,6 +566,8 @@ func _on_hardcore_death() -> void:
 
 func _on_tick() -> void:
 	# Manual play: nothing happens until you act (see _manual_turn)
+	if battle.busy():
+		return  # a boss is making its entrance
 	if not state.autoplay:
 		return
 	state.take_turn()
@@ -573,6 +575,9 @@ func _on_tick() -> void:
 
 ## Manual play: one turn when you tap Attack or the enemy.
 func _manual_turn() -> void:
+	if battle.busy():
+		battle.skip_intro()
+		return
 	var now := Time.get_ticks_msec()
 	if now - last_turn_ms < 280:
 		return
@@ -1469,7 +1474,10 @@ func _refresh_top() -> void:
 	var boss := state.enemy_is_boss
 	boss_pill.visible = boss
 	if boss:
-		boss_label.text = "%s  -  unique %d%%" % ["MID BOSS" if state.enemy_boss_kind == "mid" else "ZONE BOSS", int(state.unique_chance())]
+		var bword := "MID BOSS" if state.enemy_boss_kind == "mid" else "ZONE BOSS"
+		# phones: just the word (the full line made the top bar wider than the screen)
+		boss_label.text = bword if get_viewport_rect().size.x < 720.0 else "%s  -  unique %d%%" % [bword, int(state.unique_chance())]
+		boss_pill.tooltip_text = "Chance of a unique drop: %d%%" % int(state.unique_chance())
 	for i in pips.size():
 		pips[i].visible = not boss
 		var done := i < state.fight - 1

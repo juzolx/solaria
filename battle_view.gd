@@ -151,6 +151,13 @@ var floaters: Array[Dictionary] = []
 var banner_text := ""
 var banner_sub := ""
 var banner_alpha := 0.0
+var intro_t := -1.0       # 0.13+: boss entrance running (seconds), -1 when none
+var intro_key := ""
+var intro_title := ""
+var intro_name := ""
+var intro_color := Color.WHITE
+const INTRO_LEN := 2.4
+const INTRO_REVEAL := 0.75  # when the boss bursts out of its silhouette
 var banner_color := Color("#fbbf24")
 var last_floor := -1
 var hero_white: ImageTexture
@@ -950,17 +957,92 @@ func _hero_died() -> void:
 	t.tween_property(self, "hero_alpha", 1.0, 0.5)
 
 func _show_banner() -> void:
-	_sfx("boss_intro" if state.enemy_is_boss else "floor")
+	_sfx("floor")  # bosses get their own entrance (_start_intro)
 	var zone := GameData.zone_for_floor(state.floor_num)
 	banner_text = "FLOOR %d" % state.floor_num
 	banner_color = Color("#fbbf24")
-	var boss_word := "MID BOSS: " if state.enemy_boss_kind == "mid" else "BOSS: "
-	if GameData.wall_mult(state.floor_num) > 1.0:
-		boss_word = "THE WALL: "
-	elif GameData.is_region_boss(state.floor_num):
-		boss_word = "REGION BOSS: "
-	banner_sub = (boss_word + state.enemy_name) if state.enemy_is_boss else "%s  -  %s" % [zone["name"], GameData.sub_name(state.floor_num)]
+	banner_sub = "%s  -  %s" % [zone["name"], GameData.sub_name(state.floor_num)]
 	banner_alpha = 1.8
+
+## What kind of boss this is, for its entrance card.
+func _boss_title() -> String:
+	if state.enemy_calamity > 0:
+		return "CALAMITY"
+	if GameData.wall_mult(state.floor_num) > 1.0:
+		return "THE WALL"
+	if GameData.is_region_boss(state.floor_num):
+		return "REGION BOSS"
+	return "MID BOSS" if state.enemy_boss_kind == "mid" else "BOSS"
+
+## True while a boss entrance holds the turns.
+func busy() -> bool:
+	if DisplayServer.get_name() == "headless":
+		return false  # tests drive turns directly
+	return intro_t >= 0.0 and intro_t < INTRO_LEN - 0.5
+
+func skip_intro() -> void:
+	if intro_t >= 0.0 and intro_t < INTRO_LEN - 0.5:
+		if intro_t < INTRO_REVEAL:
+			_intro_burst()
+		intro_t = INTRO_LEN - 0.5
+
+## Starts a boss's entrance the first time it stands there; runs the clock.
+func _intro_step(delta: float) -> void:
+	if state == null:
+		return
+	if (state.enemy_is_boss or state.enemy_calamity > 0) and is_visible_in_tree() and not state.in_town and state.enemy_hp > 0:
+		var key := "%d|%s|%d" % [state.floor_num, state.enemy_name, state.enemy_max_hp]
+		if key != intro_key:
+			intro_key = key
+			intro_title = _boss_title()
+			intro_name = state.enemy_name
+			intro_color = Color("#ef4444") if state.enemy_calamity > 0 else Color("#fbbf24")
+			intro_t = 0.0
+			_sfx("curse" if state.enemy_calamity > 0 else "enrage", 0.8)
+			if profile and profile.reduce_motion:
+				intro_t = INTRO_REVEAL  # no silhouette or slide
+				_intro_burst()
+			return
+	if intro_t < 0.0:
+		return
+	var before := intro_t
+	intro_t += delta
+	if before < INTRO_REVEAL and intro_t >= INTRO_REVEAL:
+		_intro_burst()
+	if intro_t >= INTRO_LEN:
+		intro_t = -1.0
+
+func _intro_burst() -> void:
+	_sfx("boss_intro")
+	shake = 12.0
+	enemy_flash = 1.0
+	create_tween().tween_property(self, "enemy_flash", 0.0, 0.35)
+	_burst(_enemy_center(), intro_color, 40, 380.0)
+
+## Letterbox bars, a dimmed room and the boss's name card on the lower bar.
+func _draw_intro(font: Font, w: float, h: float) -> void:
+	if intro_t < 0.0:
+		return
+	var k := minf(clampf(intro_t / 0.3, 0.0, 1.0), clampf((INTRO_LEN - intro_t) / 0.4, 0.0, 1.0))
+	k = k * k * (3.0 - 2.0 * k)
+	var bh := h * 0.13 * k
+	draw_rect(Rect2(0, 0, w, bh), Color(0, 0, 0, 0.92))
+	draw_rect(Rect2(0, h - bh, w, bh), Color(0, 0, 0, 0.92))
+	if intro_t < INTRO_REVEAL:
+		draw_rect(Rect2(0, bh, w, h - bh * 2.0), Color(0, 0, 0, 0.25 * k))
+	# the name card slides in from the right after the reveal
+	var s := clampf((intro_t - INTRO_REVEAL) / 0.35, 0.0, 1.0)
+	if s <= 0.0:
+		return
+	var slide := (1.0 - s) * (1.0 - s) * w * 0.5
+	var a := k * s
+	var y := h - bh + 20.0
+	draw_string_outline(font, Vector2(slide, y), intro_title, HORIZONTAL_ALIGNMENT_CENTER, w, 14, 4, Color(0, 0, 0, a))
+	draw_string(font, Vector2(slide, y), intro_title, HORIZONTAL_ALIGNMENT_CENTER, w, 14, Color(intro_color, a))
+	var lw := w * 0.5 * s
+	draw_rect(Rect2(w / 2.0 - lw / 2.0, y + 6.0, lw, 2.0), Color(intro_color, 0.8 * a))
+	draw_string_outline(font, Vector2(-slide, y + 34.0), intro_name, HORIZONTAL_ALIGNMENT_CENTER, w, 28, 7, Color(0, 0, 0, a))
+	draw_string(font, Vector2(-slide, y + 34.0), intro_name, HORIZONTAL_ALIGNMENT_CENTER, w, 28, Color(1, 0.96, 0.88, a))
 
 ## Where a new floating text goes: [position, lane]. Texts near each other take
 ## the next free lane, fanning out sideways (big sprites leave little room above).
@@ -1019,6 +1101,7 @@ func _float(text: String, pos: Vector2, color: Color, font_size: int) -> void:
 # =====================================================================
 
 func _process(delta: float) -> void:
+	_intro_step(delta)
 	if freeze_left > 0.0:
 		freeze_left -= delta  # hit stop: hold this frame
 		return
@@ -1412,6 +1495,10 @@ func _draw() -> void:
 		var rank := GameData.zone_rank(state.floor_num)
 		if rank > 0:
 			etint = Color(1.0 - 0.08 * rank, 0.9 - 0.1 * rank, 1.0 - 0.02 * rank, enemy_alpha)
+		if intro_t >= 0.0:
+			# Boss entrance: a black shape until it bursts into view
+			var rv := clampf((intro_t - INTRO_REVEAL + 0.1) / 0.15, 0.0, 1.0)
+			etint = Color(etint.r * rv, etint.g * rv, etint.b * rv, etint.a)
 		if state.enemy_calamity > 0:
 			# A shape of darkness with a burning crimson edge
 			etint = Color(0.16, 0.05, 0.12, enemy_alpha)
@@ -1574,6 +1661,8 @@ func _draw() -> void:
 		draw_string_outline(font, Vector2(slide, 62), banner_text, HORIZONTAL_ALIGNMENT_CENTER, w, 26, 6, Color(0, 0, 0, a))
 		draw_string(font, Vector2(slide, 62), banner_text, HORIZONTAL_ALIGNMENT_CENTER, w, 26, Color(big_color, a))
 		draw_string(font, Vector2(-slide, 79), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, w, 13, Color(1, 1, 1, 0.85 * a))
+
+	_draw_intro(font, w, h)
 
 	# Tip toast at the top
 	if toast_life > 0.0:
