@@ -134,6 +134,8 @@ func _gui_input(event: InputEvent) -> void:
 			accept_event()
 			if String(k).begins_with("d"):
 				main.pick_door(int(String(k).substr(1)))
+			elif String(k).begins_with("p"):
+				main.interact_prop(int(String(k).substr(1)))
 			else:
 				main.engage_monster()
 			return
@@ -201,6 +203,43 @@ func _draw() -> void:
 		var tt := _tx("res://art/dungeon/torch.png")
 		if tt:
 			draw_texture_rect(tt, rect, false)
+	# Things to poke at: chests (some are mimics), pots, altars, levers, nests, people
+	var pfont := get_theme_default_font()
+	for i in state.room_props.size():
+		var p: Dictionary = state.room_props[i]
+		var used: bool = p.get("used", false)
+		var kind := String(p["kind"])
+		if used and kind in ["pot", "key", "npc", "beast", "nest"]:
+			continue
+		var tile: String = String({"chest": "chest", "locked": "chest", "pot": "pot", "altar": "altar", "lever": "lever", "nest": "nest", "key": "key"}.get(kind, ""))
+		if kind == "chest" and p.get("spotted", false) and not used:
+			tile = "mimic"
+		if used and kind in ["chest", "locked"]:
+			tile = "chest_open"
+		var pp := origin + Vector2(cols * float(p["x"]), rows * float(p["y"])) * px
+		var prr := Rect2(pp - Vector2(px / 2.0, px * 0.8), Vector2(px, px))
+		_shadow(Vector2(pp.x, pp.y + px * 0.15), px * 0.3)
+		if kind == "npc":
+			var ntx := _tx("res://art/dungeon/npc.png")
+			if ntx:
+				draw_texture_rect(ntx, prr, false, Color(0.85, 0.8, 0.8))
+		elif kind == "beast":
+			var who := Sprites.enemy_by_key("barghest")
+			if who.has("tex"):
+				draw_texture_rect(who["tex"], prr, false, Color(0.6, 0.55, 0.55))
+		elif tile != "":
+			var ptx := _tx("res://art/dungeon/%s.png" % tile)
+			if ptx:
+				draw_texture_rect(ptx, prr, false, Color(0.6, 0.6, 0.6) if used else Color(1, 1, 1))
+		if not used and Halls.can_interact(state):
+			hit["p%d" % i] = prr.grow(6)
+			var lab := String(Halls.PROP_NAMES.get(kind, kind))
+			var lc := Color("#f6d88f")
+			if tile == "mimic":
+				lab = "Mimic!"
+				lc = Color("#f87171")
+			draw_string_outline(pfont, Vector2(prr.position.x - 30, prr.end.y + 12), lab, HORIZONTAL_ALIGNMENT_CENTER, px + 60, 10, 3, Color(0, 0, 0, 0.9))
+			draw_string(pfont, Vector2(prr.position.x - 30, prr.end.y + 12), lab, HORIZONTAL_ALIGNMENT_CENTER, px + 60, 10, lc)
 	# A trap you've spotted (hidden ones stay hidden)
 	var tr: Dictionary = state.room_trap
 	if not tr.is_empty() and tr.get("spotted", false) and not tr.get("done", false) and not doors_open:

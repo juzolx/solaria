@@ -59,11 +59,14 @@ static func blocked(g: GameState, floor_done := false) -> String:
 		return "This hero's run is over."
 	if not g.shop_unlocked():
 		return "The town opens once you reach floor %d." % GameData.SHOP_UNLOCK_FLOOR
+	if not g.in_town and not g.portal.is_empty():
+		return PORTAL_BLOCK
 	if not g.in_town and not floor_done and not floor_clear(g):
 		return FLOOR_BLOCK
 	return ""
 
 const FLOOR_BLOCK := "You can only head home between floors."
+const PORTAL_BLOCK := "The portal holds you. Only a Return Scroll gets you out before the end."
 
 ## True when you're between floors: nothing on this floor has been fought yet
 ## (you just cleared the last one, woke at a checkpoint, or came down from town).
@@ -74,6 +77,8 @@ static func floor_clear(g: GameState) -> bool:
 static func use_return(g: GameState) -> bool:
 	if g.return_scrolls <= 0 or g.in_town:
 		return false
+	if not g.portal.is_empty() and not g.trial_active and not g.run_over:
+		Halls.leave_portal(g, false)
 	if blocked(g, true) != "":
 		return false
 	g.return_scrolls -= 1

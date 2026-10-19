@@ -164,6 +164,9 @@ var explore_wait := 0
 var room_count := 0         # rooms entered this run (seeds each room's layout)
 var room_trap := {}         # 0.13: this room's trap {kind, spotted, done, x, y} ({} = none)
 var door_traps: Array = []  # which of the 3 doors are trapped
+var room_props: Array = []  # things to poke at in this room (halls.gd)
+var room_key := false       # picked up this room's key
+var portal := {}            # 0.13: inside a hidden dungeon portal {theme, depth} ({} = not in one)
 var doors: Array = []      # 0.13: what's behind the 3 blank doors of a cleared room (hidden until you walk through)
 
 # ---------- Current enemy ----------
@@ -3067,6 +3070,9 @@ func save_game() -> void:
 		"door_traps": door_traps,
 		"room_trap": room_trap,
 		"room_count": room_count,
+		"room_props": room_props,
+		"room_key": room_key,
+		"portal": portal,
 		"curse_turns": curse_turns,
 		"luck_turns": luck_turns,
 		"hunt_spawns": hunt_spawns,
@@ -3316,6 +3322,9 @@ func load_game() -> bool:
 	door_traps = data.get("door_traps", [])
 	room_trap = data.get("room_trap", {})
 	room_count = int(data.get("room_count", 0))
+	room_props = data.get("room_props", [])
+	room_key = bool(data.get("room_key", false))
+	portal = data.get("portal", {})
 	horde_total = maxi(horde_left, GameData.HORDE_SIZE)
 	curse_turns = int(data.get("curse_turns", 0))
 	luck_turns = int(data.get("luck_turns", 0))
@@ -3655,6 +3664,7 @@ func _through_door(i: int) -> void:
 	spawn_enemy()
 	_enter_room_pause()
 	Halls.roll_room_trap(self)
+	Halls.roll_props(self)
 	if kind != "fight":
 		_apply_path(kind)
 

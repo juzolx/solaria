@@ -320,6 +320,14 @@ func engage_monster() -> void:
 	state.engage()
 	refresh()
 
+## Room view: open, smash, pray at or talk to something in the room.
+func interact_prop(i: int) -> void:
+	var r := Halls.interact(state, i)
+	if r != "":
+		sfx.play("buy")
+		toast(r)
+	refresh()
+
 ## Room view: through one of the three doors.
 func pick_door(i: int) -> void:
 	if not state.door_pending():
@@ -909,7 +917,9 @@ func go_to_town() -> bool:
 		return true
 	if not Town.enter(state):
 		var why := Town.blocked(state)
-		if why == Town.FLOOR_BLOCK and state.return_scrolls > 0:
+		if why == Town.PORTAL_BLOCK and state.return_scrolls <= 0:
+			toast(why)
+		elif why in [Town.FLOOR_BLOCK, Town.PORTAL_BLOCK] and state.return_scrolls > 0:
 			confirm("Read a Return Scroll?", "You escape home right now with everything you carry. You have %d." % state.return_scrolls, "Read it", func():
 				if Town.use_return(state):
 					sfx.play("click")

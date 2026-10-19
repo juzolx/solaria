@@ -128,3 +128,179 @@ static func read_door(g: GameState, i: int) -> Dictionary:
 static func on_doors_shown(g: GameState) -> void:
 	if team_sense(g) > 0:
 		ClassTree.count(g, "doors_read", 3)
+
+# =====================================================================
+# Room interactions (manual play: tap them; Auto walks past)
+# =====================================================================
+
+const PROP_WEIGHTS := {"chest": 25, "pot": 30, "altar": 12, "lever": 10, "nest": 8, "npc": 8, "key": 7}
+const MIMIC_CHANCE := 12.5         # % of chests (about 1 in 8)
+const NEST_EGG_CHANCE := 25.0      # % a nest holds an egg
+const PROP_NAMES := {"chest": "Chest", "pot": "Old pot", "altar": "Altar", "lever": "Lever", "nest": "Nest",
+	"npc": "Wounded adventurer", "key": "Rusty key", "locked": "Locked chest", "beast": "Dying beast"}
+
+static func _pick_prop() -> String:
+	var total := 0
+	for k in PROP_WEIGHTS:
+		total += int(PROP_WEIGHTS[k])
+	var r := randi() % total
+	for k in PROP_WEIGHTS:
+		r -= int(PROP_WEIGHTS[k])
+		if r < 0:
+			return k
+	return "pot"
+
+## A new room: 1-3 things to poke at (none on boss floors).
+static func roll_props(g: GameState) -> void:
+	g.room_props = []
+	g.room_key = false
+	if GameData.is_boss_floor(g.floor_num) or g.trial_active:
+		return
+	var n := randi_range(1, 3)
+	var xs := [0.2, 0.8, 0.35, 0.65]
+	xs.shuffle()
+	for i in n:
+		var k := _pick_prop()
+		var p := {"kind": k, "used": false, "x": xs[i], "y": randf_range(0.5, 0.72)}
+		if k == "chest":
+			p["mimic"] = randf() * 100.0 < MIMIC_CHANCE
+			p["spotted"] = p["mimic"] and randf() * 100.0 < spot_chance(g)
+		if k == "npc" and randf() < 0.35:
+			p["kind"] = "beast"   # a dying beast and its young (an egg quest)
+		g.room_props.append(p)
+		if k == "key":
+			# the key opens a locked chest somewhere in the same room
+			g.room_props.append({"kind": "locked", "used": false, "x": xs[(i + 1) % xs.size()] if n < 4 else 0.5, "y": 0.42})
+
+static func can_interact(g: GameState) -> bool:
+	return not g.in_town and (g.exploring or g.door_pending())
+
+## Tap something in the room. Returns what happened (for the log).
+static func interact(g: GameState, i: int) -> String:
+	if i < 0 or i >= g.room_props.size() or not can_interact(g):
+		return ""
+	var p: Dictionary = g.room_props[i]
+	if p.get("used", false):
+		return ""
+	var out := ""
+	match String(p["kind"]):
+		"chest":
+			if p.get("mimic", false):
+				p["used"] = true
+				_mimic(g)
+				return "The chest grows teeth!"
+			p["used"] = true
+			var gold := (5 + g.floor_num * 4) * 2
+			g._add_gold(gold)
+			g._give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), g._rarity(10 + g._loot_bonus(), GameData.LEGENDARY_CHANCE_NORMAL * 2.0), g.floor_num, g._new_id()))
+			out = "You open the chest: +%d gold and some gear." % gold
+			g.events.append({"type": "treasure"})
+		"locked":
+			if not g.room_key:
+				return "It's locked. The key must be somewhere in this room."
+			p["used"] = true
+			var gold2 := (5 + g.floor_num * 4) * 4
+			g._add_gold(gold2)
+			g._give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), maxi(2, g._rarity(25 + g._loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS)), g.floor_num, g._new_id()))
+			out = "The rusty key turns. Inside: +%d gold and something good." % gold2
+			g.events.append({"type": "treasure"})
+		"key":
+			p["used"] = true
+			g.room_key = true
+			out = "You pick up a rusty key."
+		"pot":
+			p["used"] = true
+			var roll := randf()
+			if roll < 0.45:
+				var gp := 2 + g.floor_num
+				g._add_gold(gp)
+				out = "You smash the pot: +%d gold." % gp
+			elif roll < 0.65:
+				g.potions += 1
+				out = "You smash the pot: a potion!"
+			elif roll < 0.75:
+				Combat.afflict(g, "poison", 3)
+				out = "A snake was coiled inside. It bites!"
+			else:
+				out = "Just dust."
+		"altar":
+			p["used"] = true
+			match randi() % 3:
+				0:
+					g.elixirs["rested"] = int(GameData.ELIXIRS["rested"]["turns"])
+					out = "You pray at the altar. Strength flows into you (+15% Attack for a while)."
+				1:
+					g.luck_turns += 30
+					out = "You pray at the altar. Luck smiles on you (better loot for 30 turns)."
+				_:
+					g.hero_hp = g.get_max_hp()
+					out = "You pray at the altar. Your wounds close."
+			g.events.append({"type": "buff", "name": "Altar"})
+		"lever":
+			p["used"] = true
+			if randf() < 0.6:
+				var gl := (5 + g.floor_num * 3) * 2
+				g._add_gold(gl)
+				g._give_materials(1)
+				out = "A hidden alcove grinds open: +%d gold and some materials." % gl
+			else:
+				trigger(g, roll_trap())
+				out = "Click. That was a trap."
+		"nest":
+			p["used"] = true
+			if randf() * 100.0 < NEST_EGG_CHANCE:
+				Menagerie.give_egg(g, "nest")
+				out = "Among the twigs: an egg."
+			else:
+				g.horde_left = maxi(g.horde_left, 2)
+				g.horde_total = g.horde_left
+				g.horde_pack = true
+				out = "Something angry was sitting on that nest. A pack comes for you!"
+		"npc":
+			if g.potions <= 0:
+				return "A wounded adventurer begs for a potion. You have none to give."
+			p["used"] = true
+			g.potions -= 1
+			g._faith(5)
+			var gn := (5 + g.floor_num * 4) * 3
+			g._add_gold(gn)
+			if randf() < 0.35:
+				g._give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), 3, g.floor_num, g._new_id()))
+			out = "You give the adventurer a potion. Grateful, they press their purse into your hands (+%d gold)." % gn
+		"beast":
+			p["used"] = true
+			g._faith(5)
+			if randf() < 0.6:
+				Menagerie.give_egg(g, "beast")
+				out = "The dying beast nudges something toward you before it goes still: its egg. Look after it."
+			else:
+				out = "You ease the beast's last moments. It doesn't fight you."
+	g.codex.add("room_things")
+	if out != "":
+		g.say(out)
+	g.save_game()
+	return out
+
+## A mimic: the chest was a monster all along (Epic, better loot).
+static func _mimic(g: GameState) -> void:
+	g.exploring = false
+	g.spawn_enemy()
+	g.enemy_name = "Mimic"
+	g.enemy_species = "Mimic"
+	g.enemy_art = "mimic"
+	g.enemy_people = ""
+	g._apply_tier(Monsters.EPIC)
+	g.events.append({"type": "rare_monster", "tier": Monsters.EPIC, "name": "Mimic", "mods": g.enemy_mods.duplicate()})
+	g.say("[color=#f87171]The chest snaps open... it's a Mimic![/color]")
+
+# =====================================================================
+# Hidden dungeon portals (part 9, in progress)
+# =====================================================================
+
+## Leave the portal (cleared = reached the end).
+static func leave_portal(g: GameState, cleared: bool) -> void:
+	if g.portal.is_empty():
+		return
+	g.portal = {}
+	if not cleared:
+		g.say("[color=#c4b5fd]The portal snaps shut behind you.[/color]")

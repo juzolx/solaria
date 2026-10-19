@@ -13,6 +13,7 @@ const NOTES := [
 		"One room per floor, seen from above: see the monsters waiting, tap one to fight (Auto walks up by itself). Clear the room and pick one of three blank doors: anything could be behind them. Every region has its own walls, floors, light and drifting mood.",
 		"Traps: spikes, poison darts, flame jets, frost runes, smoke (blind) and alarms that bring an ambush. Sharp eyes spot them and step around. Doors can be trapped too.",
 		"Rangers read the blank doors: at first a glow (green safe, yellow a fight, red danger), and with practice the room itself. Their companions read for the whole team. A new Ranger branch-off waits for those who read enough doors.",
+		"Rooms hold things to poke at between fights: chests (about 1 in 8 bites back, though sharp eyes see it coming), keys and locked chests, pots, old altars, levers, nests, wounded adventurers who need a potion, and dying beasts that sometimes leave you their egg.",
 		"Work in progress: more of The Halls Below arrives part by part.",
 	]},
 	{"version": "0.12", "name": "The Deep", "lines": [
