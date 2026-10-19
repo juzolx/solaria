@@ -962,7 +962,7 @@ func _enemy_died() -> void:
 	if dying.has("tex"):
 		_burst(_dying_rect().get_center(), Color(dying["color"]), 24, 300.0)
 	var t := create_tween()
-	t.tween_method(_set_dying_alpha, 1.0, 0.0, 0.35)
+	t.tween_method(_set_dying_alpha, 1.0, 0.0, 0.6 if (profile == null or not profile.reduce_motion) else 0.3)
 	t.tween_callback(func(): dying = {})
 	t.tween_property(self, "enemy_alpha", 1.0, 0.25)
 
@@ -1462,8 +1462,11 @@ func _draw() -> void:
 	# Dying enemy fading out
 	if dying.has("tex"):
 		var dr := _dying_rect()
-		dr.position.y += (1.0 - float(dying["alpha"])) * 20.0
-		draw_texture_rect(dying["tex"], dr, false, Color(1, 1, 1, dying["alpha"]))
+		# 0.13+: it crumbles away pixel by pixel, edges glowing, instead of fading
+		var frames := _dissolve(dying["tex"], Color(String(dying.get("color", "#ff8040"))))
+		var fi := clampi(int((1.0 - float(dying["alpha"])) * frames.size()), 0, frames.size() - 1)
+		dr.position.y -= (1.0 - float(dying["alpha"])) * 6.0
+		draw_texture_rect(frames[fi], dr, false, Color(1, 1, 1, minf(1.0, float(dying["alpha"]) * 3.0)))
 
 	# A pack (horde): the ones still waiting stand behind, either side
 	if state.horde_left > 1 and enemy_alpha > 0.0 and not state.enemy_is_boss:
@@ -2258,3 +2261,40 @@ func _draw_team_strip(font: Font) -> void:
 	if tsl > 0:
 		draw_string_outline(font, Vector2(6, y + 41), "Team Strike in %d" % tsl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, 3, Color(0, 0, 0, 0.9))
 		draw_string(font, Vector2(6, y + 41), "Team Strike in %d" % tsl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#fbbf24"))
+
+static var _dissolves := {}
+const DISSOLVE_FRAMES := 8
+## A monster's death as frames: pixels burn away in a noisy order, with a glowing edge
+## in its color just ahead of the hole. Made once per sprite and kept.
+func _dissolve(tex: Texture2D, glow: Color) -> Array:
+	var key := tex.get_rid().get_id()
+	if _dissolves.has(key):
+		return _dissolves[key]
+	var src := tex.get_image().duplicate() as Image
+	src.convert(Image.FORMAT_RGBA8)
+	var w := src.get_width()
+	var h := src.get_height()
+	var noise := FastNoiseLite.new()
+	noise.seed = key % 9973
+	noise.frequency = 0.12
+	var out: Array = []
+	var edge := glow.lightened(0.5)
+	for f in DISSOLVE_FRAMES:
+		var cut := float(f) / DISSOLVE_FRAMES     # 0 = whole, near 1 = almost gone
+		var img := src.duplicate() as Image
+		for y in h:
+			for x in w:
+				var c := img.get_pixel(x, y)
+				if c.a < 0.01:
+					continue
+				# higher pixels go first, broken up by noise
+				var n := (noise.get_noise_2d(x, y) + 1.0) * 0.5 * 0.7 + (1.0 - float(y) / h) * 0.3
+				if n < cut:
+					img.set_pixel(x, y, Color(0, 0, 0, 0))
+				elif n < cut + 0.08 and f > 0:
+					img.set_pixel(x, y, Color(edge.r, edge.g, edge.b, c.a))
+		out.append(ImageTexture.create_from_image(img))
+	if _dissolves.size() > 60:
+		_dissolves.clear()
+	_dissolves[key] = out
+	return out
