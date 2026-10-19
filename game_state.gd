@@ -139,6 +139,7 @@ var packs_carried := 0     # backpacks found this dive: lost if you fall, kept w
 var dive := {}              # what this dive set off with (Town.leave), for the "made it home" tally
 var grave := {}             # Stage 3: what you lost when you fell, guarded by your killer (grave.gd)
 var enemy_grave := false     # the monster on screen guards your grave
+var enemy_wanderer := false  # a rare wanderer (wanderers.gd): leaves after a few turns
 var hazard := ""            # Stage 3: this room's hazard (hazards.gd), "" for none
 var next_id := 1
 
@@ -1273,6 +1274,7 @@ func _frozen_crit() -> bool:
 func spawn_enemy() -> void:
 	enemy_calamity = 0
 	enemy_grave = false
+	enemy_wanderer = false
 	calamity_pending = false
 	enemy_boss_kind = GameData.boss_kind(floor_num)
 	enemy_is_boss = enemy_boss_kind != ""
@@ -1369,6 +1371,7 @@ func spawn_enemy() -> void:
 		return
 	Grave.make_guard(self)  # your killer, guarding what you lost
 	Hazards.roll(self)
+	Wanderers.maybe(self)  # once in a long while, a legend crosses your path
 	ClassTree.on_fight_start(self)
 	_setup_fight()
 	if pierce_carry > 0:
@@ -1559,6 +1562,9 @@ func take_turn() -> void:
 	# Bosses: shields, minions, the enrage clock
 	line += Combat.boss_turn(self)
 	line += Combat.monster_turn(self)  # Rare+ monsters telegraph heavy blows
+	if Wanderers.wander_off(self):
+		say(line.trim_prefix(". ") + ".")
+		return
 	line += Hazards.tick(self)  # some rooms fight back
 	if enemy_hp <= 0:
 		say(line)
@@ -1872,6 +1878,7 @@ func _enemy_defeated() -> void:
 		enemy_champion = false
 		World.champion_reward(self)
 	Grave.recover(self)
+	Wanderers.reward(self)
 	hero_hp = mini(hero_hp + int(get_max_hp() * 0.15 * (0.0 if curses.has("frailty") else 1.0)), get_max_hp())
 
 	# Move on (horde fights and the goblin don't count toward the floor's 3 fights)

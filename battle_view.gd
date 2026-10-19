@@ -1549,7 +1549,7 @@ func _draw() -> void:
 		elif state.enemy_calamity > 0:
 			label = "CALAMITY: " + state.enemy_name
 			name_color = Color("#ff6b6b")
-		elif state.enemy_tier > 0 and not boss:
+		elif state.enemy_tier > 0 and not boss and not state.enemy_wanderer:
 			label = "%s %s" % [Monsters.tier_name(state.enemy_tier), state.enemy_name]
 		if state.enemy_goblin:
 			label += "  (%d turns)" % state.goblin_turns
@@ -2128,6 +2128,9 @@ func _draw_enemy_info(r: Rect2, font: Font) -> void:
 		st.append(["Stunned", Color("#fde68a")])
 	if state.enemy_grave:
 		st.append(["Wears your gear", Color("#fbbf24")])
+	var wl := Wanderers.turns_left(state)
+	if wl >= 0:
+		st.append(["Wanders off in %d" % wl, Color("#fde68a")])
 	var hz := Hazards.turns_left(state)
 	if hz >= 0 and Hazards.KINDS.has(state.hazard):
 		var hk: Dictionary = Hazards.KINDS[state.hazard]

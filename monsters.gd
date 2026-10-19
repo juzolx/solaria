@@ -176,6 +176,9 @@ const MILESTONES := [[10, 2], [100, 4], [500, 7], [1000, 10]]
 static func info(monster: String) -> Dictionary:
 	if INFO.has(monster):
 		return INFO[monster]
+	for w in Wanderers.LIST:
+		if w["name"] == monster:
+			return {"lore": w["lore"], "drops": []}
 	return Realms.MONSTER_INFO.get(monster, {"lore": "", "drops": []})
 
 ## Every monster's info: the roots' and the realms'.
