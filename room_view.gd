@@ -201,6 +201,7 @@ func _draw_team() -> void:
 		draw_texture_rect(an["tex"][fi], Rect2(feet - Vector2(sz / 2.0, sz * 0.9), Vector2(sz, sz)), false, Color(0.85, 0.82, 0.8, a))
 		if j == 0:
 			_draw_pet(feet, sz)
+			_draw_menagerie_room(feet, sz)
 
 ## Your companion trots at the leader's heels.
 func _draw_pet(leader_feet: Vector2, leader_sz: float) -> void:
@@ -304,3 +305,20 @@ func _draw_rift(x: float, z: float) -> Rect2:
 		draw_rect(Rect2(p, Vector2(2, 2)), Color(0.85, 0.8, 1.0, d))
 	draw_circle(c, rw * 0.18, Color(1, 1, 1, 0.6 + 0.3 * sin(t * 4.0)))
 	return Rect2(c - Vector2(rw, rh), Vector2(rw * 2.0, rh * 2.0))
+
+## Menagerie pets on the run follow at the leader's left, sized by their level.
+func _draw_menagerie_room(leader_feet: Vector2, leader_sz: float) -> void:
+	var pets := Menagerie.out(state)
+	for i in pets.size():
+		var p: Dictionary = pets[i]
+		var art := Sprites.enemy_by_key(String(p["art"]))
+		if not art.has("tex"):
+			continue
+		var grow := clampf((int(p["level"]) - 1) / 29.0, 0.0, 1.0)
+		var s := leader_sz * lerpf(0.32, 0.55, grow)
+		var hop := 0.0 if (main.profile and main.profile.reduce_motion) else absf(sin(t * 3.0 + i)) * s * 0.04
+		var at := leader_feet + Vector2(-leader_sz * (0.5 + 0.3 * i), -4.0 - i * 4.0)
+		scene.shadow(self, at, s * 0.2)
+		var asz: Vector2 = art["size"]
+		var w := s * asz.x / asz.y
+		draw_texture_rect(SpriteLight.lit(art["tex"], scene.zone), Rect2(at - Vector2(w / 2.0, s * 0.9 + hop), Vector2(w, s)), false, Color(0.9, 0.88, 0.85))
