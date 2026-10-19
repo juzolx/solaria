@@ -45,6 +45,22 @@ func _initialize() -> void:
 	main.profile.low_graphics = false
 	main.apply_settings()
 	check(Engine.max_fps == 0 and not HallsScene.low, "both settings turn off again")
+
+	# Speed cycles 1x -> 2x -> 3x -> 1x and sets the turn timer
+	main.state.speed = 1
+	var waits: Array = []
+	for i in 3:
+		main.speed_button.pressed.emit()
+		waits.append(snappedf(main.timer.wait_time, 0.001))
+	check(main.state.speed == 1 and waits.size() == 3 and waits[1] < waits[0] and waits[2] > waits[1], "speed cycles 2x, 3x, back to 1x (%s)" % str(waits))
+
+	# Dive again: from town, straight back down
+	main.state.return_scrolls = 1
+	var _home := Town.use_return(main.state)
+	main.refresh()
+	check(main.state.in_town, "home for the dive-again check")
+	main.dive_again()
+	check(not main.state.in_town and main.state.floor_num == main.dive_again_floor(), "dive again leaves town at the last checkpoint")
 	print("STAGE2 LIFECYCLE TESTS DONE, failures: ", fails)
 	GameState.delete_saves()
 	quit()

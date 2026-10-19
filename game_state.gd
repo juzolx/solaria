@@ -144,7 +144,8 @@ var auto_potion := true
 var autoplay := true      # the fight runs by itself; off = you take every turn (Attack / tap the enemy)
 var auto_paths := true    # forks pick a room by themselves after a few turns
 var auto_salvage := -1  # -1 = off, otherwise salvage new drops of this rarity and below
-var fast_mode := false
+var fast_mode := false   # kept in step with speed (older saves only have this)
+var speed := 1           # fight speed: 1x, 2x or 3x
 var tips_seen := {}  # tips already shown once
 var bosses_since_unique := 0  # pity counter: raises the unique chance
 var sound_on := true
@@ -3007,6 +3008,7 @@ func save_game() -> void:
 		"auto_paths": auto_paths,
 		"auto_salvage": auto_salvage,
 		"fast_mode": fast_mode,
+		"speed": speed,
 		"tips_seen": tips_seen,
 		"bosses_since_unique": bosses_since_unique,
 		"sound_on": sound_on,
@@ -3220,6 +3222,7 @@ func load_game() -> bool:
 	auto_paths = bool(data.get("auto_paths", true))
 	auto_salvage = int(data.get("auto_salvage", -1))
 	fast_mode = bool(data.get("fast_mode", false))
+	speed = clampi(int(data.get("speed", 2 if fast_mode else 1)), 1, 3)
 	tips_seen = data.get("tips_seen", {})
 	bosses_since_unique = int(data.get("bosses_since_unique", 0))
 	sound_on = bool(data.get("sound_on", true))

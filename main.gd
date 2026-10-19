@@ -218,11 +218,28 @@ func _show_home_tally(e: Dictionary) -> void:
 		lines.append("%d monster%s defeated" % [kills, "" if kills == 1 else "s"])
 	t.text = "\n".join(lines)
 	o.content.add_child(t)
-	var ok := UI.primary("To town", o.close, UI.GOLD)
-	ok.custom_minimum_size = Vector2(0, UI.TAP)
-	o.content.add_child(ok)
+	var row := UI.hbox(8)
+	o.content.add_child(row)
+	var ok := UI.button("Stay in town", o.close)
+	var again := UI.primary("Dive again (floor %d)" % dive_again_floor(), func():
+		o.close()
+		dive_again(), UI.GOLD)
+	again.tooltip_text = "Straight back down from your last checkpoint, carrying the same share of gold as last time."
+	for b in [ok, again]:
+		b.custom_minimum_size = Vector2(0, UI.TAP)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(b)
 	if sfx:
 		sfx.play("achievement")
+
+## Where "Dive again" starts: your last checkpoint (as the floor picker's first choice).
+func dive_again_floor() -> int:
+	return GameState.checkpoint_start(mini(state.best_floor, state.checkpoint + 1))
+
+## Back into the dungeon in one tap: last checkpoint, the same gold-to-carry choice.
+func dive_again() -> void:
+	if state.in_town and state.go_to_floor(dive_again_floor()):
+		_leave_town()
 
 ## Saves the hero, the party, the codex and the profile.
 func save_everything() -> void:
@@ -293,7 +310,7 @@ func _start(is_new: bool) -> void:
 	apply_settings()
 	codex.refresh_bounties(state)
 
-	timer.wait_time = TURN_SECONDS / 2.0 if state.fast_mode else TURN_SECONDS
+	timer.wait_time = TURN_SECONDS / float(state.speed)
 	if not loaded or state.needs_creator:
 		_show_creator(not loaded)
 	elif state.hero_class == "":
@@ -861,11 +878,12 @@ func _build_fight(parent: Control) -> void:
 	floors_button = UI.button("Floors", func(): FloorPicker.new().show_for(self))
 	floors_button.tooltip_text = "Travel to any floor you've reached, including boss floors"
 	speed_button = UI.button("", func():
-		state.fast_mode = not state.fast_mode
-		timer.wait_time = TURN_SECONDS / 2.0 if state.fast_mode else TURN_SECONDS
+		state.speed = state.speed % 3 + 1  # 1x -> 2x -> 3x -> 1x
+		state.fast_mode = state.speed > 1
+		timer.wait_time = TURN_SECONDS / float(state.speed)
 		state.save_game()
 		refresh())
-	speed_button.tooltip_text = "Make the fight run twice as fast"
+	speed_button.tooltip_text = "Fight speed: 1x, 2x or 3x. Tap to cycle."
 	escape_button = UI.button("Run", func():
 		Lineage.try_escape(state)
 		refresh())
@@ -1465,7 +1483,7 @@ func _refresh_fight() -> void:
 	potion_button.text = "Potion (%d)" % state.potions
 	potion_button.disabled = state.potions <= 0 or state.hero_hp >= state.get_max_hp() or state.leader_down
 	auto_potion_button.text = "Auto-heal %s" % ("ON" if state.auto_potion else "OFF")
-	speed_button.text = "Speed %s" % ("2x" if state.fast_mode else "1x")
+	speed_button.text = "Speed %dx" % state.speed
 	floors_button.disabled = state.best_floor <= 1
 	var acts := state.equipped_actives()
 	for i in skill_buttons.size():
