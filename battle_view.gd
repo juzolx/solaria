@@ -143,6 +143,9 @@ var hero_alpha := 1.0
 var enemy_alpha := 1.0
 var dying := {}  # the enemy that just died, fading out
 var shake := 0.0
+var freeze_left := 0.0  # hit stop: seconds the fight picture stays frozen
+var bar_ghost := {}   # HP bar label -> the pale "just lost" level that drains toward the real one
+var bar_target := {}
 var bob := 0.0
 var floaters: Array[Dictionary] = []
 var banner_text := ""
@@ -772,11 +775,13 @@ func _shoot(color: Color, big := false) -> void:
 		"kind": "arrow" if _weapon_type() == "bow" else "bolt", "big": big})
 
 ## Freezes the action for a split second so big hits feel heavy.
+## Freezes the fight picture for a moment so big hits land heavy. Only this view
+## stops: the turn timer, menus and sound keep going (slowing Engine.time_scale
+## would slow the game's own clock too). Follows the Screen shake setting.
 func _hit_stop(seconds: float) -> void:
-	if profile and not profile.flashes:
+	if profile and not profile.shake:
 		return
-	Engine.time_scale = 0.05
-	get_tree().create_timer(seconds, true, false, true).timeout.connect(func(): Engine.time_scale = 1.0)
+	freeze_left = maxf(freeze_left, seconds)
 
 func _burst(pos: Vector2, color: Color, count: int, speed: float) -> void:
 	for i in count:
@@ -918,8 +923,13 @@ func _float(text: String, pos: Vector2, color: Color, font_size: int) -> void:
 # =====================================================================
 
 func _process(delta: float) -> void:
+	if freeze_left > 0.0:
+		freeze_left -= delta  # hit stop: hold this frame
+		return
 	bob += delta
-	shake = move_toward(shake, 0.0, delta * 40.0)
+	shake = move_toward(shake * exp(-delta * 6.0), 0.0, delta * 8.0)  # quick fade with a short tail
+	for key in bar_ghost.keys():
+		bar_ghost[key] = move_toward(float(bar_ghost[key]), float(bar_target.get(key, 0.0)), delta * 0.8)
 	lpc_t += delta
 	if chest_t >= 0.0:
 		chest_t += delta
@@ -1229,8 +1239,11 @@ func _draw() -> void:
 	draw_string(font, Vector2(14, 24), "%s  -  %s  -  Floor %d" % [zone["name"], GameData.sub_name(state.floor_num), state.floor_num], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 1, 1, 0.55))
 	_draw_status(font)
 
-	var sh := shake if (profile == null or profile.shake) else 0.0
-	_off = Vector2(randf_range(-sh, sh), randf_range(-sh, sh))
+	# Shake as "trauma": strength grows faster than linearly (small taps barely move the
+	# view, big hits really land) and wobbles smoothly instead of jumping every frame.
+	var trauma := clampf(shake / 14.0, 0.0, 1.0) if (profile == null or profile.shake) else 0.0
+	var sh := 14.0 * pow(trauma, 1.6)
+	_off = Vector2(sin(bob * 53.0) + 0.5 * sin(bob * 97.0), cos(bob * 61.0) + 0.5 * cos(bob * 89.0)) * sh / 1.5
 	draw_set_transform(_off)
 
 	var hr := _hero_rect()
@@ -1731,6 +1744,13 @@ func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color,
 	draw_rect(b.grow(1.0), Color(0.0, 0.0, 0.0, 0.85 * a))
 	draw_rect(b, Color(0.08, 0.09, 0.14, 0.95 * a))
 	var fw := (b.size.x) * pct
+	# The ghost: health just lost stays as a pale strip that drains away (_process),
+	# so every hit reads clearly. Healing moves it straight up.
+	var ghost: float = maxf(float(bar_ghost.get(label, pct)), pct)
+	bar_ghost[label] = ghost
+	bar_target[label] = pct
+	if ghost > pct + 0.001:
+		draw_rect(Rect2(b.position + Vector2(fw, 0), Vector2(b.size.x * (ghost - pct), b.size.y)), Color(1.0, 0.92, 0.7, 0.75 * a))
 	draw_rect(Rect2(b.position, Vector2(fw, b.size.y)), Color(fill.darkened(0.15), a))
 	draw_rect(Rect2(b.position, Vector2(fw, 3.0)), Color(fill.lightened(0.35), a))
 	draw_string_outline(font, Vector2(b.position.x, b.end.y - 2.0), "%s / %s" % [_short(maxi(value, 0)), _short(max_value)], HORIZONTAL_ALIGNMENT_CENTER, b.size.x, 12, 3, Color(0, 0, 0, a))
