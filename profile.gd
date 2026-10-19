@@ -16,6 +16,8 @@ var volume := 0.8
 var music_volume := 0.5
 var fullscreen := false
 var dark_art := true          # the dark fantasy grade on monsters and backgrounds (dark_grade.gd)
+var battery_saver := OS.has_feature("mobile")  # cap at 30 fps (a turn-based game needs no more; saves battery and heat)
+var low_graphics := false     # simpler rooms and fewer particles for weak phones
 var dev_mode := false
 var hc_best := 0             # deepest floor a Hardcore hero reached
 var hc_runs: Array = []      # past Hardcore heroes, newest first: {floor, level, title, race, date}
@@ -55,6 +57,8 @@ func _from(d: Dictionary) -> void:
 	music_volume = float(d.get("music_volume", 0.5))
 	fullscreen = bool(d.get("fullscreen", false))
 	dark_art = bool(d.get("dark_art", true))
+	battery_saver = bool(d.get("battery_saver", OS.has_feature("mobile")))
+	low_graphics = bool(d.get("low_graphics", false))
 	dev_mode = bool(d.get("dev_mode", false))
 	hc_best = int(d.get("hc_best", 0))
 	hc_runs = d.get("hc_runs", [])
@@ -83,7 +87,7 @@ func save() -> void:
 		return
 	f.store_var({
 		"last_mode": last_mode, "sound_on": sound_on, "volume": volume, "music_volume": music_volume,
-		"fullscreen": fullscreen, "dark_art": dark_art, "dev_mode": dev_mode, "hc_best": hc_best, "hc_runs": hc_runs,
+		"fullscreen": fullscreen, "dark_art": dark_art, "battery_saver": battery_saver, "low_graphics": low_graphics, "dev_mode": dev_mode, "hc_best": hc_best, "hc_runs": hc_runs,
 		"player_name": player_name, "online": online, "path_choice": path_choice,
 		"active_slot": active_slot, "max_floor": max_floor, "stash": stash, "stash_level": stash_level,
 		"shake": shake, "damage_numbers": damage_numbers, "flashes": flashes, "text_size": text_size, "notes_seen": notes_seen, "skill_book": skill_book, "show_recap": show_recap, "colorblind": colorblind, "mail_seen": mail_seen, "calamities": calamities, "save_epoch": save_epoch,

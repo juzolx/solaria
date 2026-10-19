@@ -32,6 +32,19 @@ func _initialize() -> void:
 	var want: bool = main.profile.dark_art
 	main.notification(Node.NOTIFICATION_APPLICATION_PAUSED)
 	check(Profile.load_profile().dark_art == want, "profile saved on pause")
+
+	# Battery saver and Low graphics
+	main.profile.battery_saver = true
+	main.profile.low_graphics = true
+	main.apply_settings()
+	check(Engine.max_fps == 30, "battery saver caps at 30 fps")
+	check(HallsScene.low, "low graphics reaches the room renderer")
+	var p := Profile.load_profile()
+	check(p.battery_saver and p.low_graphics, "both settings are saved")
+	main.profile.battery_saver = false
+	main.profile.low_graphics = false
+	main.apply_settings()
+	check(Engine.max_fps == 0 and not HallsScene.low, "both settings turn off again")
 	print("STAGE2 LIFECYCLE TESTS DONE, failures: ", fails)
 	GameState.delete_saves()
 	quit()

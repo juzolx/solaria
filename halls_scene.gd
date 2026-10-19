@@ -12,6 +12,7 @@ const Z_NEAR := 0.9
 const FLOOR_Y := -1.5     # eye height above the floor
 const CEIL_Y := 2.5
 const STEP := 0.5         # quads are half a unit (less warping, finer floor)
+static var low := false   # Low graphics: quads twice the size (a quarter as many)
 const DOOR_X := [-1.9, 0.0, 1.9]
 const DOOR_W := 1.3
 const DOOR_H := 2.3
@@ -98,12 +99,44 @@ func lit(x: float, y: float, z: float) -> Color:
 	c += light * (0.35 / (1.0 + dn * 0.5))
 	return Color(minf(c.r, 1.2), minf(c.g, 1.2), minf(c.b, 1.2), 1.0)
 
+## Quad size: half a world unit, or a whole unit on Low graphics.
+func _step() -> float:
+	return STEP * 2.0 if low else STEP
+
 ## A textured world quad from 4 corners (a = top-left of the texture, then clockwise).
+## Between begin_batch() and end_batch() quads with the batch's texture are collected
+## and sent as one triangle list: one draw call per surface instead of one per quad.
 func quad(ci: CanvasItem, tex: Texture2D, a: Vector3, b: Vector3, c: Vector3, d: Vector3, uv0: Vector2, uv1: Vector2) -> void:
 	var pts := PackedVector2Array([proj(a.x, a.y, a.z), proj(b.x, b.y, b.z), proj(c.x, c.y, c.z), proj(d.x, d.y, d.z)])
 	var cols := PackedColorArray([lit(a.x, a.y, a.z), lit(b.x, b.y, b.z), lit(c.x, c.y, c.z), lit(d.x, d.y, d.z)])
 	var uvs := PackedVector2Array([uv0, Vector2(uv1.x, uv0.y), uv1, Vector2(uv0.x, uv1.y)])
+	if _batch_tex != null and tex == _batch_tex:
+		var base := _batch_pts.size()
+		_batch_pts.append_array(pts)
+		_batch_cols.append_array(cols)
+		_batch_uvs.append_array(uvs)
+		_batch_idx.append_array(PackedInt32Array([base, base + 1, base + 2, base, base + 2, base + 3]))
+		return
 	ci.draw_polygon(pts, cols, uvs, tex)
+
+var _batch_tex: Texture2D = null
+var _batch_pts := PackedVector2Array()
+var _batch_cols := PackedColorArray()
+var _batch_uvs := PackedVector2Array()
+var _batch_idx := PackedInt32Array()
+
+func begin_batch(tex: Texture2D) -> void:
+	_batch_tex = tex
+	_batch_pts.clear()
+	_batch_cols.clear()
+	_batch_uvs.clear()
+	_batch_idx.clear()
+
+func end_batch(ci: CanvasItem) -> void:
+	if _batch_tex != null and not _batch_idx.is_empty():
+		RenderingServer.canvas_item_add_triangle_array(ci.get_canvas_item(), _batch_idx, _batch_pts, _batch_cols, _batch_uvs,
+			PackedInt32Array(), PackedFloat32Array(), _batch_tex.get_rid())
+	_batch_tex = null
 
 func shadow(ci: CanvasItem, at: Vector2, r: float) -> void:
 	ci.draw_set_transform(at, 0.0, Vector2(1.0, 0.3))
@@ -134,30 +167,43 @@ func draw_shell(ci: CanvasItem, sz: Vector2) -> void:
 	var flo := tx("res://art/halls/z%d_floor.png" % zone)
 	var ceil_t := tx("res://art/halls/z%d_ceil.png" % zone)
 	var hw := W / 2.0
-	var z0 := Z_NEAR
-	while z0 < D - 0.001:
-		var z1 := minf(z0 + STEP, D)
-		var x0 := -hw
-		while x0 < hw - 0.001:
-			var x1 := x0 + STEP
-			if flo:
-				quad(ci, flo, Vector3(x0, FLOOR_Y, z1), Vector3(x1, FLOOR_Y, z1), Vector3(x1, FLOOR_Y, z0), Vector3(x0, FLOOR_Y, z0), Vector2.ZERO, Vector2.ONE)
-			if ceil_t:
-				quad(ci, ceil_t, Vector3(x0, CEIL_Y, z0), Vector3(x1, CEIL_Y, z0), Vector3(x1, CEIL_Y, z1), Vector3(x0, CEIL_Y, z1), Vector2.ZERO, Vector2.ONE)
-			x0 = x1
-		if wall:
-			# side walls: one texture per world unit
+	# One texture at a time (all floor, then all ceiling, then the walls), each sent as a
+	# single triangle list: a few draw calls for the whole room instead of one per quad.
+	for pass_tex in [flo, ceil_t]:
+		if pass_tex == null:
+			continue
+		var y := FLOOR_Y if pass_tex == flo else CEIL_Y
+		begin_batch(pass_tex)
+		var z0 := Z_NEAR
+		while z0 < D - 0.001:
+			var z1 := minf(z0 + _step(), D)
+			var x0 := -hw
+			while x0 < hw - 0.001:
+				var x1 := x0 + _step()
+				if pass_tex == flo:
+					quad(ci, flo, Vector3(x0, y, z1), Vector3(x1, y, z1), Vector3(x1, y, z0), Vector3(x0, y, z0), Vector2.ZERO, Vector2.ONE)
+				else:
+					quad(ci, ceil_t, Vector3(x0, y, z0), Vector3(x1, y, z0), Vector3(x1, y, z1), Vector3(x0, y, z1), Vector2.ZERO, Vector2.ONE)
+				x0 = x1
+			z0 = z1
+		end_batch(ci)
+	if wall:
+		begin_batch(wall)
+		# side walls: one texture per world unit
+		var z0 := Z_NEAR
+		while z0 < D - 0.001:
+			var z1 := minf(z0 + _step(), D)
 			var u0 := fposmod(z0 - Z_NEAR, 1.0)
 			var y0 := FLOOR_Y
 			while y0 < CEIL_Y - 0.001:
-				var y1 := minf(y0 + STEP, CEIL_Y)
+				var y1 := minf(y0 + _step(), CEIL_Y)
 				var v0 := fposmod(CEIL_Y - y1, 1.0)
 				var uv0 := Vector2(u0, v0)
 				var uv1 := Vector2(u0 + (z1 - z0), v0 + (y1 - y0))
 				quad(ci, wall, Vector3(-hw, y1, z0), Vector3(-hw, y1, z1), Vector3(-hw, y0, z1), Vector3(-hw, y0, z0), uv0, uv1)
 				quad(ci, wall, Vector3(hw, y1, z1), Vector3(hw, y1, z0), Vector3(hw, y0, z0), Vector3(hw, y0, z1), uv0, uv1)
 				y0 = y1
-		z0 = z1
+			z0 = z1
 	if wall:
 		var yj := FLOOR_Y
 		while yj < CEIL_Y - 0.001:
@@ -167,6 +213,7 @@ func draw_shell(ci: CanvasItem, sz: Vector2) -> void:
 				quad(ci, wall, Vector3(xj, y1, D), Vector3(xj + 1.0, y1, D), Vector3(xj + 1.0, yj, D), Vector3(xj, yj, D), Vector2(0, 1.0 - (y1 - yj)), Vector2.ONE)
 				xj += 1.0
 			yj = y1
+		end_batch(ci)
 	ci.draw_line(proj(-hw, FLOOR_Y, D), proj(hw, FLOOR_Y, D), Color(0, 0, 0, 0.5), 2.0)
 
 ## The three doors on the far wall. When `st` has doors to pick, they glow and

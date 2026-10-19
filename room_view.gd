@@ -201,7 +201,7 @@ func _draw_team() -> void:
 
 func _step_motes(delta: float) -> void:
 	var kind: String = scene.mood()["kind"]
-	while motes.size() < 26:
+	while motes.size() < (13 if HallsScene.low else 26):
 		motes.append({"p": Vector2(randf() * size.x, randf() * size.y), "v": _mote_vel(kind), "age": randf() * 4.0, "life": randf_range(3.0, 7.0)})
 	for m in motes:
 		m["p"] = (m["p"] as Vector2) + (m["v"] as Vector2) * delta

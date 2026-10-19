@@ -10,6 +10,8 @@ var dev_toggle: Button
 var sound_toggle: Button
 var fullscreen_toggle: Button
 var dark_toggle: Button
+var battery_toggle: Button
+var graphics_toggle: Button
 var path_toggle: Button
 var a11y_buttons := {}
 var cloud_label: Label
@@ -75,6 +77,21 @@ func show_for(m) -> void:
 	dark_toggle.tooltip_text = "Darker, colder monsters and backgrounds. Fire and magic still glow. Shows on the next monster or screen."
 	dark_toggle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_child(dark_toggle)
+	var prow := UI.hbox(8)
+	content.add_child(prow)
+	battery_toggle = UI.button("", func():
+		profile.battery_saver = not profile.battery_saver
+		main.apply_settings()
+		_update())
+	battery_toggle.tooltip_text = "Caps the game at 30 frames a second. Fights are turn-based, so it looks the same and saves battery and heat."
+	graphics_toggle = UI.button("", func():
+		profile.low_graphics = not profile.low_graphics
+		main.apply_settings()
+		_update())
+	graphics_toggle.tooltip_text = "Low draws simpler rooms with fewer floating particles, for older phones."
+	for b in [battery_toggle, graphics_toggle]:
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		prow.add_child(b)
 
 	content.add_child(UI.heading("Accessibility"))
 	var arow := GridContainer.new()
@@ -253,6 +270,8 @@ func _update() -> void:
 	sound_toggle.text = "Sound: %s" % ("ON" if profile.sound_on else "OFF")
 	fullscreen_toggle.text = "Fullscreen: %s" % ("ON" if profile.fullscreen else "OFF")
 	dark_toggle.text = "Dark art: %s" % ("ON" if profile.dark_art else "OFF")
+	battery_toggle.text = "Battery saver: %s" % ("ON" if profile.battery_saver else "OFF")
+	graphics_toggle.text = "Graphics: %s" % ("Low" if profile.low_graphics else "Normal")
 	path_toggle.text = "Choose-your-path rooms: %s" % ("ON" if profile.path_choice == "ask" else "OFF")
 	dev_toggle.text = "Dev Mode: %s" % ("ON" if profile.dev_mode else "OFF")
 	dev_toggle.add_theme_color_override("font_color", UI.PINK if profile.dev_mode else UI.TEXT)
