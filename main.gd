@@ -655,6 +655,7 @@ func _build_ui() -> void:
 	town_tabs = TabContainer.new()
 	town_tabs.name = "TownPages"
 	town_tabs.theme_type_variation = "SubTabs"
+	town_tabs.tabs_visible = false  # 0.13+ (Juzo): you go into a building by tapping it on the town map
 	town_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	town_tabs.tab_changed.connect(func(_i): sfx.play("click"); refresh())
 	town_page.add_child(town_tabs)
@@ -1092,7 +1093,7 @@ func _sync_town() -> void:
 	fight_frame.visible = not inside
 	fight_panel.visible = not inside
 	town_frame.visible = inside
-	town_back.visible = is_tall
+	town_back.visible = is_tall  # phones: the way back to the map (buildings are tapped on the map)
 	if not inside:
 		return
 	town_talk.text = Lore.talk(state, town_tabs.current_tab)

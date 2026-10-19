@@ -124,3 +124,4 @@ Helpers (395071c): `CLAUDE.md` in the repo (rules, auto-read each session), `COD
 
 ## Juzo's playtest notes (Oct 19)
 * Oct 19, 4:46 PM: Gear Score: one score for every slot (item power over that slot's floor-1 base, x10), shown on every item ("Gear Score N (you average M)", green when above) and as your average in Items > Gear. Fortune's Wheel: a win is now remade for your deepest floor and never weaker than your average Gear Score (it used to re-roll from the floor the item first dropped on, so old items stayed weak). Scrap rerolls unchanged. Skill stones rarer: 0.4% per kill (was 1%), softer tier multipliers, guaranteed after 400 kills (was 150). Tests: stage4_wheel; main test's stone range updated.
+* Oct 19, 4:51 PM: Town: buildings are the only way in (Juzo): the strip of building tabs inside town is hidden; you open a place by tapping its building on the map, and phones go back with "Town map".
