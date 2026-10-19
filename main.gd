@@ -719,6 +719,14 @@ func _fit_layout() -> void:
 	is_tall = tall
 	for side in ["left", "right"]:
 		ui_root.add_theme_constant_override("margin_" + side, 6 if tall else 10)  # phones need every pixel of width
+	# 0.13+: keep clear of the notch / Dynamic Island and the home bar (phones only: on a PC
+	# the "safe area" is the monitor minus the taskbar, which isn't about this window)
+	if OS.has_feature("mobile") and win.y > 0:
+		var safe := DisplayServer.get_display_safe_area()
+		if safe.size.y > 0:
+			var k := float(want.y) / float(win.y)
+			ui_root.add_theme_constant_override("margin_top", maxi(0, int(round(safe.position.y * k))))
+			ui_root.add_theme_constant_override("margin_bottom", maxi(0, int(round((win.y - safe.end.y) * k))))
 	_apply_drawer()
 	_apply_nav()
 	left_panel.size_flags_stretch_ratio = 0.9 if tall else 1.0

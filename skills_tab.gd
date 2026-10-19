@@ -272,6 +272,7 @@ static func _fill_auto(m, o: Overlay, st: GameState) -> void:
 		["Auto skills", st.auto_ability, func(): st.auto_ability = not st.auto_ability],
 		["Pick rooms at forks", st.auto_paths, func(): st.auto_paths = not st.auto_paths],
 		["Spend stat points on your build", st.auto_stats, func(): st.auto_stats = not st.auto_stats],
+		["Skip easy fights (far below you: one turn)", st.skip_easy, func(): st.skip_easy = not st.skip_easy],
 	]
 	for tg in toggles:
 		var cb: Callable = tg[2]

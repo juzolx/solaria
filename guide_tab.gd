@@ -43,14 +43,21 @@ func refresh() -> void:
 	shown = codex.guide.size()
 	list.clear()
 	ids.clear()
+	# 0.13+: only the pages you've found, then one line for the rest (no wall of "???")
+	var missing := 0
 	for p in Guide.PAGES:
-		var have := codex.guide.has(p["id"])
-		var i := list.add_item(p["title"] if have else "???  (keep playing)")
-		list.set_item_selectable(i, have)
-		list.set_item_custom_fg_color(i, UI.TEXT if have else UI.DIM)
-		ids.append(p["id"] if have else "")
-		if have and selected == "":
+		if not codex.guide.has(p["id"]):
+			missing += 1
+			continue
+		list.add_item(p["title"])
+		ids.append(p["id"])
+		if selected == "":
 			selected = p["id"]
+	if missing > 0:
+		var mi := list.add_item("+ %d more to discover" % missing)
+		list.set_item_selectable(mi, false)
+		list.set_item_custom_fg_color(mi, UI.DIM)
+		ids.append("")
 	_show()
 
 func _show() -> void:

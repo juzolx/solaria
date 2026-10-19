@@ -151,6 +151,7 @@ var auto_potion := true
 var autoplay := true      # the fight runs by itself; off = you take every turn (Attack / tap the enemy)
 var auto_rules := {}       # Stage 3: when Autoplay pauses for you (auto_rules.gd)
 var auto_rule_seen := ""   # the last thing a rule paused for (so it pauses once)
+var skip_easy := false        # 0.13+: monsters far below you fall in one turn (Autoplay option)
 var auto_paths := true    # forks pick a room by themselves after a few turns
 var auto_salvage := -1  # -1 = off, otherwise salvage new drops of this rarity and below
 var fast_mode := false   # kept in step with speed (older saves only have this)
@@ -1465,6 +1466,8 @@ func take_turn() -> void:
 		_down_turn()
 		return
 	if Peoples.part_ways(self):
+		return
+	if _skip_easy_fight():
 		return
 	codex.add("turns")
 	ClassTree.on_turn(self)
@@ -3101,6 +3104,7 @@ func save_game() -> void:
 		"auto_potion": auto_potion,
 		"autoplay": autoplay,
 		"auto_rules": auto_rules,
+		"skip_easy": skip_easy,
 		"auto_paths": auto_paths,
 		"auto_salvage": auto_salvage,
 		"fast_mode": fast_mode,
@@ -3319,6 +3323,7 @@ func load_game() -> bool:
 	auto_potion = bool(data.get("auto_potion", true))
 	autoplay = bool(data.get("autoplay", true))
 	auto_rules = data.get("auto_rules", {})
+	skip_easy = bool(data.get("skip_easy", false))
 	auto_paths = bool(data.get("auto_paths", true))
 	auto_salvage = int(data.get("auto_salvage", -1))
 	fast_mode = bool(data.get("fast_mode", false))
@@ -4409,3 +4414,21 @@ func auto_door() -> String:
 			best_score = score
 			best = i
 	return String(DOOR_KEYS[best])
+
+## 0.13+: "Skip easy fights": a monster far below you (one of your hits finishes it,
+## and it can barely scratch you) falls in a single turn instead of playing out.
+func is_easy_fight() -> bool:
+	if enemy_is_boss or enemy_goblin or enemy_tier > 0 or enemy_wanderer or enemy_grave or enemy_calamity > 0 or not portal.is_empty():
+		return false
+	return enemy_hp <= get_attack() and damage_taken() < get_max_hp() * 0.03
+
+func _skip_easy_fight() -> bool:
+	if not skip_easy or not autoplay or not is_easy_fight():
+		return false
+	codex.add("turns")
+	codex.add("easy_skips")
+	last_hit = "hit"
+	enemy_hp = 0
+	say("You cut through the %s without breaking stride." % enemy_name)
+	_enemy_defeated()
+	return true
