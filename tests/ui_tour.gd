@@ -11,6 +11,12 @@ func shot(label: String) -> void:
 	n += 1
 	var path := "%s/%02d_%s.png" % [out, n, label.to_lower().replace(" ", "_").replace("(", "").replace(")", "")]
 	root.get_texture().get_image().save_png(path)
+	# Flag any popup that runs off a phone-width screen
+	var screen_w := root.get_visible_rect().size.x
+	for c in root.get_children():
+		for o in c.get_children():
+			if o is Overlay and o.box != null and o.box.size.x > screen_w + 1.0:
+				print("TOO WIDE: %s (%.0f px on a %.0f px screen)" % [label, o.box.size.x, screen_w])
 
 func close_popups(main: Node) -> void:
 	for c in main.get_children():

@@ -39,6 +39,10 @@ func open(parent: Node, title: String, width := 560.0, border := UI.GOLD, closab
 		head.add_child(UI.button("Close", close))
 	return self
 
+## True on phone-width screens, where side-by-side layouts should stack.
+func is_narrow() -> bool:
+	return get_viewport().get_visible_rect().size.x < 720.0  # portrait layouts are 648 wide or less
+
 func _fit_height() -> void:
 	if not is_inside_tree():
 		return

@@ -23,10 +23,14 @@ func _show(main_node, id: String, as_popup: bool) -> void:
 	codex = m.codex
 	popped = as_popup
 	open(m, "Guide book", 820.0, Color("#c28569"))
-	var body := UI.hbox(14)
+	# Side by side on wide screens; on phones the page list sits above the page
+	var narrow := is_narrow()
+	var body := BoxContainer.new()
+	body.vertical = narrow
+	body.add_theme_constant_override("separation", 10 if narrow else 14)
 	content.add_child(body)
 	var left := UI.panel(UI.INSET, UI.BORDER, 8, 8, 1)
-	left.custom_minimum_size = Vector2(210, 300)
+	left.custom_minimum_size = Vector2(0, 150) if narrow else Vector2(210, 300)
 	body.add_child(left)
 	var ls := ScrollContainer.new()
 	ls.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -42,7 +46,8 @@ func _show(main_node, id: String, as_popup: bool) -> void:
 	title_label = UI.label("", 20, Color("#f6d88f"))
 	pv.add_child(title_label)
 	text = UI.rich(14)
-	text.custom_minimum_size = Vector2(380, 0)
+	text.custom_minimum_size = Vector2(0 if narrow else 380, 0)
+	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pv.add_child(text)
 	var row := UI.hbox(8)
 	content.add_child(row)
