@@ -11,6 +11,8 @@ var list_title: Label
 var item_grid: GridContainer
 var empty_note: Label
 var slot_pics := {}
+var doll_pic: TextureRect   # your hero, wearing what's equipped
+var doll_key := ""
 var slot := "Weapon"
 var shown := ""
 var equip_best_button: Button
@@ -35,12 +37,23 @@ func setup(m) -> void:
 	equip_best_button.tooltip_text = "Wear whatever makes your whole build strongest, counting set bonuses and special effects"
 	head.add_child(equip_best_button)
 
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 8)
-	grid.add_theme_constant_override("v_separation", 8)
-	add_child(grid)
+	# 0.13+: a paper doll: your hero in the middle wearing it all, slots on either side
+	var doll := UI.hbox(6)
+	add_child(doll)
+	var left := UI.vbox(6)
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	doll.add_child(left)
+	doll_pic = TextureRect.new()
+	doll_pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	doll_pic.custom_minimum_size = Vector2(124, 0)
+	doll_pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	doll_pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	doll.add_child(doll_pic)
+	var right := UI.vbox(6)
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	doll.add_child(right)
 	for s in GameData.SLOT_ORDER:
+		var grid: VBoxContainer = left if s in ["Weapon", "Helmet", "Chest"] else right
 		var card := PanelContainer.new()
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card.custom_minimum_size = Vector2(0, 66)
@@ -52,11 +65,11 @@ func setup(m) -> void:
 		var ch := UI.hbox(8)
 		ch.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(ch)
-		var pic := ItemGrid.picture(44)
+		var pic := ItemGrid.picture(36)
 		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		ch.add_child(pic)
 		slot_pics[s] = pic
-		var r := UI.rich(12)
+		var r := UI.rich(11)
 		r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		ch.add_child(r)
@@ -156,6 +169,10 @@ func refresh() -> void:
 		loadout_buttons[i].text = "%d: %s" % [i + 1, "empty" if empty else "Wear"]
 		loadout_buttons[i].tooltip_text = "Empty: tap to save what you're wearing now." if empty else "Put on loadout %d (shift-click to overwrite it)." % (i + 1)
 	var ups := 0
+	var dk := str(state.appearance) + str(state.hero_looks())
+	if dk != doll_key:
+		doll_key = dk
+		doll_pic.texture = Sprites.portrait(state.appearance, state.hero_looks())
 	for s in GameData.SLOT_ORDER:
 		var r: RichTextLabel = slot_labels[s]
 		var st: StyleBoxFlat = slot_styles[s]
