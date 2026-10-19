@@ -11,6 +11,9 @@ var list: ItemList
 var keys: Array[String] = []
 var detail: VBoxContainer
 var pic: TextureRect
+var plate: PanelContainer
+var backdrop: TextureRect
+static var _grounds := {}
 var text: RichTextLabel
 var selected := ""
 var shown := ""
@@ -38,12 +41,26 @@ func setup(m) -> void:
 	scroll.add_child(detail)
 	var top := UI.hbox(10)
 	detail.add_child(top)
+	# 0.13+: an illustrated plate: the monster lit in its home region's colors on a glowing ground
+	plate = PanelContainer.new()
+	top.add_child(plate)
+	backdrop = TextureRect.new()
+	backdrop.custom_minimum_size = Vector2(168, 168)
+	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	backdrop.stretch_mode = TextureRect.STRETCH_SCALE
+	backdrop.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	plate.add_child(backdrop)
 	pic = TextureRect.new()
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(96, 96)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	top.add_child(pic)
+	pic.set_anchors_preset(Control.PRESET_FULL_RECT)
+	pic.offset_left = 10
+	pic.offset_top = 6
+	pic.offset_right = -10
+	pic.offset_bottom = -10
+	backdrop.add_child(pic)
+	list.fixed_icon_size = Vector2i(22, 22)
 	text = UI.rich(13)
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	detail.add_child(text)
@@ -75,6 +92,11 @@ func refresh() -> void:
 			if met and bool(codex.bestiary[n].get("sig", false)):
 				label += "  *"
 			var i := list.add_item(label)
+			var ia := Sprites.enemy_by_key(_art_key(n, GameData.monster_home(n)))
+			if ia.has("tex"):
+				list.set_item_icon(i, ia["tex"] if met else ia["white"])
+				if not met:
+					list.set_item_icon_modulate(i, Color(0.32, 0.32, 0.42))  # a dark shape until you meet it
 			list.set_item_custom_fg_color(i, UI.TEXT if met else UI.DIM)
 			if boss and met:
 				list.set_item_custom_fg_color(i, Color("#fca5a5"))
@@ -97,7 +119,11 @@ func _show() -> void:
 	var boss: bool = info.get("boss", false)
 	var home := GameData.monster_home(selected)
 	var art := Sprites.enemy_by_key(_art_key(selected, home))
-	pic.texture = art.get("tex", null)
+	var zi := clampi(int(home.get("zone", 0)), 0, 9)
+	pic.texture = SpriteLight.lit(art.get("tex", null), zi) if art.has("tex") else null
+	backdrop.texture = _ground(zi)
+	var zc := Color(GameData.ZONES[mini(zi, GameData.ZONES.size() - 1)]["color"])
+	plate.add_theme_stylebox_override("panel", UI.style(Color(0.02, 0.02, 0.04), zc.lightened(0.2), 6, 3, 2))
 	var e := codex.entry(selected)
 	var kills := int(e["kills"])
 	var dim := UI.hex(UI.DIM)
@@ -194,3 +220,24 @@ func _odds_line(label: String, odds: Array) -> String:
 func _num(n: int) -> String:
 	var s := str(n)
 	return s.substr(0, s.length() - 3) + "," + s.substr(s.length() - 3) if s.length() > 3 else s
+
+## The plate's backdrop for a region: dark, with its mood light glowing up from the ground.
+static func _ground(zi: int) -> Texture2D:
+	if _grounds.has(zi):
+		return _grounds[zi]
+	var mood: Dictionary = HallsScene.MOODS[clampi(zi, 0, HallsScene.MOODS.size() - 1)]
+	var amb: Color = mood["amb"]
+	var light: Color = mood["light"]
+	var img := Image.create(56, 56, false, Image.FORMAT_RGBA8)
+	for y in 56:
+		for x in 56:
+			var g := clampf((y - 20.0) / 36.0, 0.0, 1.0)
+			var d := Vector2(x - 27.5, (y - 46.0) * 2.2).length() / 30.0
+			var c := Color(0.03, 0.03, 0.05).lerp(amb.darkened(0.6), g * 0.7)
+			c = c.lerp(light.darkened(0.25), clampf(1.0 - d, 0.0, 1.0) * 0.55)
+			if (x * 7 + y * 13) % 11 == 0 and y < 30:
+				c = c.lightened(0.06)  # a little stone grain above the ground
+			img.set_pixel(x, y, c)
+	var tex := ImageTexture.create_from_image(img)
+	_grounds[zi] = tex
+	return tex
