@@ -14,6 +14,7 @@ var tick := Timer.new()
 var from_town := false   # picking where to go down to from town (main._leave_town)
 var carry_buttons: Array = []
 var carry_note: Label
+var risk_note: Label
 
 ## From town: the same picker, plus quick picks, and choosing a floor takes you down.
 func show_from_town(main_node) -> void:
@@ -52,6 +53,30 @@ func show_for(main_node) -> void:
 		carry_note = UI.label("", 11, UI.DIM)
 		carry_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		content.add_child(carry_note)
+		# 0.13+: prepare the dive: who goes, and what a fall would cost
+		content.add_child(UI.label("YOUR TEAM", 11, UI.DIM))
+		var team := UI.hbox(8)
+		content.add_child(team)
+		var heroes: Array = [state]
+		if state.party != null:
+			for mem in state.party.members:
+				heroes.append(mem.hero)
+		for hg in heroes:
+			var col := UI.vbox(0)
+			team.add_child(col)
+			var tp := TextureRect.new()
+			tp.texture = Sprites.portrait(hg.appearance, hg.hero_looks())
+			tp.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			tp.custom_minimum_size = Vector2(48, 48)
+			tp.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			tp.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			col.add_child(tp)
+			col.add_child(UI.label("%s Lv %d" % [hg.hero_class, hg.level], 11, Color(hg.class_info().get("color", "#e5e7eb"))))
+		if heroes.size() == 1:
+			team.add_child(UI.wrap("Going alone. Bring up to 2 of your other heroes from Character > Party.", 11, UI.DIM))
+		risk_note = UI.label("", 12, Color("#fca5a5"))
+		risk_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		content.add_child(risk_note)
 		_show_carry()
 	var sub := UI.rich(13)
 	if from_town:
@@ -190,7 +215,14 @@ func _show_carry() -> void:
 		b.set_pressed_no_signal(i == state.carry_pick)
 		b.add_theme_color_override("font_color", UI.GOLD if i == state.carry_pick else UI.TEXT)
 	var c := Town.carry_amount(state, state.carry_pick)
-	carry_note.text = "You take %d gold down; %d stays safe in the Bank. Carried gold is lost if you fall, and banked when you come home." % [c, state.total_gold() - c]
+	carry_note.text = "You take %d gold down; %d stays safe in the Bank. Carried gold is banked when you come home." % [c, state.total_gold() - c]
+	if risk_note:
+		var worn := 0
+		for s in state.equipped:
+			if not GameState.is_bound(state.equipped[s]):
+				worn += 1
+		var packed := state.bag.filter(func(it): return not GameState.is_bound(it)).size()
+		risk_note.text = "AT RISK THIS DIVE: %d gold, %d worn item%s and %d in your bag (bound items are always safe). Fall, and the gear plus half that gold wait in your grave on that floor, guarded by your killer; potions and scrolls are lost." % [c, worn, "" if worn == 1 else "s", packed]
 
 func _show_zone(zb: int) -> void:
 	zone_shown = zb
