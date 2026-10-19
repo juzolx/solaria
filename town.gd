@@ -106,6 +106,7 @@ static func enter(g: GameState, floor_done := false) -> bool:
 		g.say("[color=#60a5fa]You brought %d backpack%s home.[/color] Your bag now holds %d." % [g.packs_carried, "" if g.packs_carried == 1 else "s", g.bag_capacity()])
 		g.packs_carried = 0
 		g.bag_version += 1
+	_home_tally(g, carried)
 	g.path_offer.clear()
 	g.doors.clear()
 	g.buffs.clear()
@@ -140,10 +141,34 @@ static func leave(g: GameState) -> void:
 	g.bank = total - carry
 	g.fight = 1
 	g.spawn_enemy()
+	start_dive(g)
 	g.say("[color=#e8b14a]Back into the dungeon: floor %d.[/color] You carry %d gold; %d stays safe in the Bank." % [g.floor_num, g.gold, g.bank])
 	g.tip("bank", "Gold you carry into the dungeon can be lost if you fall. Gold in the Bank is always safe. Everything you carry home is banked for you.")
 	g.events.append({"type": "town", "in": false})
 	g.save_game()
+
+## Remembers what a dive set off with (also after a fall, when it starts over).
+static func start_dive(g: GameState) -> void:
+	var ids: Array = []
+	for it in g.bag:
+		ids.append(int(it.get("id", -1)))
+	g.dive = {"gold": g.gold, "floor": g.floor_num, "kills": g.codex.stat("kills"), "items": ids}
+
+## Getting home safe: what this dive brought back, for the "Made it home" card.
+static func _home_tally(g: GameState, carried: int) -> void:
+	if g.dive.is_empty():
+		return
+	var before: Array = g.dive.get("items", [])
+	var found := 0
+	var best: Dictionary = {}
+	for it in g.bag:
+		if not int(it.get("id", -1)) in before:
+			found += 1
+			if best.is_empty() or int(it.get("rarity", 0)) > int(best.get("rarity", 0)):
+				best = it
+	g.events.append({"type": "home_tally", "gold": maxi(0, carried - int(g.dive.get("gold", 0))), "items": found, "best": best,
+		"floors": maxi(0, g.floor_num - int(g.dive.get("floor", g.floor_num))), "kills": maxi(0, g.codex.stat("kills") - int(g.dive.get("kills", 0)))})
+	g.dive = {}
 
 ## Shop stock is made in the style of the zone you're in (power still follows your best floor).
 static func local_goods(g: GameState, item: Dictionary) -> Dictionary:

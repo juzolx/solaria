@@ -189,6 +189,40 @@ func show_title() -> void:
 	if fresh_start_notice:
 		_show_fresh_start.call_deferred()
 
+## You got home alive: show what this dive brought back. Getting home is the win
+## in an extraction game, so it gets its own moment.
+func _show_home_tally(e: Dictionary) -> void:
+	var gold := int(e.get("gold", 0))
+	var items := int(e.get("items", 0))
+	var floors := int(e.get("floors", 0))
+	var kills := int(e.get("kills", 0))
+	if gold <= 0 and items <= 0 and kills <= 0:
+		return  # a quick look down and straight back up: nothing to report
+	var o := Overlay.new().open(self, "Made it home!", 460.0, UI.GOLD)
+	o.content.add_child(UI.label("Everything you carried is safe now.", 15, UI.GREEN))
+	var t := UI.rich(16)
+	var lines: Array[String] = []
+	if gold > 0:
+		lines.append("[color=%s]+%s gold[/color] banked" % [UI.hex(UI.GOLD), UI.short(gold)])
+	if items > 0:
+		var best: Dictionary = e.get("best", {})
+		var line := "%d new item%s" % [items, "" if items == 1 else "s"]
+		if not best.is_empty():
+			var col: String = GameData.RARITY_COLORS[clampi(int(best.get("rarity", 0)), 0, GameData.RARITY_COLORS.size() - 1)]
+			line += ", best: [color=%s]%s[/color]" % [col, GameData.display_name(best)]
+		lines.append(line)
+	if floors > 0:
+		lines.append("%d floor%s deeper" % [floors, "" if floors == 1 else "s"])
+	if kills > 0:
+		lines.append("%d monster%s defeated" % [kills, "" if kills == 1 else "s"])
+	t.text = "\n".join(lines)
+	o.content.add_child(t)
+	var ok := UI.primary("To town", o.close, UI.GOLD)
+	ok.custom_minimum_size = Vector2(0, UI.TAP)
+	o.content.add_child(ok)
+	if sfx:
+		sfx.play("achievement")
+
 ## Saves the hero, the party, the codex and the profile.
 func save_everything() -> void:
 	if started and not state.run_over:
@@ -1307,6 +1341,8 @@ func _handle_events() -> void:
 					GuideBook.open_book(self, e["id"], true)
 			"merchant":
 				MerchantPopup.new().show_for(self)
+			"home_tally":
+				_show_home_tally.call_deferred(e)
 			"calamity":
 				_show_calamity.call_deferred(e)
 			"blackout":

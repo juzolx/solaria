@@ -136,6 +136,7 @@ var potions := GameData.START_POTIONS
 var bag_level := 0
 var bonus_bag := 0         # backpacks brought home (each adds GameData.PACK_SLOTS slots)
 var packs_carried := 0     # backpacks found this dive: lost if you fall, kept when you get home
+var dive := {}              # what this dive set off with (Town.leave), for the "made it home" tally
 var next_id := 1
 
 # ---------- Settings ----------
@@ -2074,6 +2075,7 @@ func _hero_died() -> void:
 	deaths_here = 0
 	say("[color=#f87171]You fell on floor %d.[/color] You wake at the checkpoint on floor %d.%s" % [floor_num, back, (" Lost: " + lost) if lost != "" else ""])
 	floor_num = back
+	Town.start_dive(self)  # what you carried is gone: the dive counts again from here
 	tip("death", "Falling costs everything you carried in: the gold on you, your bag, the gear you wore, your potions and scrolls. The Bank, the Vault and the Mailbox are always safe. Leave after any cleared floor to keep what you found.")
 	hero_hp = get_max_hp()
 	fight = 1
@@ -2998,6 +3000,7 @@ func save_game() -> void:
 		"bag_level": bag_level,
 		"bonus_bag": bonus_bag,
 		"packs_carried": packs_carried,
+		"dive": dive,
 		"next_id": next_id,
 		"auto_potion": auto_potion,
 		"autoplay": autoplay,
@@ -3210,6 +3213,7 @@ func load_game() -> bool:
 	bag_level = int(data.get("bag_level", 0))
 	bonus_bag = int(data.get("bonus_bag", 0))
 	packs_carried = int(data.get("packs_carried", 0))
+	dive = data.get("dive", {})
 	next_id = int(data.get("next_id", 1))
 	auto_potion = bool(data.get("auto_potion", true))
 	autoplay = bool(data.get("autoplay", true))

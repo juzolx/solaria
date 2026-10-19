@@ -68,13 +68,20 @@ func _initialize() -> void:
 	await process_frame
 	if not main.state.in_town:
 		# a fresh hero stands mid-floor, so read a Return Scroll to get home
+		# (with a little dive behind it, for the "Made it home" card)
+		Town.start_dive(main.state)
+		main.state.gold += 480
+		main.state.codex.add("kills", 9)
 		main.state.return_scrolls = maxi(main.state.return_scrolls, 1)
 		var _home := Town.use_return(main.state)
 	if main.go_to_town():
 		main.nav_page = 0
 		main._apply_nav()
 		main.refresh()
-		await create_timer(1.0).timeout
+		await create_timer(0.8).timeout
+		await shot("home_tally")
+		await close_popups(main)
+		await create_timer(0.4).timeout
 		await shot("town_map")
 		var tg: TabContainer = main._groups()[2]
 		for s in tg.get_tab_count():
