@@ -1128,8 +1128,8 @@ func _member_plate(m, g: GameState, c: Rect2, u: float) -> void:
 		draw_rect(Rect2(bx, by, bw, 5), Color(0.03, 0.03, 0.05, 0.85))
 		draw_rect(Rect2(bx + 1, by + 1, (bw - 2) * clampf(float(m.hp) / maxf(1.0, m.max_hp()), 0.0, 1.0), 3), Color("#22c55e") if not m.knocked_out else Color("#64748b"))
 		var font := ThemeDB.fallback_font
-		draw_string_outline(font, Vector2(bx - 20, by - 3), m.name, HORIZONTAL_ALIGNMENT_CENTER, bw + 40, 11, 3, Color(0, 0, 0, 0.9))
-		draw_string(font, Vector2(bx - 20, by - 3), m.name, HORIZONTAL_ALIGNMENT_CENTER, bw + 40, 11, Color(g.class_info().get("color", "#ffffff")).lightened(0.4))
+		draw_string_outline(font, Vector2(bx - 20, by - 3), m.name, HORIZONTAL_ALIGNMENT_CENTER, bw + 40, 13, 3, Color(0, 0, 0, 0.9))
+		draw_string(font, Vector2(bx - 20, by - 3), m.name, HORIZONTAL_ALIGNMENT_CENTER, bw + 40, 13, Color(g.class_info().get("color", "#ffffff")).lightened(0.4))
 
 ## The visible body part of the hero (for bars, effects and centering).
 func _hero_rect() -> Rect2:
@@ -1444,7 +1444,7 @@ func _draw() -> void:
 		var big_color := banner_color
 		draw_string_outline(font, Vector2(slide, 62), banner_text, HORIZONTAL_ALIGNMENT_CENTER, w, 26, 6, Color(0, 0, 0, a))
 		draw_string(font, Vector2(slide, 62), banner_text, HORIZONTAL_ALIGNMENT_CENTER, w, 26, Color(big_color, a))
-		draw_string(font, Vector2(-slide, 79), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, w, 12, Color(1, 1, 1, 0.85 * a))
+		draw_string(font, Vector2(-slide, 79), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, w, 13, Color(1, 1, 1, 0.85 * a))
 
 	# Tip toast at the top
 	if toast_life > 0.0:
@@ -1641,7 +1641,7 @@ func _draw_mods(r: Rect2) -> void:
 		var box := Rect2(cx, y - 13.0, widths[i], 17.0)
 		draw_rect(box, Color(0.03, 0.04, 0.08, 0.85 * enemy_alpha))
 		draw_rect(box, Color(c, 0.8 * enemy_alpha), false, 1.0)
-		draw_string(font, Vector2(cx + 6.0, y), m, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(c, enemy_alpha))
+		draw_string(font, Vector2(cx + 6.0, y), m, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(c, enemy_alpha))
 		cx += widths[i] + 4.0
 
 ## Small status chips: shrine curse, scroll of luck, hunter's scroll.
@@ -1658,7 +1658,7 @@ func _draw_status(font: Font) -> void:
 		var wdt := font.get_string_size(c[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 12.0
 		draw_rect(Rect2(x, 32, wdt, 18), Color(0.03, 0.04, 0.08, 0.8))
 		draw_rect(Rect2(x, 32, wdt, 18), c[1], false, 1.0)
-		draw_string(font, Vector2(x + 6, 46), c[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, c[1])
+		draw_string(font, Vector2(x + 6, 46), c[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, c[1])
 		x += wdt + 6.0
 
 ## The light color of the current zone (for rim lights).
@@ -1733,8 +1733,8 @@ func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color,
 	var fw := (b.size.x) * pct
 	draw_rect(Rect2(b.position, Vector2(fw, b.size.y)), Color(fill.darkened(0.15), a))
 	draw_rect(Rect2(b.position, Vector2(fw, 3.0)), Color(fill.lightened(0.35), a))
-	draw_string_outline(font, Vector2(b.position.x, b.end.y - 2.0), "%s / %s" % [_short(maxi(value, 0)), _short(max_value)], HORIZONTAL_ALIGNMENT_CENTER, b.size.x, 10, 3, Color(0, 0, 0, a))
-	draw_string(font, Vector2(b.position.x, b.end.y - 2.0), "%s / %s" % [_short(maxi(value, 0)), _short(max_value)], HORIZONTAL_ALIGNMENT_CENTER, b.size.x, 10, Color(1, 1, 1, a))
+	draw_string_outline(font, Vector2(b.position.x, b.end.y - 2.0), "%s / %s" % [_short(maxi(value, 0)), _short(max_value)], HORIZONTAL_ALIGNMENT_CENTER, b.size.x, 12, 3, Color(0, 0, 0, a))
+	draw_string(font, Vector2(b.position.x, b.end.y - 2.0), "%s / %s" % [_short(maxi(value, 0)), _short(max_value)], HORIZONTAL_ALIGNMENT_CENTER, b.size.x, 12, Color(1, 1, 1, a))
 	var ny := b.end.y + 15.0
 	draw_string_outline(font, Vector2(b.position.x - 60, ny), label, HORIZONTAL_ALIGNMENT_CENTER, b.size.x + 120, 13, 4, Color(0, 0, 0, a))
 	draw_string(font, Vector2(b.position.x - 60, ny), label, HORIZONTAL_ALIGNMENT_CENTER, b.size.x + 120, 13, label_color)
@@ -1803,7 +1803,7 @@ func _pixel_color(ch: String, tint: Color) -> Color:
 # =====================================================================
 
 ## A row of small chips: [label, color]. Centered on x, at y (top).
-func _chip_row(chips: Array, x: float, y: float, font: Font, fs := 11) -> void:
+func _chip_row(chips: Array, x: float, y: float, font: Font, fs := 13) -> void:
 	if chips.is_empty():
 		return
 	var widths: Array = []
@@ -1823,11 +1823,14 @@ func _chip_row(chips: Array, x: float, y: float, font: Font, fs := 11) -> void:
 
 ## What the monster is weak to and resists, its statuses, and its boss clock.
 func _draw_enemy_info(r: Rect2, font: Font) -> void:
+	# One chip each for weaknesses and resistances ("Weak: Fire, Holy"), so a
+	# monster with several doesn't get a stack of labels over its head
 	var chips: Array = []
-	for el in state.enemy_weak:
-		chips.append(["Weak: " + String(el), Color(Combat.ELEMENT_COLORS.get(el, "#ffffff")).lightened(0.15)])
-	for el in state.enemy_resist:
-		chips.append(["Resists: " + String(el), Color("#94a3b8")])
+	if not state.enemy_weak.is_empty():
+		var first: String = String(state.enemy_weak[0])
+		chips.append(["Weak: " + ", ".join(state.enemy_weak.map(func(e): return String(e))), Color(Combat.ELEMENT_COLORS.get(first, "#ffffff")).lightened(0.15)])
+	if not state.enemy_resist.is_empty():
+		chips.append(["Resists: " + ", ".join(state.enemy_resist.map(func(e): return String(e))), Color("#94a3b8")])
 	var st: Array = []
 	if state.burn_turns > 0:
 		st.append(["Burning", Color("#fb923c")])
@@ -1851,8 +1854,8 @@ func _draw_enemy_info(r: Rect2, font: Font) -> void:
 	if state.boss_minions > 0:
 		st.append(["Minions x%d" % state.boss_minions, Color("#d4d4d4")])
 	var top := maxf(34.0, r.position.y - 6.0)
-	_chip_row(st, r.get_center().x, top - 20.0, font)
-	_chip_row(chips, r.get_center().x, top, font, 10)
+	_chip_row(st, r.get_center().x, top - 22.0, font)
+	_chip_row(chips, r.get_center().x, top, font, 12)
 
 ## Your statuses (poison, burns, chill) over your head.
 func _draw_hero_status(r: Rect2, font: Font) -> void:
