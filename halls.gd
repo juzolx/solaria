@@ -138,14 +138,14 @@ static func on_doors_shown(g: GameState) -> void:
 
 ## door kind -> the one thing standing in that room
 const EVENT_ROOMS := {"treasure": "chest", "rest": "campfire", "merchant": "merchant", "altar": "altar",
-	"nest": "nest", "stranger": "npc", "beast": "beast"}
+	"nest": "nest", "stranger": "npc", "beast": "beast", "rift": "rift"}
 const ROOM_NAMES := {"fight": "Monsters", "elite": "Elite monster", "treasure": "Treasure room", "rest": "Campfire",
-	"merchant": "Goblin trader", "altar": "Shrine", "nest": "Nest", "stranger": "A stranger", "beast": "Dying beast"}
+	"merchant": "Goblin trader", "altar": "Shrine", "nest": "Nest", "stranger": "A stranger", "beast": "Dying beast", "rift": "A shimmer in the air"}
 const MIMIC_CHANCE := 12.5         # % of chests (about 1 in 8)
 const NEST_EGG_CHANCE := 40.0      # % a nest holds an egg (otherwise its mother is home)
 const PROP_NAMES := {"chest": "Chest", "altar": "Shrine", "nest": "Nest", "npc": "Wounded adventurer",
-	"beast": "Dying beast", "merchant": "Snik", "campfire": "Campfire"}
-const PROP_HINTS := {"chest": "Tap the chest", "altar": "Tap the shrine to pray", "nest": "Tap the nest",
+	"beast": "Dying beast", "merchant": "Snik", "campfire": "Campfire", "rift": "Rift"}
+const PROP_HINTS := {"chest": "Tap the chest", "rift": "Tap the rift to step through", "altar": "Tap the shrine to pray", "nest": "Tap the nest",
 	"npc": "Tap to help them", "beast": "Tap to go to it", "merchant": "Tap Snik to trade", "campfire": "You rest by the fire"}
 
 ## Walk into a room that holds one thing instead of monsters.
@@ -236,6 +236,10 @@ static func interact(g: GameState, i: int) -> String:
 					out = "You pray at the shrine. Your wounds close."
 			g._faith(3)
 			g.events.append({"type": "buff", "name": "Shrine"})
+		"rift":
+			p["used"] = true
+			Rifts.enter(g)
+			return "You step through the rift!"
 		"nest":
 			p["used"] = true
 			if randf() * 100.0 < NEST_EGG_CHANCE:

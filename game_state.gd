@@ -1881,6 +1881,11 @@ func _enemy_defeated() -> void:
 	Wanderers.reward(self)
 	hero_hp = mini(hero_hp + int(get_max_hp() * 0.15 * (0.0 if curses.has("frailty") else 1.0)), get_max_hp())
 
+	# Inside a hidden portal: the rift decides what comes next
+	if Rifts.on_kill(self):
+		_check_codex()
+		save_game()
+		return
 	# Move on (horde fights and the goblin don't count toward the floor's 3 fights)
 	if horde_left > 0 and not was_boss and not was_goblin:
 		horde_left -= 1
@@ -2060,6 +2065,7 @@ func _hero_died() -> void:
 		if not leader_down:
 			_leader_falls()
 		return
+	Halls.leave_portal(self, false)  # a rift closes on you when you fall
 	leader_down = false
 	last_death = Combat.recap(self)
 	events.append({"type": "death_recap"})
@@ -3692,7 +3698,7 @@ func roll_doors(was_boss := false) -> Array:
 					break
 		if floor_num < 3 and kind in ["elite", "nest"]:
 			kind = "fight"
-		out.append(kind)
+		out.append(Rifts.maybe_door(self, kind))  # very rarely: a hidden portal
 	if was_boss and not "merchant" in out:
 		out[randi() % 3] = "merchant"
 	return out
