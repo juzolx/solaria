@@ -149,8 +149,10 @@ func _initialize() -> void:
 	await shot(prefix + "_12_blackout", 2.0)
 	# 0.13 rooms: the room between fights, then the three doors, in a few regions
 	main.timer.stop()
-	for f in [5, 60, 160, 280]:
+	for f in [5, 60, 160, 280, 460, 760]:
 		st.floor_num = f
+		seed(f)
+		Halls.roll_props(st)
 		st.room_count += 1
 		st.fight = 1
 		st.horde_left = 0

@@ -719,6 +719,34 @@ func _level_up_fx(e: Dictionary) -> void:
 	_burst(_hero_center(), Color("#fbbf24"), 30, 300.0)
 	_float("LEVEL %d" % e["level"], _hero_center() + Vector2(0, -30), Color("#fbbf24"), 22)
 
+
+var halls := HallsScene.new()
+
+## The old painted backdrop (town and trials still use it).
+func _draw_old_bg(w: float, h: float) -> void:
+	var zone := GameData.zone_for_floor(state.floor_num)
+	var tint := Color(zone["color"])
+	var bg := _bg_tex(GameData.zone_index(state.floor_num), GameData.sub_index(state.floor_num))
+	if bg:
+		var gy := _ground()
+		var ss := _scr()
+		# Whole screen pixels per background pixel, so the scene stays crisp at any window size
+		var sc := maxf(maxf(ceilf(w * ss / BG_SIZE.x), ceilf(gy * ss / BG_GROUND)), ceilf((h - gy) * ss / (BG_SIZE.y - BG_GROUND))) / ss
+		var bw := BG_SIZE.x * sc
+		var dim := 0.62
+		draw_texture_rect(bg, Rect2(_snap(Vector2((w - bw) / 2.0, gy - BG_GROUND * sc)), Vector2(bw, BG_SIZE.y * sc)), false, Color(dim, dim, dim * 1.05))
+		# Vignette: the edges fall into shadow so the fighters read first
+		for i in 8:
+			var t := float(i) / 8.0
+			var va := 0.05 * (1.0 - t)
+			draw_rect(Rect2(0, 0, w * 0.18 * (1.0 - t), h), Color(0.0, 0.0, 0.02, va))
+			draw_rect(Rect2(w - w * 0.18 * (1.0 - t), 0, w * 0.18 * (1.0 - t), h), Color(0.0, 0.0, 0.02, va))
+			draw_rect(Rect2(0, 0, w, h * 0.22 * (1.0 - t)), Color(0.0, 0.0, 0.02, va))
+		_draw_mood(w, h, gy)
+	else:
+		draw_rect(Rect2(0, 0, w, h), tint.darkened(0.82))
+		draw_rect(Rect2(0, _ground(), w, h - _ground()), tint.darkened(0.6))
+
 const BG_SIZE := Vector2(320, 180)
 const BG_GROUND := 136.0
 var _bgs := {}
@@ -1181,27 +1209,20 @@ func _draw() -> void:
 	var tint := Color(zone["color"])
 	var font := ThemeDB.fallback_font
 
-	# Background: the zone's pixel-art scene, scaled by whole pixels, ground lined up
-	var bg := _bg_tex(GameData.zone_index(state.floor_num), GameData.sub_index(state.floor_num))
-	if bg:
-		var gy := _ground()
-		var ss := _scr()
-		# Whole screen pixels per background pixel, so the scene stays crisp at any window size
-		var sc := maxf(maxf(ceilf(w * ss / BG_SIZE.x), ceilf(gy * ss / BG_GROUND)), ceilf((h - gy) * ss / (BG_SIZE.y - BG_GROUND))) / ss
-		var bw := BG_SIZE.x * sc
-		var dim := 0.62
-		draw_texture_rect(bg, Rect2(_snap(Vector2((w - bw) / 2.0, gy - BG_GROUND * sc)), Vector2(bw, BG_SIZE.y * sc)), false, Color(dim, dim, dim * 1.05))
-		# Vignette: the edges fall into shadow so the fighters read first
-		for i in 8:
-			var t := float(i) / 8.0
-			var va := 0.05 * (1.0 - t)
-			draw_rect(Rect2(0, 0, w * 0.18 * (1.0 - t), h), Color(0.0, 0.0, 0.02, va))
-			draw_rect(Rect2(w - w * 0.18 * (1.0 - t), 0, w * 0.18 * (1.0 - t), h), Color(0.0, 0.0, 0.02, va))
-			draw_rect(Rect2(0, 0, w, h * 0.22 * (1.0 - t)), Color(0.0, 0.0, 0.02, va))
-		_draw_mood(w, h, gy)
+	# Background (0.13): the room you walked into, first-person (HallsScene), same as between fights
+	if state.in_town or state.trial_active:
+		_draw_old_bg(w, h)
 	else:
-		draw_rect(Rect2(0, 0, w, h), tint.darkened(0.82))
-		draw_rect(Rect2(0, _ground(), w, h - _ground()), tint.darkened(0.6))
+		halls.t = Time.get_ticks_msec() / 1000.0
+		halls.build(state, size)
+		halls.draw_shell(self, size)
+		halls.draw_doors(self, null, {}, font)
+		var things: Array = halls.scenery()
+		things.sort_custom(func(a, b): return float(a["z"]) > float(b["z"]))
+		for th in things:
+			halls.draw_scenery(self, th)
+		halls.vignette(self, size)
+		_draw_mood(w, h, _ground())
 	draw_string(font, Vector2(14, 24), "%s  -  %s  -  Floor %d" % [zone["name"], GameData.sub_name(state.floor_num), state.floor_num], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 1, 1, 0.55))
 	_draw_status(font)
 
