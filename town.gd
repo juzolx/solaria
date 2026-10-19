@@ -108,6 +108,7 @@ static func enter(g: GameState, floor_done := false) -> bool:
 		g.bag_version += 1
 	_home_tally(g, carried)
 	TownEvents.on_home(g)  # a fair, a bard, a bounty day...
+	Milestones.on_home(g)
 	g.path_offer.clear()
 	g.doors.clear()
 	g.buffs.clear()

@@ -48,7 +48,7 @@ func _build(kind: String, title: String, sub: String, color: Color, extra: Strin
 	band.color = Color(color.r, color.g, color.b, 0.0)
 	band.set_anchors_and_offsets_preset(Control.PRESET_HCENTER_WIDE)
 	band.offset_top = -170 if portrait else -90
-	band.offset_bottom = 110 if portrait else 90
+	band.offset_bottom = 170 if portrait else 90
 	band.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(band)
 	var center := CenterContainer.new()
@@ -70,7 +70,7 @@ func _build(kind: String, title: String, sub: String, color: Color, extra: Strin
 		var pt := create_tween()
 		pt.tween_interval(0.5)
 		pt.tween_property(pic, "modulate:a", 1.0, 0.6)
-	var kicker: String = {"realm": "YOU ENTER", "boss": "", "awaken": "AWAKENING", "transform": "SOMETHING CHANGES", "hidden": "HIDDEN CLASS", "class": "YOUR CLASS GROWS"}.get(kind, "")
+	var kicker: String = {"realm": "YOU ENTER", "boss": "", "awaken": "AWAKENING", "transform": "SOMETHING CHANGES", "hidden": "HIDDEN CLASS", "class": "YOUR CLASS GROWS", "milestone": "A MILESTONE"}.get(kind, "")
 	if kicker != "":
 		lines.append(_line(v, kicker, 14, color.lightened(0.3)))
 	lines.append(_line(v, title.to_upper(), 34 if kind != "boss" else 30, color.lightened(0.4)))
@@ -96,7 +96,7 @@ func _build(kind: String, title: String, sub: String, color: Color, extra: Strin
 	if main_node and main_node.timer:
 		main_node.timer.paused = true
 	if main_node and main_node.sfx:
-		main_node.sfx.play({"realm": "portal", "boss": "boss_intro", "awaken": "awaken", "transform": "transform", "hidden": "hidden", "class": "spec"}.get(kind, "event"))
+		main_node.sfx.play({"realm": "portal", "boss": "boss_intro", "awaken": "awaken", "transform": "transform", "hidden": "hidden", "class": "spec", "milestone": "milestone"}.get(kind, "event"))
 
 func _line(parent: Control, text: String, size_px: int, color: Color) -> Label:
 	var l := UI.label(text, size_px, color)

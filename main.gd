@@ -1411,6 +1411,8 @@ func _handle_events() -> void:
 				moment_queue.append(["realm", e["name"], e["blurb"], Color(e["color"]), e["mechanic"], null, DarkGrade.texture(bgp, DarkGrade.SCENE, false)])
 			"boss_intro":
 				moment_queue.append(["boss", e["name"], e["lore"], Color(e["color"]), e.get("sub", ""), null])
+			"milestone_moment":
+				moment_queue.append(["milestone", e["title"], e["sub"], Color(e["color"]), "", Sprites.portrait(state.appearance, state.hero_looks())])
 			"awaken":
 				moment_queue.append(["awaken", e["name"], e["text"], Color(e["color"]), "", Sprites.portrait(state.appearance, state.hero_looks())])
 			"transform":

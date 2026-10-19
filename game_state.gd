@@ -1806,6 +1806,8 @@ func _enemy_defeated() -> void:
 		party.on_kill(xp_gain)
 	Menagerie.on_kill(self)
 	EggQuests.on_kill(self, tier, was_boss)
+	if was_boss:
+		Milestones.on_boss(self, species)
 	var gold_gain := (2 + floor_num) * (10 if was_boss else 1)
 	gold_gain = int(gold_gain * float(t["gold"]) * (1.0 + (effect_total("gold_find") + bonus_pct + World.curse_gold(self)) / 100.0) * GameData.event_bonus("gold"))
 	if curse_turns > 0:
@@ -2013,6 +2015,7 @@ func _next_floor() -> void:
 			party.save_all()
 	fight = 1
 	best_floor = maxi(best_floor, floor_num)
+	Milestones.on_floor(self)
 	floors_since_event += 1
 	codex.bounty_progress("floor")
 	var portal_pending := Realms.is_realm_start(floor_num) and GameData.realm_slot(floor_num) >= realm_order.size()
@@ -2356,6 +2359,7 @@ func filter_salvages(item: Dictionary) -> bool:
 	return false
 
 func _give_item(item: Dictionary) -> void:
+	Milestones.on_item(self, item)
 	add_to_wardrobe(item)
 	codex.found_item(item)
 	var r := int(item["rarity"])
