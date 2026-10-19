@@ -25,7 +25,7 @@ static func maybe(g: GameState) -> void:
 	g.enemy_wanderer = false
 	if g.enemy_is_boss or g.enemy_goblin or g.trial_active or g.enemy_calamity > 0 or g.enemy_grave or g.horde_left > 0:
 		return
-	if g.floor_num < FROM_FLOOR or randf() * 100.0 >= CHANCE:
+	if g.floor_num < FROM_FLOOR or randf() * 100.0 >= CHANCE * TownEvents.wanderer_mult(g):
 		return
 	make(g, LIST.pick_random())
 

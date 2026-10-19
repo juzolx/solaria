@@ -233,6 +233,7 @@ var luck_turns := 0         # Scroll of Luck
 var hunt_spawns := 0        # Hunter's Scroll: next monsters are more often rare
 var merchant: Array = []    # the wandering merchant's stock while you're with them
 var merchant_haggle := ""   # Stage 3: "" (not tried), "won" or "lost" this visit (snik.gd)
+var town_event := ""        # Stage 3: what's on in town until you're next home (town_events.gd)
 var loadouts: Array = [{}, {}, {}]  # saved gear sets: slot -> item id
 var loot_filter := {"slots": {}, "weaker": false}  # extra auto-salvage rules (Common-Rare only)
 var codex := Codex.new()    # account-wide bestiary, stats, achievements (main swaps in the saved one)
@@ -346,7 +347,7 @@ func luck_odds() -> float:
 
 ## Shop and merchant price after your Charisma discount.
 func price(base: int) -> int:
-	return maxi(1, int(round(base * (1.0 - dim("CHA", GameData.CHA_DISCOUNT) / 100.0))))
+	return maxi(1, int(round(base * (1.0 - dim("CHA", GameData.CHA_DISCOUNT) / 100.0) * TownEvents.price_mult(self))))
 
 ## What an item sells for (Charisma gets better prices).
 func sell_price(item: Dictionary) -> int:
@@ -1176,7 +1177,7 @@ func toggle_skill_auto(id: String) -> void:
 	save_game()
 
 func gain_xp(amount: int) -> void:
-	xp += int(amount * float(race_info().get("xp", 1.0)) * (1.0 + _flat("xp") / 100.0))
+	xp += int(amount * float(race_info().get("xp", 1.0)) * (1.0 + _flat("xp") / 100.0) * TownEvents.xp_mult(self))
 	while xp >= GameData.xp_to_next(level):
 		xp -= GameData.xp_to_next(level)
 		level += 1
@@ -1956,6 +1957,7 @@ func _give_signature(monster: String) -> void:
 	_give_item(item)
 
 func _add_gold(amount: int) -> void:
+	amount = int(amount * TownEvents.gold_mult(self))
 	gold += amount
 	codex.add("gold_earned", amount)
 	ClassTree.count(self, "gold_earned", amount)
@@ -3131,7 +3133,7 @@ func save_game() -> void:
 		"curse_turns": curse_turns,
 		"luck_turns": luck_turns,
 		"hunt_spawns": hunt_spawns,
-		"merchant": merchant, "merchant_haggle": merchant_haggle,
+		"merchant": merchant, "merchant_haggle": merchant_haggle, "town_event": town_event,
 		"loadouts": loadouts,
 		"loot_filter": loot_filter,
 		"enemy_goblin": enemy_goblin,
@@ -3389,6 +3391,7 @@ func load_game() -> bool:
 	hunt_spawns = int(data.get("hunt_spawns", 0))
 	merchant = data.get("merchant", [])
 	merchant_haggle = String(data.get("merchant_haggle", ""))
+	town_event = String(data.get("town_event", ""))
 	var saved_loadouts: Array = data.get("loadouts", [])
 	for i in mini(saved_loadouts.size(), loadouts.size()):
 		loadouts[i] = saved_loadouts[i]
@@ -3876,7 +3879,7 @@ func _make_merchant() -> void:
 			r = 3
 		var item := GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, floor_num, _new_id())
 		merchant.append({"kind": "item", "item": item, "price": price(int(GameData.shop_price(item) * GameData.MERCHANT_PRICE_MULT)), "sold": false})
-	merchant.append({"kind": "potions", "amount": 3, "price": price(int(potion_cost() * 3 * GameData.MERCHANT_PRICE_MULT)), "sold": false})
+	merchant.append({"kind": "potions", "amount": 3, "price": price(int(GameData.POTION_GOLD * 3 * GameData.MERCHANT_PRICE_MULT)), "sold": false})
 	# Priced for where you are now, like everything else Snik sells
 	var here := 30 + floor_num * 12
 	merchant.append({"kind": "scroll", "id": "return", "price": price(here * 2), "sold": false})

@@ -1078,10 +1078,15 @@ func _sync_town() -> void:
 	town_mail.text = "✉ Mail (%d)" % mw if mw > 0 else "✉ Mail"
 	town_mail.add_theme_color_override("font_color", UI.GOLD if Mail.unread(state) > 0 else UI.TEXT)
 	town_status.text = "HP %d / %d   ·   %s" % [state.hero_hp, state.get_max_hp(), Town.look(state)["name"]]
+	if state.town_event != "":
+		town_status.text += "   ·   " + String(TownEvents.EVENTS[state.town_event]["name"])
 	var notes := {}
 	for id in Town.BUILDINGS:
 		notes[id] = Town.BUILDINGS[id][1]
 	notes["gate"] = "Choose your floor"
+	var ev := TownEvents.note(state)
+	if not ev.is_empty():
+		notes[ev[0]] = "* %s *" % ev[1]  # what's on in town
 	town_view.notes = notes
 	town_view.locked = {
 		"smith": "" if state.craft_unlocked() else "Opens at floor %d" % GameData.CRAFT_UNLOCK_FLOOR,
