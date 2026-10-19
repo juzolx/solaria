@@ -201,6 +201,7 @@ func refresh() -> void:
 
 	var text := "Attack [color=#fbbf24]%d[/color]     Defense [color=#60a5fa]%d[/color]     Max HP [color=#4ade80]%d[/color]" % [
 		state.get_attack(), state.get_defense(), state.get_max_hp()]
+	text += "     Gear Score [color=#e8b14a]%d[/color]" % state.average_gear_score()  # the average of what you wear
 	var effects: Array[String] = []
 	for effect in ["lifesteal", "regen", "double_strike", "crit", "dodge", "thorns", "gold_find"]:
 		var total := state.effect_total(effect)

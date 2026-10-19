@@ -26,6 +26,10 @@ static func describe(state: GameState, item: Dictionary) -> String:
 	var text := "[color=%s][b]%s[/b][/color]  [color=%s](%s %s, floor %d)[/color]\n+%d %s" % [
 		GameData.color_of(r), GameData.display_name(item), dim, GameData.RARITY_NAMES[r], item["slot"], int(item["floor"]),
 		GameData.item_power(item), item["stat"]]
+	# 0.13+: one score for every slot, next to the average of what you wear
+	var avg := state.average_gear_score()
+	var gs := GameData.gear_score(item)
+	text += "   [color=%s]Gear Score %d[/color] [color=%s](you average %d)[/color]" % [UI.hex(UI.GREEN) if gs > avg else dim, gs, dim, avg]
 	if item.get("locked", false):
 		text += "  [color=#e8b14a](locked)[/color]"
 	match String(item.get("bound", "")):

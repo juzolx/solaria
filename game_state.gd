@@ -4239,7 +4239,13 @@ func gamble(id: int) -> Dictionary:
 		var new_rarity := int(item["rarity"]) + 1
 		item["rarity"] = new_rarity
 		item["name"] = GameData.item_name(item)
+		# 0.13+: a win is made for where you are now, and never weaker than your average gear
+		item["floor"] = maxi(int(item["floor"]), best_floor)
 		item["bonus"] = maxi(1, int(GameData.base_bonus(item["slot"], int(item["floor"])) * float(GameData.RARITY_MULTS[new_rarity])))
+		var avg := average_gear_score()
+		var gs := GameData.gear_score(item)
+		if avg > 0 and gs < avg:
+			item["bonus"] = int(ceil(int(item["bonus"]) * float(avg) / maxf(1.0, gs)))
 		if new_rarity == GameData.LEGENDARY:
 			GameData.add_legendary_effect(item)
 		add_to_wardrobe(item)
@@ -4432,3 +4438,12 @@ func _skip_easy_fight() -> bool:
 	say("You cut through the %s without breaking stride." % enemy_name)
 	_enemy_defeated()
 	return true
+
+## 0.13+: the average Gear Score of what you wear (0 with nothing on).
+func average_gear_score() -> int:
+	if equipped.is_empty():
+		return 0
+	var t := 0
+	for s in equipped:
+		t += GameData.gear_score(equipped[s])
+	return int(round(float(t) / equipped.size()))

@@ -586,6 +586,13 @@ static func rarity_odds(bonus: int, legendary_chance: float) -> Array:
 	var com := 100.0 - float(c[0]) - float(c[1]) - float(c[2])
 	return [com * rest, float(c[0]) * rest, float(c[1]) * rest, float(c[2]) * rest, legendary_chance]
 
+## 0.13+: Gear Score puts every slot on one scale (a weapon's Attack and a helmet's HP
+## differ), so items can be compared and averaged: about 10 per Common item of floor 1.
+static func gear_score(item: Dictionary) -> int:
+	if not SLOT_INFO.has(String(item.get("slot", ""))):
+		return 0
+	return int(round(item_power(item) / maxf(1.0, base_bonus(String(item["slot"]), 1)) * 10.0))
+
 static func base_bonus(slot: String, floor_num: int) -> float:
 	var info: Dictionary = SLOT_INFO[slot]
 	return float(info["base"]) + floor_num * float(info["per_floor"])

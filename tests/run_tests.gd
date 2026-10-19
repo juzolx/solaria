@@ -796,7 +796,7 @@ func _initialize() -> void:
 			sd.floor_num = 12
 		stones += sd.codex.stat("stones") - before
 	print("Stones from 3000 kills: %d" % stones)
-	check(stones > 15 and stones < 80, "stone drops about 1-2%% (got %d)" % stones)
+	check(stones > 4 and stones < 40, "stone drops about 0.5%% (0.13+: rarer) (got %d)" % stones)
 	# The Wanderer: items and god trials
 	var wd := GameState.new()
 	wd.autosave = false
