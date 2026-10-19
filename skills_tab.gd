@@ -282,6 +282,16 @@ static func _fill_auto(m, o: Overlay, st: GameState) -> void:
 			_fill_auto(m, o, st))
 		b.custom_minimum_size = Vector2(0, UI.TAP)
 		o.content.add_child(b)
+	UI.section(o.content, "Pause Auto when...", "Autoplay stops and tells you why, once per thing. Tap Auto to carry on.")
+	for rid in AutoRules.RULES:
+		var r_id: String = rid
+		var rb := UI.button("%s: %s" % [AutoRules.RULES[r_id], "ON" if AutoRules.on(st, r_id) else "OFF"], func():
+			AutoRules.toggle(st, r_id)
+			st.save_game()
+			_fill_auto(m, o, st))
+		rb.custom_minimum_size = Vector2(0, UI.TAP)
+		rb.add_theme_color_override("font_color", UI.TEAL if AutoRules.on(st, r_id) else UI.DIM)
+		o.content.add_child(rb)
 	UI.section(o.content, "Potions", "Auto-potion drinks one when your HP drops below this.")
 	var prow := UI.hbox(8)
 	o.content.add_child(prow)

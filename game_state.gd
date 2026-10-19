@@ -148,6 +148,8 @@ var next_id := 1
 # ---------- Settings ----------
 var auto_potion := true
 var autoplay := true      # the fight runs by itself; off = you take every turn (Attack / tap the enemy)
+var auto_rules := {}       # Stage 3: when Autoplay pauses for you (auto_rules.gd)
+var auto_rule_seen := ""   # the last thing a rule paused for (so it pauses once)
 var auto_paths := true    # forks pick a room by themselves after a few turns
 var auto_salvage := -1  # -1 = off, otherwise salvage new drops of this rarity and below
 var fast_mode := false   # kept in step with speed (older saves only have this)
@@ -3095,6 +3097,7 @@ func save_game() -> void:
 		"next_id": next_id,
 		"auto_potion": auto_potion,
 		"autoplay": autoplay,
+		"auto_rules": auto_rules,
 		"auto_paths": auto_paths,
 		"auto_salvage": auto_salvage,
 		"fast_mode": fast_mode,
@@ -3311,6 +3314,7 @@ func load_game() -> bool:
 	next_id = int(data.get("next_id", 1))
 	auto_potion = bool(data.get("auto_potion", true))
 	autoplay = bool(data.get("autoplay", true))
+	auto_rules = data.get("auto_rules", {})
 	auto_paths = bool(data.get("auto_paths", true))
 	auto_salvage = int(data.get("auto_salvage", -1))
 	fast_mode = bool(data.get("fast_mode", false))

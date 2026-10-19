@@ -51,7 +51,7 @@ func _initialize() -> void:
 	var pots0 := g.potions
 	var rep0 := float(g.rep["Elf"])
 	g.take_turn()
-	check(not g.enemy_peaceful and (g.fight != fight0 or g.floor_num != 260), "they step aside and you move on")
+	check(g.fight != fight0 or g.floor_num != 260, "they step aside and you move on (the next monster may be friendly too)")
 	check(g.gold > gold0 or g.potions > pots0, "with a gift")
 	check(float(g.rep.get("Elf", 0.0)) > rep0, "and they like you a bit more")
 	print("STAGE3 PEOPLES TESTS DONE, failures: ", fails)

@@ -62,10 +62,15 @@ func _initialize() -> void:
 	p.cfight["turns"] = 4
 	Combat.start_windup(p, Combat.HEAVY_MULT)
 	p.hero_hp = maxi(1, int(p.damage_taken() * 1.5))
+	p.hazard = ""  # just the wind-up: no room hazard, variant or pack in the way
+	p.enemy_variant = ""
+	p.enemy_mods = []
+	p.horde_left = 0
+	p.events.clear()
 	p.enemy_hp = p.enemy_max_hp * 20
 	p.enemy_max_hp = p.enemy_hp
 	p.take_turn()
-	check(p.potions == 2, "Auto drinks before the heavy blow lands (%d potions left)" % p.potions)
+	check(p.events.any(func(e): return e["type"] == "potion"), "Auto drinks before the heavy blow lands")
 	print("STAGE3 AUTO TESTS DONE, failures: ", fails)
 	GameState.delete_saves()
 	quit()

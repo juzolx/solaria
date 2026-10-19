@@ -570,6 +570,14 @@ func _on_tick() -> void:
 	# Manual play: nothing happens until you act (see _manual_turn)
 	if battle.busy():
 		return  # a boss is making its entrance
+	var pause := AutoRules.check(state)
+	if pause != "":
+		state.autoplay = false  # one of your Auto rules: you take it from here
+		sfx.play("event")
+		toast("Auto paused: %s. Tap Auto to carry on." % pause)
+		state.save_game()
+		refresh()
+		return
 	if not state.autoplay:
 		return
 	state.take_turn()
