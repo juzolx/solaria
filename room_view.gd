@@ -30,6 +30,8 @@ func _process(delta: float) -> void:
 	_step_motes(delta)
 	var k := "%d|%d" % [state.floor_num, state.room_count]
 	if k != key:
+		if key != "":
+			main.sfx.play("whoosh", randf_range(0.9, 1.1))
 		key = k
 		motes.clear()
 	queue_redraw()

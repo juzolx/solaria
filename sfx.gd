@@ -8,7 +8,7 @@ const RATE := 22050
 const VOICES := 12
 const SOUND_DIR := "res://sounds/"
 const MUSIC_FADE := 1.2
-const EXPECTED_FILES := 52  # sound + music files in the sounds folder
+const EXPECTED_FILES := 61  # sound + music files in the sounds folder
 
 var enabled := true
 var sfx_db := 0.0
@@ -21,6 +21,16 @@ var music_b := AudioStreamPlayer.new()
 var music_current := ""
 var music_streams := {}
 var files_found := 0  # how many sound files loaded from the sounds folder
+var ambience := AudioStreamPlayer.new()   # 0.13+: the room you stand in (wind, drips, fire...)
+var ambience_current := ""
+var amb_streams := {}
+var haptics := true       # short buzzes on phones for big hits, drops and moments
+## Region mood kind (HallsScene.MOODS) -> ambience loop
+const AMBIENCE := {"fireflies": "forest", "leaves": "forest", "dust": "crypt", "motes": "crypt", "drips": "water",
+	"embers": "fire", "sparks": "fire", "shadows": "void", "sparkles": "void"}
+## Sound -> buzz length in ms (phones only)
+const HAPTIC := {"crit": 15, "hurt": 20, "kill": 12, "legendary": 45, "unique": 60, "signature": 60, "level_up": 35,
+	"boss_intro": 70, "death": 90, "trap": 40, "evolve": 80, "shatter": 25, "enrage": 50}
 
 func _ready() -> void:
 	for i in VOICES:
@@ -29,6 +39,17 @@ func _ready() -> void:
 		players.append(p)
 	add_child(music_a)
 	add_child(music_b)
+	add_child(ambience)
+	ambience.volume_db = -80.0
+	for k in ["forest", "crypt", "water", "fire", "void"]:
+		var ap: String = SOUND_DIR + "amb_" + k + ".wav"
+		if ResourceLoader.exists(ap):
+			var ast: AudioStreamWAV = load(ap)
+			ast.loop_mode = AudioStreamWAV.LOOP_FORWARD
+			ast.loop_begin = 0
+			ast.loop_end = int(ast.get_length() * ast.mix_rate)
+			amb_streams[k] = ast
+			files_found += 1
 	for p in [music_a, music_b]:
 		p.volume_db = -80.0
 
@@ -59,7 +80,8 @@ func _ready() -> void:
 			"boss_intro", "dodge", "burn", "stun", "buff", "ability", "error",
 			"rare_spawn", "signature", "achievement", "event", "page",
 			"awaken", "transform", "hidden", "escape", "portal",
-			"evolve", "weak_hit", "resisted", "freeze", "shatter", "combo", "milestone", "pet", "curse", "enrage"]:
+			"evolve", "weak_hit", "resisted", "freeze", "shatter", "combo", "milestone", "pet", "curse", "enrage",
+			"drop", "door", "trap", "whoosh"]:
 		var path: String = SOUND_DIR + n + ".wav"
 		if ResourceLoader.exists(path):
 			sounds[n] = load(path)
@@ -70,7 +92,8 @@ func _ready() -> void:
 		"stun": "crit", "buff": "potion", "ability": "crit", "error": "click",
 		"rare_spawn": "boss_intro", "signature": "unique", "achievement": "level_up", "event": "floor", "page": "click",
 		"awaken": "level_up", "transform": "rare_spawn", "hidden": "signature", "escape": "dodge", "portal": "event",
-		"evolve": "spec", "weak_hit": "crit", "resisted": "hit", "freeze": "stun", "shatter": "crit", "combo": "ability", "milestone": "level_up", "pet": "buff", "curse": "boss_intro", "enrage": "boss_intro"}
+		"evolve": "spec", "weak_hit": "crit", "resisted": "hit", "freeze": "stun", "shatter": "crit", "combo": "ability", "milestone": "level_up", "pet": "buff", "curse": "boss_intro", "enrage": "boss_intro",
+		"drop": "loot", "door": "tap", "trap": "hurt", "whoosh": "tap"}
 	for n in aliases:
 		if not sounds.has(n):
 			sounds[n] = sounds[aliases[n]]
@@ -90,6 +113,8 @@ func set_volumes(effects: float, music: float) -> void:
 	var active := music_a if music_a.playing and music_a.volume_db > -40.0 else music_b
 	if active.playing:
 		active.volume_db = _music_db()
+	if ambience.playing:
+		ambience.volume_db = _amb_db()
 
 func _music_db() -> float:
 	return linear_to_db(maxf(music_linear * 0.6, 0.0001)) if enabled and music_linear > 0.0 else -80.0
@@ -103,10 +128,13 @@ func play(sound_name: String, pitch := 1.0) -> void:
 	p.pitch_scale = pitch
 	p.volume_db = sfx_db
 	p.play()
+	if haptics and HAPTIC.has(sound_name) and OS.has_feature("mobile"):
+		Input.vibrate_handheld(int(HAPTIC[sound_name]), 0.6)
 
 ## Picks the zone music (or the boss theme) and crossfades when it changes.
 func update_music(state: GameState) -> void:
 	if state.in_town:
+		play_ambience("")
 		play_music("town" if music_streams.has("town") else "menu")
 	elif state.enemy_is_boss:
 		# The boss theme gets faster and heavier for the second half of the fight (or once it enrages)
@@ -114,6 +142,9 @@ func update_music(state: GameState) -> void:
 		play_music("boss2" if late and music_streams.has("boss2") else "boss")
 	else:
 		play_music("zone_%d" % GameData.zone_index(state.floor_num))
+	if not state.in_town:
+		var kind: String = HallsScene.MOODS[clampi(GameData.zone_index(state.floor_num), 0, 9)]["kind"]
+		play_ambience(String(AMBIENCE.get(kind, "crypt")))
 
 ## Crossfades to a music track ("menu", "boss", "zone_0"...).
 func play_music(want: String) -> void:
@@ -172,3 +203,24 @@ func _synth(segments: Array) -> AudioStreamWAV:
 	wav.stereo = false
 	wav.data = data
 	return wav
+
+func _amb_db() -> float:
+	return sfx_db - 15.0 if enabled else -80.0
+
+## Fades the room ambience to `kind` ("forest", "crypt", "water", "fire", "void"; "" for silence).
+func play_ambience(kind: String) -> void:
+	if kind == ambience_current:
+		if ambience.playing:
+			ambience.volume_db = _amb_db()
+		return
+	ambience_current = kind
+	var t := create_tween()
+	if ambience.playing:
+		t.tween_property(ambience, "volume_db", -60.0, 0.6)
+		t.tween_callback(ambience.stop)
+	if kind != "" and amb_streams.has(kind):
+		t.tween_callback(func():
+			ambience.stream = amb_streams[kind]
+			ambience.volume_db = -60.0
+			ambience.play())
+		t.tween_property(ambience, "volume_db", _amb_db(), 1.2)

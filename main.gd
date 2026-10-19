@@ -401,7 +401,7 @@ func interact_prop(i: int) -> void:
 func pick_door(i: int) -> void:
 	if not state.door_pending():
 		return
-	sfx.play("click")
+	sfx.play("door", randf_range(0.95, 1.05))
 	state.choose_path(GameState.DOOR_KEYS[i])
 	refresh()
 
@@ -1257,6 +1257,7 @@ func _show_tree_picker() -> void:
 func apply_settings() -> void:
 	sfx.enabled = profile.sound_on
 	sfx.set_volumes(profile.volume, profile.music_volume)
+	sfx.haptics = profile.haptics
 	var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if profile.fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
 	if DisplayServer.get_name() != "headless" and DisplayServer.window_get_mode() != mode:
 		DisplayServer.window_set_mode(mode)
@@ -1358,6 +1359,8 @@ func _handle_events() -> void:
 		if state.in_town and e["type"] in ["tip", "toast"]:
 			toast(String(e["text"]))
 		match e["type"]:
+			"trap":
+				sfx.play("trap")
 			"guide":
 				if codex.stat("guide_skip") == 0 and not _popup_open():
 					GuideBook.open_book(self, e["id"], true)

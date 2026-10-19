@@ -39,6 +39,7 @@ var mail_seen: Array = []  # news letters (mail.gd NEWS) already delivered
 var calamities := {}       # region index (str) -> {"hero", "slot", "date"}: Calamities this account has slain (the server owns this once online)
 var colorblind := false      # spell out what colors mean (rarity, weak / resist)
 var reduce_motion := false   # no idle bobbing, floating motes, shake or hit stop
+var haptics := true          # short buzzes on phones for big hits, drops and moments
 var high_contrast := false   # brighter secondary text
 var save_epoch := 0          # the SAVE_EPOCH these saves were made under
 
@@ -80,6 +81,7 @@ func _from(d: Dictionary) -> void:
 	show_recap = bool(d.get("show_recap", true))
 	colorblind = bool(d.get("colorblind", false))
 	reduce_motion = bool(d.get("reduce_motion", false))
+	haptics = bool(d.get("haptics", true))
 	high_contrast = bool(d.get("high_contrast", false))
 	mail_seen = d.get("mail_seen", [])
 	calamities = d.get("calamities", {})
@@ -94,7 +96,7 @@ func save() -> void:
 		"fullscreen": fullscreen, "dark_art": dark_art, "battery_saver": battery_saver, "low_graphics": low_graphics, "dev_mode": dev_mode, "hc_best": hc_best, "hc_runs": hc_runs,
 		"player_name": player_name, "online": online, "path_choice": path_choice,
 		"active_slot": active_slot, "max_floor": max_floor, "stash": stash, "stash_level": stash_level,
-		"shake": shake, "damage_numbers": damage_numbers, "flashes": flashes, "text_size": text_size, "notes_seen": notes_seen, "skill_book": skill_book, "show_recap": show_recap, "colorblind": colorblind, "reduce_motion": reduce_motion, "high_contrast": high_contrast, "mail_seen": mail_seen, "calamities": calamities, "save_epoch": save_epoch,
+		"shake": shake, "damage_numbers": damage_numbers, "flashes": flashes, "text_size": text_size, "notes_seen": notes_seen, "skill_book": skill_book, "show_recap": show_recap, "colorblind": colorblind, "reduce_motion": reduce_motion, "haptics": haptics, "high_contrast": high_contrast, "mail_seen": mail_seen, "calamities": calamities, "save_epoch": save_epoch,
 	})
 
 ## True when saves from an older epoch exist and must be wiped.

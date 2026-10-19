@@ -846,6 +846,7 @@ func _drop_item(e: Dictionary, pos: Vector2, color: Color, r: int) -> void:
 		"life": 1.5 + 0.45 * mini(r, 5), "still": still, "spin": randf_range(-1.0, 1.0)})
 	if drops.size() > 5:
 		drops.pop_front()
+	_later(0.0 if still else DROP_FALL, func(): _sfx("drop", randf_range(0.92, 1.08) + 0.04 * mini(r, 5)))
 
 var _whites := {}
 ## A plain white silhouette of a texture (tinted for outlines).
