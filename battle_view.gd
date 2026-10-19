@@ -2109,6 +2109,8 @@ func _draw_enemy_info(r: Rect2, font: Font) -> void:
 		st.append(["Cursed", Color("#a78bfa")])
 	if state.enemy_stun > 0:
 		st.append(["Stunned", Color("#fde68a")])
+	if state.enemy_grave:
+		st.append(["Wears your gear", Color("#fbbf24")])
 	if Combat.winding(state):
 		st.append(["WINDING UP! Use a skill", Color("#f59e0b")])
 	var el := Combat.enrage_left(state)

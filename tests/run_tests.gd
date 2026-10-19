@@ -114,7 +114,7 @@ func _initialize() -> void:
 	# Retreat + unequip
 	var fl := g.floor_num
 	g.retreat()
-	check(g.floor_num == fl - 1 or fl == 1, "retreat goes up a floor")
+	check(g.floor_num == fl - 1 or fl == 1 or g.boss_cooldown(fl - 1) > 0, "retreat goes up a floor (unless a resting boss is there)")
 
 	# Save round trip
 	g.autosave = true

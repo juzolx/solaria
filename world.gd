@@ -408,6 +408,10 @@ static func next_goal(g: GameState) -> Dictionary:
 	var fd := first_dive_goal(g)
 	if not fd.is_empty():
 		return fd
+	# What you lost when you fell, waiting with your killer
+	var gv := Grave.goal(g)
+	if not gv.is_empty():
+		return gv
 	var goals: Array = []
 	# The next evolution
 	var t := g.class_path.size()

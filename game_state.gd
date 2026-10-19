@@ -137,6 +137,8 @@ var bag_level := 0
 var bonus_bag := 0         # backpacks brought home (each adds GameData.PACK_SLOTS slots)
 var packs_carried := 0     # backpacks found this dive: lost if you fall, kept when you get home
 var dive := {}              # what this dive set off with (Town.leave), for the "made it home" tally
+var grave := {}             # Stage 3: what you lost when you fell, guarded by your killer (grave.gd)
+var enemy_grave := false     # the monster on screen guards your grave
 var next_id := 1
 
 # ---------- Settings ----------
@@ -1269,6 +1271,7 @@ func _frozen_crit() -> bool:
 
 func spawn_enemy() -> void:
 	enemy_calamity = 0
+	enemy_grave = false
 	calamity_pending = false
 	enemy_boss_kind = GameData.boss_kind(floor_num)
 	enemy_is_boss = enemy_boss_kind != ""
@@ -1362,6 +1365,7 @@ func spawn_enemy() -> void:
 		enemy_weak = []
 		enemy_resist = []
 		return
+	Grave.make_guard(self)  # your killer, guarding what you lost
 	ClassTree.on_fight_start(self)
 	_setup_fight()
 	if pierce_carry > 0:
@@ -1855,6 +1859,7 @@ func _enemy_defeated() -> void:
 	if enemy_champion:
 		enemy_champion = false
 		World.champion_reward(self)
+	Grave.recover(self)
 	hero_hp = mini(hero_hp + int(get_max_hp() * 0.15 * (0.0 if curses.has("frailty") else 1.0)), get_max_hp())
 
 	# Move on (horde fights and the goblin don't count toward the floor's 3 fights)
@@ -2082,7 +2087,10 @@ func _hero_died() -> void:
 		boss_ready_at[str(floor_num)] = Time.get_unix_time_from_system() + float(GameData.BOSS_COOLDOWN[enemy_boss_kind])
 	# The death penalty (0.12): you lose what you carried in and fall back to the
 	# start of this 25-floor stretch. Soulbound and Account-bound items are never lost.
+	Grave.on_death(self)  # what you carried drops here; your killer guards it
 	var lost := _death_losses()
+	if lost != "" and not grave.is_empty() and int(grave["floor"]) == floor_num:
+		lost += " (your gear and bag lie here, guarded by your killer)"
 	var hurt_pets := Menagerie.on_wipe(self)
 	if hurt_pets != "":
 		say("[color=#d9a066]%s.[/color] Pets are never lost; they rest for %d floors or get healed at the Clinic." % [hurt_pets, Menagerie.HEAL_FLOORS])
@@ -2093,7 +2101,7 @@ func _hero_died() -> void:
 	say("[color=#f87171]You fell on floor %d.[/color] You wake at the checkpoint on floor %d.%s" % [floor_num, back, (" Lost: " + lost) if lost != "" else ""])
 	floor_num = back
 	Town.start_dive(self)  # what you carried is gone: the dive counts again from here
-	tip("death", "Falling costs everything you carried in: the gold on you, your bag, the gear you wore, your potions and scrolls. The Bank, the Vault and the Mailbox are always safe. Leave after any cleared floor to keep what you found.")
+	tip("death", "Falling drops your bag and the gear you wore where you fell, guarded by your killer: beat it there to get them back. Half the gold on you goes with them; potions and scrolls are lost. The Bank, the Vault and the Mailbox are always safe.")
 	hero_hp = get_max_hp()
 	fight = 1
 	spawn_enemy()
@@ -3020,6 +3028,7 @@ func save_game() -> void:
 		"bonus_bag": bonus_bag,
 		"packs_carried": packs_carried,
 		"dive": dive,
+		"grave": grave,
 		"next_id": next_id,
 		"auto_potion": auto_potion,
 		"autoplay": autoplay,
@@ -3234,6 +3243,7 @@ func load_game() -> bool:
 	bonus_bag = int(data.get("bonus_bag", 0))
 	packs_carried = int(data.get("packs_carried", 0))
 	dive = data.get("dive", {})
+	grave = data.get("grave", {})
 	next_id = int(data.get("next_id", 1))
 	auto_potion = bool(data.get("auto_potion", true))
 	autoplay = bool(data.get("autoplay", true))
