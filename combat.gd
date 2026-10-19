@@ -193,11 +193,12 @@ const HERO_BURN := 0.03
 const HERO_CHILL_ATK := 0.75 # your Attack while chilled
 const HERO_BLEED := 0.02    # % of max HP a turn, per stack
 const HERO_WEAK_ATK := 0.8   # your Attack while weakened
+const HERO_SUNDER_DEF := 0.75 # your Defense while your armor is broken (brutes)
 const MAX_STACKS := 3         # poison and bleeding stack this high
 const STACKING := ["poison", "bleed"]
 ## From floor SHAPE_FROM, ordinary monsters hurt you in their own way: [status, chance, turns]
 const SHAPE_FROM := 8
-const SHAPE_STATUS := {"beast": ["bleed", 0.22, 3], "spirit": ["weak", 0.18, 2], "serpent": ["poison", 0.2, 3]}
+const SHAPE_STATUS := {"beast": ["bleed", 0.22, 3], "spirit": ["weak", 0.18, 2], "serpent": ["poison", 0.2, 3], "brute": ["sunder", 0.18, 3]}
 const STATUS_INFO := {
 	"poison": {"name": "Poisoned", "color": "#a3e635"},
 	"burn": {"name": "Burning", "color": "#fb923c"},
@@ -205,6 +206,7 @@ const STATUS_INFO := {
 	"blind": {"name": "Blinded", "color": "#9ca3af"},
 	"bleed": {"name": "Bleeding", "color": "#e43b44"},
 	"weak": {"name": "Weakened", "color": "#a78bfa"},
+	"sunder": {"name": "Armor Broken", "color": "#a8a29e"},
 }
 
 ## The monster puts a status on you. Wisdom shortens it.

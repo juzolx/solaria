@@ -42,6 +42,7 @@ func _initialize() -> void:
 	var legend_after := k.bag.filter(func(it): return int(it["rarity"]) == GameData.LEGENDARY).size()
 	check(legend_after > legend_before or k.mail.size() > 0, "beating it leaves a Legendary")
 	check(k.codex.stat("wanderers") == 1, "counted in the codex")
+	check("Lantern-Snuffer" in k.codex.titles(), "and a trophy title")
 	var n := 0
 	var o := hero()
 	for i in 20000:

@@ -289,7 +289,7 @@ func get_attack() -> int:
 
 func get_defense() -> int:
 	var base := (level - 1) * GameData.LEVEL_DEFENSE + stat("VIT") * GameData.VIT_DEFENSE + stat_total("Defense")
-	return int(base * _class_mult("def") * _mult("def") * _buff("def", 1.0) * _elixir("def", 1.0) * _mastery())
+	return int(base * _class_mult("def") * _mult("def") * _buff("def", 1.0) * _elixir("def", 1.0) * _mastery() * (Combat.HERO_SUNDER_DEF if hero_status.has("sunder") else 1.0))
 
 func get_max_hp() -> int:
 	var base := BASE_HP + (level - 1) * GameData.LEVEL_HP + stat("STR") * GameData.STR_HP + stat("VIT") * GameData.VIT_HP + stat_total("HP")

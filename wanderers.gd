@@ -78,4 +78,10 @@ static func reward(g: GameState) -> void:
 	g._add_gold((10 + g.floor_num * 8) * 5)
 	g.codex.add("wanderers")
 	ClassTree.count(g, "wanderers")
+	# a trophy: a title of its own for each legend you bring down
+	var trophy: String = {"Black Shuck": "Shuck-Slayer", "The Lantern Man": "Lantern-Snuffer", "Old Hob": "Hob's Bane", "Jenny Greenteeth": "Weed-Walker", "The Grey Walker": "Grey-Stopper"}.get(g.enemy_species, "")
+	if trophy != "" and not trophy in g.codex.extra_titles:
+		g.codex.extra_titles.append(trophy)
+		g.codex.dirty = true
+		g.say("[color=#fde68a]A trophy: the title \"%s\".[/color] Show it off in Town > Guild Hall." % trophy)
 	g.events.append({"type": "mini_event", "kind": "wanderer", "title": "WANDERER DOWN", "sub": "%s leaves something behind" % g.enemy_name})

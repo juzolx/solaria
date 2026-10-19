@@ -71,5 +71,10 @@ func _initialize() -> void:
 	for i in 200:
 		Combat.on_enemy_hit(e, 10)
 	check(not e.hero_status.has("bleed"), "not on the first floors")
+	# brutes break your armor
+	var s := hero()
+	var d0 := s.get_defense()
+	stick(s, "sunder", 3)
+	check(s.hero_status.has("sunder") and s.get_defense() < d0, "armor broken: less Defense (%d vs %d)" % [s.get_defense(), d0])
 	print("STAGE3 STATUS TESTS DONE, failures: ", fails)
 	quit()
