@@ -996,7 +996,9 @@ func toast(text: String) -> void:
 	p.z_index = 60
 	add_child(p)
 	p.reset_size()
-	p.position = Vector2((vp.x - p.size.x) / 2.0, 64.0)
+	# Phones: just above the bottom bar, so it never covers the tabs at the top
+	var y := 64.0 if not is_tall else vp.y - p.size.y - 96.0
+	p.position = Vector2((vp.x - p.size.x) / 2.0, y)
 	var tw := p.create_tween()
 	tw.tween_interval(2.4 + text.length() / 30.0)
 	tw.tween_property(p, "modulate:a", 0.0, 0.5)

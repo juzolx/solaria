@@ -13,6 +13,7 @@ var bag_cost: RichTextLabel
 var bag_button: Button
 var set_info := {}     # set -> [header label, cost label, wearing label]
 var set_buttons := {}  # set -> Array of buttons
+var piece_rows: Array = []  # one row of set-piece buttons per set (stacked on phones)
 var gear_buttons := {}
 var gear_cost: RichTextLabel
 
@@ -66,8 +67,10 @@ func setup(m) -> void:
 		cv.add_child(bonus)
 		var cost := UI.rich(12)
 		cv.add_child(cost)
-		var row := UI.hbox(6)
+		var row := BoxContainer.new()  # side by side, or stacked on phones (refresh)
+		row.add_theme_constant_override("separation", 6)
 		cv.add_child(row)
+		piece_rows.append(row)
 		var buttons := []
 		for slot in info["pieces"]:
 			var b := UI.button("", _craft_set.bind(set_name, slot))
@@ -129,6 +132,9 @@ func _chip(text: String, color: Color) -> void:
 	mats_row.add_child(p)
 
 func refresh() -> void:
+	var narrow: bool = main.get_viewport().get_visible_rect().size.x < 720.0
+	for r in piece_rows:
+		(r as BoxContainer).vertical = narrow  # phones: one full-width button per piece, so names fit
 	for c in mats_row.get_children():
 		c.queue_free()
 	_chip("Scrap [color=#e8b14a][b]%d[/b][/color]" % state.scrap, UI.GOLD)
