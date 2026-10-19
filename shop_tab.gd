@@ -52,7 +52,7 @@ func setup(m) -> void:
 	greeting = UI.rich(12)
 	mcol.add_child(greeting)
 	gold_label = UI.rich(16)
-	gold_label.custom_minimum_size = Vector2(150, 0)
+	gold_label.custom_minimum_size = Vector2(120, 0)
 	gold_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	mrow.add_child(gold_label)
 
@@ -94,7 +94,7 @@ func setup(m) -> void:
 	ghead.add_child(restock_button)
 	gear_grid = GridContainer.new()
 	gear_grid.columns = 3
-	gear_grid.add_theme_constant_override("h_separation", 8)
+	gear_grid.add_theme_constant_override("h_separation", 6)
 	gear_grid.add_theme_constant_override("v_separation", 8)
 	v.add_child(gear_grid)
 

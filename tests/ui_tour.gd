@@ -11,8 +11,13 @@ func shot(label: String) -> void:
 	n += 1
 	var path := "%s/%02d_%s.png" % [out, n, label.to_lower().replace(" ", "_").replace("(", "").replace(")", "")]
 	root.get_texture().get_image().save_png(path)
-	# Flag any popup that runs off a phone-width screen
+	# Flag any popup or screen that runs off a phone-width screen
 	var screen_w := root.get_visible_rect().size.x
+	for c in root.get_children():
+		if c.get("ui_root") is Control:
+			var need: float = (c.get("ui_root") as Control).get_combined_minimum_size().x
+			if need > screen_w + 1.0:
+				print("SCREEN TOO WIDE: %s needs %.0f px of %.0f" % [label, need, screen_w])
 	for c in root.get_children():
 		for o in c.get_children():
 			if o is Overlay and o.box != null and o.box.size.x > screen_w + 1.0:

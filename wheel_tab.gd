@@ -1,5 +1,5 @@
 class_name WheelTab
-extends HBoxContainer
+extends BoxContainer
 ## Town > Wheel: Fortune's Wheel. Bet an item: win and it comes back one
 ## rarity higher, lose and it's gone for good. Rarer items have worse odds.
 ## Legendary and better, and locked items, can't go on the wheel.
@@ -74,6 +74,7 @@ func setup(m) -> void:
 	main = m
 	state = m.state
 	name = "Wheel"
+	vertical = (m as Node).get_viewport().get_visible_rect().size.x < 720.0  # phones: the wheel sits under the items
 	add_theme_constant_override("separation", 12)
 	var left := UI.vbox(6)
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -158,6 +159,7 @@ func _pick(id: int) -> void:
 	refresh()
 
 func refresh() -> void:
+	vertical = main.get_viewport().get_visible_rect().size.x < 720.0  # phones: the wheel sits under the items
 	var key := "%d|%d|%d|%s|%s" % [state.bag_version, state.gold, selected_id, str(slate), high]
 	if key != shown and not spinning:
 		shown = key

@@ -6,6 +6,7 @@ extends Node2D
 
 const TURN_SECONDS := 1.0
 
+const PORTRAIT_DESIGN := Vector2(504, 896)  # the phone layout size (see _fit_layout)
 var state := GameState.new()
 var profile: Profile
 var codex: Codex
@@ -631,15 +632,18 @@ func _fit_root() -> void:
 func _fit_layout() -> void:
 	var win := get_tree().root.size
 	var tall := win.x < win.y * 0.95
-	# Keep text the same size in both orientations (the design size is 1152x648)
+	# Design sizes: 1152x648 on wide screens. Phones use a narrower 504x896 layout so the
+	# whole interface draws about 30% bigger (at 648 wide, size-12 text was ~8 pt on a phone).
 	# Interface size (accessibility): a smaller design size makes everything bigger
 	var zoom: float = [1.12, 1.0, 0.86][clampi(profile.text_size if profile else 1, 0, 2)]
-	var want := Vector2i(Vector2(648, 1152) * zoom) if tall else Vector2i(Vector2(1152, 648) * zoom)
+	var want := Vector2i(PORTRAIT_DESIGN * zoom) if tall else Vector2i(Vector2(1152, 648) * zoom)
 	if get_tree().root.content_scale_size != want:
 		get_tree().root.content_scale_size = want
 		_fit_root.call_deferred()
 	body.vertical = tall
 	is_tall = tall
+	for side in ["left", "right"]:
+		ui_root.add_theme_constant_override("margin_" + side, 6 if tall else 10)  # phones need every pixel of width
 	_apply_nav()
 	left_panel.size_flags_stretch_ratio = 0.9 if tall else 1.0
 	tabs.size_flags_stretch_ratio = 1.1 if tall else 1.2
@@ -665,7 +669,7 @@ func _build_top_bar(parent: Control) -> void:
 	bar.get_theme_stylebox("panel").content_margin_left = 14
 	bar.get_theme_stylebox("panel").content_margin_right = 10
 	parent.add_child(bar)
-	var row := UI.hbox(16)
+	var row := UI.hbox(10)
 	bar.add_child(row)
 
 	# Left: game name + your hero
@@ -678,6 +682,7 @@ func _build_top_bar(parent: Control) -> void:
 	row.add_child(hero)
 	class_label = UI.label("", 14, UI.TEXT)
 	class_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	class_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS  # long names shorten with "..." on phones
 	hero.add_child(class_label)
 	xp_bar = UI.bar(UI.GOLD, 5)
 	xp_bar.custom_minimum_size = Vector2(150, 5)
@@ -692,6 +697,8 @@ func _build_top_bar(parent: Control) -> void:
 	row.add_child(mid)
 	zone_label = UI.label("", 11, UI.DIM)
 	zone_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	zone_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mid.add_child(zone_label)
 	var frow := UI.hbox(8)
 	frow.alignment = BoxContainer.ALIGNMENT_CENTER

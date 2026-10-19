@@ -86,6 +86,7 @@ static func panel(bg := INSET, border := EMPTY, radius := 8, margin := 10, width
 ## Small caps heading for a section.
 static func heading(text: String) -> Label:
 	var l := label(text.to_upper(), 12, DIM)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # long headings wrap instead of widening the screen
 	return l
 
 ## A button that squishes and clicks when pressed, so every tap feels answered.
