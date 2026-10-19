@@ -129,6 +129,7 @@ func _ready() -> void:
 	_build_ui()
 	timer.timeout.connect(_on_tick)
 	add_child(timer)
+	add_child(HoldTip.new())  # tap-and-hold shows tooltips (phones have no hover)
 	apply_settings()
 	var action := TitleScreen.pending
 	TitleScreen.pending = {}
