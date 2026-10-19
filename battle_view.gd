@@ -173,6 +173,7 @@ const CHEST_ART := [
 	 "KbBBBBBBBBBBBBBBBBbK", "KGGGGGGGGGGGGGGGGGGK", "KbbbbbbbbbbbbbbbbbbK", ".KKKKKKKKKKKKKKKKKK."],
 ]
 var beams: Array = []   # loot beams: {"x", "color", "t", "life", "w"} (Rare and better)
+var drops: Array = []   # 0.13+: loot that falls out of the monster: {"tex", "color", "r", "from", "to", "t", "life"}
 var fx_sprites: Array = []   # sprite effects: {"name", "pos", "t", "scale", "flip"} (art/fx)
 static var _fx_tex := {}
 static var _fx_frames := {}
@@ -813,6 +814,7 @@ func _loot_pop(e: Dictionary) -> void:
 		beams.append({"x": pos.x + randf_range(-12, 12), "color": color, "t": 0.0, "life": 0.9 + 0.35 * mini(r, 5), "w": 2.0 + mini(r, 5)})
 		if beams.size() > 6:
 			beams.pop_front()
+	_drop_item(e, pos, color, r)
 	# Better than what you wear? Say so right away, whatever the rarity
 	var up := float(e.get("up", 0.0))
 	if up >= 0.5:
@@ -827,6 +829,96 @@ func _loot_pop(e: Dictionary) -> void:
 		banner_alpha = 2.2
 		_burst(pos, Color("#fbbf24"), 30, 380.0)
 		_hit_stop(0.1)
+
+## The item itself falls out: it arcs to the ground, bounces, lies there glowing in its
+## rarity color (longer for rarer finds), then flies to your hero.
+func _drop_item(e: Dictionary, pos: Vector2, color: Color, r: int) -> void:
+	var item: Dictionary = e.get("item", {})
+	if item.is_empty():
+		return
+	var tex: Texture2D = Sprites.item_icon(item)
+	if tex == null:
+		return
+	var fy := lerpf(_ground(), _team_ground(), 0.22) + _u() * randf_range(-3.0, 4.0)
+	var land := Vector2(clampf(pos.x + randf_range(-1.0, 1.0) * _u() * 40.0, size.x * 0.12, size.x * 0.88), fy)
+	var still := profile != null and profile.reduce_motion
+	drops.append({"tex": tex, "white": _white_of(tex), "color": color, "r": r, "from": pos, "to": land, "t": 0.0,
+		"life": 1.5 + 0.45 * mini(r, 5), "still": still, "spin": randf_range(-1.0, 1.0)})
+	if drops.size() > 5:
+		drops.pop_front()
+
+var _whites := {}
+## A plain white silhouette of a texture (tinted for outlines).
+func _white_of(tex: Texture2D) -> Texture2D:
+	var id := tex.get_rid().get_id()
+	if not _whites.has(id):
+		var img := tex.get_image()
+		img.convert(Image.FORMAT_RGBA8)
+		for y in img.get_height():
+			for x in img.get_width():
+				img.set_pixel(x, y, Color(1, 1, 1, 1.0 if img.get_pixel(x, y).a > 0.5 else 0.0))
+		_whites[id] = ImageTexture.create_from_image(img)
+	return _whites[id]
+
+const DROP_FALL := 0.45   # seconds in the air
+const DROP_FLY := 0.35    # seconds to fly to the hero at the end
+
+func _draw_drops() -> void:
+	var u := _u()
+	var hero := _hero_center()
+	for dp in drops:
+		var t: float = dp["t"]
+		var life: float = dp["life"]
+		var r: int = dp["r"]
+		var col: Color = dp["color"]
+		var tex: Texture2D = dp["tex"]
+		var from: Vector2 = dp["from"]
+		var to: Vector2 = dp["to"]
+		var side := u * (13.0 + 2.0 * mini(r, 5))
+		var p := to
+		var rot := 0.0
+		var a := 1.0
+		var scale := 1.0
+		if dp["still"]:
+			a = minf(1.0, t * 5.0) * minf(1.0, (life - t) * 4.0)
+		elif t < DROP_FALL:
+			# up and out of the monster, then down
+			var f := t / DROP_FALL
+			p = from.lerp(to, f) + Vector2(0, -u * 26.0 * sin(f * PI))
+			rot = float(dp["spin"]) * TAU * f
+		elif t < DROP_FALL + 0.18:
+			var f := (t - DROP_FALL) / 0.18
+			p = to + Vector2(0, -u * 5.0 * sin(f * PI))  # one small bounce
+		elif t > life - DROP_FLY:
+			var f := (t - (life - DROP_FLY)) / DROP_FLY
+			f = f * f
+			p = to.lerp(hero, f)
+			scale = 1.0 - 0.6 * f
+			a = 1.0 - f * 0.7
+		var on_ground := t >= DROP_FALL and t <= life - DROP_FLY
+		# a glow on the floor where it lies: Uncommon and better
+		if r >= 1 and on_ground:
+			var pulse := 0.5 + 0.5 * sin(t * 5.0)
+			draw_set_transform(_snap(to + Vector2(0, side * 0.1)), 0.0, Vector2(1.0, 0.32))
+			draw_circle(Vector2.ZERO, side * (0.9 + 0.12 * mini(r, 5)), Color(col, (0.18 + 0.12 * pulse) * a))
+			draw_circle(Vector2.ZERO, side * 0.55, Color(col.lightened(0.3), (0.22 + 0.15 * pulse) * a))
+			draw_set_transform(Vector2.ZERO)
+		# Epic and better: little sparkles rise off it
+		if r >= 3 and on_ground:
+			for k in 3:
+				var st := fmod(t * 0.9 + k * 0.33, 1.0)
+				var sp := to + Vector2(sin(k * 2.3 + t) * side * 0.6, -side * 0.3 - st * side * 1.6)
+				draw_rect(Rect2(_snap(sp), Vector2(u * 1.5, u * 1.5)), Color(col.lightened(0.5), (1.0 - st) * a))
+		var sz := side * scale
+		var dst := Rect2(-Vector2(sz, sz) / 2.0, Vector2(sz, sz))
+		draw_set_transform(_snap(p - Vector2(0, sz * 0.5)), rot, Vector2.ONE)
+		# an outline in the rarity color so it reads against any floor
+		if r >= 1:
+			var wt: Texture2D = dp["white"]
+			for off in [Vector2(-u, 0), Vector2(u, 0), Vector2(0, -u), Vector2(0, u)]:
+				draw_texture_rect(wt, Rect2(dst.position + off, dst.size), false, Color(col, 0.85 * a))
+		draw_texture_rect(tex, dst, false, Color(1, 1, 1, a))
+		draw_set_transform(Vector2.ZERO)
 
 func _set_dying_alpha(v: float) -> void:
 	if dying.has("tex"):
@@ -936,6 +1028,9 @@ func _process(delta: float) -> void:
 		chest_t += delta
 		if chest_t > 2.2:
 			chest_t = -1.0
+	for dp in drops:
+		dp["t"] = float(dp["t"]) + delta
+	drops = drops.filter(func(dp): return float(dp["t"]) < float(dp["life"]))
 	for bm in beams:
 		bm["t"] = float(bm["t"]) + delta
 	beams = beams.filter(func(bm): return float(bm["t"]) < float(bm["life"]))
@@ -1384,6 +1479,7 @@ func _draw() -> void:
 		draw_rect(Rect2(_snap(Vector2(bx - bw * 1.5, top)), Vector2(bw * 3.0, gy2 - top)), Color(bc, 0.16 * a))
 		draw_rect(Rect2(_snap(Vector2(bx - bw / 2.0, top)), Vector2(bw, gy2 - top)), Color(bc.lightened(0.4), 0.55 * a))
 		draw_rect(Rect2(_snap(Vector2(bx - bw * 2.5, gy2 - _u() * 2.0)), Vector2(bw * 5.0, _u() * 3.0)), Color(bc.lightened(0.5), 0.7 * a))
+	_draw_drops()
 	# Sprite effects (slashes, bursts, spells) over the fighters
 	for fx in fx_sprites:
 		var tex: Texture2D = _fx_tex.get(fx["name"])

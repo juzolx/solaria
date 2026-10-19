@@ -2289,7 +2289,7 @@ func _give_item(item: Dictionary) -> void:
 	codex.found_item(item)
 	var r := int(item["rarity"])
 	codex.bounty_progress("item", {"rarity": r})
-	events.append({"type": "loot", "name": GameData.display_name(item), "rarity": r, "up": compare_pct(item)})
+	events.append({"type": "loot", "name": GameData.display_name(item), "rarity": r, "up": compare_pct(item), "item": item})
 	_page("gear")
 	var keep := r in [GameData.UNIQUE, GameData.SIGNATURE]
 	if not keep and filter_salvages(item):
@@ -3882,7 +3882,7 @@ func buy_merchant(i: int) -> bool:
 		bag.append(item)
 		bag_version += 1
 		say("Bought %s from the merchant." % _tag(item))
-		events.append({"type": "loot", "name": GameData.display_name(item), "rarity": int(item["rarity"])})
+		events.append({"type": "loot", "name": GameData.display_name(item), "rarity": int(item["rarity"]), "item": item})
 	elif m["kind"] == "potions":
 		potions += int(m["amount"])
 		say("Bought %d potions." % int(m["amount"]))
