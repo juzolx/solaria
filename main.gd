@@ -1466,6 +1466,8 @@ func _refresh_top() -> void:
 		var hid := Hidden.title(state)
 		class_label.text = "%sLv %d  %s%s%s" % [nm, state.level, state.title(), "  /  " + hid if hid != "" else "", honor]
 		class_label.add_theme_color_override("font_color", Color(state.class_info()["color"]).lightened(0.3))
+		if codex.name_color != "":
+			class_label.add_theme_color_override("font_color", Cosmetics.name_color(codex))  # an earned name color
 		class_label.tooltip_text = "XP %d / %d to level %d" % [state.xp, GameData.xp_to_next(state.level), state.level + 1]
 		xp_bar.max_value = GameData.xp_to_next(state.level)
 		xp_bar.value = state.xp

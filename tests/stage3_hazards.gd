@@ -34,6 +34,9 @@ func _initialize() -> void:
 	check(g.events.any(func(e): return e["type"] == "hazard"), "a hazard event for the screen")
 	var r := hero()
 	r.hazard = "rubble"
+	r.enemy_shield = 0
+	r.enemy_mods = []
+	r.enemy_illusion = false
 	r.cfight["turns"] = 6
 	var hp0 := r.hero_hp
 	var ehp0 := r.enemy_hp

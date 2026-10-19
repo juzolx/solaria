@@ -8,6 +8,8 @@ var main
 var codex: Codex
 var head: Label
 var title_pick: OptionButton
+var color_pick: OptionButton
+var frame_pick: OptionButton
 var box: VBoxContainer
 var shown := 0
 
@@ -28,6 +30,29 @@ func setup(m) -> void:
 		codex.save()
 		main.refresh())
 	top.add_child(title_pick)
+	# Name colors and plate frames earned by deeds (looks only)
+	var looks := UI.hbox(8)
+	add_child(looks)
+	looks.add_child(UI.label("Name:", 12, UI.DIM))
+	color_pick = OptionButton.new()
+	color_pick.fit_to_longest_item = false  # long locked names would push the screen wider than a phone
+	color_pick.clip_text = true
+	color_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	color_pick.item_selected.connect(func(i: int):
+		codex.name_color = String(Cosmetics.COLORS[i]["id"])
+		codex.save()
+		main.refresh())
+	looks.add_child(color_pick)
+	looks.add_child(UI.label("Frame:", 12, UI.DIM))
+	frame_pick = OptionButton.new()
+	frame_pick.fit_to_longest_item = false
+	frame_pick.clip_text = true
+	frame_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	frame_pick.item_selected.connect(func(i: int):
+		codex.frame = String(Cosmetics.FRAMES[i]["id"])
+		codex.save()
+		main.refresh())
+	looks.add_child(frame_pick)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -49,6 +74,8 @@ func refresh() -> void:
 		title_pick.add_item(t)
 		if t == codex.title:
 			title_pick.select(title_pick.item_count - 1)
+	_fill_looks(color_pick, Cosmetics.COLORS, codex.name_color)
+	_fill_looks(frame_pick, Cosmetics.FRAMES, codex.frame)
 	OnlineUI.clear(box)
 	# Rewards waiting to be claimed come first
 	if not codex.deeds.is_empty():
@@ -83,6 +110,12 @@ func _row(a: Dictionary) -> PanelContainer:
 	var reward := Town.reward_text(Town.deed_reward(a), main.state)
 	if a.has("title"):
 		reward += ", title \"%s\"" % a["title"]
+	for e in Cosmetics.COLORS:
+		if e["need"] == a["id"]:
+			reward += ", name color \"%s\"" % e["name"]
+	for e in Cosmetics.FRAMES:
+		if e["need"] == a["id"]:
+			reward += ", frame \"%s\"" % e["name"]
 	var dl := UI.label("%s  -  Reward: %s" % [a["text"], reward], 11, UI.DIM)
 	dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	dl.custom_minimum_size = Vector2(120, 0)
@@ -137,3 +170,26 @@ static func _reward_text(r: Dictionary) -> String:
 	if r.has("mats"):
 		parts.append("%d materials" % int(r["mats"]))
 	return ", ".join(parts)
+
+## Every look in the list; the ones you haven't earned say which deed unlocks them.
+func _fill_looks(pick: OptionButton, list: Array, current: String) -> void:
+	pick.clear()
+	for e in list:
+		var got := Cosmetics.has(codex, e)
+		pick.add_item(String(e["name"]) if got else "%s (deed: %s)" % [e["name"], Cosmetics.need_name(e)])
+		var i := pick.item_count - 1
+		pick.set_item_disabled(i, not got)
+		if String(e.get("color", "")) != "":
+			pick.set_item_icon(i, _swatch(Color(String(e["color"]))))
+		if String(e["id"]) == current and got:
+			pick.select(i)
+
+var _swatches := {}
+func _swatch(c: Color) -> Texture2D:
+	var k := c.to_html()
+	if not _swatches.has(k):
+		var img := Image.create(12, 12, false, Image.FORMAT_RGBA8)
+		img.fill(Color(0, 0, 0))
+		img.fill_rect(Rect2i(1, 1, 10, 10), c)
+		_swatches[k] = ImageTexture.create_from_image(img)
+	return _swatches[k]

@@ -1574,7 +1574,8 @@ func _draw() -> void:
 	_draw_pet()
 	_draw_hero()
 	var hero_name := "HERO" if state.hero_class == "" else "%s  Lv %d" % [state.title(), state.level]
-	_draw_bar(hr, hero_name, state.hero_hp, state.get_max_hp(), Color("#22c55e"), Color("#e5e7eb"))
+	Cosmetics.draw_frame(self, _bar_rect(hr), state.codex, bob)
+	_draw_bar(hr, hero_name, state.hero_hp, state.get_max_hp(), Color("#22c55e"), Cosmetics.name_color(state.codex))
 	# Thin XP bar under the health bar
 	var xbr := _bar_rect(hr)
 	var xbw := xbr.size.x
