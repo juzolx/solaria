@@ -48,6 +48,17 @@ func _initialize() -> void:
 	m.enemy_hp = 0
 	m._enemy_defeated()
 	check(m.door_pending(), "beating the mimic opens the doors")
+	# A mimic never brings a pack (spawn_enemy can roll one; it used to leak out of the chest)
+	var leaked := 0
+	for s in 60:
+		seed(1000 + s)
+		var mm := room("treasure")
+		mm.room_props[0]["mimic"] = true
+		mm.room_props[0]["spotted"] = false
+		Halls.interact(mm, 0)
+		if mm.horde_left > 0 or mm.horde_pack:
+			leaked += 1
+	check(leaked == 0, "a mimic comes alone (%d of 60 brought a pack)" % leaked)
 	var mimics := 0
 	for i in 300:
 		var r := room("treasure")

@@ -277,6 +277,10 @@ static func interact(g: GameState, i: int) -> String:
 static func _monster(g: GameState, name: String, art: String, line: String) -> void:
 	g.exploring = false
 	g.spawn_enemy()
+	# A room's own monster (a mimic, an angry nest mother) comes alone: spawn_enemy can
+	# roll a pack, which left ordinary monsters stepping out of a treasure room after it
+	g.horde_left = 0
+	g.horde_pack = false
 	if name != "":
 		g.enemy_name = name
 		g.enemy_species = name
