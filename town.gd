@@ -112,6 +112,7 @@ static func enter(g: GameState, floor_done := false) -> bool:
 	g.doors.clear()
 	g.buffs.clear()
 	g.hero_status.clear()
+	g.hero_stacks.clear()
 	g.shield_hp = 0
 	g.kill_streak = 0
 	refresh_board(g)
@@ -201,6 +202,7 @@ static func rest(g: GameState) -> bool:
 	g.gold -= cost
 	g.hero_hp = g.get_max_hp()
 	g.hero_status.clear()
+	g.hero_stacks.clear()
 	if g.party != null:
 		g.party.heal_all()
 	g.say("[color=#4ade80]You sleep well and wake at full health.[/color]" + (" (-%d gold)" % cost if cost > 0 else ""))

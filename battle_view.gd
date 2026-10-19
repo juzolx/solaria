@@ -2154,5 +2154,6 @@ func _draw_hero_status(r: Rect2, font: Font) -> void:
 	for k in state.hero_status:
 		var info: Dictionary = Combat.STATUS_INFO.get(k, {})
 		if not info.is_empty():
-			chips.append(["%s %d" % [info["name"], int(state.hero_status[k])], Color(info["color"])])
+			var stk := int(state.hero_stacks.get(k, 1))
+			chips.append(["%s%s %d" % [info["name"], (" x%d" % stk) if stk > 1 else "", int(state.hero_status[k])], Color(info["color"])])
 	_chip_row(chips, r.get_center().x, maxf(34.0, r.position.y - 4.0), font)

@@ -52,7 +52,7 @@ func _initialize() -> void:
 		for e in w.events:
 			if e["type"] == "boss_mechanic":
 				ids.append(String(e["id"]))
-			if e["type"] == "enemy_hit" and not e.get("minion", false):
+			if e["type"] == "enemy_hit" and not e.get("minion", false) and not e.get("status", false) and not e.get("hazard", false):
 				hits += 1
 		if "windup" in ids:
 			winds += 1

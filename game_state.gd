@@ -207,6 +207,7 @@ var boss_phase := {}
 var boss_minions := 0
 var minion_hp := 0
 var hero_status := {}         # statuses on you: "poison" / "burn" / "chill" -> turns left
+var hero_stacks := {}         # Stage 3: poison and bleeding stack up to 3 ("poison" -> 2)
 var last_death := {}          # the death recap (combat.gd)
 var enemy_champion := false   # a milestone floor's Champion (world.gd)
 var checkpoint := 0           # the highest milestone floor beaten: you never fall below it
@@ -276,6 +277,8 @@ func _buff(key: String, default: float) -> float:
 func get_attack() -> int:
 	var base := BASE_ATTACK + (level - 1) * GameData.LEVEL_ATTACK + stat("STR") * GameData.STR_ATTACK + stat_total("Attack")
 	var chill := Combat.HERO_CHILL_ATK if hero_status.has("chill") else 1.0
+	if hero_status.has("weak"):
+		chill *= Combat.HERO_WEAK_ATK
 	return int(base * _class_mult("atk") * _mult("atk") * _buff("atk", 1.0) * _elixir("atk", 1.0) * _mastery() * chill)
 
 func get_defense() -> int:
@@ -2073,6 +2076,7 @@ func _hero_died() -> void:
 	last_death = Combat.recap(self)
 	events.append({"type": "death_recap"})
 	hero_status.clear()
+	hero_stacks.clear()
 	codex.add("deaths")
 	ClassTree.on_death(self)
 	Lineage.gain(self, "death")
@@ -2317,6 +2321,14 @@ func use_potion() -> void:
 	var heal := int(get_max_hp() * GameData.POTION_HEAL * (1.0 + _flat("potion") / 100.0) * heal_mult() * (0.5 if curses.has("thirst") else 1.0))
 	hero_hp = mini(hero_hp + heal, get_max_hp())
 	say("[color=#f472b6]Drank a potion (+%d HP).[/color]" % heal)
+	var cleansed: Array = []
+	for k in ["poison", "bleed", "burn", "weak"]:
+		if hero_status.has(k):
+			hero_status.erase(k)
+			hero_stacks.erase(k)
+			cleansed.append(String(Combat.STATUS_INFO[k]["name"]).to_lower())
+	if not cleansed.is_empty():
+		say("The potion cleanses you (no longer %s)." % ", ".join(cleansed))
 	events.append({"type": "potion", "amount": heal})
 	save_game()
 
@@ -3096,6 +3108,7 @@ func save_game() -> void:
 		"active_slots": active_slots,
 		"sig_slot": sig_slot,
 		"hero_status": hero_status,
+		"hero_stacks": hero_stacks,
 		"passive_slots": passive_slots,
 		"stones_since": stones_since,
 		"faith": faith,
@@ -3339,6 +3352,7 @@ func load_game() -> bool:
 	ClassTree.from_save(self, data.get("class_tree", {}))
 	sig_slot = str(data.get("sig_slot", ""))
 	hero_status = data.get("hero_status", {})
+	hero_stacks = data.get("hero_stacks", {})
 	var sigs := Signatures.owned(self)
 	if not sig_slot in sigs:
 		sig_slot = sigs[sigs.size() - 1] if not sigs.is_empty() else ""

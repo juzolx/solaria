@@ -191,11 +191,20 @@ static func tick_enemy(g: GameState) -> int:
 const HERO_POISON := 0.025   # % of max HP a turn
 const HERO_BURN := 0.03
 const HERO_CHILL_ATK := 0.75 # your Attack while chilled
+const HERO_BLEED := 0.02    # % of max HP a turn, per stack
+const HERO_WEAK_ATK := 0.8   # your Attack while weakened
+const MAX_STACKS := 3         # poison and bleeding stack this high
+const STACKING := ["poison", "bleed"]
+## From floor SHAPE_FROM, ordinary monsters hurt you in their own way: [status, chance, turns]
+const SHAPE_FROM := 8
+const SHAPE_STATUS := {"beast": ["bleed", 0.22, 3], "spirit": ["weak", 0.18, 2], "serpent": ["poison", 0.2, 3]}
 const STATUS_INFO := {
 	"poison": {"name": "Poisoned", "color": "#a3e635"},
 	"burn": {"name": "Burning", "color": "#fb923c"},
 	"chill": {"name": "Chilled", "color": "#7fd0f0"},
 	"blind": {"name": "Blinded", "color": "#9ca3af"},
+	"bleed": {"name": "Bleeding", "color": "#e43b44"},
+	"weak": {"name": "Weakened", "color": "#a78bfa"},
 }
 
 ## The monster puts a status on you. Wisdom shortens it.
@@ -204,8 +213,15 @@ static func afflict(g: GameState, kind: String, turns: int) -> void:
 	if randf() < (1.0 - g.status_mult()) * 0.5:
 		g.events.append({"type": "resisted", "kind": kind})
 		return
+	var name: String = STATUS_INFO[kind]["name"]
+	if kind in STACKING:
+		# poison and bleeding pile up (to 3): each stack hurts again
+		var n := mini(MAX_STACKS, int(g.hero_stacks.get(kind, 0)) + 1) if g.hero_status.has(kind) else 1
+		g.hero_stacks[kind] = n
+		if n > 1:
+			name += " x%d" % n
 	g.hero_status[kind] = maxi(int(g.hero_status.get(kind, 0)), t)
-	g.events.append({"type": "afflicted", "kind": kind, "name": STATUS_INFO[kind]["name"], "color": STATUS_INFO[kind]["color"]})
+	g.events.append({"type": "afflicted", "kind": kind, "name": name, "color": STATUS_INFO[kind]["color"]})
 
 ## Your statuses hurt and count down. Returns damage taken.
 static func tick_hero(g: GameState) -> int:
@@ -213,23 +229,31 @@ static func tick_hero(g: GameState) -> int:
 	for kind in g.hero_status.keys():
 		var pct := 0.0
 		if kind == "poison":
-			pct = HERO_POISON
+			pct = HERO_POISON * int(g.hero_stacks.get("poison", 1))
 		elif kind == "burn":
 			pct = HERO_BURN
+		elif kind == "bleed":
+			pct = HERO_BLEED * int(g.hero_stacks.get("bleed", 1))
 		if pct > 0.0:
 			var d := maxi(1, int(g.get_max_hp() * pct * g.status_mult()))
 			g.hero_hp -= d
 			dmg += d
 			note_damage(g, kind, d)
-			g.events.append({"type": "enemy_hit", "dmg": d, "burning": kind == "burn", "poison": kind == "poison"})
+			g.events.append({"type": "enemy_hit", "dmg": d, "burning": kind == "burn", "poison": kind == "poison", "bleed": kind == "bleed", "status": true})
 		g.hero_status[kind] = int(g.hero_status[kind]) - 1
 		if int(g.hero_status[kind]) <= 0:
 			g.hero_status.erase(kind)
+			g.hero_stacks.erase(kind)
 	return dmg
 
 # ---------- Elite modifiers that use statuses ----------
 ## The monster's attack landed: modifiers that do something on a hit.
 static func on_enemy_hit(g: GameState, dmg: int) -> void:
+	# Beasts tear, spirits sap, serpents bite (from floor SHAPE_FROM, not bosses)
+	if SHAPE_STATUS.has(g.enemy_shape) and g.floor_num >= SHAPE_FROM and not g.enemy_is_boss and dmg > 0:
+		var ss: Array = SHAPE_STATUS[g.enemy_shape]
+		if randf() < float(ss[1]):
+			afflict(g, String(ss[0]), int(ss[2]))
 	if g.has_mod("Venomous") and randf() < 0.35:
 		afflict(g, "poison", 3)
 	if g.has_mod("Frigid") and randf() < 0.3:
