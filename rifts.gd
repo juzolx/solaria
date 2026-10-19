@@ -64,6 +64,7 @@ static func on_kill(g: GameState) -> bool:
 		g._give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, g.floor_num, g._new_id()))
 	g._give_materials(3)
 	g.codex.add("rifts")
+	ClassTree.count(g, "rifts")
 	g.say("[color=#fbbf24]The vault opens:[/color] +%d gold, two fine pieces of gear and materials." % gold)
 	g.events.append({"type": "treasure"})
 	g.events.append({"type": "mini_event", "kind": "rift", "title": "THE VAULT", "sub": "The rift lets you go"})

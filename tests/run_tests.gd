@@ -652,7 +652,7 @@ func _initialize() -> void:
 			check(sk.has("cd") and (sk.has("power") or sk.has("buff") or sk.has("shield") or sk.has("summon") or sk.has("song") or sk.has("wild")), "active skill does something: " + sid)
 	print("Skills: %d active, %d passive" % [SkillData.all_of("active").size(), SkillData.all_of("passive").size()])
 	check(ClassTree.all_nodes().size() == 9 * 14 + ClassTree.BRANCHES.size(), "every class name is unique (%d nodes)" % ClassTree.all_nodes().size())
-	check(ClassTree.BRANCHES.size() == 117, "117 branch-offs (got %d)" % ClassTree.BRANCHES.size())
+	check(ClassTree.BRANCHES.size() == 125, "125 branch-offs (got %d)" % ClassTree.BRANCHES.size())
 	for itk in ClassTree.ITEMS:
 		check(not ClassTree.node(ClassTree.ITEMS[itk]["node"]).is_empty() and not ClassTree.node(ClassTree.ITEMS[itk]["at"]).is_empty(), "item nodes exist: " + itk)
 	var gods := 0

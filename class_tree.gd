@@ -265,6 +265,10 @@ const BRANCHES := [
 	["Dragoon", "Skybreaker", "Ascent", "atk:.6 boss:.4", [["realm_flawless", 1]], "Beat every boss in one realm without dying there", false],
 	["Death Knight", "Oathbreaker", "Betrayal", "atk:.5 lifesteal:.5", [["oathbreak", 1]], "Fall from faith +50 to -50", false],
 	["Death Knight", "Bone Rider", "Requiem", "lifesteal:.5 def:.5", [["kill_faith_m75", 500]], "Kill 500 enemies while your faith is -75 or lower", false],
+	# ----- 0.13+ branches earned through the deeper dungeon (Stage 3 systems) -----
+	["Juggernaut", "Stormbreaker", "Defiance", "def:.5 atk:.5", [["staggers", 100]], "Break 100 telegraphed blows before they land", false],
+	["Berserker", "Grave-Walker", "Vengeance", "atk:.6 lifesteal:.4", [["graves_recovered", 5]], "Take your gear back from your killer 5 times", false],
+	["Champion", "Team Captain", "Unity", "atk:.5 hp:.5", [["team_strikes", 100]], "Land 100 Team Strikes", false],
 	# ----- Wanderer -----
 	["Swordsman", "Iaido Master", "Draw", "crit:.6 atk:.4", [["first_hit_kill", 1000]], "Kill 1,000 enemies with your first hit", false],
 	["Swordsman", "Wandering Blade", "Path", "double_strike:.5 dodge:.5", [["live:realms_half", 5]], "Clear 25 floors in each of 5 realms", false],
@@ -273,6 +277,11 @@ const BRANCHES := [
 	["Sword Saint", "Sword Hermit", "Stillness", "crit:.5 atk:.5", [["same_sword_floors", 250]], "Keep the same sword for 250 floors", false],
 	["Sword Saint", "Heaven Splitter", "Edge", "atk:.5 boss:.5", [["boss_half_hit", 1]], "Deal 50% of a boss's HP in one hit", false],
 	["Blade Phantom", "Shadow Blade", "Phase", "dodge:.6 crit:.4", [["dodges", 3000]], "Dodge 3,000 attacks", false],
+	["Rogue", "Vault Breaker", "Greed", "gold_find:.6 crit:.4", [["rifts", 3]], "Clear 3 hidden portal vaults", false],
+	["Deadeye", "Legend Hunter", "Quarry", "crit:.5 boss:.5", [["wanderers", 3]], "Beat 3 wanderers before they walk away", false],
+	["Minstrel", "Silver Tongue", "Charm", "charm:.6 gold_find:.4", [["haggles_won", 20]], "Talk Snik down 20 times", false],
+	["Druid", "Weatherwise", "Weather", "regen:.5 def:.5", [["hazard_bursts", 100]], "Fight through 100 room hazard bursts", false],
+	["Priest", "Friend of Peoples", "Kinship", "regen:.5 charm:.5", [["peaceful", 30]], "Be let pass by friendly peoples 30 times", false],
 	["Blade Phantom", "Mist Walker", "Drift", "dodge:.5 escape:.5", [["escapes", 100]], "Escape 100 fights", false],
 	["Demon Saint", "Fallen Sage", "Corruption", "skill:.5 lifesteal:.5", [["cursed_shrines", 50]], "Pray at 50 cursed shrines", false],
 	["Demon Saint", "Thousand Hands", "Many Arms", "double_strike:.7 atk:.3", [["double_strikes", 1000]], "Land 1,000 double strikes", false],

@@ -410,6 +410,7 @@ static func start_windup(g: GameState, mult: float) -> void:
 
 ## A skill, a stun or a freeze breaks the wind-up.
 static func break_windup(g: GameState) -> void:
+	ClassTree.count(g, "staggers")
 	g.cfight["windup"] = -1
 	g.boss_phase.erase("windup")
 	g.events.append({"type": "boss_mechanic", "id": "stagger", "name": "STAGGERED!", "color": MECHANICS["stagger"]["color"]})

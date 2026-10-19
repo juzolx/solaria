@@ -50,6 +50,8 @@ static func haggle(g: GameState) -> String:
 		if not e["sold"]:
 			e["price"] = maxi(1, int(round(int(e["price"]) * mult)))
 	g.codex.add("haggles_won" if won else "haggles_lost")
+	if won:
+		ClassTree.count(g, "haggles_won")
 	var lines_won := ["Fine! FINE! Snik's children will starve. Snik has no children. Still!", "You drive a hard bargain. Snik respects that. Snik hates it, but respects it.", "Ugh. Twenty off. Don't tell the other goblins."]
 	var lines_lost := ["Insulting! Snik's prices just went UP.", "Haggle with Snik? Snik invented haggling. Ten percent more.", "Snik is hurt. Snik's prices are also hurt. Upward."]
 	var said: String = (lines_won if won else lines_lost).pick_random()

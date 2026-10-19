@@ -92,6 +92,7 @@ static func recover(g: GameState) -> void:
 	if not to_mail.is_empty():
 		Mail.post(g, "Your grave", "What your bag couldn't hold", "Recovered from the %s on floor %d." % [String(g.grave["killer"]), int(g.grave["floor"])], {"items": to_mail})
 	g.codex.add("graves")
+	ClassTree.count(g, "graves_recovered")
 	g.say("[color=#4ade80]You take back what you lost:[/color] %d item%s%s%s." % [items.size(), "" if items.size() == 1 else "s",
 		(", %d gold" % gold) if gold > 0 else "", (" (%d sent to the Mailbox)" % to_mail.size()) if not to_mail.is_empty() else ""])
 	g.events.append({"type": "mini_event", "kind": "grave", "title": "RECOVERED!", "sub": "%d items back from the %s" % [items.size(), String(g.grave["killer"])]})

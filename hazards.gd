@@ -77,5 +77,6 @@ static func tick(g: GameState) -> String:
 			g.events.append({"type": "enemy_hit", "dmg": dh, "hazard": true})
 			var de := g._damage_enemy(maxi(1, int(g.enemy_max_hp * HIT_PART)), ["Shadow" if g.hazard == "dark" else "Physical"])
 			line += " You take %d, the %s takes %d" % [dh, g.enemy_name, de]
+	ClassTree.count(g, "hazard_bursts")
 	g.events.append({"type": "hazard", "id": g.hazard, "name": k["name"], "color": k["color"], "fx": k["fx"]})
 	return line

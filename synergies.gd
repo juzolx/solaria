@@ -86,5 +86,6 @@ static func team_strike(g: GameState) -> String:
 		total += float(m.hero.get_attack())
 	var dmg := g._damage_enemy(int(total * STRIKE_MULT * g.party_mult()), ["Physical"])
 	g.codex.add("team_strikes")
+	ClassTree.count(g, "team_strikes")
 	g.events.append({"type": "team_strike", "dmg": dmg, "count": g.party.living().size() + 1})
 	return ". [color=#fbbf24]TEAM STRIKE![/color] Your whole team hits together for %d" % dmg

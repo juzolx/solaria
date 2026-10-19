@@ -36,6 +36,7 @@ static func part_ways(g: GameState) -> bool:
 		gift = "%d gold" % gold
 	Lineage.change_rep(g, race, REP_GAIN, false)
 	g.codex.add("peaceful_meetings")
+	ClassTree.count(g, "peaceful")
 	g.say("[color=#4ade80]The %s nod to you and step aside.[/color] They press %s into your hands." % [Lineage.race_plural(race), gift])
 	g.events.append({"type": "escaped"})
 	Lineage._move_on(g)

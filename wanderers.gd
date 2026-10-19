@@ -77,4 +77,5 @@ static func reward(g: GameState) -> void:
 	g._give_item(item)
 	g._add_gold((10 + g.floor_num * 8) * 5)
 	g.codex.add("wanderers")
+	ClassTree.count(g, "wanderers")
 	g.events.append({"type": "mini_event", "kind": "wanderer", "title": "WANDERER DOWN", "sub": "%s leaves something behind" % g.enemy_name})
