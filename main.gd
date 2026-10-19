@@ -91,6 +91,9 @@ var potion_button: Button
 var auto_potion_button: Button
 var floors_button: Button
 var speed_button: Button
+var more_button: Button
+var drawer: HBoxContainer
+var drawer_open := false
 var class_overlay: Overlay
 var started := false
 var event_pill: PanelContainer
@@ -644,6 +647,7 @@ func _fit_layout() -> void:
 	is_tall = tall
 	for side in ["left", "right"]:
 		ui_root.add_theme_constant_override("margin_" + side, 6 if tall else 10)  # phones need every pixel of width
+	_apply_drawer()
 	_apply_nav()
 	left_panel.size_flags_stretch_ratio = 0.9 if tall else 1.0
 	tabs.size_flags_stretch_ratio = 1.1 if tall else 1.2
@@ -654,7 +658,7 @@ func _fit_layout() -> void:
 	potion_label.get_parent().visible = not tall
 	xp_bar.custom_minimum_size.x = 100 if tall else 150
 	if log_label:
-		log_label.custom_minimum_size.y = 60 if tall else 80
+		log_label.custom_minimum_size.y = 38 if tall else 80  # phones: the latest two lines
 
 func _group(title: String) -> TabContainer:
 	var t := TabContainer.new()
@@ -809,10 +813,6 @@ func _build_fight(parent: Control) -> void:
 	auto_ability_button.custom_minimum_size = Vector2(84, 0)
 	ability_row.add_child(auto_ability_button)
 
-	var buttons := GridContainer.new()
-	buttons.columns = 4
-	buttons.add_theme_constant_override("h_separation", 6)
-	col.add_child(buttons)
 	potion_button = UI.button("", func(): state.use_potion(); refresh())
 	potion_button.icon = Sprites.consumable_icon("potion")
 	potion_button.expand_icon = false
@@ -847,14 +847,32 @@ func _build_fight(parent: Control) -> void:
 	catch_button.tooltip_text = "Tame this monster. It becomes your pet (no XP or loot from it)."
 	catch_button.add_theme_color_override("font_color", Color("#d9a066"))
 	catch_button.visible = false
-	for b in [potion_button, auto_potion_button, floors_button, speed_button]:
+	# What you do in a fight sits in one row; settings-like toggles live in a drawer
+	# on phones ("More"), and stay out in the open on wide screens.
+	var action_row := UI.hbox(6)
+	col.add_child(action_row)
+	for b in [potion_button, escape_button, catch_button, spare_button]:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		buttons.add_child(b)
-	var run_row := UI.hbox(6)
-	col.add_child(run_row)
-	for b in [escape_button, catch_button, spare_button]:
+		action_row.add_child(b)
+	more_button = UI.button("More", func():
+		drawer_open = not drawer_open
+		_apply_drawer())
+	more_button.tooltip_text = "Auto-heal, speed and floor travel"
+	more_button.custom_minimum_size = Vector2(84, 0)
+	action_row.add_child(more_button)
+	drawer = UI.hbox(6)
+	col.add_child(drawer)
+	for b in [auto_potion_button, speed_button, floors_button]:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		run_row.add_child(b)
+		drawer.add_child(b)
+
+## Phones show the settings drawer only when "More" is open; wide screens always do.
+func _apply_drawer() -> void:
+	if drawer == null:
+		return
+	drawer.visible = drawer_open or not is_tall
+	more_button.visible = is_tall
+	more_button.text = "Less" if drawer_open else "More"
 
 ## The town map (shown instead of the fight while you're in town).
 func _build_town(parent: Control) -> void:
@@ -1366,7 +1384,8 @@ func _pull_messages() -> void:
 	while log_lines.size() > 5:
 		log_lines.pop_front()
 	var text := ""
-	for n in log_lines.size():
+	var first := maxi(0, log_lines.size() - 2) if is_tall else 0  # phones: the newest two lines
+	for n in range(first, log_lines.size()):
 		if n < log_lines.size() - 1:
 			text += "[color=%s]%s[/color]\n" % [UI.hex(UI.DIM), log_lines[n]]
 		else:

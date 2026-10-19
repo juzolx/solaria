@@ -1038,8 +1038,11 @@ func _hero_unit() -> int:
 	# keeps them as big as the monsters while staying on whole pixels
 	if hero_art.has("lpc"):
 		un = maxi(un, roundi(un * 4.0 / 3.0))
-	# Your leader is closest to you (back-to-front): a size bigger than everyone else
-	return un + 1
+	# Your leader is closest to you (back-to-front): a size bigger than everyone else,
+	# but never so big that their head covers the monster's feet and HP bar
+	# (the body is about 31 art pixels tall; keep it under the gap between the two ground lines)
+	var room := (_team_ground() - _ground() - 18.0) * _scr() / (31.0 * Sprites.HD)
+	return clampi(un + 1, 1, maxi(1, floori(room)))
 
 func _party_members() -> Array:
 	return state.party.members if state != null and state.party != null else []
