@@ -46,6 +46,24 @@ func _initialize() -> void:
 	main.apply_settings()
 	check(Engine.max_fps == 0 and not HallsScene.low, "both settings turn off again")
 
+	# Reduce motion and high-contrast text
+	main.profile.reduce_motion = true
+	main.profile.high_contrast = true
+	main.apply_settings()
+	main.battle.freeze_left = 0.0
+	main.battle._hit_stop(0.2)
+	check(main.battle.freeze_left == 0.0, "no hit stop with Reduce motion")
+	var dim_label := UI.label("hint", 13, UI.DIM)
+	check(dim_label.get_theme_color("font_color") == UI.DIM_CONTRAST, "high-contrast text brightens dim labels")
+	dim_label.free()
+	var pp := Profile.load_profile()
+	check(pp.reduce_motion and pp.high_contrast, "both accessibility settings are saved")
+	main.profile.reduce_motion = false
+	main.profile.high_contrast = false
+	main.apply_settings()
+	main.battle._hit_stop(0.2)
+	check(main.battle.freeze_left > 0.0, "hit stop is back once Reduce motion is off")
+
 	# Speed cycles 1x -> 2x -> 3x -> 1x and sets the turn timer
 	main.state.speed = 1
 	var waits: Array = []

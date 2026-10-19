@@ -1263,6 +1263,7 @@ func apply_settings() -> void:
 	state.dev_mode = profile.dev_mode
 	state.path_rooms_on = profile.path_choice != "fight"
 	UI.colorblind = profile.colorblind
+	UI.high_contrast = profile.high_contrast
 	DarkGrade.set_enabled(profile.dark_art)
 	Engine.max_fps = 30 if profile.battery_saver else 0
 	HallsScene.low = profile.low_graphics

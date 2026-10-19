@@ -779,7 +779,7 @@ func _shoot(color: Color, big := false) -> void:
 ## stops: the turn timer, menus and sound keep going (slowing Engine.time_scale
 ## would slow the game's own clock too). Follows the Screen shake setting.
 func _hit_stop(seconds: float) -> void:
-	if profile and not profile.shake:
+	if profile and (not profile.shake or profile.reduce_motion):
 		return
 	freeze_left = maxf(freeze_left, seconds)
 
@@ -926,7 +926,8 @@ func _process(delta: float) -> void:
 	if freeze_left > 0.0:
 		freeze_left -= delta  # hit stop: hold this frame
 		return
-	bob += delta
+	if profile == null or not profile.reduce_motion:
+		bob += delta  # idle breathing and bobbing (frozen with Reduce motion)
 	shake = move_toward(shake * exp(-delta * 6.0), 0.0, delta * 8.0)  # quick fade with a short tail
 	for key in bar_ghost.keys():
 		bar_ghost[key] = move_toward(float(bar_ghost[key]), float(bar_target.get(key, 0.0)), delta * 0.8)
@@ -1241,7 +1242,7 @@ func _draw() -> void:
 
 	# Shake as "trauma": strength grows faster than linearly (small taps barely move the
 	# view, big hits really land) and wobbles smoothly instead of jumping every frame.
-	var trauma := clampf(shake / 14.0, 0.0, 1.0) if (profile == null or profile.shake) else 0.0
+	var trauma := clampf(shake / 14.0, 0.0, 1.0) if (profile == null or (profile.shake and not profile.reduce_motion)) else 0.0
 	var sh := 14.0 * pow(trauma, 1.6)
 	_off = Vector2(sin(bob * 53.0) + 0.5 * sin(bob * 97.0), cos(bob * 61.0) + 0.5 * cos(bob * 89.0)) * sh / 1.5
 	draw_set_transform(_off)

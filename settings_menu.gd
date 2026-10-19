@@ -100,7 +100,7 @@ func show_for(m) -> void:
 	arow.add_theme_constant_override("h_separation", 8)
 	arow.add_theme_constant_override("v_separation", 6)
 	content.add_child(arow)
-	for key in ["shake", "damage_numbers", "flashes", "text_size", "colorblind"]:
+	for key in ["shake", "damage_numbers", "flashes", "text_size", "colorblind", "reduce_motion", "high_contrast"]:
 		var b := UI.button("", _toggle_a11y.bind(key))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		arow.add_child(b)
@@ -235,6 +235,10 @@ func _toggle_a11y(key: String) -> void:
 			profile.text_size = (profile.text_size + 1) % 3
 		"colorblind":
 			profile.colorblind = not profile.colorblind
+		"reduce_motion":
+			profile.reduce_motion = not profile.reduce_motion
+		"high_contrast":
+			profile.high_contrast = not profile.high_contrast
 	main.apply_settings()
 	main._fit_layout()
 	_update()
@@ -272,6 +276,8 @@ func _update() -> void:
 	(a11y_buttons["damage_numbers"] as Button).text = "Damage numbers: %s" % ("ON" if profile.damage_numbers else "OFF")
 	(a11y_buttons["flashes"] as Button).text = "Flashing effects: %s" % ("ON" if profile.flashes else "OFF")
 	(a11y_buttons["colorblind"] as Button).text = "Colorblind labels: %s" % ("ON" if profile.colorblind else "OFF")
+	(a11y_buttons["reduce_motion"] as Button).text = "Reduce motion: %s" % ("ON" if profile.reduce_motion else "OFF")
+	(a11y_buttons["high_contrast"] as Button).text = "High-contrast text: %s" % ("ON" if profile.high_contrast else "OFF")
 	(a11y_buttons["text_size"] as Button).text = "Interface size: %s" % ["Small", "Normal", "Large"][profile.text_size]
 	sound_toggle.text = "Sound: %s" % ("ON" if profile.sound_on else "OFF")
 	fullscreen_toggle.text = "Fullscreen: %s" % ("ON" if profile.fullscreen else "OFF")

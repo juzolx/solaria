@@ -26,6 +26,8 @@ const BUTTON_H := 42  # every button is at least this tall (~36 pt on a phone; A
 const EDGE := Color("#64759b")  # edges of things you can press: 3:1 contrast or better
 const MIN_FONT := 13  # ~11 pt on a phone at the 504-wide layout
 static var colorblind := false  # set from the settings: adds words and symbols where color carries meaning
+static var high_contrast := false  # set from the settings: secondary (DIM) text is drawn brighter
+const DIM_CONTRAST := Color("#c3cbdc")  # DIM in high-contrast mode
 
 ## 9680 -> "9680", 12400 -> "12.4k", 3500000 -> "3.5M": short numbers for tight spots.
 static func short(n: int) -> String:
@@ -51,7 +53,7 @@ static func label(text: String, font_size := 14, color := TEXT) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.add_theme_font_size_override("font_size", maxi(MIN_FONT, font_size))
-	l.add_theme_color_override("font_color", color)
+	l.add_theme_color_override("font_color", DIM_CONTRAST if high_contrast and color == DIM else color)
 	return l
 
 static func rich(font_size := 13, fit := true) -> RichTextLabel:
