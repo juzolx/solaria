@@ -491,6 +491,17 @@ func play(events: Array[Dictionary]) -> void:
 					_fx(String(e["fx"]), _hero_center(), 1.2)
 					_float(String(e["name"]).to_upper() + "!", Vector2(size.x / 2.0, size.y * 0.47), Color(e["color"]), 16)
 					shake = maxf(shake, 5.0))
+			"team_strike":
+				_later(delay + 0.3, func():
+					_sfx("combo")
+					banner_text = "TEAM STRIKE!"
+					banner_sub = "%d heroes hit as one: %d damage" % [int(e["count"]), int(e["dmg"])]
+					banner_color = Color("#fbbf24")
+					banner_alpha = 1.8
+					_fx("impact", _enemy_center(), 1.8)
+					_burst(_enemy_center(), Color("#fbbf24"), 30, 340.0)
+					shake = maxf(shake, 9.0)
+					_hit_stop(0.08))
 			"minion_dead":
 				_later(delay, func(): _float("MINION DOWN", _enemy_center() + Vector2(-30, -10), Color("#d4d4d4"), 13))
 			"mastery":
@@ -2156,4 +2167,7 @@ func _draw_hero_status(r: Rect2, font: Font) -> void:
 		if not info.is_empty():
 			var stk := int(state.hero_stacks.get(k, 1))
 			chips.append(["%s%s %d" % [info["name"], (" x%d" % stk) if stk > 1 else "", int(state.hero_status[k])], Color(info["color"])])
+	var tsl := Synergies.strike_left(state)
+	if tsl > 0:
+		chips.append(["Team Strike in %d" % tsl, Color("#fbbf24")])
 	_chip_row(chips, r.get_center().x, maxf(34.0, r.position.y - 4.0), font)

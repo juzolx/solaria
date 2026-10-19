@@ -105,6 +105,7 @@ func hit_member(leader: GameState, m: Member) -> String:
 	var atk := float(leader.enemy_attack)
 	var dmg := maxi(1, int(round(atk * atk / (atk + g.get_defense()))))
 	dmg = maxi(1, int(dmg * Combat.crush_mult(leader)))  # a telegraphed blow lands on whoever it hits
+	dmg = maxi(1, int(dmg * Synergies.damage_mult(leader)))
 	if leader.enemy_weaken_turns > 0:
 		dmg = maxi(1, int(dmg * leader.enemy_weaken))
 	m.hp -= dmg
@@ -145,7 +146,7 @@ func act(leader: GameState) -> String:
 		var crit := false
 		for _h in hits:
 			var d := float(g.get_attack()) * leader.party_mult()
-			if randf() * 100.0 < g.effect_value("crit"):
+			if randf() * 100.0 < g.effect_value("crit") + Synergies.crit_bonus(leader):
 				d *= g.crit_mult()
 				crit = true
 			total += int(d)

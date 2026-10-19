@@ -30,6 +30,7 @@ func refresh() -> void:
 	box.add_child(UI.label("YOUR PARTY", 15, UI.GOLD))
 	var note := UI.label("Take a team of 3: you plus up to 2 of your other Regular heroes. They use their own gear, stats and skills, level up with you, and share one skill book. Monsters get tougher with a bigger team and aim mostly at tanks (Warrior, Knight). A hero who falls loses only their own worn gear (bound items stay) and gets back up on the next floor. The run fails only when all three are down. Leave gear you love at home, or send a team with nothing to lose.", 12, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_synergy_rows()
 	box.add_child(note)
 	if state.hardcore:
 		box.add_child(UI.label("Hardcore heroes fight alone. One life, no backup.", 14, UI.RED))
@@ -126,3 +127,17 @@ func _member_card(mem) -> PanelContainer:
 	h.add_child(rm)
 	return p
 
+
+## Team synergies (synergies.gd): the ones your team has light up, the rest say how to get them.
+func _synergy_rows() -> void:
+	var on := Synergies.active(state) if state.party != null and state.party.size() > 0 else []
+	box.add_child(UI.label("TEAM SYNERGIES  (%d active)" % on.size(), 13, UI.GOLD))
+	for id in Synergies.LIST:
+		var s: Dictionary = Synergies.LIST[id]
+		var got: bool = id in on
+		var l := UI.label(("%s  -  %s" % [s["name"], s["text"]]), 12, Color(String(s["color"])) if got else UI.DIM)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(l)
+	var ts := UI.label("Team Strike: with companions standing, your whole team hits together every %d turns of a fight." % Synergies.STRIKE_EVERY, 12, UI.DIM)
+	ts.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(ts)

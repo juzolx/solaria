@@ -818,6 +818,7 @@ func damage_taken() -> int:
 	var atk := float(enemy_attack) * Lineage.enemy_attack_mult(self) * Realms.damage_mult(self)
 	# Bestiary mastery: you know this monster's moves (half your kill bonus as less damage)
 	atk *= 1.0 - Monsters.milestone_bonus(codex.kills(enemy_species)) / 200.0
+	atk *= Synergies.damage_mult(self)  # Shield and Prayer
 	return maxi(1, int(round(atk * atk / (atk + get_defense()))))
 
 ## Chance (%) the next boss drops a unique. Goes up after every boss without one.
@@ -987,6 +988,7 @@ func use_skill(id: String) -> bool:
 		if s.has("execute") and enemy_hp < enemy_max_hp * 0.3:
 			total = int(total * (1.0 + float(s["execute"])))
 		last_hit = "skill"
+		total = int(total * Synergies.skill_mult(self))  # Spellweave
 		total = _damage_enemy(total, tags)
 		crit_hit = crit_any
 		parts.append("%d damage%s" % [total, " (crit!)" if crit_any else ""])
@@ -1180,7 +1182,7 @@ func toggle_skill_auto(id: String) -> void:
 	save_game()
 
 func gain_xp(amount: int) -> void:
-	xp += int(amount * float(race_info().get("xp", 1.0)) * (1.0 + _flat("xp") / 100.0) * TownEvents.xp_mult(self))
+	xp += int(amount * float(race_info().get("xp", 1.0)) * (1.0 + _flat("xp") / 100.0) * TownEvents.xp_mult(self) * Synergies.reward_mult(self))
 	while xp >= GameData.xp_to_next(level):
 		xp -= GameData.xp_to_next(level)
 		level += 1
@@ -1545,6 +1547,7 @@ func take_turn() -> void:
 	if party != null and party.size() > 0 and enemy_hp > 0:
 		last_hit = "hit"
 		line += party.act(self)
+		line += Synergies.team_strike(self)  # every few turns the whole team hits together
 
 	if enemy_hp <= 0:
 		say(line + ".")
@@ -1696,7 +1699,7 @@ func _basic_attack() -> Dictionary:
 	var crit := false
 	for _h in hits:
 		var dmg := float(get_attack())
-		if randf() * 100.0 < effect_total("crit") or _frozen_crit():
+		if randf() * 100.0 < effect_total("crit") + Synergies.crit_bonus(self) or _frozen_crit():
 			dmg *= crit_mult()
 			crit = true
 			Lineage.gain(self, "crit")
@@ -1961,7 +1964,7 @@ func _give_signature(monster: String) -> void:
 	_give_item(item)
 
 func _add_gold(amount: int) -> void:
-	amount = int(amount * TownEvents.gold_mult(self))
+	amount = int(amount * TownEvents.gold_mult(self) * (Synergies.reward_mult(self) if not in_town else 1.0))
 	gold += amount
 	codex.add("gold_earned", amount)
 	ClassTree.count(self, "gold_earned", amount)
