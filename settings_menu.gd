@@ -46,12 +46,13 @@ func show_for(m) -> void:
 	sound_toggle.custom_minimum_size = Vector2(130, 0)
 	srow.add_child(sound_toggle)
 	srow.add_child(UI.button("Test sound", func(): main.sfx.play("level_up")))
-	var found: int = main.sfx.files_found
-	var info := UI.label("Sound files found: %d / %d" % [found, Sfx.EXPECTED_FILES] + ("" if found >= Sfx.EXPECTED_FILES else " - copy the sounds folder into the game folder"), 12, UI.GREEN if found >= Sfx.EXPECTED_FILES else UI.RED)
-	info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	srow.add_child(info)
+	if OS.is_debug_build():  # a check for whoever builds the game; players never need it
+		var found: int = main.sfx.files_found
+		var info := UI.label("Sound files found: %d / %d" % [found, Sfx.EXPECTED_FILES] + ("" if found >= Sfx.EXPECTED_FILES else " - copy the sounds folder into the game folder"), 12, UI.GREEN if found >= Sfx.EXPECTED_FILES else UI.RED)
+		info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		srow.add_child(info)
 	content.add_child(_slider("Effects", profile.volume, func(v: float): profile.volume = v; main.apply_settings()))
 	content.add_child(_slider("Music", profile.music_volume, func(v: float): profile.music_volume = v; main.apply_settings()))
 
@@ -123,19 +124,24 @@ func show_for(m) -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.disabled = not main.online.is_configured()
 		crow.add_child(b)
-	cloud_label = UI.label("Online isn't set up yet (see ONLINE_SETUP.md)." if not main.online.is_configured() else "Saves your heroes to your online account, so you can get them back on a new device.", 11, UI.DIM)
+	var off_text := "Online isn't set up yet (see ONLINE_SETUP.md)." if OS.is_debug_build() else "Cloud backup arrives with online features in a later update."
+	cloud_label = UI.label(off_text if not main.online.is_configured() else "Saves your heroes to your online account, so you can get them back on a new device.", 11, UI.DIM)
 	cloud_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(cloud_label)
 
-	content.add_child(UI.heading("Save and developer"))
-	var drow := UI.hbox(8)
-	content.add_child(drow)
-	var reset := UI.button("Delete this hero", func():
+	# Deleting a hero is rare and permanent: a quiet button at the bottom, behind a confirmation
+	content.add_child(UI.heading("This hero"))
+	var reset := UI.button("Delete this hero...", func():
 		main.confirm("Delete this hero?", "This wipes this %s hero's gear, levels, gold and progress. It can't be undone. Your other heroes, the Codex and the stash are not touched." % mode_name, "Delete hero", func(): main.reset_save()))
 	reset.disabled = not main.started
-	reset.add_theme_color_override("font_color", UI.RED)
-	reset.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	drow.add_child(reset)
+	reset.add_theme_color_override("font_color", UI.DIM)
+	reset.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	content.add_child(reset)
+
+	# Developer tools exist only when running from the editor or a debug build
+	var drow := UI.hbox(8)
+	drow.visible = OS.is_debug_build()
+	content.add_child(drow)
 	dev_toggle = UI.button("", func():
 		profile.dev_mode = not profile.dev_mode
 		main.apply_settings()

@@ -59,7 +59,7 @@ func _from(d: Dictionary) -> void:
 	dark_art = bool(d.get("dark_art", true))
 	battery_saver = bool(d.get("battery_saver", OS.has_feature("mobile")))
 	low_graphics = bool(d.get("low_graphics", false))
-	dev_mode = bool(d.get("dev_mode", false))
+	dev_mode = bool(d.get("dev_mode", false)) and OS.is_debug_build()  # never in store builds
 	hc_best = int(d.get("hc_best", 0))
 	hc_runs = d.get("hc_runs", [])
 	player_name = str(d.get("player_name", ""))

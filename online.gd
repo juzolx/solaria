@@ -59,7 +59,7 @@ func _headers(auth := true, extra: Array = []) -> PackedStringArray:
 ## Sends one HTTP request and waits for it. Returns {ok, code, data, error}.
 func _request(path: String, method := HTTPClient.METHOD_GET, body = null, extra_headers: Array = [], auth := true) -> Dictionary:
 	if not is_configured():
-		return {"ok": false, "error": "Online isn't set up yet. See ONLINE_SETUP.md."}
+		return {"ok": false, "error": ("Online isn't set up yet. See ONLINE_SETUP.md." if OS.is_debug_build() else "Online features arrive in a later update.")}
 	var http := HTTPRequest.new()
 	http.timeout = 12.0
 	add_child(http)
@@ -116,7 +116,7 @@ func _rest(path: String, method := HTTPClient.METHOD_GET, body = null, extra: Ar
 ## Logs in (creating an anonymous account the first time) and refreshes the login when needed.
 func ensure_login() -> Dictionary:
 	if not is_configured():
-		return {"ok": false, "error": "Online isn't set up yet. See ONLINE_SETUP.md."}
+		return {"ok": false, "error": ("Online isn't set up yet. See ONLINE_SETUP.md." if OS.is_debug_build() else "Online features arrive in a later update.")}
 	var now := int(Time.get_unix_time_from_system())
 	if profile.online.get("access_token", "") != "" and now < int(profile.online.get("expires_at", 0)) - 60:
 		return {"ok": true}

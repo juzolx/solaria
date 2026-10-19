@@ -6,9 +6,14 @@ static func not_setup_card() -> PanelContainer:
 	var card := UI.panel(UI.INSET, UI.BORDER, 10, 14, 1)
 	var v := UI.vbox(8)
 	card.add_child(v)
-	v.add_child(UI.label("Online isn't turned on yet", 16, UI.GOLD))
 	var t := UI.rich(13)
-	t.text = "Leaderboards, guilds and raids need a free Supabase project. It takes about 5 minutes: follow [color=#e8b14a]ONLINE_SETUP.md[/color] in the game folder, then paste your project URL and key into [color=#e8b14a]online_config.gd[/color]. Everything else works without it."
+	if OS.is_debug_build():
+		# For whoever builds the game
+		v.add_child(UI.label("Online isn't turned on yet", 16, UI.GOLD))
+		t.text = "Leaderboards, guilds and raids need a free Supabase project. It takes about 5 minutes: follow [color=#e8b14a]ONLINE_SETUP.md[/color] in the game folder, then paste your project URL and key into [color=#e8b14a]online_config.gd[/color]. Everything else works without it."
+	else:
+		v.add_child(UI.label("Coming soon", 16, UI.GOLD))
+		t.text = "Leaderboards, guilds and weekly guild raids open in a later update: race other players to the deepest floor and fight raid bosses together. Everything else in the game works now."
 	v.add_child(t)
 	return card
 
