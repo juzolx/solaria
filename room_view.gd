@@ -197,6 +197,21 @@ func _draw_team() -> void:
 		scene.shadow(self, feet, sz * 0.18)
 		var a := 0.4 if (j == 0 and state.leader_down) or (j > 0 and members[j - 1].knocked_out) else 1.0
 		draw_texture_rect(an["tex"][fi], Rect2(feet - Vector2(sz / 2.0, sz * 0.9), Vector2(sz, sz)), false, Color(0.85, 0.82, 0.8, a))
+		if j == 0:
+			_draw_pet(feet, sz)
+
+## Your companion trots at the leader's heels.
+func _draw_pet(leader_feet: Vector2, leader_sz: float) -> void:
+	if not state.pet_on or World.pet_stage(state) < 0:
+		return
+	var tex := Pets.portrait(state)
+	if tex == null:
+		return
+	var s := leader_sz * 0.5
+	var hop := 0.0 if (main.profile and main.profile.reduce_motion) else absf(sin(t * 3.2)) * s * 0.05
+	var at := leader_feet + Vector2(leader_sz * 0.62, -4.0)
+	scene.shadow(self, at, s * 0.22)
+	draw_texture_rect(tex, Rect2(at - Vector2(s / 2.0, s * 0.85 + hop), Vector2(s, s)), false, Color(0.88, 0.85, 0.82))
 
 # =====================================================================
 # Mood particles by region

@@ -162,6 +162,8 @@ var swing := 0.0         # weapon swing: -1 wind-up, +1 strike
 var lpc_anim := "combat_idle"  # LPC heroes: the animation playing (lpc.gd)
 var lpc_t := 0.0
 var pet_lunge := 0.0
+var summon_lunge := 0.0   # 0.13+: the skeleton or wolf you called steps in to hit
+var summon_in := 0.0      # fades the summon in and out
 var chest_t := -1.0   # chest-opening moment: seconds since it appeared (-1 = none)
 static var _chest_tex: Array = []  # [closed, open]
 const CHEST_ART := [
@@ -364,10 +366,11 @@ func play(events: Array[Dictionary]) -> void:
 				_sfx("buff")
 				_float(str(e["name"]).to_upper() + "!", _hero_center() + Vector2(30, -20), Color("#c4b5fd"), 18)
 			"summon_hit":
-				if e.has("name") and state.pet_on and World.pet_stage(state) >= 0:
+				var who := "summon_lunge" if String(e.get("name", "")) == state.summon_name and state.summon_turns > 0 else "pet_lunge"
+				if who == "summon_lunge" or (state.pet_on and World.pet_stage(state) >= 0):
 					var pt := create_tween()
-					pt.tween_property(self, "pet_lunge", 1.0, 0.1)
-					pt.tween_property(self, "pet_lunge", 0.0, 0.2)
+					pt.tween_property(self, who, 1.0, 0.1)
+					pt.tween_property(self, who, 0.0, 0.2)
 				_later(delay + 0.15, func():
 					_fx("claw", _enemy_center() + Vector2(-16, 12), 0.7)
 					_float("%d" % e["dmg"], _enemy_center() + Vector2(-20, 20), Color("#c4b5fd"), 15)
@@ -1029,6 +1032,8 @@ func _process(delta: float) -> void:
 		chest_t += delta
 		if chest_t > 2.2:
 			chest_t = -1.0
+	if state != null:
+		summon_in = move_toward(summon_in, 1.0 if state.summon_turns > 0 else 0.0, delta * 3.0)
 	for dp in drops:
 		dp["t"] = float(dp["t"]) + delta
 	drops = drops.filter(func(dp): return float(dp["t"]) < float(dp["life"]))
@@ -1462,6 +1467,7 @@ func _draw() -> void:
 		draw_arc(Vector2.ZERO, hr.size.x * (0.5 + 0.2 * (1.0 - cast_glow)), 0.0, TAU, 32, Color(cast_color, cast_glow), 3.0)
 		draw_arc(Vector2.ZERO, hr.size.x * (0.35 + 0.15 * (1.0 - cast_glow)), 0.0, TAU, 24, Color(cast_color, cast_glow * 0.6), 2.0)
 		draw_set_transform(_off)
+	_draw_summon()
 	_draw_members()
 	_draw_pet()
 	_draw_hero()
@@ -1660,6 +1666,35 @@ func _draw_hero() -> void:
 		if hero_flash > 0.0:
 			draw_texture(hero_art["weapon_white"], -piv, Color(1.0, 0.2, 0.2, hero_flash * 0.75))
 		draw_set_transform(_off)
+
+## A called helper (Raise Dead's skeleton, Call of the Wild's wolf) stands at the hero's
+## left as a pale spirit while it lasts, and steps in when it strikes.
+func _draw_summon() -> void:
+	if state == null or summon_in <= 0.01:
+		return
+	var key := "revenant" if state.summon_name == "Skeleton" else "barghest"
+	var art := Sprites.enemy_by_key(key)
+	if not art.has("tex"):
+		art = Sprites.enemy_by_key("draugr" if key == "revenant" else "garmr")
+	if not art.has("tex"):
+		return
+	var tex: Texture2D = art["tex"]
+	var white: Texture2D = art["white"]
+	var asz: Vector2 = art["size"]
+	var hc := _hero_canvas()
+	var h := hc.size.y * 0.5
+	var w := h * asz.x / asz.y
+	var feet := Vector2(hc.position.x + hc.size.x * 0.12, _team_ground() - h * 0.06)
+	feet += Vector2(summon_lunge * w * 0.25, -summon_lunge * size.y * 0.08)
+	var r := Rect2(_snap(feet - Vector2(w / 2.0, h)), Vector2(w, h))
+	var a := summon_in * hero_alpha
+	var glow := Color("#a78bfa") if key == "revenant" else Color("#86efac")
+	draw_set_transform(Vector2(r.get_center().x, r.end.y), 0.0, Vector2(1.0, 0.3))
+	draw_circle(Vector2.ZERO, w * 0.4, Color(glow, 0.18 * a))
+	draw_set_transform(Vector2.ZERO)
+	for off in [Vector2(-2, 0), Vector2(2, 0), Vector2(0, -2)]:
+		draw_texture_rect(white, Rect2(r.position + off, r.size), false, Color(glow, (0.35 + 0.15 * sin(bob * 4.0)) * a))
+	draw_texture_rect(tex, r, false, Color(0.7, 0.75, 1.0, 0.7 * a))
 
 ## The companion stands behind the hero (art/pets, tools/art_pets.py), a size smaller.
 func _draw_pet() -> void:
