@@ -1,0 +1,29 @@
+class_name CooldownRing
+extends Control
+## 0.13+: drawn over a skill button. A ring around its icon fills as the skill
+## recharges, a thin bar along the bottom shows the same, and a soft pulse says "ready".
+
+var frac := 0.0          # 0 = ready, 1 = just used
+var color := Color.WHITE
+var t := 0.0
+
+func _init() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	set_anchors_preset(Control.PRESET_FULL_RECT)
+
+func _process(delta: float) -> void:
+	t += delta
+	if is_visible_in_tree():
+		queue_redraw()
+
+func _draw() -> void:
+	var c := Vector2(21.0, size.y / 2.0)   # over the button's icon
+	var r := minf(16.0, size.y / 2.0 - 3.0)
+	if frac > 0.0:
+		draw_arc(c, r, 0.0, TAU, 32, Color(0, 0, 0, 0.55), 3.0)
+		var done := 1.0 - frac
+		draw_arc(c, r, -PI / 2.0, -PI / 2.0 + TAU * done, 32, Color(color, 0.95), 3.0)
+		draw_rect(Rect2(4, size.y - 4, (size.x - 8) * done, 2), Color(color, 0.8))
+	else:
+		var p := 0.5 + 0.5 * sin(t * 4.0)
+		draw_arc(c, r + p * 1.5, 0.0, TAU, 32, Color(color, 0.25 + 0.35 * p), 2.0)

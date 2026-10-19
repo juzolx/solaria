@@ -872,6 +872,7 @@ func _build_fight(parent: Control) -> void:
 		b.clip_text = true
 		ability_row.add_child(b)
 		skill_buttons.append(b)
+		b.add_child(CooldownRing.new())  # recharge ring and ready pulse
 	auto_ability_button = UI.button("", func(): SkillsTab.auto_battle_popup(self))
 	auto_ability_button.tooltip_text = "Autoplay options: let the fight run by itself, or take every turn yourself"
 	auto_ability_button.custom_minimum_size = Vector2(84, 0)
@@ -1525,6 +1526,9 @@ func _refresh_fight() -> void:
 	var acts := state.equipped_actives()
 	for i in skill_buttons.size():
 		var b: Button = skill_buttons[i]
+		for ch in b.get_children():
+			if ch is CooldownRing:
+				ch.visible = false  # shown again below for a real, equipped skill
 		var id: String = state.active_slots[i] if i < mini(3, state.active_slot_count()) else ""
 		if i == 3:
 			id = state.sig_slot
@@ -1551,6 +1555,11 @@ func _refresh_fight() -> void:
 		b.add_theme_constant_override("icon_max_width", 26)
 		b.add_theme_stylebox_override("normal", UI.style(c.darkened(0.6), c, 6, 8))
 		b.add_theme_color_override("font_color", c.lightened(0.55))
+		for ch in b.get_children():
+			if ch is CooldownRing:
+				ch.frac = clampf(float(cd) / maxf(1.0, float(sk.get("cd", 1))), 0.0, 1.0)
+				ch.color = c.lightened(0.3)
+				ch.visible = true
 	auto_ability_button.text = "Auto" if state.autoplay else "Manual"
 	attack_button.visible = not state.autoplay and not state.in_town
 	attack_button.disabled = not state.path_offer.is_empty() or state.enemy_hp <= 0
