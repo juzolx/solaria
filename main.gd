@@ -1414,6 +1414,12 @@ func _handle_events() -> void:
 				moment_queue.append(["realm", e["name"], e["blurb"], Color(e["color"]), e["mechanic"], null, DarkGrade.texture(bgp, DarkGrade.SCENE, false)])
 			"boss_intro":
 				moment_queue.append(["boss", e["name"], e["lore"], Color(e["color"]), e.get("sub", ""), null])
+			"hatch_moment":
+				var hart := Sprites.enemy_by_key(String(e["art"]))
+				moment_queue.append(["hatch", ("Cherished " if e["cherished"] else "") + "Baby " + String(e["name"]), "%s pet. It already looks at you like you're its whole world." % Monsters.tier_name(int(e["tier"])), Color(Monsters.tier_color(int(e["tier"]))), "", hart.get("tex", null)])
+			"forge_moment":
+				var fit: Dictionary = e["item"]
+				moment_queue.append(["forge", String(fit["name"]), "+%d %s  -  part of the %s set" % [GameData.item_power(fit), fit["stat"], String(e.get("set", "?"))], Color(GameData.color_of(GameData.SET_RARITY)), "", Sprites.item_icon(fit)])
 			"milestone_moment":
 				moment_queue.append(["milestone", e["title"], e["sub"], Color(e["color"]), "", Sprites.portrait(state.appearance, state.hero_looks())])
 			"awaken":

@@ -3017,6 +3017,7 @@ func craft_set_piece(set_name: String, slot: String) -> void:
 	bag_version += 1
 	say("Crafted %s (+%d %s)!" % [_tag(item), GameData.item_power(item), item["stat"]])
 	events.append({"type": "loot", "name": item["name"], "rarity": GameData.SET_RARITY})
+	events.append({"type": "forge_moment", "item": item, "set": set_name})  # 0.13+: the forge reveal
 	tip("sets", "Set items get bonuses when you wear 2 or 3 pieces of the same set.")
 	save_game()
 

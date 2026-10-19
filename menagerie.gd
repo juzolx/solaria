@@ -213,6 +213,7 @@ static func hatch(g: GameState, egg := {}) -> Dictionary:
 		p["cherished"] = true
 		g.codex.add("cherished_pets")
 	g.say("[color=#fde68a]Your egg hatches: a %sbaby %s![/color]" % ["Cherished " if cherished else "", name])
+	g.events.append({"type": "hatch_moment", "name": name, "art": art, "cherished": cherished, "tier": tier})
 	g.events.append({"type": "mini_event", "kind": "pet", "title": "IT HATCHED!", "sub": ("A Cherished baby %s" if cherished else "A baby %s") % name})
 	return p
 
