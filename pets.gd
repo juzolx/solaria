@@ -9,10 +9,12 @@ static func texture_for(cls: String, stage: int) -> Texture2D:
 	var key := "%s_%d" % [cls.to_lower(), stage]
 	if _cache.has(key):
 		return _cache[key]
-	var path := "res://art/pets/%s.png" % key
-	var tex: Texture2D = load(path) if ResourceLoader.exists(path) else null
+	var tex := DarkGrade.texture("res://art/pets/%s.png" % key)
 	_cache[key] = tex
 	return tex
+
+static func clear_cache() -> void:
+	_cache.clear()
 
 static func portrait(g: GameState) -> Texture2D:
 	var st := World.pet_stage(g)

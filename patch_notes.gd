@@ -14,6 +14,8 @@ const NOTES := [
 		"Traps: spikes, poison darts, flame jets, frost runes, smoke (blind) and alarms that bring an ambush. Sharp eyes spot them and step around. Doors can be trapped too.",
 		"Rangers read the blank doors: at first a glow (green safe, yellow a fight, red danger), and with practice the room itself. Their companions read for the whole team. A new Ranger branch-off waits for those who read enough doors.",
 		"Chests: about 1 in 8 bites back (sharp eyes spot a mimic, and you can leave it be). Nests may hold an egg, or an angry mother. Help a wounded stranger with a potion for a reward. A dying beast may leave you its egg.",
+		"Darker art: monsters, companions and backgrounds get a cold, grim grade, while fire, magic and eyes still glow and a faint moonlit edge keeps dark monsters easy to see. Turn it off in Menu > Dark art.",
+		"Fixed: choosing an elite room could leave an already-rare monster no tougher (or even weaker). Elites are now always a step up.",
 		"Work in progress: more of The Halls Below arrives part by part.",
 	]},
 	{"version": "0.12", "name": "The Deep", "lines": [

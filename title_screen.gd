@@ -48,7 +48,7 @@ func show_for(main_node) -> void:
 
 func _bg(zi: int) -> Texture2D:
 	var path := "res://art/bg/zone_%d.png" % zi
-	return load(path) if ResourceLoader.exists(path) else null
+	return DarkGrade.texture(path, DarkGrade.SCENE, false)
 
 func _pick_monster() -> void:
 	var z: Dictionary = GameData.ZONES[bg_keys[bg_index]]

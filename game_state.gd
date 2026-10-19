@@ -3746,7 +3746,12 @@ func _apply_path(kind: String) -> void:
 		"elite":
 			enemy_elite = true
 			if not enemy_is_boss and not enemy_goblin:
-				_apply_tier(maxi(enemy_tier, Monsters.EPIC))
+				# Always a step up: at least Epic, one tier higher, and never less health than before
+				var old_max := enemy_max_hp
+				_apply_tier(mini(maxi(enemy_tier + 1, Monsters.EPIC), Monsters.MYTHIC))
+				if enemy_max_hp <= old_max:
+					enemy_max_hp = int(old_max * 1.25)
+					enemy_hp = enemy_max_hp
 				say("[color=#f87171]An elite %s blocks the way![/color]" % enemy_name)
 			events.append({"type": "elite"})
 		"merchant":

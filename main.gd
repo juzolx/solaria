@@ -1170,6 +1170,7 @@ func apply_settings() -> void:
 	state.dev_mode = profile.dev_mode
 	state.path_rooms_on = profile.path_choice != "fight"
 	UI.colorblind = profile.colorblind
+	DarkGrade.set_enabled(profile.dark_art)
 	profile.save()
 
 func reset_save() -> void:
@@ -1287,7 +1288,7 @@ func _handle_events() -> void:
 				profile.save()  # the shared skill book lives in the profile
 			"realm_enter":
 				var bgp := "res://art/bg/zone_%d_0.png" % Realms.zone_for_id(e["id"])
-				moment_queue.append(["realm", e["name"], e["blurb"], Color(e["color"]), e["mechanic"], null, load(bgp) if ResourceLoader.exists(bgp) else null])
+				moment_queue.append(["realm", e["name"], e["blurb"], Color(e["color"]), e["mechanic"], null, DarkGrade.texture(bgp, DarkGrade.SCENE, false)])
 			"boss_intro":
 				moment_queue.append(["boss", e["name"], e["lore"], Color(e["color"]), e.get("sub", ""), null])
 			"awaken":

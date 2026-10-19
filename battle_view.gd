@@ -753,12 +753,12 @@ var _bgs := {}
 
 ## The area's own background (art/bg/zone_Z_S.png), or the zone's if missing.
 func _bg_tex(zone: int, sub := -1) -> Texture2D:
-	var key := "%d_%d" % [zone, sub]
+	var key := "%d_%d_%s" % [zone, sub, DarkGrade.enabled]
 	if not _bgs.has(key):
 		var path := "res://art/bg/zone_%d_%d.png" % [zone, sub]
 		if sub < 0 or not ResourceLoader.exists(path):
 			path = "res://art/bg/zone_%d.png" % zone
-		_bgs[key] = load(path) if ResourceLoader.exists(path) else null
+		_bgs[key] = DarkGrade.texture(path, DarkGrade.SCENE, false)
 	return _bgs[key]
 
 func _weapon_type() -> String:

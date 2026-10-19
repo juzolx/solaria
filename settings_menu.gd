@@ -9,6 +9,7 @@ var dev_box: VBoxContainer
 var dev_toggle: Button
 var sound_toggle: Button
 var fullscreen_toggle: Button
+var dark_toggle: Button
 var path_toggle: Button
 var a11y_buttons := {}
 var cloud_label: Label
@@ -67,6 +68,13 @@ func show_for(m) -> void:
 	for b in [path_toggle, fullscreen_toggle]:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grow.add_child(b)
+	dark_toggle = UI.button("", func():
+		profile.dark_art = not profile.dark_art
+		main.apply_settings()
+		_update())
+	dark_toggle.tooltip_text = "Darker, colder monsters and backgrounds. Fire and magic still glow. Shows on the next monster or screen."
+	dark_toggle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(dark_toggle)
 
 	content.add_child(UI.heading("Accessibility"))
 	var arow := GridContainer.new()
@@ -244,6 +252,7 @@ func _update() -> void:
 	(a11y_buttons["text_size"] as Button).text = "Interface size: %s" % ["Small", "Normal", "Large"][profile.text_size]
 	sound_toggle.text = "Sound: %s" % ("ON" if profile.sound_on else "OFF")
 	fullscreen_toggle.text = "Fullscreen: %s" % ("ON" if profile.fullscreen else "OFF")
+	dark_toggle.text = "Dark art: %s" % ("ON" if profile.dark_art else "OFF")
 	path_toggle.text = "Choose-your-path rooms: %s" % ("ON" if profile.path_choice == "ask" else "OFF")
 	dev_toggle.text = "Dev Mode: %s" % ("ON" if profile.dev_mode else "OFF")
 	dev_toggle.add_theme_color_override("font_color", UI.PINK if profile.dev_mode else UI.TEXT)

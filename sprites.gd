@@ -500,10 +500,16 @@ static func enemy_by_key(key: String) -> Dictionary:
 	var out := {}
 	if img:
 		var info: Dictionary = ArtInfo.DATA["enemies"].get(key, {})
-		out = {"tex": ImageTexture.create_from_image(img), "white": ImageTexture.create_from_image(_silhouette(img)),
+		out = {"tex": ImageTexture.create_from_image(DarkGrade.image(img)), "white": ImageTexture.create_from_image(_silhouette(img)),
 			"size": Vector2(img.get_size()), "foot": float(info.get("foot", img.get_height() - 1))}
 	_cache["e_" + key] = out
 	return out
+
+## Forgets the monster pictures (the dark grade was switched on or off).
+static func clear_monster_cache() -> void:
+	for k in _cache.keys():
+		if str(k).begins_with("e_"):
+			_cache.erase(k)
 
 # =====================================================================
 # Animation poses (pixel-perfect, made from one picture)
