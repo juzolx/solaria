@@ -3340,7 +3340,7 @@ code-map.md::TextFile::-1::1792399484::0::1::::<><><>0<>0<><>::
 dungeon-revamp-design.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
 next-update-notes.md::TextFile::-1::1792399494::0::1::::<><><>0<>0<><>::
 stage1-progress.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
-stage2-progress.md::TextFile::-1::1792426307::0::1::::<><><>0<>0<><>::
+stage2-progress.md::TextFile::-1::1792426626::0::1::::<><><>0<>0<><>::
 study-and-implement-list.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
 ::res://proto/::1792399796
 room3d.gd::GDScript::9127945263395229099::1792399784::0::1::::<>Control<><>0<>0<><>::
@@ -3422,7 +3422,7 @@ trap.wav::AudioStreamWAV::5886903482315739742::1792420851::1792420925::1::::<><>
 unique.wav::AudioStreamWAV::8636343434808806334::1792399749::1792399749::1::::<><><>0<>0<>24b953901c641877be8bd90b0855e4f1<>res://.godot/imported/unique.wav-01a11a3f6299a52159d56bc3979efc29.sample::
 weak_hit.wav::AudioStreamWAV::274863471046238212::1792399749::1792399749::1::::<><><>0<>0<>97037ddd4d71eda073d42530b2de2f5c<>res://.godot/imported/weak_hit.wav-2b1222b25052fbed1eab50fdb4b254b0.sample::
 whoosh.wav::AudioStreamWAV::1026168785560146225::1792420851::1792420925::1::::<><><>0<>0<>ad513f44c1eb5c39d6cf2d945c9dd358<>res://.godot/imported/whoosh.wav-e4488afa67299d9e17083d9f3d4c308c.sample::
-::res://tests/::1792426414
+::res://tests/::1792426778
 _boss_shot.gd::GDScript::4379987889203406784::1792421528::0::1::::<>SceneTree<><>0<>0<><>::
 _dump.gd::GDScript::7543732177956544217::1792399749::0::1::::<>SceneTree<><>0<>0<><>::
 _ghost_shot.gd::GDScript::6178283616557847475::1792404861::0::1::::<>SceneTree<><>0<>0<><>::
@@ -3478,7 +3478,7 @@ stage2_battle.gd::GDScript::1159569364474657876::1792399750::0::1::::<>SceneTree
 stage2_dark_grade.gd::GDScript::3531716919466113971::1792399784::0::1::::<>SceneTree<><>0<>0<><>::
 stage2_extraction.gd::GDScript::8472727975342358204::1792418509::0::1::::<>SceneTree<><>0<>0<><>::
 stage2_lifecycle.gd::GDScript::8028843492769716758::1792417820::0::1::::<>SceneTree<><>0<>0<><>::
-stage2_props.gd::GDScript::8159381052196991971::1792405321::0::1::::<>SceneTree<><>0<>0<><>::
+stage2_props.gd::GDScript::8159381052196991971::1792426778::0::1::::<>SceneTree<><>0<>0<><>::
 stage2_rooms.gd::GDScript::1297776073196833453::1792399750::0::1::::<>SceneTree<><>0<>0<><>::
 stage2_traps.gd::GDScript::6021885088797283440::1792399750::0::1::::<>SceneTree<><>0<>0<><>::
 stage3_auto.gd::GDScript::5792505858201746165::1792424867::0::1::::<>SceneTree<><>0<>0<><>::

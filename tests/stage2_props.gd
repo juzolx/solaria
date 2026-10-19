@@ -104,6 +104,8 @@ func _initialize() -> void:
 	var au := room("treasure")
 	au.room_props[0]["mimic"] = false
 	au.room_props[0]["spotted"] = false
+	au.exploring = true  # (a spotted mimic would have opened the doors already)
+	au.path_offer = []
 	au.autoplay = true
 	for _t in GameData.EXPLORE_WAIT_TURNS + 1:
 		au.take_turn()
