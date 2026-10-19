@@ -1884,6 +1884,7 @@ func _enemy_defeated() -> void:
 		World.champion_reward(self)
 	Grave.recover(self)
 	Wanderers.reward(self)
+	Lore.maybe_find(self, Lore.DROP_CHANCE)  # now and then, a torn page of the story
 	hero_hp = mini(hero_hp + int(get_max_hp() * 0.15 * (0.0 if curses.has("frailty") else 1.0)), get_max_hp())
 
 	# Inside a hidden portal: the rift decides what comes next

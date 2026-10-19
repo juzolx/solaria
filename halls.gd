@@ -221,6 +221,7 @@ static func interact(g: GameState, i: int) -> String:
 			g._add_gold(gold)
 			g._give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), g._rarity(20 + g._loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS), g.floor_num, g._new_id()))
 			out = "You open the chest: +%d gold and some gear." % gold
+			Lore.maybe_find(g, Lore.CHEST_CHANCE)
 			g.events.append({"type": "treasure"})
 		"altar":
 			p["used"] = true

@@ -145,6 +145,7 @@ var achievements := {}  # id -> date unlocked
 var title := ""         # the achievement title you're showing ("" = your class)
 var name_color := ""    # Stage 3: the name color you show (cosmetics.gd), "" = Plain
 var frame := ""         # the plate frame you show, "" = none
+var lore: Array = []     # Stage 3: lore pages found, in order (lore.gd)
 var bounties := {"day": "", "daily": [], "week": "", "weekly": []}
 var extra_titles: Array = []  # titles from feats, not deeds (a slain Calamity)
 var deeds: Array = []   # achievement ids whose rewards wait at the Guild Hall
@@ -174,6 +175,7 @@ func _from(d: Dictionary) -> void:
 	title = str(d.get("title", ""))
 	name_color = str(d.get("name_color", ""))
 	frame = str(d.get("frame", ""))
+	lore = d.get("lore", [])
 	bounties = d.get("bounties", bounties)
 	login = d.get("login", login)
 	guide = d.get("guide", {})
@@ -188,7 +190,7 @@ func save() -> void:
 	if f == null:
 		return
 	f.store_var({"bestiary": bestiary, "stats": stats, "collection": collection, "achievements": achievements,
-		"title": title, "name_color": name_color, "frame": frame, "bounties": bounties, "login": login, "guide": guide, "deeds": deeds, "extra_titles": extra_titles})
+		"title": title, "name_color": name_color, "frame": frame, "lore": lore, "bounties": bounties, "login": login, "guide": guide, "deeds": deeds, "extra_titles": extra_titles})
 
 static func delete() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))

@@ -20,6 +20,7 @@ var char_tabs: TabContainer
 var item_tabs: TabContainer
 var town_tabs: TabContainer
 var town_page: VBoxContainer    # the Town group: a "back to the map" bar over town_tabs
+var town_talk: Label            # what the building's keeper says
 var town_back: Control
 var fight_frame: Control
 var fight_panel: Control
@@ -49,6 +50,7 @@ var stats_tab: StatsTab
 var achievements_tab: AchievementsTab
 var bounty_tab: BountyTab
 var guide_tab: GuideTab
+var lore_tab: LoreTab
 var stash_tab: StashTab
 var party_tab: PartyTab
 var pet_tab: PetTab
@@ -638,6 +640,10 @@ func _build_ui() -> void:
 		refresh())
 	back_btn.custom_minimum_size = Vector2(0, UI.TAP)
 	town_back.add_child(back_btn)
+	# The keeper of whichever building you're in has something to say (lore.gd)
+	town_talk = UI.label("", 12, Color("#d8c9a8"))
+	town_talk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	town_page.add_child(town_talk)
 	town_tabs = TabContainer.new()
 	town_tabs.name = "TownPages"
 	town_tabs.theme_type_variation = "SubTabs"
@@ -670,12 +676,13 @@ func _build_ui() -> void:
 	inn_tab = InnTab.new()
 	mail_tab = MailTab.new()
 	guide_tab = GuideTab.new()
+	lore_tab = LoreTab.new()
 	for pair in [[char_tabs, hero_tab], [char_tabs, class_tab], [char_tabs, race_tab], [char_tabs, skills_tab], [char_tabs, party_tab], [char_tabs, pet_tab],
 			[item_tabs, gear_tab], [item_tabs, bag_tab],
 			[town_tabs, shop_tab], [town_tabs, craft_tab], [town_tabs, wheel_tab], [town_tabs, inn_tab], [town_tabs, stash_tab],
 			[town_tabs, bounty_tab], [town_tabs, achievements_tab], [town_tabs, mail_tab], [town_tabs, clinic_tab],
 			[codex_tabs, bestiary_tab], [codex_tabs, collection_tab],
-			[codex_tabs, stats_tab], [codex_tabs, guide_tab],
+			[codex_tabs, stats_tab], [codex_tabs, guide_tab], [codex_tabs, lore_tab],
 			[online_tabs, leaderboard_tab], [online_tabs, guild_tab], [online_tabs, raid_tab]]:
 		pair[1].setup(self)
 		(pair[0] as TabContainer).add_child(pair[1])
@@ -1071,6 +1078,7 @@ func _sync_town() -> void:
 	town_back.visible = is_tall
 	if not inside:
 		return
+	town_talk.text = Lore.talk(state, town_tabs.current_tab)
 	town_view.set_look(Town.look(state))
 	_town_heroes()
 	town_leave.text = "Into the dungeon"
