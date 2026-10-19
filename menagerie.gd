@@ -179,20 +179,22 @@ static func on_floor(g: GameState) -> void:
 		e["floors"] = int(e["floors"]) - 1
 		if int(e["floors"]) <= 0:
 			g.eggs.erase(e)
-			hatch(g)
+			hatch(g, e)
 
 # =====================================================================
 # Eggs
 # =====================================================================
 
 static func give_egg(g: GameState, from: String) -> void:
-	g.eggs.append({"id": g._new_id(), "floors": EGG_FLOORS, "from": from})
+	var egg := {"id": g._new_id(), "floors": EGG_FLOORS, "from": from}
+	EggQuests.assign(egg)  # a little care before it hatches
+	g.eggs.append(egg)
 	g.say("[color=#fde68a]You got an egg![/color] Something inside is moving. It hatches after %d floors." % EGG_FLOORS)
 	g.events.append({"type": "toast", "text": "An egg! It hatches in %d floors." % EGG_FLOORS})
 	g.tip("egg", "Eggs hatch after a few cleared floors, and anything could be inside. Any hero can keep the pet.")
 
 ## A random pet: any monster from the zones (most eggs don't care what's inside).
-static func hatch(g: GameState) -> Dictionary:
+static func hatch(g: GameState, egg := {}) -> Dictionary:
 	var pool := Monsters.all_monsters()
 	var name := ""
 	var art := ""
@@ -203,9 +205,15 @@ static func hatch(g: GameState) -> Dictionary:
 			break
 	var roll := randf() * 100.0
 	var tier := 0 if roll < 55.0 else (1 if roll < 82.0 else (2 if roll < 95.0 else (3 if roll < 99.3 else 4)))
+	var cherished := EggQuests.done(egg)
+	if cherished:
+		tier = mini(4, maxi(tier + 1, Monsters.RARE))  # its quest was done: it hatches stronger
 	var p := make_pet(g, name, art, tier, "egg")
-	g.say("[color=#fde68a]Your egg hatches: a baby %s![/color]" % name)
-	g.events.append({"type": "mini_event", "kind": "pet", "title": "IT HATCHED!", "sub": "A baby %s" % name})
+	if cherished:
+		p["cherished"] = true
+		g.codex.add("cherished_pets")
+	g.say("[color=#fde68a]Your egg hatches: a %sbaby %s![/color]" % ["Cherished " if cherished else "", name])
+	g.events.append({"type": "mini_event", "kind": "pet", "title": "IT HATCHED!", "sub": ("A Cherished baby %s" if cherished else "A baby %s") % name})
 	return p
 
 # =====================================================================

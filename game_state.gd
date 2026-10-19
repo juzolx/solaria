@@ -1805,6 +1805,7 @@ func _enemy_defeated() -> void:
 	if party != null:
 		party.on_kill(xp_gain)
 	Menagerie.on_kill(self)
+	EggQuests.on_kill(self, tier, was_boss)
 	var gold_gain := (2 + floor_num) * (10 if was_boss else 1)
 	gold_gain = int(gold_gain * float(t["gold"]) * (1.0 + (effect_total("gold_find") + bonus_pct + World.curse_gold(self)) / 100.0) * GameData.event_bonus("gold"))
 	if curse_turns > 0:
@@ -3821,6 +3822,7 @@ func _apply_path(kind: String) -> void:
 			_give_item(item)
 			events.append({"type": "treasure"})
 		"rest":
+			EggQuests.on_rest(self)
 			hero_hp = get_max_hp()
 			skill_cds.clear()
 			elixirs["rested"] = int(GameData.ELIXIRS["rested"]["turns"])

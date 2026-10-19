@@ -50,7 +50,7 @@ func _owned() -> void:
 		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		h.add_child(pic)
-		h.add_child(UI.wrap("An egg. Something inside is moving. It hatches in %d floor%s." % [int(e["floors"]), "" if int(e["floors"]) == 1 else "s"], 13, UI.TEXT))
+		h.add_child(UI.wrap("An egg. Something inside is moving. It hatches in %d floor%s.\nQuest: %s" % [int(e["floors"]), "" if int(e["floors"]) == 1 else "s", EggQuests.text(e)], 13, UI.TEXT))
 	# Empty slots hint at what's out there (never how)
 	var empty := maxi(0, 3 - state.pets.size() - state.eggs.size())
 	for i in empty:
