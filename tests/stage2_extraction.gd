@@ -55,6 +55,32 @@ func _initialize() -> void:
 	g._give_item(GameData.make_item("Chest", 2, g.floor_num, g._new_id()))
 	g._hero_died()
 	check(not g.dive.is_empty() and int(g.dive["gold"]) == g.gold, "after a fall the dive counts again from the checkpoint")
+	# The first dive is the tutorial: clear 3 floors, then head home
+	var n := GameState.new()
+	n.codex.path = ""
+	n.autosave = false
+	n.new_game()
+	n.choose_class("Warrior")
+	n.stat_points = 0
+	var g1: String = World.next_goal(n).get("text", "")
+	check(g1.begins_with("First dive: clear 3 more floors"), "a new hero is told to clear 3 floors (%s)" % g1)
+	n.floor_num = 4
+	n.best_floor = 4
+	var g2: String = World.next_goal(n).get("text", "")
+	check(g2.begins_with("Head home"), "after 3 floors: head home (%s)" % g2)
+	n.path_offer.clear()
+	check(Town.enter(n, true) and n.codex.stat("home_trips") == 0, "a dive with no snapshot isn't counted")
+	Town.leave(n)
+	n.floor_num += 1
+	n.path_offer.clear()
+	var _back := Town.enter(n, true)
+	check(n.codex.stat("home_trips") == 1, "a safe dive counts as a trip home")
+	Town.leave(n)
+	check(World.first_dive_goal(n).is_empty(), "the tutorial goal is gone once you've made it home")
+	var vet := hero()
+	vet.best_floor = 40
+	vet.in_town = false
+	check(World.first_dive_goal(vet).is_empty(), "veterans never see the first-dive goal")
 	print("STAGE2 EXTRACTION TESTS DONE, failures: ", fails)
 	GameState.delete_saves()
 	quit()

@@ -158,6 +158,7 @@ static func start_dive(g: GameState) -> void:
 static func _home_tally(g: GameState, carried: int) -> void:
 	if g.dive.is_empty():
 		return
+	g.codex.add("home_trips")  # a dive that ended safely at home (the first one is the tutorial goal)
 	var before: Array = g.dive.get("items", [])
 	var found := 0
 	var best: Dictionary = {}

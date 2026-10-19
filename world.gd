@@ -377,6 +377,21 @@ static func pet_first(g: GameState) -> bool:
 # =====================================================================
 
 ## {"text", "pct" (0..1 or -1), "color"} for the goal line under the fight.
+const FIRST_DIVE_FLOORS := 3
+
+## Until a new hero has made it home once: "clear 3 floors", then "head home".
+## Only for new heroes (best floor under 15), so veterans never see the tutorial.
+static func first_dive_goal(g: GameState) -> Dictionary:
+	if g.in_town or g.best_floor >= 15 or g.codex.stat("home_trips") > 0:
+		return {}
+	var start := int(g.dive.get("floor", 1)) if not g.dive.is_empty() else 1
+	var cleared := maxi(0, g.floor_num - start)
+	if cleared < FIRST_DIVE_FLOORS:
+		var left := FIRST_DIVE_FLOORS - cleared
+		return {"text": "First dive: clear %d more floor%s, then head home with your loot" % [left, "" if left == 1 else "s"],
+			"pct": float(cleared) / FIRST_DIVE_FLOORS, "color": UI.GOLD}
+	return {"text": "Head home to keep what you found: tap Town (gold you carry is lost if you fall)", "pct": 1.0, "color": UI.GREEN}
+
 static func next_goal(g: GameState) -> Dictionary:
 	if g.hero_class == "":
 		return {"text": "Choose your class", "pct": -1.0, "color": UI.GOLD}
@@ -389,6 +404,10 @@ static func next_goal(g: GameState) -> Dictionary:
 		return {"text": "%d stat points to spend (Character > Hero)" % g.stat_points, "pct": -1.0, "color": UI.GOLD}
 	if g.upgrade_count() > 0:
 		return {"text": "Upgrades in your bag: Items > Gear > Equip Best", "pct": -1.0, "color": UI.GREEN}
+	# The first dive teaches the whole game: go down, then get home to keep what you found
+	var fd := first_dive_goal(g)
+	if not fd.is_empty():
+		return fd
 	var goals: Array = []
 	# The next evolution
 	var t := g.class_path.size()
