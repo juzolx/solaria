@@ -8,6 +8,7 @@ var m
 var state: GameState
 var grid: VBoxContainer
 var gold_label: Label
+var say_label: Label   # what Snik just said
 
 func show_for(main_node) -> void:
 	m = main_node
@@ -17,12 +18,18 @@ func show_for(main_node) -> void:
 		open(m, "%s, the goblin trader" % GameData.GOBLIN_NAME, 640.0, Color("#a3e635"))
 	else:
 		open(m, "%s merchant" % who, 640.0, Color(Races.info(who)["color"]))
-	var greet := UI.label("\"Cheap, cheap! Only what's in your pockets, though. And I'll take that junk off your back.\"" if who == "" else
+	var greet := UI.label(Snik.greeting(state) if who == "" else
 		"\"Friends of the %s get our best prices. Friends get better ones.\" (They see you as %s.)" % [Lineage.race_plural(who), Races.rep_level(Lineage.rep(state, who))[0]], 13, UI.DIM)
 	greet.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(greet)
+	if who == "":
+		var mood := UI.label("Snik sees you as: %s  (%d purchases)" % [Snik.friendship_name(state), state.codex.stat("merchant_buys")], 12, Color("#a3e635"))
+		content.add_child(mood)
 	gold_label = UI.label("", 14, UI.GOLD)
 	content.add_child(gold_label)
+	say_label = UI.label("", 13, UI.TEXT)
+	say_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(say_label)
 	grid = UI.vbox(6)
 	content.add_child(grid)
 	_fill()
@@ -81,8 +88,26 @@ func _fill() -> void:
 	gold_label.text = "Gold you carry: %d" % state.gold
 	if state.bag_full():
 		gold_label.text += "    Your bag is full (%d / %d): sell, salvage or stash something to buy gear." % [state.bag.size(), state.bag_capacity()]
-	rows(m, grid, func(): _fill(); m.refresh())
+	var bought := state.codex.stat("merchant_buys")
+	rows(m, grid, func():
+		if state.codex.stat("merchant_buys") > bought:
+			say_label.text = Snik.thanks(state) if state.merchant_who == "" else ""
+		_fill()
+		m.refresh())
 	if state.merchant_who == "":
+		# Haggling: once a visit
+		var hb := UI.button("Haggle with Snik (%d%% chance)" % int(Snik.haggle_chance(state)) if Snik.can_haggle(state)
+			else ("You talked him down: 20% off" if state.merchant_haggle == "won" else "He's still sulking: prices +10%"), func():
+			var said := Snik.haggle(state)
+			m.sfx.play("buy" if state.merchant_haggle == "won" else "error")
+			say_label.text = "\"%s\"" % said
+			_fill()
+			m.refresh())
+		hb.custom_minimum_size = Vector2(0, UI.TAP)
+		hb.tooltip_text = "Once a visit. Win: 20% off everything. Lose: he marks it all up 10%."
+		hb.disabled = not Snik.can_haggle(state)
+		hb.add_theme_color_override("font_color", Color("#a3e635"))
+		grid.add_child(hb)
 		var junk := state.goblin_junk()
 		var jb := UI.button("Sell junk to %s: %d item%s for %d gold" % [GameData.GOBLIN_NAME, junk.size(), "" if junk.size() == 1 else "s", state.goblin_junk_value()] if not junk.is_empty() else "No junk to sell (Common and Uncommon, unlocked)", func():
 			if state.goblin_buy_junk() > 0:

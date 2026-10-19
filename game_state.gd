@@ -232,6 +232,7 @@ var curse_turns := 0        # cursed shrine: tougher monsters, better loot
 var luck_turns := 0         # Scroll of Luck
 var hunt_spawns := 0        # Hunter's Scroll: next monsters are more often rare
 var merchant: Array = []    # the wandering merchant's stock while you're with them
+var merchant_haggle := ""   # Stage 3: "" (not tried), "won" or "lost" this visit (snik.gd)
 var loadouts: Array = [{}, {}, {}]  # saved gear sets: slot -> item id
 var loot_filter := {"slots": {}, "weaker": false}  # extra auto-salvage rules (Common-Rare only)
 var codex := Codex.new()    # account-wide bestiary, stats, achievements (main swaps in the saved one)
@@ -3130,7 +3131,7 @@ func save_game() -> void:
 		"curse_turns": curse_turns,
 		"luck_turns": luck_turns,
 		"hunt_spawns": hunt_spawns,
-		"merchant": merchant,
+		"merchant": merchant, "merchant_haggle": merchant_haggle,
 		"loadouts": loadouts,
 		"loot_filter": loot_filter,
 		"enemy_goblin": enemy_goblin,
@@ -3387,6 +3388,7 @@ func load_game() -> bool:
 	luck_turns = int(data.get("luck_turns", 0))
 	hunt_spawns = int(data.get("hunt_spawns", 0))
 	merchant = data.get("merchant", [])
+	merchant_haggle = String(data.get("merchant_haggle", ""))
 	var saved_loadouts: Array = data.get("loadouts", [])
 	for i in mini(saved_loadouts.size(), loadouts.size()):
 		loadouts[i] = saved_loadouts[i]
@@ -3864,6 +3866,7 @@ func _gold_scale() -> int:
 ## the gold you carry. Deeper down his gear gets better.
 func _make_merchant() -> void:
 	merchant = []
+	merchant_haggle = ""
 	merchant_who = ""
 	for _i in 2:
 		var r := 2
