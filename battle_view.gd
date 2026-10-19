@@ -1706,6 +1706,7 @@ func _draw() -> void:
 		draw_string_outline(font, Vector2(-slide, 79), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, w, sfs, 3, Color(0, 0, 0, 0.8 * a))
 		draw_string(font, Vector2(-slide, 79), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, w, sfs, Color(1, 1, 1, 0.85 * a))
 
+	_draw_team_strip(font)
 	_draw_intro(font, w, h)
 
 	# Tip toast at the top
@@ -2185,9 +2186,6 @@ func _draw_hero_status(r: Rect2, font: Font) -> void:
 		if not info.is_empty():
 			var stk := int(state.hero_stacks.get(k, 1))
 			chips.append(["%s%s %d" % [info["name"], (" x%d" % stk) if stk > 1 else "", int(state.hero_status[k])], Color(info["color"])])
-	var tsl := Synergies.strike_left(state)
-	if tsl > 0:
-		chips.append(["Team Strike in %d" % tsl, Color("#fbbf24")])
 	_chip_row(chips, r.get_center().x, maxf(34.0, r.position.y - 4.0), font)
 
 ## Your menagerie pets on the run (caught or hatched), at the hero's right. They grow
@@ -2222,3 +2220,41 @@ func _draw_menagerie() -> void:
 			for off in [Vector2(-1.5, 0), Vector2(1.5, 0), Vector2(0, -1.5)]:
 				draw_texture_rect(art["white"], Rect2(r.position + off, r.size), false, Color(1.0, 0.85, 0.4, gl * hero_alpha))
 		draw_texture_rect(SpriteLight.lit(art["tex"], zi), r, false, Color(1, 1, 1, (0.55 if int(p["hurt"]) > 0 else 1.0) * hero_alpha))
+
+var _strip_pics := {}
+## With companions: a compact strip at the top-left, a portrait, name and HP bar for
+## each hero, so you can read the whole team's health at a glance.
+func _draw_team_strip(font: Font) -> void:
+	if state == null or state.party == null or state.party.size() == 0 or state.in_town:
+		return
+	var rows: Array = [[state, state.hero_hp, state.get_max_hp(), state.leader_down, "you"]]
+	for m in state.party.members:
+		rows.append([m.hero, m.hp, m.max_hp(), m.knocked_out, "m%d" % m.slot])
+	var x := 6.0
+	var y := 26.0
+	var cw := minf(132.0, (size.x - 12.0) / rows.size() - 4.0)
+	for r in rows:
+		var g: GameState = r[0]
+		var key: String = r[4]
+		if not _strip_pics.has(key):
+			_strip_pics[key] = Sprites.portrait(g.appearance, g.hero_looks())
+		var box := Rect2(x, y, cw, 28)
+		draw_rect(box, Color(0.03, 0.04, 0.08, 0.78))
+		draw_rect(box, Color(Color(g.class_info().get("color", "#94a3b8")), 0.7), false, 1.0)
+		var pic: Texture2D = _strip_pics[key]
+		var down: bool = r[3]
+		if pic:
+			draw_texture_rect(pic, Rect2(x + 2, y + 2, 24, 24), false, Color(1, 1, 1, 0.4 if down else 1.0))
+		var pct := clampf(float(r[1]) / maxf(1.0, float(r[2])), 0.0, 1.0)
+		var bw := cw - 34.0
+		draw_string(font, Vector2(x + 30, y + 11), g.hero_name if g.hero_name != "" else g.hero_class, HORIZONTAL_ALIGNMENT_LEFT, bw, 10, Color(1, 1, 1, 0.5 if down else 0.9))
+		draw_rect(Rect2(x + 30, y + 16, bw, 6), Color(0.1, 0.1, 0.14))
+		var col := Color("#22c55e") if pct > 0.5 else (Color("#eab308") if pct > 0.25 else Color("#ef4444"))
+		draw_rect(Rect2(x + 30, y + 16, bw * pct, 6), Color(0.4, 0.4, 0.4) if down else col)
+		if down:
+			draw_string(font, Vector2(x + 30, y + 27), "DOWN", HORIZONTAL_ALIGNMENT_LEFT, bw, 9, Color("#f87171"))
+		x += cw + 4.0
+	var tsl := Synergies.strike_left(state)
+	if tsl > 0:
+		draw_string_outline(font, Vector2(6, y + 41), "Team Strike in %d" % tsl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, 3, Color(0, 0, 0, 0.9))
+		draw_string(font, Vector2(6, y + 41), "Team Strike in %d" % tsl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#fbbf24"))

@@ -1,9 +1,9 @@
 78098b89c88a74ebe8c20117b8754620
-::res://::1792442969
+::res://::1792443248
 achievements_tab.gd::GDScript::225817628144516105::1792426149::0::1::::AchievementsTab<>VBoxContainer<><>0<>0<><>::
 art_info.gd::GDScript::2121761137587333428::1792440491::0::1::::ArtInfo<>RefCounted<><>0<>0<><>::
 bag_tab.gd::GDScript::7963412957330005317::1792399749::0::1::::BagTab<>VBoxContainer<><>0<>0<><>::
-battle_view.gd::GDScript::1321114398721736239::1792442714::0::1::::BattleView<>Control<><>0<>0<><>::
+battle_view.gd::GDScript::1321114398721736239::1792443248::0::1::::BattleView<>Control<><>0<>0<><>::
 bestiary_tab.gd::GDScript::3473921906557743363::1792438576::0::1::::BestiaryTab<>HBoxContainer<><>0<>0<><>::
 bounty_tab.gd::GDScript::6266114143799082059::1792399749::0::1::::BountyTab<>ScrollContainer<><>0<>0<><>::
 calamity.gd::GDScript::1610204335130373049::1792399749::0::1::::Calamity<>RefCounted<><>0<>0<><>::
@@ -3363,7 +3363,7 @@ code-map.md::TextFile::-1::1792399484::0::1::::<><><>0<>0<><>::
 dungeon-revamp-design.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
 next-update-notes.md::TextFile::-1::1792399494::0::1::::<><><>0<>0<><>::
 stage1-progress.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
-stage2-progress.md::TextFile::-1::1792442922::0::1::::<><><>0<>0<><>::
+stage2-progress.md::TextFile::-1::1792443193::0::1::::<><><>0<>0<><>::
 study-and-implement-list.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
 ::res://proto/::1792399796
 room3d.gd::GDScript::9127945263395229099::1792399784::0::1::::<>Control<><>0<>0<><>::
@@ -3445,7 +3445,7 @@ trap.wav::AudioStreamWAV::5886903482315739742::1792420851::1792420925::1::::<><>
 unique.wav::AudioStreamWAV::8636343434808806334::1792399749::1792399749::1::::<><><>0<>0<>24b953901c641877be8bd90b0855e4f1<>res://.godot/imported/unique.wav-01a11a3f6299a52159d56bc3979efc29.sample::
 weak_hit.wav::AudioStreamWAV::274863471046238212::1792399749::1792399749::1::::<><><>0<>0<>97037ddd4d71eda073d42530b2de2f5c<>res://.godot/imported/weak_hit.wav-2b1222b25052fbed1eab50fdb4b254b0.sample::
 whoosh.wav::AudioStreamWAV::1026168785560146225::1792420851::1792420925::1::::<><><>0<>0<>ad513f44c1eb5c39d6cf2d945c9dd358<>res://.godot/imported/whoosh.wav-e4488afa67299d9e17083d9f3d4c308c.sample::
-::res://tests/::1792442986
+::res://tests/::1792443232
 _boss_shot.gd::GDScript::4379987889203406784::1792421528::0::1::::<>SceneTree<><>0<>0<><>::
 _camp_shot.gd::GDScript::5456053022506633982::1792439732::0::1::::<>SceneTree<><>0<>0<><>::
 _cd_shot.gd::GDScript::2063642194249711510::1792442971::0::1::::<>SceneTree<><>0<>0<><>::
@@ -3464,6 +3464,7 @@ _pets_shot.gd::GDScript::8696021299785636614::1792438835::0::1::::<>SceneTree<><
 _rift_shot.gd::GDScript::906296518665649426::1792427126::0::1::::<>SceneTree<><>0<>0<><>::
 _room3d_shot.gd::GDScript::1091020687373335100::1792419538::0::1::::<>SceneTree<><>0<>0<><>::
 _snik_shot.gd::GDScript::341919956889541762::1792434829::0::1::::<>SceneTree<><>0<>0<><>::
+_strip_shot.gd::GDScript::3897584853497098943::1792443232::0::1::::<>SceneTree<><>0<>0<><>::
 _team_shot.gd::GDScript::4661515701742640833::1792421227::0::1::::<>SceneTree<><>0<>0<><>::
 _tier_shot.gd::GDScript::1374463898402426384::1792420561::0::1::::<>SceneTree<><>0<>0<><>::
 _ui_width.gd::GDScript::3555152043916074216::1792403336::0::1::::<>SceneTree<><>0<>0<><>::
