@@ -124,7 +124,7 @@ func setup(m) -> void:
 	for r in [0, 1, 2]:
 		var lb := UI.button("+ all %s" % GameData.RARITY_NAMES[r], _load_rarity.bind(r))
 		lb.add_theme_color_override("font_color", Color(GameData.color_of(r)))
-		lb.add_theme_font_size_override("font_size", 11)
+		lb.add_theme_font_size_override("font_size", UI.MIN_FONT)
 		lb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		load_row.add_child(lb)
 	info = UI.rich(13)

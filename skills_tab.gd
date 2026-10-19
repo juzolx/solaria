@@ -54,7 +54,7 @@ func setup(m) -> void:
 	add_child(filter_pick)
 	list = ItemList.new()
 	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	list.add_theme_font_size_override("font_size", 12)
+	list.add_theme_font_size_override("font_size", UI.MIN_FONT)
 	list.item_selected.connect(func(i: int):
 		if i >= 0 and i < ids.size():
 			selected = ids[i]
@@ -84,7 +84,7 @@ func _slot_button(id: String, open: bool, need: int, active: bool) -> Button:
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.custom_minimum_size = Vector2(0, 34)
 	b.clip_text = true
-	b.add_theme_font_size_override("font_size", 12)
+	b.add_theme_font_size_override("font_size", UI.MIN_FONT)
 	if not open:
 		b.text = "Lv %d" % need
 		b.disabled = true
@@ -137,7 +137,7 @@ func refresh() -> void:
 		sb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		sb.custom_minimum_size = Vector2(0, 34)
 		sb.clip_text = true
-		sb.add_theme_font_size_override("font_size", 12)
+		sb.add_theme_font_size_override("font_size", UI.MIN_FONT)
 		var sc := Color(Signatures.COLOR)
 		sb.text = "Signature: %s" % (SkillData.skill_name(state.sig_slot) if state.sig_slot != "" else "(none)")
 		sb.add_theme_stylebox_override("normal", UI.style(sc.darkened(0.75), sc.darkened(0.2), 6, 4, 1))
@@ -221,7 +221,7 @@ func _craft_popup() -> void:
 	o.content.add_child(UI.label("You have %d dust. Dust comes from stones of skills you've already maxed." % state.dust, 13, UI.DIM))
 	var l := ItemList.new()
 	l.custom_minimum_size = Vector2(0, 340)
-	l.add_theme_font_size_override("font_size", 12)
+	l.add_theme_font_size_override("font_size", UI.MIN_FONT)
 	o.content.add_child(l)
 	var all_ids: Array = SkillData.SKILLS.keys()
 	all_ids.sort_custom(func(a, b): return SkillData.skill_name(a) < SkillData.skill_name(b))

@@ -183,7 +183,7 @@ func show_for(m) -> void:
 			b.disabled = not main.started
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			b.add_theme_color_override("font_color", UI.PINK)
-			b.add_theme_font_size_override("font_size", 12)
+			b.add_theme_font_size_override("font_size", UI.MIN_FONT)
 			grid.add_child(b)
 	var cal_b := UI.button("Summon this region's Calamity", func():
 		if main.started and not state.in_town:

@@ -23,7 +23,7 @@ func setup(m) -> void:
 	list = ItemList.new()
 	list.custom_minimum_size = Vector2(200, 0)
 	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	list.add_theme_font_size_override("font_size", 12)
+	list.add_theme_font_size_override("font_size", UI.MIN_FONT)
 	list.item_selected.connect(func(i: int):
 		if i >= 0 and i < keys.size() and keys[i] != "":
 			selected = keys[i]

@@ -22,9 +22,9 @@ static var sfx: Sfx  # set by main, used for button clicks
 static var tip_layer: CanvasLayer  # set by main: where tap-tips appear
 static var _tip: Control
 const TAP := 44  # smallest comfortable tap target on a phone (pixels at the design size)
-const BUTTON_H := 36  # every button is at least this tall (the window scales up on phones)
+const BUTTON_H := 42  # every button is at least this tall (~36 pt on a phone; Apple asks for 44 pt on main controls)
 const EDGE := Color("#64759b")  # edges of things you can press: 3:1 contrast or better
-const MIN_FONT := 12
+const MIN_FONT := 13  # ~11 pt on a phone at the 504-wide layout
 static var colorblind := false  # set from the settings: adds words and symbols where color carries meaning
 
 ## 9680 -> "9680", 12400 -> "12.4k", 3500000 -> "3.5M": short numbers for tight spots.

@@ -93,7 +93,7 @@ func _build() -> void:
 		var first := zb * GameData.ZONE_FLOORS + 1
 		var zone := GameData.zone_for_floor(first)
 		var b := UI.button(GameData.rank_prefix(first) + str(zone["name"]), _show_zone.bind(zb))
-		b.add_theme_font_size_override("font_size", 12)
+		b.add_theme_font_size_override("font_size", UI.MIN_FONT)
 		if zb == zone_shown:
 			b.add_theme_stylebox_override("normal", UI.style(Color(zone["color"]).darkened(0.5), Color(zone["color"]).lightened(0.3), 6, 4, 2))
 		zone_bar.add_child(b)

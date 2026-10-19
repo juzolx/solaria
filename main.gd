@@ -462,7 +462,7 @@ func _show_recap() -> void:
 		profile.save()
 		if is_instance_valid(recap_panel):
 			recap_panel.queue_free())
-	off.add_theme_font_size_override("font_size", 12)
+	off.add_theme_font_size_override("font_size", UI.MIN_FONT)
 	v.add_child(off)
 	recap_panel.custom_minimum_size.x = minf(520.0, battle.size.x - 24.0)
 	await get_tree().process_frame
@@ -717,7 +717,7 @@ func _build_top_bar(parent: Control) -> void:
 	var bp := UI.pill(UI.RED)
 	boss_pill = bp[0]
 	boss_label = bp[1]
-	boss_label.add_theme_font_size_override("font_size", 12)
+	boss_label.add_theme_font_size_override("font_size", UI.MIN_FONT)
 	boss_pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	frow.add_child(boss_pill)
 	best_label = UI.label("", 12, UI.DIM)
@@ -731,7 +731,7 @@ func _build_top_bar(parent: Control) -> void:
 		names.append(GameData.EVENTS[id]["name"])
 		tips.append("%s: %s" % [GameData.EVENTS[id]["name"], GameData.EVENTS[id]["text"]])
 	(ep[1] as Label).text = " + ".join(names)
-	(ep[1] as Label).add_theme_font_size_override("font_size", 12)
+	(ep[1] as Label).add_theme_font_size_override("font_size", UI.MIN_FONT)
 	event_pill.tooltip_text = "Events running now:\n" + "\n".join(tips)
 	event_pill.mouse_filter = Control.MOUSE_FILTER_STOP
 	event_pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -1481,7 +1481,7 @@ func _build_nav(parent: Control) -> void:
 		b.expand_icon = false
 		b.custom_minimum_size = Vector2(0, 58)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.add_theme_font_size_override("font_size", 12)
+		b.add_theme_font_size_override("font_size", UI.MIN_FONT)
 		for st in ["normal", "hover", "pressed", "focus"]:
 			var sb := UI.style(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 8, 2, 0)
 			if st == "focus":

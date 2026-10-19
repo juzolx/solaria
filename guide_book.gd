@@ -83,7 +83,7 @@ func _show_page(id: String) -> void:
 		var b := UI.button(p["title"] if have else "???", _show_page.bind(p["id"]))
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.disabled = not have
-		b.add_theme_font_size_override("font_size", 12)
+		b.add_theme_font_size_override("font_size", UI.MIN_FONT)
 		if p["id"] == id:
 			b.add_theme_color_override("font_color", UI.GOLD)
 		list.add_child(b)
