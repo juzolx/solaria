@@ -1414,6 +1414,16 @@ func _draw() -> void:
 				draw_texture_rect(ewhite, Rect2(local.position + off, local.size), false, glow)
 		else:
 			draw_texture_rect(ewhite, Rect2(local.position + Vector2(0, -er.size.y / maxf(1.0, (art.get("size", Vector2(64, 64)) as Vector2).y)), local.size), false, Color(_rim_color(), 0.38 * enemy_alpha))
+			# Rare and tougher monsters wear a crisp outline in their tier color (Mythic: two)
+			if state.enemy_tier >= 2 and not boss and not Realms.hides_tier(state):
+				var tc := Color(Monsters.tier_color(state.enemy_tier))
+				var px := er.size.y / maxf(1.0, (art.get("size", Vector2(64, 64)) as Vector2).y)
+				var ta := (0.7 + 0.3 * sin(bob * (2.0 + state.enemy_tier * 0.5))) * enemy_alpha
+				if state.enemy_tier >= 5:
+					for off in [Vector2(-2, 0), Vector2(2, 0), Vector2(0, -2), Vector2(0, 2), Vector2(-1.5, -1.5), Vector2(1.5, -1.5), Vector2(-1.5, 1.5), Vector2(1.5, 1.5)]:
+						draw_texture_rect(ewhite, Rect2(local.position + off * px, local.size), false, Color(0.25, 0.0, 0.05, 0.8 * enemy_alpha))
+				for off in [Vector2(-px, 0), Vector2(px, 0), Vector2(0, -px), Vector2(0, px)]:
+					draw_texture_rect(ewhite, Rect2(local.position + off, local.size), false, Color(tc, ta))
 		draw_texture_rect(etex, local, false, etint)
 		if enemy_flash > 0.0:
 			draw_texture_rect(ewhite, local, false, Color(1, 1, 1, enemy_flash * 0.85 * enemy_alpha))

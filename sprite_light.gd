@@ -55,6 +55,8 @@ static func shade(img: Image, key_col: Color, rim_col: Color) -> Image:
 	var key := 0.75
 	var flat := amb + key * (ldir.z + WRAP) / (1.0 + WRAP)
 	var k := float(radius) * 1.6
+	# the region tints every monster a little (same beast, its own colors in each region)
+	var tint := rim_col / maxf(0.001, maxf(rim_col.r, maxf(rim_col.g, rim_col.b)))
 	for y in h:
 		for x in w:
 			var i := y * w + x
@@ -65,6 +67,7 @@ static func shade(img: Image, key_col: Color, rim_col: Color) -> Image:
 			var n := Vector3(-gx * k, -gy * k, 1.0).normalized()
 			var wrap := maxf(0.0, (n.dot(ldir) + WRAP) / (1.0 + WRAP))
 			var c := img.get_pixel(x, y)
+			c = Color(c.r * lerpf(1.0, tint.r, 0.3), c.g * lerpf(1.0, tint.g, 0.3), c.b * lerpf(1.0, tint.b, 0.3), c.a)
 			var lr := (amb + key * wrap * key_col.r) / flat
 			var lg := (amb + key * wrap * key_col.g) / flat
 			var lb := (amb + key * wrap * key_col.b) / flat
