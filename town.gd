@@ -441,3 +441,14 @@ static func claim_deed(g: GameState, id: String) -> String:
 	g.codex.save()
 	g.save_game()
 	return String(l["title"])
+
+## Gear found this dive that a fall would drop (for the "at risk" line in the top bar).
+static func dive_finds(g: GameState) -> int:
+	if g.dive.is_empty():
+		return 0
+	var before: Array = g.dive.get("items", [])
+	var n := 0
+	for it in g.bag:
+		if not int(it.get("id", -1)) in before and not GameState.is_bound(it):
+			n += 1
+	return n

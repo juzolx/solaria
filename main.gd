@@ -1506,10 +1506,13 @@ func _refresh_top() -> void:
 		pips[i].add_theme_stylebox_override("panel", st)
 	best_label.text = "Best %d" % state.best_floor
 	# In the dungeon: what you carry (at risk) over what's safe in the Bank
-	var two := not state.in_town and state.bank > 0
-	gold_label.text = "Gold  %s\nBank  %s" % [UI.short(state.gold), UI.short(state.bank)] if two else "Gold  %d" % state.gold
+	# (0.13+: always in the dungeon, with the gear found this dive as "+N")
+	var two := not state.in_town
+	var finds := Town.dive_finds(state)
+	gold_label.text = ("Risk  %s%s\nBank  %s" % [UI.short(state.gold), ("  +%d" % finds) if finds > 0 else "", UI.short(state.bank)]) if two else "Gold  %d" % state.gold
 	gold_label.add_theme_font_size_override("font_size", 11 if two else 15)
-	gold_label.get_parent().tooltip_text = "Carried gold: %d (lost if you fall)\nBank: %d (always safe)" % [state.gold, state.bank] if two else "Gold: from enemies and selling. Spend it in Town."
+	gold_label.add_theme_color_override("font_color", Color("#fca5a5") if two and (state.gold > 0 or finds > 0) else UI.GOLD)
+	gold_label.get_parent().tooltip_text = ("At risk if you fall: %d gold you carry and %d piece%s of gear found this dive (plus what you wear).\nBank: %d (always safe). Head home from the Town tab to keep it all." % [state.gold, finds, "" if finds == 1 else "s", state.bank]) if two else "Gold: from enemies and selling. Spend it in Town."
 	scrap_label.text = "Scrap  %d" % state.scrap
 	potion_label.text = "Potions  %d" % state.potions
 

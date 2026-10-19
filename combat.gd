@@ -367,7 +367,7 @@ static func boss_turn(g: GameState) -> String:
 		if tc > 0 and tc % CRUSH_EVERY == CRUSH_EVERY - 1:
 			start_windup(g, CRUSH_MULT)
 			ph = g.boss_phase
-			line += ". [color=#f59e0b]%s winds up a crushing blow! Use a skill to stagger it.[/color]" % g.enemy_name
+			line += ". [color=#f59e0b]%s winds up a crushing blow! Use a skill to stagger it[/color]" % g.enemy_name
 	if "enrage" in g.boss_mechanics:
 		var t := int(g.cfight.get("turns", 0))
 		if t == ENRAGE_TURNS:
@@ -426,7 +426,8 @@ static func monster_turn(g: GameState) -> String:
 	var tc := int(g.cfight.get("turns", 0))
 	if tc > 0 and tc % HEAVY_EVERY == HEAVY_EVERY - 1 and randf() < 0.7:
 		start_windup(g, HEAVY_MULT)
-		return ". [color=#f59e0b]The %s winds up a heavy blow! Use a skill to stagger it.[/color]" % g.enemy_name
+		var who := g.enemy_name if g.enemy_wanderer else "The " + g.enemy_name
+		return ". [color=#f59e0b]%s winds up a heavy blow! Use a skill to stagger it[/color]" % who
 	return ""
 
 ## The boss's attack multiplier from enrage.

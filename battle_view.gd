@@ -483,6 +483,8 @@ func play(events: Array[Dictionary]) -> void:
 						_fx("shatter", _enemy_center(), 1.6)
 					banner_text = String(e["name"]).to_upper()
 					banner_sub = String(Combat.MECHANICS[e["id"]]["text"]).replace("%d", str(Combat.ENRAGE_TURNS))
+					if mid == "crush" and not state.enemy_is_boss:
+						banner_sub = "It hit with everything it had (2x). Stagger the next one with a skill."
 					banner_color = Color(e["color"])
 					banner_alpha = 2.0
 					shake = maxf(shake, 6.0))
@@ -1698,7 +1700,11 @@ func _draw() -> void:
 			bfs -= 1
 		draw_string_outline(font, Vector2(slide, 62), banner_text, HORIZONTAL_ALIGNMENT_CENTER, w, bfs, 6, Color(0, 0, 0, a))
 		draw_string(font, Vector2(slide, 62), banner_text, HORIZONTAL_ALIGNMENT_CENTER, w, bfs, Color(big_color, a))
-		draw_string(font, Vector2(-slide, 79), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, w, 13, Color(1, 1, 1, 0.85 * a))
+		var sfs := 13  # the line under it shrinks to fit too
+		while sfs > 9 and font.get_string_size(banner_sub, HORIZONTAL_ALIGNMENT_LEFT, -1, sfs).x > w - 12.0:
+			sfs -= 1
+		draw_string_outline(font, Vector2(-slide, 79), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, w, sfs, 3, Color(0, 0, 0, 0.8 * a))
+		draw_string(font, Vector2(-slide, 79), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, w, sfs, Color(1, 1, 1, 0.85 * a))
 
 	_draw_intro(font, w, h)
 

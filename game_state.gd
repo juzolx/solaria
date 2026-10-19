@@ -1599,7 +1599,7 @@ func take_turn() -> void:
 		line += ". The %s is stunned!" % enemy_name
 		events.append({"type": "stunned"})
 	elif Combat.charging(self):
-		line += ". The %s gathers its strength..." % enemy_name  # your turn to answer the wind-up
+		line += ". %s gathers its strength..." % (enemy_name if enemy_wanderer else "The " + enemy_name)  # your turn to answer the wind-up
 	elif charm_total() > 0.0 and randf() * 100.0 < charm_total():
 		line += ". The %s is charmed and forgets to attack" % enemy_name
 		ClassTree.grow(self, "charm")
