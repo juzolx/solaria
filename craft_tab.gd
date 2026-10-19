@@ -16,6 +16,14 @@ var set_buttons := {}  # set -> Array of buttons
 var piece_rows: Array = []  # one row of set-piece buttons per set (stacked on phones)
 var gear_buttons := {}
 var gear_cost: RichTextLabel
+var smith_pic: TextureRect
+var section_buttons := {}
+var forge_box: VBoxContainer
+var sets_box: VBoxContainer
+var wares_box: VBoxContainer
+var section := "forge"
+var wares_key := ""
+var wares_list: VBoxContainer
 
 func setup(m) -> void:
 	main = m
@@ -25,16 +33,41 @@ func setup(m) -> void:
 	var v := UI.vbox(10)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_child(v)
+	# 0.13+ (Juzo): Hilde Ironbraid, the dwarf smith, and her three counters
+	var who := UI.hbox(10)
+	v.add_child(who)
+	smith_pic = TextureRect.new()
+	smith_pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	smith_pic.custom_minimum_size = Vector2(56, 56)
+	smith_pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	smith_pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	who.add_child(smith_pic)
+	who.add_child(UI.wrap("%s, dwarf smith of the town forge" % Smith.NAME, 14, UI.GOLD))
+	var tabs_row := UI.hbox(6)
+	v.add_child(tabs_row)
+	for sec in [["forge", "Forge"], ["sets", "Set Recipes"], ["wares", "Dwarf's Wares"]]:
+		var sb := UI.button(String(sec[1]), _show_section.bind(String(sec[0])))
+		sb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		sb.custom_minimum_size = Vector2(0, UI.TAP)
+		tabs_row.add_child(sb)
+		section_buttons[String(sec[0])] = sb
+	var root_v := v
+	forge_box = UI.vbox(10)
+	sets_box = UI.vbox(10)
+	wares_box = UI.vbox(10)
 
 	# ---- 1. What you have ----
-	v.add_child(UI.heading("1. Your materials  -  scrap comes from salvaging, the rest from bosses"))
+	v.add_child(UI.heading("Your materials  -  scrap comes from salvaging, the rest from bosses"))
 	mats_row = HFlowContainer.new()
 	mats_row.add_theme_constant_override("h_separation", 6)
 	mats_row.add_theme_constant_override("v_separation", 6)
 	v.add_child(mats_row)
 
+	for bx in [forge_box, sets_box, wares_box]:
+		root_v.add_child(bx)
+	v = forge_box
 	# ---- 2. Basics ----
-	v.add_child(UI.heading("2. Basics"))
+	v.add_child(UI.heading("Basics"))
 	var basics := UI.hbox(8)
 	v.add_child(basics)
 	var pcard := _recipe_card(basics, "Health Potion", UI.PINK, "Heals 40% HP. Drunk automatically when your HP is low.")
@@ -47,8 +80,9 @@ func setup(m) -> void:
 	bag_button = UI.primary("Craft", func(): state.craft_bag(); main.sfx.play("craft"); main.refresh(), UI.BLUE)
 	bcard[1].add_child(bag_button)
 
+	v = sets_box
 	# ---- 3. Set recipes ----
-	v.add_child(UI.heading("3. Set recipes  -  wear 2 or 3 pieces of a set for bonuses"))
+	v.add_child(UI.heading("Set recipes  -  wear 2 or 3 pieces of a set for bonuses"))
 	for set_name in GameData.SET_ORDER:
 		var info: Dictionary = GameData.SETS[set_name]
 		var card := UI.panel(UI.INSET, Color(UI.TEAL, 0.45), 8, 10, 2)
@@ -86,8 +120,9 @@ func setup(m) -> void:
 		set_info[set_name] = [title, cost, wearing]
 		set_buttons[set_name] = buttons
 
+	v = forge_box
 	# ---- 4. Mystery gear ----
-	v.add_child(UI.heading("4. Mystery gear  -  pick a slot, get a random item with better odds"))
+	v.add_child(UI.heading("Mystery gear  -  pick a slot, get a random item with better odds"))
 	gear_cost = UI.rich(12)
 	v.add_child(gear_cost)
 	var grid := GridContainer.new()
@@ -100,6 +135,58 @@ func setup(m) -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(b)
 		gear_buttons[slot] = b
+
+	# ---- Dwarf's wares ----
+	wares_box.add_child(UI.heading("Dwarf's Wares  -  forged for your depth, never below your average Gear Score; new pieces each time you come home"))
+	wares_list = UI.vbox(6)
+	wares_box.add_child(wares_list)
+	_show_section("forge")
+
+## Shows one of the smith's three counters.
+func _show_section(id: String) -> void:
+	section = id
+	forge_box.visible = id == "forge"
+	sets_box.visible = id == "sets"
+	wares_box.visible = id == "wares"
+	for k in section_buttons:
+		(section_buttons[k] as Button).add_theme_color_override("font_color", UI.GOLD if k == id else UI.TEXT)
+	if id == "wares":
+		_fill_wares(true)
+
+func _fill_wares(force := false) -> void:
+	if state.smith_stock.is_empty():
+		Smith.restock(state)
+	var key := str(state.smith_stock) + str(state.gold) + str(state.bag.size())
+	if key == wares_key and not force:
+		return
+	wares_key = key
+	for c in wares_list.get_children():
+		c.queue_free()
+	for i in state.smith_stock.size():
+		var e: Dictionary = state.smith_stock[i]
+		var item: Dictionary = e["item"]
+		var row := UI.panel(UI.INSET, Color(GameData.color_of(int(item["rarity"]))), 8, 8, 1)
+		wares_list.add_child(row)
+		var h := UI.hbox(10)
+		row.add_child(h)
+		var pic := ItemGrid.picture(40)
+		pic.texture = Sprites.item_icon(item)
+		h.add_child(pic)
+		var t := UI.rich(12)
+		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		t.text = ItemText.describe(state, item)
+		h.add_child(t)
+		var need := int(e["price"]) - state.gold
+		var label := "Sold" if e["sold"] else ("Bag full" if state.bag_full() else ("Need %d more" % need if need > 0 else "%d gold" % int(e["price"])))
+		var b := UI.primary(label, func():
+			if Smith.buy(state, i):
+				main.sfx.play("buy")
+			_fill_wares(true)
+			main.refresh(), UI.GOLD)
+		b.custom_minimum_size = Vector2(110, 40)
+		b.disabled = e["sold"] or need > 0 or state.bag_full()
+		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(b)
 
 ## A small card: title, description, cost line, and a spot for its button.
 func _recipe_card(parent: Control, title: String, color: Color, text: String) -> Array:
@@ -133,6 +220,12 @@ func _chip(text: String, color: Color) -> void:
 
 func refresh() -> void:
 	var narrow: bool = main.get_viewport().get_visible_rect().size.x < 720.0
+	if smith_pic.texture == null:
+		var app: Dictionary = state.appearance.duplicate()
+		app["race"] = "Dwarf"
+		smith_pic.texture = Sprites.portrait(app, {})
+	if section == "wares":
+		_fill_wares()
 	for r in piece_rows:
 		(r as BoxContainer).vertical = narrow  # phones: one full-width button per piece, so names fit
 	for c in mats_row.get_children():

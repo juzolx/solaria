@@ -241,6 +241,7 @@ var hunt_spawns := 0        # Hunter's Scroll: next monsters are more often rare
 var merchant: Array = []    # the wandering merchant's stock while you're with them
 var merchant_haggle := ""   # Stage 3: "" (not tried), "won" or "lost" this visit (snik.gd)
 var town_event := ""        # Stage 3: what's on in town until you're next home (town_events.gd)
+var smith_stock: Array = []   # 0.13+: the dwarf smith's forged wares (smith.gd)
 var loadouts: Array = [{}, {}, {}]  # saved gear sets: slot -> item id
 var loot_filter := {"slots": {}, "weaker": false}  # extra auto-salvage rules (Common-Rare only)
 var codex := Codex.new()    # account-wide bestiary, stats, achievements (main swaps in the saved one)
@@ -3179,7 +3180,7 @@ func save_game() -> void:
 		"curse_turns": curse_turns,
 		"luck_turns": luck_turns,
 		"hunt_spawns": hunt_spawns,
-		"merchant": merchant, "merchant_haggle": merchant_haggle, "town_event": town_event,
+		"merchant": merchant, "merchant_haggle": merchant_haggle, "town_event": town_event, "smith_stock": smith_stock,
 		"loadouts": loadouts,
 		"loot_filter": loot_filter,
 		"enemy_goblin": enemy_goblin,
@@ -3442,6 +3443,7 @@ func load_game() -> bool:
 	merchant = data.get("merchant", [])
 	merchant_haggle = String(data.get("merchant_haggle", ""))
 	town_event = String(data.get("town_event", ""))
+	smith_stock = data.get("smith_stock", [])
 	var saved_loadouts: Array = data.get("loadouts", [])
 	for i in mini(saved_loadouts.size(), loadouts.size()):
 		loadouts[i] = saved_loadouts[i]

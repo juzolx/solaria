@@ -45,7 +45,7 @@ static func maybe_find(g: GameState, chance: float) -> bool:
 ## Town page index -> [keeper, their usual lines]
 const KEEPERS := {
 	0: ["Marta, the shopkeeper", ["Potions first, glory second. You'd be amazed how many get that backwards.", "Everything here was carried up by someone who came back. Mostly.", "If it's shiny and cheap, it's cursed or it's Snik's. Usually both."]],
-	1: ["Hilde, the smith", ["Bring me scrap and I'll bring you a reason to go deeper.", "Good steel remembers every hit. So does bad steel, just not for long.", "Sets are worth it. Matching gear sings."]],
+	1: ["Hilde Ironbraid, the dwarf smith", ["Bring me scrap and I'll bring you a reason to go deeper.", "Good steel remembers every hit. So does bad steel, just not for long.", "Sets are worth it. Matching gear sings."]],
 	2: ["Pip, the barkeep", ["One spin of the Wheel? For luck. Or for the opposite of luck. One or the other.", "That lantern over the bar? The First Descender's. Don't touch it. It's warm.", "Sit. Drink. Lie to me about how deep you got."]],
 	3: ["Mother Wren, at the inn", ["Sleep, love. The dark isn't going anywhere, more's the pity.", "You look like you've been chewed. Bed's made.", "Eat something. Heroes who skip supper skip breakfast for good."]],
 	4: ["Ledger, the vault-keeper", ["What's in the Vault stays in the Vault. Even if you don't come back. Especially then.", "I count everything twice. The dark only has to be lucky once.", "Nothing has ever been stolen from my vault. Nothing has ever tried."]],
