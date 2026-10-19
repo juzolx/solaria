@@ -1455,6 +1455,10 @@ func take_turn() -> void:
 			skill_cds[id] = int(skill_cds[id]) - 1
 	if auto_ability:
 		_auto_skill()
+	# Auto: a telegraphed blow lands this turn and would finish you: drink first
+	if auto_potion and potions > 0 and Combat.winding(self) and not Combat.charging(self) and not (trial_active and trial_data.get("no_potions", false)):
+		if hero_hp <= int(damage_taken() * float(cfight.get("windup_mult", Combat.HEAVY_MULT)) * 1.1):
+			use_potion()
 	if enemy_hp <= 0 or hero_hp <= 0:
 		return
 
@@ -3715,7 +3719,7 @@ func _through_door(i: int) -> void:
 ## What gets picked if you don't choose in time.
 func auto_path() -> String:
 	if door_pending():
-		return String(DOOR_KEYS.pick_random())
+		return auto_door()
 	for k in ["cenc_yes", "leave", "fight", "pass", "revent_no"]:
 		if k in path_offer:
 			return k
@@ -4300,3 +4304,35 @@ func set_party(slots: Array) -> void:
 	party_slots = party.members.map(func(m): return m.slot)
 	spawn_enemy()
 	save_game()
+
+## Auto's door: only what your door reader can tell you (no reader: a blind pick, like yours).
+## Hurt: campfires and safe rooms. Healthy: elite rooms are worth it. Treasure is always nice.
+func auto_door() -> String:
+	var lvl := Halls.team_sense(self)
+	if lvl == 0 or doors.size() < DOOR_KEYS.size():
+		return String(DOOR_KEYS.pick_random())
+	var hp := float(hero_hp) / maxf(1.0, get_max_hp())
+	var best := 0
+	var best_score := -99.0
+	for i in DOOR_KEYS.size():
+		var kind: String = doors[i]
+		var trapped: bool = i < door_traps.size() and bool(door_traps[i])
+		var danger := kind == "elite" or (trapped and lvl < 3)
+		var safe := kind in ["treasure", "rest", "merchant", "altar", "stranger", "beast"]
+		var score := 0.5
+		if danger:
+			score = 1.2 if hp > 0.75 else -2.0
+		elif safe:
+			score = 2.0 if hp < 0.5 else 1.0
+		if lvl >= 2:
+			if kind == "rest":
+				score += 2.5 if hp < 0.5 else -0.3
+			elif kind == "treasure":
+				score += 1.0
+			if trapped and lvl >= 3:
+				score -= 0.6
+		score += randf() * 0.2  # ties break at random
+		if score > best_score:
+			best_score = score
+			best = i
+	return String(DOOR_KEYS[best])
