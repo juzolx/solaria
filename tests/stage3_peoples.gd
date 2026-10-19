@@ -42,6 +42,10 @@ func _initialize() -> void:
 	g.enemy_people = "Elf"
 	g.enemy_peaceful = true
 	g.rep["Elf"] = 70.0
+	g.path_offer.clear()  # nothing else pending: just you and them
+	g.exploring = false
+	g.calamity_pending = false
+	g.leader_down = false
 	var fight0 := g.fight
 	var gold0 := g.gold
 	var pots0 := g.potions

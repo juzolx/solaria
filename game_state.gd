@@ -141,6 +141,7 @@ var grave := {}             # Stage 3: what you lost when you fell, guarded by y
 var enemy_grave := false     # the monster on screen guards your grave
 var enemy_wanderer := false  # a rare wanderer (wanderers.gd): leaves after a few turns
 var enemy_peaceful := false  # friends of yours: they step aside on your next turn (peoples.gd)
+var enemy_variant := ""     # Gilded / Blighted / Ashen / Pale (variants.gd), "" for none
 var hazard := ""            # Stage 3: this room's hazard (hazards.gd), "" for none
 var next_id := 1
 
@@ -1284,6 +1285,7 @@ func spawn_enemy() -> void:
 	enemy_grave = false
 	enemy_wanderer = false
 	enemy_peaceful = false
+	enemy_variant = ""
 	calamity_pending = false
 	enemy_boss_kind = GameData.boss_kind(floor_num)
 	enemy_is_boss = enemy_boss_kind != ""
@@ -1381,6 +1383,7 @@ func spawn_enemy() -> void:
 	Grave.make_guard(self)  # your killer, guarding what you lost
 	Hazards.roll(self)
 	Wanderers.maybe(self)  # once in a long while, a legend crosses your path
+	Variants.maybe(self)  # now and then the same beast with a new face
 	Peoples.on_spawn(self)  # a race that likes you may let you pass
 	ClassTree.on_fight_start(self)
 	_setup_fight()
@@ -1696,6 +1699,9 @@ func _basic_attack() -> Dictionary:
 	if hero_status.has("blind") and randf() < Halls.BLIND_MISS:
 		events.append({"type": "blink"})
 		return {"line": "Blinded, you swing at nothing", "dealt": 0}
+	if enemy_variant == "Pale" and randf() < Variants.PALE_MISS:
+		events.append({"type": "blink"})
+		return {"line": "You lose sight of the pale %s and strike only air" % enemy_species, "dealt": 0}
 	if World.dark_miss(self):
 		events.append({"type": "blink"})
 		return {"line": "You swing at shadows", "dealt": 0}
@@ -1814,6 +1820,8 @@ func _enemy_defeated() -> void:
 	if was_boss:
 		Milestones.on_boss(self, species)
 	var gold_gain := (2 + floor_num) * (10 if was_boss else 1)
+	if enemy_variant == "Gilded":
+		gold_gain = int(gold_gain * Variants.GOLD_MULT)
 	gold_gain = int(gold_gain * float(t["gold"]) * (1.0 + (effect_total("gold_find") + bonus_pct + World.curse_gold(self)) / 100.0) * GameData.event_bonus("gold"))
 	if curse_turns > 0:
 		gold_gain *= 2

@@ -21,10 +21,11 @@ static func lit(tex: Texture2D, zone: int) -> Texture2D:
 		return _cache[key]
 	if _cache.size() > 800:
 		_cache.clear()
-	var img := tex.get_image()
-	if img == null:
+	var src := tex.get_image()
+	if src == null:
 		_cache[key] = tex
 		return tex
+	var img := src.duplicate() as Image  # work on a copy of the monster's image
 	if img.is_compressed():
 		img.decompress()
 	img.convert(Image.FORMAT_RGBA8)

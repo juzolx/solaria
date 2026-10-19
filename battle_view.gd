@@ -883,7 +883,7 @@ var _whites := {}
 func _white_of(tex: Texture2D) -> Texture2D:
 	var id := tex.get_rid().get_id()
 	if not _whites.has(id):
-		var img := tex.get_image()
+		var img := tex.get_image().duplicate() as Image  # a copy: never paint on the icon itself
 		img.convert(Image.FORMAT_RGBA8)
 		for y in img.get_height():
 			for x in img.get_width():
@@ -1513,6 +1513,7 @@ func _draw() -> void:
 			if not epose.is_empty():
 				etex = epose["tex"]
 				ewhite = epose["white"]
+		etex = Variants.tex(etex, state.enemy_variant)
 		if state.enemy_calamity <= 0:
 			etex = SpriteLight.lit(etex, clampi(GameData.zone_index(state.floor_num), 0, 9))
 		var etint := Color(1, 1, 1, enemy_alpha)
@@ -2146,6 +2147,8 @@ func _draw_enemy_info(r: Rect2, font: Font) -> void:
 		st.append(["Stunned", Color("#fde68a")])
 	if state.enemy_grave:
 		st.append(["Wears your gear", Color("#fbbf24")])
+	if state.enemy_variant != "" and Variants.LIST.has(state.enemy_variant):
+		st.append(["%s: %s" % [state.enemy_variant, Variants.LIST[state.enemy_variant]["text"]], Color(String(Variants.LIST[state.enemy_variant]["tint"]))])
 	if state.enemy_peaceful:
 		st.append(["Friendly: they won't fight", Color("#4ade80")])
 	var wl := Wanderers.turns_left(state)

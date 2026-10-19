@@ -249,6 +249,8 @@ static func tick_hero(g: GameState) -> int:
 # ---------- Elite modifiers that use statuses ----------
 ## The monster's attack landed: modifiers that do something on a hit.
 static func on_enemy_hit(g: GameState, dmg: int) -> void:
+	if g.enemy_variant == "Blighted" and dmg > 0 and randf() < 0.3:
+		afflict(g, "poison", 3)
 	# Beasts tear, spirits sap, serpents bite (from floor SHAPE_FROM, not bosses)
 	if SHAPE_STATUS.has(g.enemy_shape) and g.floor_num >= SHAPE_FROM and not g.enemy_is_boss and dmg > 0:
 		var ss: Array = SHAPE_STATUS[g.enemy_shape]
