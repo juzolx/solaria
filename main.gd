@@ -498,7 +498,7 @@ func _show_recap() -> void:
 		v.add_child(lost_l)
 	var taken: Dictionary = r.get("taken", {})
 	var total := maxf(1.0, float(r.get("total", 0)))
-	var names := {"hits": "its hits", "burning": "burning", "burn": "burns", "poison": "poison", "minions": "minions", "realm": "the realm"}
+	var names := {"hits": "its hits", "burning": "burning", "burn": "burns", "poison": "poison", "minions": "minions", "realm": "the realm", "hazard": "the room itself"}
 	var parts: Array = []
 	var keys := taken.keys()
 	keys.sort_custom(func(a, b): return int(taken[a]) > int(taken[b]))

@@ -42,6 +42,10 @@ static func on_death(g: GameState) -> void:
 	g.events.append({"type": "toast", "text": "Your things lie on floor %d. The %s guards them." % [g.floor_num, killer]})
 	g.tip("grave", "When you fall, what you carried drops where you fell and your killer guards it. Come back to that floor and beat it to get it all back. Fall somewhere else first and the old grave is lost.")
 
+## The grave's guardian is due on this floor's first fight (no pack rolls then).
+static func due(g: GameState) -> bool:
+	return not g.grave.is_empty() and int(g.grave["floor"]) == g.floor_num and g.fight == 1 and not bool(g.grave["boss"]) and not g.trial_active
+
 ## True when the grave is on this floor and its guardian should be the next monster.
 static func guarding_here(g: GameState) -> bool:
 	if g.grave.is_empty() or g.trial_active or g.enemy_goblin or g.horde_left > 0:

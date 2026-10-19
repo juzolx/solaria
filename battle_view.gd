@@ -484,6 +484,13 @@ func play(events: Array[Dictionary]) -> void:
 					banner_color = Color(e["color"])
 					banner_alpha = 2.0
 					shake = maxf(shake, 6.0))
+			"hazard":
+				_later(delay + 0.1, func():
+					_sfx({"spores": "curse", "rubble": "hurt", "flood": "freeze", "embers": "burn", "dark": "curse"}.get(String(e["id"]), "hurt"), 1.1)
+					_fx(String(e["fx"]), _enemy_center(), 1.4)
+					_fx(String(e["fx"]), _hero_center(), 1.2)
+					_float(String(e["name"]).to_upper() + "!", Vector2(size.x / 2.0, size.y * 0.47), Color(e["color"]), 16)
+					shake = maxf(shake, 5.0))
 			"minion_dead":
 				_later(delay, func(): _float("MINION DOWN", _enemy_center() + Vector2(-30, -10), Color("#d4d4d4"), 13))
 			"mastery":
@@ -2071,20 +2078,29 @@ func _pixel_color(ch: String, tint: Color) -> Color:
 func _chip_row(chips: Array, x: float, y: float, font: Font, fs := 13) -> void:
 	if chips.is_empty():
 		return
-	var widths: Array = []
-	var total := 0.0
+	# Too many for one line: the rest wrap onto lines ABOVE (the row below stays clear)
+	var lines: Array = [[]]
+	var line_w: Array = [0.0]
 	for c in chips:
 		var wdt := font.get_string_size(String(c[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 10.0
-		widths.append(wdt)
-		total += wdt + 4.0
-	var cx := clampf(x - total / 2.0, 4.0, size.x - total - 4.0)
-	for i in chips.size():
-		var col: Color = chips[i][1]
-		var box := Rect2(cx, y, widths[i], fs + 6.0)
-		draw_rect(box, Color(0.03, 0.04, 0.08, 0.82))
-		draw_rect(box, Color(col, 0.85), false, 1.0)
-		draw_string(font, Vector2(cx + 5.0, y + fs + 1.0), String(chips[i][0]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
-		cx += widths[i] + 4.0
+		if not (lines[-1] as Array).is_empty() and float(line_w[-1]) + wdt > size.x - 8.0:
+			lines.append([])
+			line_w.append(0.0)
+		(lines[-1] as Array).append([c, wdt])
+		line_w[-1] = float(line_w[-1]) + wdt + 4.0
+	for li in lines.size():
+		var total: float = line_w[li]
+		var cx := clampf(x - total / 2.0, 4.0, maxf(4.0, size.x - total - 4.0))
+		var ly := y - li * (fs + 9.0)
+		for item in lines[li]:
+			var c: Array = item[0]
+			var wdt: float = item[1]
+			var col: Color = c[1]
+			var box := Rect2(cx, ly, wdt, fs + 6.0)
+			draw_rect(box, Color(0.03, 0.04, 0.08, 0.82))
+			draw_rect(box, Color(col, 0.85), false, 1.0)
+			draw_string(font, Vector2(cx + 5.0, ly + fs + 1.0), String(c[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+			cx += wdt + 4.0
 
 ## What the monster is weak to and resists, its statuses, and its boss clock.
 func _draw_enemy_info(r: Rect2, font: Font) -> void:
@@ -2111,6 +2127,10 @@ func _draw_enemy_info(r: Rect2, font: Font) -> void:
 		st.append(["Stunned", Color("#fde68a")])
 	if state.enemy_grave:
 		st.append(["Wears your gear", Color("#fbbf24")])
+	var hz := Hazards.turns_left(state)
+	if hz >= 0 and Hazards.KINDS.has(state.hazard):
+		var hk: Dictionary = Hazards.KINDS[state.hazard]
+		st.append(["%s in %d" % [hk["name"], hz], Color(hk["color"])])
 	if Combat.winding(state):
 		st.append(["WINDING UP! Use a skill", Color("#f59e0b")])
 	var el := Combat.enrage_left(state)

@@ -139,6 +139,7 @@ var packs_carried := 0     # backpacks found this dive: lost if you fall, kept w
 var dive := {}              # what this dive set off with (Town.leave), for the "made it home" tally
 var grave := {}             # Stage 3: what you lost when you fell, guarded by your killer (grave.gd)
 var enemy_grave := false     # the monster on screen guards your grave
+var hazard := ""            # Stage 3: this room's hazard (hazards.gd), "" for none
 var next_id := 1
 
 # ---------- Settings ----------
@@ -1315,7 +1316,7 @@ func spawn_enemy() -> void:
 			boost = GameData.HUNT_RARE_BOOST
 		enemy_tier = Monsters.roll_tier(hardcore, boost * (1.6 if curses.has("swarm") else 1.0))
 		# 0.13: sometimes they come in packs of 2-3 (shown standing together)
-		if horde_left == 0 and not trial_active and floor_num >= GameData.PACK_FROM and randf() * 100.0 < GameData.PACK_MON_CHANCE:
+		if horde_left == 0 and not trial_active and not Grave.due(self) and floor_num >= GameData.PACK_FROM and randf() * 100.0 < GameData.PACK_MON_CHANCE:
 			horde_left = randi_range(2, 3)
 			horde_total = horde_left
 			horde_pack = true
@@ -1364,8 +1365,10 @@ func spawn_enemy() -> void:
 	if Calamity.maybe_appear(self, profile_ref):
 		enemy_weak = []
 		enemy_resist = []
+		hazard = ""
 		return
 	Grave.make_guard(self)  # your killer, guarding what you lost
+	Hazards.roll(self)
 	ClassTree.on_fight_start(self)
 	_setup_fight()
 	if pierce_carry > 0:
@@ -1556,6 +1559,11 @@ func take_turn() -> void:
 	# Bosses: shields, minions, the enrage clock
 	line += Combat.boss_turn(self)
 	line += Combat.monster_turn(self)  # Rare+ monsters telegraph heavy blows
+	line += Hazards.tick(self)  # some rooms fight back
+	if enemy_hp <= 0:
+		say(line)
+		_enemy_defeated()  # the room finished it off
+		return
 	# Enemy attacks (a stun or freeze breaks a wind-up)
 	if (enemy_frozen > 0 or enemy_stun > 0) and Combat.winding(self):
 		Combat.break_windup(self)
