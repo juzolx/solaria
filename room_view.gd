@@ -89,7 +89,8 @@ func _draw() -> void:
 	# Your team in the doorway, seen from behind
 	_draw_team()
 	scene.vignette(self, size)
-	_draw_motes(scene.mood())
+	if not scene.is_3d():
+		_draw_motes(scene.mood())
 	# What to do
 	var msg := "Pick a door"
 	if not doors_open and not state.room_props.is_empty():

@@ -13,6 +13,7 @@ const FLOOR_Y := -1.5     # eye height above the floor
 const CEIL_Y := 2.5
 const STEP := 0.5         # quads are half a unit (less warping, finer floor)
 static var low := false   # Low graphics: quads twice the size (a quarter as many)
+static var allow_3d := true   # off in tests that only want the 2D drawer
 const DOOR_X := [-1.9, 0.0, 1.9]
 const DOOR_W := 1.3
 const DOOR_H := 2.3
@@ -40,6 +41,9 @@ var dark := 0.4
 var t := 0.0
 var key := ""
 var _tex := {}
+var r3: Room3D = null      # the real 3D room (not on Low graphics)
+var _r3_key := ""
+var _seed := 0
 
 func tx(path: String) -> Texture2D:
 	if not _tex.has(path):
@@ -59,6 +63,7 @@ func build(st: GameState, sz: Vector2) -> void:
 	center = Vector2(sz.x / 2.0, sz.y * 0.40)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash("%d-%d" % [st.floor_num, st.room_count])
+	_seed = rng.seed
 	zone = clampi(GameData.zone_index(st.floor_num), 0, 9)
 	amb = MOODS[zone]["amb"]
 	light = MOODS[zone]["light"]
@@ -163,6 +168,8 @@ func sprite(ci: CanvasItem, tex: Texture2D, x: float, z: float, h: float, tint :
 ## Floor, ceiling and walls.
 func draw_shell(ci: CanvasItem, sz: Vector2) -> void:
 	ci.draw_rect(Rect2(Vector2.ZERO, sz), Color(0.01, 0.01, 0.02))
+	if _draw_3d(ci, sz):
+		return
 	var wall := tx("res://art/halls/z%d_wall.png" % zone)
 	var flo := tx("res://art/halls/z%d_floor.png" % zone)
 	var ceil_t := tx("res://art/halls/z%d_ceil.png" % zone)
@@ -216,6 +223,35 @@ func draw_shell(ci: CanvasItem, sz: Vector2) -> void:
 		end_batch(ci)
 	ci.draw_line(proj(-hw, FLOOR_Y, D), proj(hw, FLOOR_Y, D), Color(0, 0, 0, 0.5), 2.0)
 
+## True while the 3D room stands in for the 2D one (doors, scenery and torches
+## are part of it then; the views still draw what's in the room on top).
+func is_3d() -> bool:
+	return r3 != null and _r3_key == key and key != "" and not low and allow_3d
+
+## Draws the 3D room as the backdrop. The first frame of a new room (or with Low
+## graphics on) falls back to the 2D drawer while the 3D one is set up.
+func _draw_3d(ci: CanvasItem, sz: Vector2) -> bool:
+	if low or not allow_3d or DisplayServer.get_name() == "headless":
+		if r3 != null:
+			r3.queue_free()
+			r3 = null
+			_r3_key = ""
+		return false
+	if r3 == null:
+		r3 = Room3D.new()
+		ci.add_child.call_deferred(r3)
+		return false
+	if not r3.is_inside_tree():
+		return false
+	if _r3_key != key:
+		_r3_key = key
+		r3.fit(sz)
+		r3.rebuild.call_deferred(zone, _seed, {"light": light, "amb": amb, "kind": mood()["kind"], "dark": dark})
+		return false
+	r3.fit(sz)
+	ci.draw_texture_rect(r3.texture(), Rect2(Vector2.ZERO, sz), false)
+	return true
+
 ## The three doors on the far wall. When `st` has doors to pick, they glow and
 ## become tap targets in `hit` ("d0".."d2").
 func draw_doors(ci: CanvasItem, st: GameState, hit: Dictionary, font: Font) -> void:
@@ -226,7 +262,7 @@ func draw_doors(ci: CanvasItem, st: GameState, hit: Dictionary, font: Font) -> v
 		var tl := proj(x - DOOR_W / 2.0, FLOOR_Y + DOOR_H, D)
 		var br := proj(x + DOOR_W / 2.0, FLOOR_Y, D)
 		var rect := Rect2(tl, br - tl)
-		if dt:
+		if dt and not is_3d():
 			ci.draw_texture_rect(dt, rect, false, lit(x, FLOOR_Y + 1.0, D - 0.3))
 		if not open:
 			continue
@@ -258,6 +294,8 @@ func scenery() -> Array:
 
 ## Draws one scenery entry; returns false if it isn't scenery.
 func draw_scenery(ci: CanvasItem, th: Dictionary) -> bool:
+	if is_3d() and String(th["kind"]) in ["decor", "torch"]:
+		return true  # part of the 3D room
 	match String(th["kind"]):
 		"decor":
 			var dc: Dictionary = th["d"]
