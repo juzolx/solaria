@@ -394,7 +394,7 @@ func _initialize() -> void:
 	check(GameData.sub_index(1) == 0 and GameData.sub_index(10) == 0 and GameData.sub_index(11) == 1 and GameData.sub_index(50) == 4, "sub-areas")
 	check(GameData.sub_start(25) == 21 and GameData.sub_start(50) == 41 and GameData.sub_start(77) == 71, "sub-area start")
 	check(GameData.boss_for_floor(25)["name"] == "Black Annis" and GameData.boss_for_floor(100)["name"] == "Hel, Queen of the Dead", "boss lookup")
-	check(Monsters.all_monsters().size() == 100 and Monsters.all_bosses().size() == 20, "100 monsters, 20 bosses")
+	check(Monsters.all_monsters().size() == 110 and Monsters.all_bosses().size() == 20, "110 monsters (0.13+: ten myth monsters), 20 bosses")
 	for mname in Monsters.all_monsters():
 		var inf := Monsters.info(mname)
 		check(inf.get("lore", "") != "" and inf.get("drops", []).size() == 2 and Monsters.has_signature(mname), "monster info " + mname)

@@ -441,6 +441,8 @@ const ROOT_ZONES := [
 		{"name": "Boggart", "shape": "brute", "color": "#8a7f72"},         # English folklore
 		{"name": "Will-o'-Wisp", "shape": "spirit", "color": "#7dd3fc"},   # European folklore
 		{"name": "Barghest", "shape": "beast", "color": "#57534e"},        # Yorkshire black dog
+		{"name": "Hobyah", "shape": "humanoid", "color": "#a16207"},        # Scottish folk tale (0.13+)
+		{"name": "Jack-in-Irons", "shape": "brute", "color": "#6b7280"},   # Yorkshire chained giant
 	], "subs": [
 		{"name": "Fernlight Glade", "monster": {"name": "Spriggan", "shape": "brute", "color": "#6b8e3a"}},        # Cornish
 		{"name": "Toadstool Ring", "monster": {"name": "Pooka", "shape": "beast", "color": "#2b2b3a"}},            # Irish
@@ -459,6 +461,8 @@ const ROOT_ZONES := [
 		{"name": "Barrow-Wight", "shape": "spirit", "color": "#cbd5e1"},   # Norse / English
 		{"name": "Banshee", "shape": "spirit", "color": "#e9d5ff"},        # Irish folklore
 		{"name": "Strigoi", "shape": "humanoid", "color": "#9f1239"},      # Romanian folklore
+		{"name": "Ankou", "shape": "spirit", "color": "#e5e7eb"},          # Breton reaper
+		{"name": "Bog Body", "shape": "humanoid", "color": "#78716c"},     # Northern European bog dead
 	], "subs": [
 		{"name": "Bone Stair", "monster": {"name": "Revenant", "shape": "humanoid", "color": "#8a8f7a"}},          # European
 		{"name": "The Ossuary", "monster": {"name": "Gashadokuro", "shape": "brute", "color": "#e8e4d8"}},        # Japanese
@@ -477,6 +481,8 @@ const ROOT_ZONES := [
 		{"name": "Nuckelavee", "shape": "brute", "color": "#be123c"},      # Orkney folklore
 		{"name": "Bunyip", "shape": "beast", "color": "#a16207"},          # Aboriginal Australian
 		{"name": "Umibozu", "shape": "spirit", "color": "#4c6ef5"},        # Japanese sea spirit
+		{"name": "Ningyo", "shape": "serpent", "color": "#5eead4"},        # Japanese fish-woman
+		{"name": "Afanc", "shape": "beast", "color": "#365314"},          # Welsh lake monster
 	], "subs": [
 		{"name": "Tidepools", "monster": {"name": "Selkie", "shape": "beast", "color": "#7a8a9a"}},                # Scottish / Irish
 		{"name": "Drowned Village", "monster": {"name": "Vodyanoy", "shape": "humanoid", "color": "#5a7a4a"}},    # Slavic
@@ -495,6 +501,8 @@ const ROOT_ZONES := [
 		{"name": "Hellhound", "shape": "beast", "color": "#b91c1c"},       # many mythologies
 		{"name": "Chimera", "shape": "beast", "color": "#ca8a04"},         # Greek
 		{"name": "Manticore", "shape": "beast", "color": "#d9480f"},       # Persian
+		{"name": "Gullinbursti", "shape": "beast", "color": "#f59e0b"},   # Norse golden boar
+		{"name": "Div", "shape": "spirit", "color": "#9ca3af"},           # Persian demon of smoke
 	], "subs": [
 		{"name": "Cinder Steps", "monster": {"name": "Cherufe", "shape": "brute", "color": "#6a3a2a"}},           # Mapuche (Chile)
 		{"name": "Forge of Ash", "monster": {"name": "Cyclops", "shape": "brute", "color": "#8a7a6a"}},           # Greek
@@ -513,6 +521,8 @@ const ROOT_ZONES := [
 		{"name": "Rakshasa", "shape": "humanoid", "color": "#f59e0b"},     # Hindu mythology
 		{"name": "Lamia", "shape": "serpent", "color": "#65a30d"},         # Greek
 		{"name": "Gorgon", "shape": "serpent", "color": "#4d7c0f"},        # Greek
+		{"name": "Mare", "shape": "spirit", "color": "#4c1d95"},          # Germanic nightmare-rider
+		{"name": "Baku", "shape": "beast", "color": "#334155"},           # Japanese dream-eater
 	], "subs": [
 		{"name": "Gloamwood Edge", "monster": {"name": "Kitsune", "shape": "beast", "color": "#e07a3a"}},         # Japanese
 		{"name": "Weeping Stars", "monster": {"name": "Tikbalang", "shape": "humanoid", "color": "#5a3a2a"}},     # Filipino

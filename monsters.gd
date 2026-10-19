@@ -50,6 +50,27 @@ const SIGNATURE := 7            # rarity number of a Signature item
 # lore: one line for the Bestiary. drops: the 2 gear slots it favors.
 # sig: its Signature item (mat/trim pick the colors of the item's sprite).
 const INFO := {
+	# ----- 0.13+ myth monsters -----
+	"Hobyah": {"lore": "Goblin-dogs from an old Scottish tale. They creep up at night shouting 'Tear down the hemp stalks!' and only a barking dog keeps them away.", "drops": ["Feet", "Helmet"],
+		"sig": {"name": "Hobyah Hemp-Boots", "slot": "Feet", "type": "boots", "effect": "dodge", "value": 14, "mat": "hide", "trim": "#a16207", "flavor": "They creak like hemp stalks. Nothing can hear you coming."}},
+	"Jack-in-Irons": {"lore": "A giant who walks the lonely roads of Yorkshire dragging the chains he broke. He takes the heads of travelers out after dark.", "drops": ["Chest", "Weapon"],
+		"sig": {"name": "Jack's Broken Chain", "slot": "Weapon", "type": "mace", "effect": "double_strike", "value": 23, "mat": "iron", "trim": "#9ca3af", "flavor": "Every link of it was snapped by a giant's pull."}},
+	"Ankou": {"lore": "The Breton reaper: the last person to die each year must drive the death-cart for the next. The axle creaks before it arrives.", "drops": ["Weapon", "Helmet"],
+		"sig": {"name": "The Ankou's Scythe-Spear", "slot": "Weapon", "type": "spear", "effect": "lifesteal", "value": 14, "mat": "bone", "trim": "#e5e7eb", "flavor": "The axle of the death-cart, sharpened."}},
+	"Bog Body": {"lore": "The peat keeps the dead whole. Some were put there on purpose, with a rope or a stone, and they have not forgiven anyone.", "drops": ["Legs", "Chest"],
+		"sig": {"name": "Peat-Wrapped Leggings", "slot": "Legs", "type": "leggings", "effect": "regen", "value": 3, "mat": "hide", "trim": "#78716c", "flavor": "The bog kept their owner whole for two thousand years. It will keep you a while longer."}},
+	"Ningyo": {"lore": "A fish with a woman's face. Eating its flesh grants a long, long life, and the sea always comes to collect.", "drops": ["Off Hand", "Helmet"],
+		"sig": {"name": "Ningyo Scale", "slot": "Off Hand", "type": "orb", "effect": "regen", "value": 3, "mat": "sea", "trim": "#5eead4", "flavor": "A single scale is enough to add years. The sea counts them."}},
+	"Afanc": {"lore": "A Welsh lake monster that drags anyone into the water. It was chained once, by oxen, but the chains are old now.", "drops": ["Off Hand", "Legs"],
+		"sig": {"name": "Afanc Shell", "slot": "Off Hand", "type": "shield", "effect": "thorns", "value": 30, "mat": "scale", "trim": "#365314", "flavor": "Oxen could not drag it. Monsters will not get through it."}},
+	"Gullinbursti": {"lore": "The boar with golden bristles that shine in the darkest place. In the deep it lights the way for no one but itself.", "drops": ["Chest", "Feet"],
+		"sig": {"name": "Golden-Bristle Mantle", "slot": "Chest", "type": "plate", "effect": "gold_find", "value": 32, "mat": "gold", "trim": "#fbbf24", "flavor": "It glows in the dark, and gold seems to notice."}},
+	"Div": {"lore": "A Persian demon made of smoke and spite. It breaks oaths and wrecks walls, and laughs in a voice like a fire catching.", "drops": ["Weapon", "Off Hand"],
+		"sig": {"name": "Smoke-Oath Dagger", "slot": "Weapon", "type": "dagger", "effect": "crit", "value": 24, "mat": "dark", "trim": "#9ca3af", "flavor": "Sworn on, it breaks every promise but the one you make with it."}},
+	"Mare": {"lore": "The night-rider who sits on sleepers' chests. Down here nobody sleeps, so it rides whoever is closest.", "drops": ["Helmet", "Legs"],
+		"sig": {"name": "Night-Rider's Hood", "slot": "Helmet", "type": "hood", "effect": "crit", "value": 22, "mat": "cloth", "trim": "#4c1d95", "flavor": "Wear it and others dream of you. They don't enjoy it."}},
+	"Baku": {"lore": "The dream-eater with an elephant's trunk. Once it ate nightmares. In the Shadow Deep there are only nightmares, and it is very hungry.", "drops": ["Chest", "Feet"],
+		"sig": {"name": "Dream-Eater's Robe", "slot": "Chest", "type": "robe", "effect": "lifesteal", "value": 13, "mat": "dark", "trim": "#334155", "flavor": "It feeds on nightmares. Down here it never goes hungry."}},
 	# ----- Mossy Hollows -----
 	"Kobold": {"lore": "German mine spirits that steal ore and leave poisoned rock behind.", "drops": ["Weapon", "Helmet"],
 		"sig": {"name": "Kobold's Candlehelm", "slot": "Helmet", "type": "helm", "effect": "gold_find", "value": 30, "mat": "iron", "trim": "#feae34", "flavor": "The candle has burned since the first mine was dug."}},
