@@ -10,6 +10,8 @@ var scroll: ScrollContainer  # tall popups scroll instead of running off the scr
 ## Builds the popup on top of the game. Returns self so callers can fill .content.
 func open(parent: Node, title: String, width := 560.0, border := UI.GOLD, closable := true) -> Overlay:
 	parent.add_child(self)
+	for n in get_tree().get_nodes_in_group("toast"):
+		n.queue_free()  # a toast never sits on top of a popup
 	theme = UI.make_theme()
 	size = get_viewport().get_visible_rect().size
 	var dim := ColorRect.new()

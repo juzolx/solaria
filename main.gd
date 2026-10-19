@@ -999,6 +999,7 @@ func toast(text: String) -> void:
 	l.custom_minimum_size = Vector2(minf(420.0, vp.x - 40.0) - 24.0, 0)
 	p.add_child(l)
 	p.z_index = 60
+	p.add_to_group("toast")  # a popup opening clears it (Overlay._ready)
 	add_child(p)
 	p.reset_size()
 	# Phones: just above the bottom bar, so it never covers the tabs at the top

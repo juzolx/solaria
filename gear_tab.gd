@@ -132,6 +132,17 @@ func _loadout(i: int) -> void:
 		main.sfx.play("equip")
 	main.refresh()
 
+var _ghosts := {}
+## A plain item picture for an empty slot (same look every time).
+func _ghost(s: String) -> Texture2D:
+	if not _ghosts.has(s):
+		var keep := randi()
+		seed(hash(s))
+		var it: Dictionary = GameData.make_item(s, 0, 1, 0)
+		seed(keep)
+		_ghosts[s] = Sprites.item_icon(it)
+	return _ghosts[s]
+
 func _count(s: String) -> int:
 	var n := 0
 	for item in state.bag:
@@ -154,7 +165,8 @@ func refresh() -> void:
 			extra += "  [color=#4ade80]UPGRADE![/color]"
 			ups += 1
 		var pic: TextureRect = slot_pics[s]
-		pic.texture = Sprites.item_icon(state.equipped[s]) if state.equipped.has(s) else null
+		pic.texture = Sprites.item_icon(state.equipped[s]) if state.equipped.has(s) else _ghost(s)
+		pic.modulate = Color.WHITE if state.equipped.has(s) else Color(0.55, 0.6, 0.8, 0.22)  # empty: a faint outline of what goes here
 		if state.equipped.has(s):
 			var item: Dictionary = state.equipped[s]
 			var c := GameData.color_of(item["rarity"])

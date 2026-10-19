@@ -69,7 +69,7 @@ func show_for(main_node) -> void:
 	zone_bar.add_theme_constant_override("v_separation", 6)
 	content.add_child(zone_bar)
 	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED if is_narrow() else ScrollContainer.SCROLL_MODE_AUTO
 	scroll.custom_minimum_size = Vector2(0, 300)
 	content.add_child(scroll)
 	rows = UI.vbox(6)
@@ -105,11 +105,14 @@ func _build() -> void:
 		if start > state.best_floor:
 			break
 		var area: Dictionary = GameData.sub_area(start)
-		var row := UI.hbox(6)
+		# phones: the area name on top, its floors wrapping underneath (a row of 10 ran off the screen)
+		var narrow := is_narrow()
+		var row: BoxContainer = UI.vbox(4) if narrow else UI.hbox(6)
 		rows.add_child(row)
 		var name_box := UI.vbox(0)
-		name_box.custom_minimum_size = Vector2(160, 0)
+		name_box.custom_minimum_size = Vector2(0 if narrow else 160, 0)
 		row.add_child(name_box)
+		var floors_box: Container = row
 		var local: String = area["monster"]["name"]
 		var lbls := [UI.label(str(area["name"]), 13, Color(GameData.zone_for_floor(start)["color"]).lightened(0.45)),
 			UI.label("Home of: " + (local if state.codex.seen(local) else "???"), 11, UI.DIM)]
@@ -118,6 +121,12 @@ func _build() -> void:
 			lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 			lbl.tooltip_text = lbl.text
 			name_box.add_child(lbl)
+		if narrow:
+			var flow := HFlowContainer.new()
+			flow.add_theme_constant_override("h_separation", 6)
+			flow.add_theme_constant_override("v_separation", 6)
+			row.add_child(flow)
+			floors_box = flow
 		for f in range(start, start + GameData.SUB_FLOORS):
 			var b := UI.button(str(f), _go.bind(f))
 			b.custom_minimum_size = Vector2(44, 36)
@@ -132,7 +141,7 @@ func _build() -> void:
 				b.add_theme_stylebox_override("normal", UI.style(Color("#2a2010"), UI.GOLD, 6, 4, 3))
 				b.add_theme_color_override("font_color", UI.GOLD)
 				b.tooltip_text = "You are here"
-			row.add_child(b)
+			floors_box.add_child(b)
 	# Quick buttons for the zone's two bosses
 	var bosses := UI.hbox(8)
 	rows.add_child(bosses)
