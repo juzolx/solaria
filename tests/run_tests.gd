@@ -497,6 +497,7 @@ func _initialize() -> void:
 	z._enemy_defeated()
 	check(z.door_pending() and z.doors.size() == 3 and "merchant" in z.doors, "boss beaten: three blank doors, one hides Snik")
 	check(Town.floor_clear(z), "a cleared room counts as between floors")
+	z.doors[0] = "fight"
 	z.choose_path("door_l")
 	check(z.floor_num == 26 and z.material_total() >= mats_before + 5 and z.doors.is_empty(), "through a door: next floor, 5-8 materials")
 	check(z.codex.kills("Black Annis") == 1 and z.codex.value("mids") == 1, "boss in the bestiary")

@@ -149,18 +149,19 @@ func _initialize() -> void:
 	await shot(prefix + "_12_blackout", 2.0)
 	# 0.13 rooms: the room between fights, then the three doors, in a few regions
 	main.timer.stop()
-	for f in [5, 60, 160, 280, 460, 760]:
-		st.floor_num = f
-		seed(f)
-		Halls.roll_props(st)
-		st.room_count += 1
-		st.fight = 1
+	var kinds := ["treasure", "rest", "merchant", "altar", "stranger", "nest"]
+	for k in kinds.size():
+		var f: int = [6, 62, 163, 283, 463, 763][k]
+		st.floor_num = f - 1
 		st.horde_left = 0
-		st.spawn_enemy()
-		st.exploring = true
-		st.room_trap = {"kind": "spikes", "spotted": true, "done": false, "x": 0.45, "y": 0.55} if f == 60 else {}
+		st._room_cleared()
+		st.doors = [kinds[k], kinds[k], kinds[k]]
+		st.choose_path("door_m")
 		main.refresh()
-		await shot(prefix + "_14_room_%d" % f, 1.6)
+		await create_timer(4.0).timeout
+		for n in root.find_children("*", "MerchantPopup", true, false):
+			n.queue_free()
+		await shot(prefix + "_14_room_%d" % f, 1.0)
 	st.exploring = false
 	st._room_cleared()
 	main.refresh()

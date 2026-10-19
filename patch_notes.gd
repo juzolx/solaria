@@ -10,10 +10,10 @@ const NOTES := [
 		"Every monster, boss and companion has new dark fantasy art (Dungeon Crawl Stone Soup, CC0).",
 		"Fights are now back to front: your team from behind at the bottom, the monsters facing you at the top. Room for three heroes, pets and summons.",
 		"Monsters sometimes come in packs of 2 or 3.",
-		"One room per floor, seen first-person from the doorway: the monsters wait further in, tap one to fight (Auto walks up by itself). Fights happen in that same room. Clear it and pick one of three doors on the far wall: anything could be behind them. Every region has its own stone, torchlight and drifting mood, and it gets darker the deeper you go.",
+		"One room per floor, seen first-person from the doorway. Pick one of three doors on the far wall: each room holds ONE thing. Usually monsters (the fight starts as you walk in), sometimes an elite, a treasure chest, a campfire, Snik the trader, a shrine, a nest, a stranger in need or a dying beast. Every region has its own stone, torchlight and drifting mood, and it gets darker the deeper you go.",
 		"Traps: spikes, poison darts, flame jets, frost runes, smoke (blind) and alarms that bring an ambush. Sharp eyes spot them and step around. Doors can be trapped too.",
 		"Rangers read the blank doors: at first a glow (green safe, yellow a fight, red danger), and with practice the room itself. Their companions read for the whole team. A new Ranger branch-off waits for those who read enough doors.",
-		"Rooms hold things to poke at between fights: chests (about 1 in 8 bites back, though sharp eyes see it coming), keys and locked chests, pots, old altars, levers, nests, wounded adventurers who need a potion, and dying beasts that sometimes leave you their egg.",
+		"Chests: about 1 in 8 bites back (sharp eyes spot a mimic, and you can leave it be). Nests may hold an egg, or an angry mother. Help a wounded stranger with a potion for a reward. A dying beast may leave you its egg.",
 		"Work in progress: more of The Halls Below arrives part by part.",
 	]},
 	{"version": "0.12", "name": "The Deep", "lines": [

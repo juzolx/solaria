@@ -114,12 +114,12 @@ static func read_door(g: GameState, i: int) -> Dictionary:
 	var kind: String = g.doors[i]
 	var trapped: bool = i < g.door_traps.size() and bool(g.door_traps[i])
 	var danger := kind == "elite" or (trapped and lvl < 3)
-	var safe := kind in ["treasure", "rest", "merchant"]
+	var safe := kind in ["treasure", "rest", "merchant", "altar", "stranger", "beast"]
 	var col := "#f87171" if danger else ("#4ade80" if safe else "#fbbf24")
 	if lvl == 1:
 		var word := "danger" if danger else ("safe" if safe else "a fight")
 		return {"color": col, "label": "", "text": "Your reader senses %s behind it." % word}
-	var name: String = GameData.PATHS.get(kind, {}).get("name", kind) if kind != "fight" else "Monsters"
+	var name: String = String(ROOM_NAMES.get(kind, kind))
 	if lvl >= 3 and trapped:
 		name += " (trapped)"
 	return {"color": col, "label": name, "text": "Your reader knows: %s." % name}
@@ -130,143 +130,132 @@ static func on_doors_shown(g: GameState) -> void:
 		ClassTree.count(g, "doors_read", 3)
 
 # =====================================================================
-# Room interactions (manual play: tap them; Auto walks past)
+# One-thing rooms (Juzo, Oct 18): each door leads to ONE thing. A fight starts by
+# itself; otherwise the room holds a single thing: a chest (about 1 in 8 is a
+# mimic), a campfire, Snik's stall, a shrine, a nest, a stranger in need, or a
+# dying beast. Tap it (Auto does it after a moment), then pick the next door.
 # =====================================================================
 
-const PROP_WEIGHTS := {"chest": 25, "pot": 30, "altar": 12, "lever": 10, "nest": 8, "npc": 8, "key": 7}
+## door kind -> the one thing standing in that room
+const EVENT_ROOMS := {"treasure": "chest", "rest": "campfire", "merchant": "merchant", "altar": "altar",
+	"nest": "nest", "stranger": "npc", "beast": "beast"}
+const ROOM_NAMES := {"fight": "Monsters", "elite": "Elite monster", "treasure": "Treasure room", "rest": "Campfire",
+	"merchant": "Goblin trader", "altar": "Shrine", "nest": "Nest", "stranger": "A stranger", "beast": "Dying beast"}
 const MIMIC_CHANCE := 12.5         # % of chests (about 1 in 8)
-const NEST_EGG_CHANCE := 25.0      # % a nest holds an egg
-const PROP_NAMES := {"chest": "Chest", "pot": "Old pot", "altar": "Altar", "lever": "Lever", "nest": "Nest",
-	"npc": "Wounded adventurer", "key": "Rusty key", "locked": "Locked chest", "beast": "Dying beast"}
+const NEST_EGG_CHANCE := 40.0      # % a nest holds an egg (otherwise its mother is home)
+const PROP_NAMES := {"chest": "Chest", "altar": "Shrine", "nest": "Nest", "npc": "Wounded adventurer",
+	"beast": "Dying beast", "merchant": "Snik", "campfire": "Campfire"}
+const PROP_HINTS := {"chest": "Tap the chest", "altar": "Tap the shrine to pray", "nest": "Tap the nest",
+	"npc": "Tap to help them", "beast": "Tap to go to it", "merchant": "Tap Snik to trade", "campfire": "You rest by the fire"}
 
-static func _pick_prop() -> String:
-	var total := 0
-	for k in PROP_WEIGHTS:
-		total += int(PROP_WEIGHTS[k])
-	var r := randi() % total
-	for k in PROP_WEIGHTS:
-		r -= int(PROP_WEIGHTS[k])
-		if r < 0:
-			return k
-	return "pot"
+## Walk into a room that holds one thing instead of monsters.
+static func enter_event_room(g: GameState, kind: String) -> void:
+	g.room_kind = kind
+	g.horde_left = 0   # an ambush from the door doesn't follow you into a quiet room
+	g.fight = GameData.FIGHTS_PER_FLOOR   # a monster here (mimic, a nest's mother) ends the room
+	var p := {"kind": String(EVENT_ROOMS[kind]), "used": false, "x": 0.5, "y": 0.5}
+	if kind == "treasure":
+		p["mimic"] = randf() * 100.0 < MIMIC_CHANCE
+		p["spotted"] = p["mimic"] and randf() * 100.0 < spot_chance(g)
+		if p["spotted"]:
+			g.say("[color=#fbbf24]Something about that chest isn't right...[/color]")
+	g.room_props = [p]
+	g.exploring = true
+	g.explore_wait = 0
+	g.events.append({"type": "room", "kind": kind})
+	match kind:
+		"rest":
+			p["used"] = true
+			g._apply_path("rest")
+			_done(g)
+		"merchant":
+			g._apply_path("merchant")
+			_done(g)
+		"treasure":
+			if p["spotted"]:
+				_done(g)   # you can leave it be: the doors are open already
 
-## A new room: 1-3 things to poke at (none on boss floors).
-static func roll_props(g: GameState) -> void:
-	g.room_props = []
-	g.room_key = false
-	if GameData.is_boss_floor(g.floor_num) or g.trial_active:
-		return
-	var n := randi_range(1, 3)
-	var xs := [0.2, 0.8, 0.35, 0.65]
-	xs.shuffle()
-	for i in n:
-		var k := _pick_prop()
-		var p := {"kind": k, "used": false, "x": xs[i], "y": randf_range(0.5, 0.72)}
-		if k == "chest":
-			p["mimic"] = randf() * 100.0 < MIMIC_CHANCE
-			p["spotted"] = p["mimic"] and randf() * 100.0 < spot_chance(g)
-		if k == "npc" and randf() < 0.35:
-			p["kind"] = "beast"   # a dying beast and its young (an egg quest)
-		g.room_props.append(p)
-		if k == "key":
-			# the key opens a locked chest somewhere in the same room
-			g.room_props.append({"kind": "locked", "used": false, "x": xs[(i + 1) % xs.size()] if n < 4 else 0.5, "y": 0.42})
+## The room's one thing is dealt with: on to the doors.
+static func _done(g: GameState) -> void:
+	g.exploring = false
+	g.explore_wait = 0
+	if not g.door_pending():
+		g._room_cleared()
 
 static func can_interact(g: GameState) -> bool:
 	return not g.in_town and (g.exploring or g.door_pending())
 
-## Tap something in the room. Returns what happened (for the log).
+## Auto (or waiting too long): deal with the room's thing the sensible way.
+static func auto_room(g: GameState) -> void:
+	if g.room_props.is_empty():
+		_done(g)
+		return
+	var p: Dictionary = g.room_props[0]
+	if p.get("spotted", false):
+		p["used"] = true
+		g.say("You leave the mimic alone.")
+		_done(g)
+		return
+	interact(g, 0)
+
+## Tap the room's thing. Returns what happened (for the log).
 static func interact(g: GameState, i: int) -> String:
 	if i < 0 or i >= g.room_props.size() or not can_interact(g):
 		return ""
 	var p: Dictionary = g.room_props[i]
-	if p.get("used", false):
+	if p.get("used", false) and String(p["kind"]) != "merchant":
 		return ""
 	var out := ""
 	match String(p["kind"]):
+		"merchant":
+			g.events.append({"type": "merchant"})
+			return ""
 		"chest":
-			if p.get("mimic", false):
-				p["used"] = true
-				_mimic(g)
-				return "The chest grows teeth!"
 			p["used"] = true
-			var gold := (5 + g.floor_num * 4) * 2
+			if p.get("mimic", false):
+				g.doors = []
+				g.path_offer = []
+				_monster(g, "Mimic", "mimic", "[color=#f87171]The chest snaps open... it's a Mimic![/color]")
+				return "The chest grows teeth!"
+			var gold := (5 + g.floor_num * 6) * 3
 			g._add_gold(gold)
-			g._give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), g._rarity(10 + g._loot_bonus(), GameData.LEGENDARY_CHANCE_NORMAL * 2.0), g.floor_num, g._new_id()))
+			g._give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), g._rarity(20 + g._loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS), g.floor_num, g._new_id()))
 			out = "You open the chest: +%d gold and some gear." % gold
 			g.events.append({"type": "treasure"})
-		"locked":
-			if not g.room_key:
-				return "It's locked. The key must be somewhere in this room."
-			p["used"] = true
-			var gold2 := (5 + g.floor_num * 4) * 4
-			g._add_gold(gold2)
-			g._give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), maxi(2, g._rarity(25 + g._loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS)), g.floor_num, g._new_id()))
-			out = "The rusty key turns. Inside: +%d gold and something good." % gold2
-			g.events.append({"type": "treasure"})
-		"key":
-			p["used"] = true
-			g.room_key = true
-			out = "You pick up a rusty key."
-		"pot":
-			p["used"] = true
-			var roll := randf()
-			if roll < 0.45:
-				var gp := 2 + g.floor_num
-				g._add_gold(gp)
-				out = "You smash the pot: +%d gold." % gp
-			elif roll < 0.65:
-				g.potions += 1
-				out = "You smash the pot: a potion!"
-			elif roll < 0.75:
-				Combat.afflict(g, "poison", 3)
-				out = "A snake was coiled inside. It bites!"
-			else:
-				out = "Just dust."
 		"altar":
 			p["used"] = true
 			match randi() % 3:
 				0:
 					g.elixirs["rested"] = int(GameData.ELIXIRS["rested"]["turns"])
-					out = "You pray at the altar. Strength flows into you (+15% Attack for a while)."
+					out = "You pray at the shrine. Strength flows into you (+15% Attack for a while)."
 				1:
 					g.luck_turns += 30
-					out = "You pray at the altar. Luck smiles on you (better loot for 30 turns)."
+					out = "You pray at the shrine. Luck smiles on you (better loot for 30 turns)."
 				_:
 					g.hero_hp = g.get_max_hp()
-					out = "You pray at the altar. Your wounds close."
-			g.events.append({"type": "buff", "name": "Altar"})
-		"lever":
-			p["used"] = true
-			if randf() < 0.6:
-				var gl := (5 + g.floor_num * 3) * 2
-				g._add_gold(gl)
-				g._give_materials(1)
-				out = "A hidden alcove grinds open: +%d gold and some materials." % gl
-			else:
-				trigger(g, roll_trap())
-				out = "Click. That was a trap."
+					out = "You pray at the shrine. Your wounds close."
+			g._faith(3)
+			g.events.append({"type": "buff", "name": "Shrine"})
 		"nest":
 			p["used"] = true
 			if randf() * 100.0 < NEST_EGG_CHANCE:
 				Menagerie.give_egg(g, "nest")
 				out = "Among the twigs: an egg."
 			else:
-				g.horde_left = maxi(g.horde_left, 2)
-				g.horde_total = g.horde_left
-				g.horde_pack = true
-				out = "Something angry was sitting on that nest. A pack comes for you!"
+				_monster(g, "", "", "[color=#f87171]Its mother is home![/color]")
+				return "Its mother is home!"
 		"npc":
-			if g.potions <= 0:
-				return "A wounded adventurer begs for a potion. You have none to give."
 			p["used"] = true
-			g.potions -= 1
-			g._faith(5)
-			var gn := (5 + g.floor_num * 4) * 3
-			g._add_gold(gn)
-			if randf() < 0.35:
-				g._give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), 3, g.floor_num, g._new_id()))
-			out = "You give the adventurer a potion. Grateful, they press their purse into your hands (+%d gold)." % gn
+			if g.potions <= 0:
+				out = "A wounded adventurer begs for a potion. You have none to give, and leave them be."
+			else:
+				g.potions -= 1
+				g._faith(5)
+				var gn := (5 + g.floor_num * 4) * 3
+				g._add_gold(gn)
+				if randf() < 0.35:
+					g._give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), 3, g.floor_num, g._new_id()))
+				out = "You give the adventurer a potion. Grateful, they press their purse into your hands (+%d gold)." % gn
 		"beast":
 			p["used"] = true
 			g._faith(5)
@@ -275,23 +264,27 @@ static func interact(g: GameState, i: int) -> String:
 				out = "The dying beast nudges something toward you before it goes still: its egg. Look after it."
 			else:
 				out = "You ease the beast's last moments. It doesn't fight you."
+		_:
+			return ""
 	g.codex.add("room_things")
 	if out != "":
 		g.say(out)
+	_done(g)
 	g.save_game()
 	return out
 
-## A mimic: the chest was a monster all along (Epic, better loot).
-static func _mimic(g: GameState) -> void:
+## Something in the room fights back: an Epic monster (better loot). name "" = this floor's own kind.
+static func _monster(g: GameState, name: String, art: String, line: String) -> void:
 	g.exploring = false
 	g.spawn_enemy()
-	g.enemy_name = "Mimic"
-	g.enemy_species = "Mimic"
-	g.enemy_art = "mimic"
-	g.enemy_people = ""
+	if name != "":
+		g.enemy_name = name
+		g.enemy_species = name
+		g.enemy_art = art
+		g.enemy_people = ""
 	g._apply_tier(Monsters.EPIC)
-	g.events.append({"type": "rare_monster", "tier": Monsters.EPIC, "name": "Mimic", "mods": g.enemy_mods.duplicate()})
-	g.say("[color=#f87171]The chest snaps open... it's a Mimic![/color]")
+	g.events.append({"type": "rare_monster", "tier": Monsters.EPIC, "name": g.enemy_name, "mods": g.enemy_mods.duplicate()})
+	g.say(line)
 
 # =====================================================================
 # Hidden dungeon portals (part 9, in progress)

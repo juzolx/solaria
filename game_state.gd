@@ -165,7 +165,7 @@ var room_count := 0         # rooms entered this run (seeds each room's layout)
 var room_trap := {}         # 0.13: this room's trap {kind, spotted, done, x, y} ({} = none)
 var door_traps: Array = []  # which of the 3 doors are trapped
 var room_props: Array = []  # things to poke at in this room (halls.gd)
-var room_key := false       # picked up this room's key
+var room_kind := "fight"    # what this room holds (a door kind: fight, treasure, rest, merchant, altar, nest, stranger, beast)
 var portal := {}            # 0.13: inside a hidden dungeon portal {theme, depth} ({} = not in one)
 var doors: Array = []      # 0.13: what's behind the 3 blank doors of a cleared room (hidden until you walk through)
 
@@ -1407,14 +1407,12 @@ func enemy_scale() -> float:
 func take_turn() -> void:
 	if run_over or in_town:
 		return
-	if exploring and (enemy_goblin or horde_left > 0 or enemy_calamity > 0 or trial_active):
-		exploring = false   # these come at you: no time to look around
 	if exploring and path_offer.is_empty():
-		# In the room: Auto walks up to the next monster after a moment
+		# A room with one thing in it: Auto deals with it after a moment
 		if autoplay:
 			explore_wait += 1
 			if explore_wait >= GameData.EXPLORE_WAIT_TURNS:
-				engage()
+				Halls.auto_room(self)
 		return
 	if not path_offer.is_empty():
 		# Waiting for you to pick a room; after a few turns it picks the first choice by itself
@@ -1854,7 +1852,6 @@ func _enemy_defeated() -> void:
 		_room_cleared(was_boss)
 	if not door_pending():
 		spawn_enemy()
-		_enter_room_pause()
 	_check_codex()
 	save_game()
 
@@ -3071,7 +3068,7 @@ func save_game() -> void:
 		"room_trap": room_trap,
 		"room_count": room_count,
 		"room_props": room_props,
-		"room_key": room_key,
+		"room_kind": room_kind,
 		"portal": portal,
 		"curse_turns": curse_turns,
 		"luck_turns": luck_turns,
@@ -3323,7 +3320,7 @@ func load_game() -> bool:
 	room_trap = data.get("room_trap", {})
 	room_count = int(data.get("room_count", 0))
 	room_props = data.get("room_props", [])
-	room_key = bool(data.get("room_key", false))
+	room_kind = String(data.get("room_kind", "fight"))
 	portal = data.get("portal", {})
 	horde_total = maxi(horde_left, GameData.HORDE_SIZE)
 	curse_turns = int(data.get("curse_turns", 0))
@@ -3592,12 +3589,6 @@ func start_event(kind: String) -> void:
 const DOOR_KEYS := ["door_l", "door_m", "door_r"]
 const DOOR_NAMES := ["Left door", "Middle door", "Right door"]
 
-## Back to looking at the room before the next fight (only when rooms are shown).
-func _enter_room_pause() -> void:
-	if path_rooms_on and not in_town and not enemy_goblin and horde_left <= 0 and enemy_calamity == 0 and not trial_active:
-		exploring = true
-		explore_wait = 0
-
 ## Walk up to the monster: the fight starts.
 func engage() -> void:
 	if not exploring:
@@ -3623,20 +3614,30 @@ func _room_cleared(was_boss := false) -> void:
 	events.append({"type": "doors"})
 	tip("doors", "The room is clear. Three blank doors: pick one. Some classes can read what's behind them.")
 
-## What's behind each door. After a boss, one door always hides Snik.
+## What's behind each door: one thing per room. After a boss, one door always hides
+## Snik; before a boss floor every door leads to the boss.
+const DOOR_WEIGHTS := {"fight": 52, "elite": 12, "treasure": 9, "rest": 7, "altar": 5, "nest": 4, "stranger": 4, "beast": 3}
+
 func roll_doors(was_boss := false) -> Array:
 	var out: Array = []
+	if GameData.is_boss_floor(floor_num + 1):
+		return ["fight", "fight", "fight"]
+	var total := 0
+	for k in DOOR_WEIGHTS:
+		total += int(DOOR_WEIGHTS[k])
 	for i in 3:
-		var roll := randf() * 100.0
 		var kind := "fight"
-		if roll < 12.0:
-			kind = "treasure"
-		elif roll < 22.0:
-			kind = "rest"
-		elif roll < 38.0:
-			kind = "elite"
-		elif roll < 38.0 + minf(20.0, floor_num * GameData.GOBLIN_ROAM_PER_FLOOR):
+		if randf() * 100.0 < minf(12.0, floor_num * GameData.GOBLIN_ROAM_PER_FLOOR * 0.6):
 			kind = "merchant"
+		else:
+			var r := randi() % total
+			for k in DOOR_WEIGHTS:
+				r -= int(DOOR_WEIGHTS[k])
+				if r < 0:
+					kind = String(k)
+					break
+		if floor_num < 3 and kind in ["elite", "nest"]:
+			kind = "fight"
 		out.append(kind)
 	if was_boss and not "merchant" in out:
 		out[randi() % 3] = "merchant"
@@ -3645,7 +3646,7 @@ func roll_doors(was_boss := false) -> Array:
 func door_pending() -> bool:
 	return not doors.is_empty() and not path_offer.is_empty() and String(path_offer[0]) == "door_l"
 
-## Walk through a door: the next floor, and whatever was behind it.
+## Walk through a door: the next floor, and the one thing behind it.
 func _through_door(i: int) -> void:
 	var kind: String = doors[clampi(i, 0, doors.size() - 1)] if not doors.is_empty() else "fight"
 	var trapped: bool = i < door_traps.size() and bool(door_traps[i])
@@ -3658,15 +3659,23 @@ func _through_door(i: int) -> void:
 			Halls.trigger(self, Halls.roll_trap())
 	codex.add("doors")
 	room_count += 1
+	room_props = []
+	room_trap = {}
 	_next_floor()
-	if in_town:
+	if in_town or not path_offer.is_empty():
+		room_kind = "fight"
+		spawn_enemy()
 		return
+	if Halls.EVENT_ROOMS.has(kind) and not GameData.is_boss_floor(floor_num):
+		Halls.enter_event_room(self, kind)
+		return
+	# A fight: it starts as you walk in (a trap in here goes off, or you step around it)
+	room_kind = "fight"
 	spawn_enemy()
-	_enter_room_pause()
 	Halls.roll_room_trap(self)
-	Halls.roll_props(self)
-	if kind != "fight":
-		_apply_path(kind)
+	Halls.on_engage(self)
+	if kind == "elite":
+		_apply_path("elite")
 
 ## What gets picked if you don't choose in time.
 func auto_path() -> String:

@@ -29,6 +29,7 @@ func _initialize() -> void:
 		g.horde_left = 0
 	check(g.door_pending() and g.floor_num == 7, "cleared room: three doors, same floor")
 	check(g.path_info("door_m")["name"] == "Middle door", "doors are blank")
+	g.doors = ["fight", "fight", "fight"]
 	g.choose_path("door_r")
 	check(g.floor_num == 8 and not g.door_pending() and g.fight == 1, "a door leads to the next floor")
 	# Autoplay picks a door by itself after a while
@@ -45,7 +46,9 @@ func _initialize() -> void:
 	t.doors = ["treasure", "treasure", "treasure"]
 	var g0 := t.gold
 	t.choose_path("door_l")
-	check(t.gold > g0, "a treasure door pays")
+	t.room_props[0]["mimic"] = false
+	Halls.interact(t, 0)
+	check(t.gold > g0 and t.door_pending(), "a treasure room pays, then the doors open")
 	var r := fresh()
 	r._room_cleared()
 	r.doors = ["rest", "rest", "rest"]

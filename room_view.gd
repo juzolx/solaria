@@ -1,17 +1,16 @@
 class_name RoomView
 extends Control
 ## 0.13 The Halls Below: the room you're standing in, first-person from the doorway
-## (the room itself is HallsScene, shared with the battle view). One room per floor.
-## Between fights the monsters wait further in (tap one to fight it, or Auto walks
-## up); things to poke at stand on the floor; when the room is clear, three doors on
-## the far wall lead on (tap one).
+## (the room itself is HallsScene, shared with the battle view). One room per floor,
+## one thing per room: fights start by themselves (the battle view shows them); this
+## view shows a room's single thing (chest, campfire, Snik, shrine, nest, stranger,
+## dying beast) and, once the room is done, the three doors on the far wall.
 
 var main
 var state: GameState
 var scene := HallsScene.new()
 var t := 0.0
 var key := ""
-var extra_art: Array = []  # art keys for the monsters after the current one
 var motes: Array = []
 var hit := {}              # "m<i>" / "d<i>" / "p<i>" -> Rect2 (tap targets)
 
@@ -32,10 +31,6 @@ func _process(delta: float) -> void:
 	var k := "%d|%d" % [state.floor_num, state.room_count]
 	if k != key:
 		key = k
-		extra_art = []
-		for _i in 2:
-			var def := GameData.pick_monster(maxi(1, state.floor_num))
-			extra_art.append(GameData.art_key(String(def["name"])))
 		motes.clear()
 	queue_redraw()
 
@@ -82,10 +77,6 @@ func _draw() -> void:
 	var rtrap: Dictionary = state.room_trap
 	if not rtrap.is_empty() and rtrap.get("spotted", false) and not rtrap.get("done", false) and not doors_open:
 		things.append({"z": _prop_z(float(rtrap["y"])), "kind": "trap"})
-	if not doors_open and not state.in_town:
-		var left := 1 if state.enemy_is_boss else maxi(1, GameData.FIGHTS_PER_FLOOR - state.fight + 1)
-		for i in mini(left, 3):
-			things.append({"z": 3.0 + 0.55 * i, "kind": "monster", "i": i})
 	things.sort_custom(func(a, b): return float(a["z"]) > float(b["z"]))
 	for th in things:
 		if scene.draw_scenery(self, th):
@@ -95,16 +86,21 @@ func _draw() -> void:
 				_draw_prop(int(th["i"]), font)
 			"trap":
 				_draw_trap()
-			"monster":
-				_draw_monster(int(th["i"]))
 	# Your team in the doorway, seen from behind
 	_draw_team()
 	scene.vignette(self, size)
 	_draw_motes(scene.mood())
 	# What to do
-	var msg := "Pick a door" if doors_open else "Tap a monster to fight"
-	if not doors_open and state.autoplay:
-		msg += "  (Auto walks up soon)"
+	var msg := "Pick a door"
+	if not doors_open and not state.room_props.is_empty():
+		var pk := String(state.room_props[0]["kind"])
+		msg = String(Halls.PROP_HINTS.get(pk, ""))
+		if state.room_props[0].get("spotted", false):
+			msg = "A mimic! Fight it, or pick a door"
+		if state.autoplay:
+			msg += "  (Auto in a moment)"
+	elif doors_open and not state.room_props.is_empty() and String(state.room_props[0]["kind"]) == "merchant":
+		msg = "Tap Snik to trade, or pick a door"
 	draw_string_outline(font, Vector2(0, size.y - 14), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, 14, 4, Color(0, 0, 0, 0.9))
 	draw_string(font, Vector2(0, size.y - 14), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, 14, Color("#f6d88f"))
 	var title := "%s  -  Floor %d" % [GameData.zone_for_floor(state.floor_num)["name"], state.floor_num]
@@ -122,26 +118,35 @@ func _draw_prop(i: int, font: Font) -> void:
 	var p: Dictionary = state.room_props[i]
 	var used: bool = p.get("used", false)
 	var kind := String(p["kind"])
-	if used and kind in ["pot", "key", "npc", "beast", "nest"]:
+	if used and kind in ["npc", "beast", "nest"]:
 		return
-	var tile: String = String({"chest": "chest", "locked": "chest", "pot": "pot", "altar": "altar", "lever": "lever", "nest": "nest", "key": "key"}.get(kind, ""))
+	var tile: String = String({"chest": "chest", "altar": "altar", "nest": "nest"}.get(kind, ""))
 	if kind == "chest" and p.get("spotted", false) and not used:
 		tile = "mimic"
-	if used and kind in ["chest", "locked"]:
+	if used and kind == "chest":
 		tile = "chest_open"
 	var x := _prop_x(float(p["x"]))
 	var z := _prop_z(float(p["y"]))
 	var rect := Rect2()
+	var bob := sin(t * 2.0) * 1.5
 	if kind == "npc":
-		rect = scene.sprite(self, scene.tx("res://art/dungeon/npc.png"), x, z, 1.5, Color(0.9, 0.85, 0.85))
+		rect = scene.sprite(self, scene.tx("res://art/dungeon/npc.png"), x, z, 1.7, Color(0.9, 0.85, 0.85))
 	elif kind == "beast":
 		var who := Sprites.enemy_by_key("barghest")
 		if who.has("tex"):
-			rect = scene.sprite(self, who["tex"], x, z, 1.0, Color(0.6, 0.55, 0.55))
+			rect = scene.sprite(self, who["tex"], x, z, 1.3, Color(0.6, 0.55, 0.55))
+	elif kind == "merchant":
+		var sn := Sprites.enemy_by_key("treasure_goblin")
+		if sn.has("tex"):
+			rect = scene.sprite(self, sn["tex"], x, z, 1.4, Color.WHITE, bob)
+	elif kind == "campfire":
+		rect = _draw_campfire(x, z)
 	elif tile != "":
-		var h := 0.75 if tile == "key" else 0.9
-		rect = scene.sprite(self, scene.tx("res://art/dungeon/%s.png" % tile), x, z, h, Color(0.6, 0.6, 0.6) if used else Color.WHITE)
-	if used or not Halls.can_interact(state) or rect.size == Vector2.ZERO:
+		var big := 1.6 if tile == "altar" else 1.1
+		rect = scene.sprite(self, scene.tx("res://art/dungeon/%s.png" % tile), x, z, big, Color(0.6, 0.6, 0.6) if used else Color.WHITE)
+	if not Halls.can_interact(state) or rect.size == Vector2.ZERO or kind == "campfire":
+		return
+	if used and kind != "merchant":
 		return
 	hit["p%d" % i] = rect.grow(8)
 	var lab := String(Halls.PROP_NAMES.get(kind, kind))
@@ -165,19 +170,6 @@ func _draw_trap() -> void:
 	draw_set_transform(scene.proj(x, HallsScene.FLOOR_Y, z), 0.0, Vector2(1.0, 0.35))
 	draw_arc(Vector2.ZERO, scene.focal * 0.55 / z, 0, TAU, 24, Color(1, 0.75, 0.2, 0.5 + 0.3 * sin(t * 5.0)), 2.0)
 	draw_set_transform(Vector2.ZERO)
-
-func _draw_monster(i: int) -> void:
-	var art_key := state.enemy_art if i == 0 else String(extra_art[(i - 1) % extra_art.size()])
-	var art := Sprites.enemy_by_key(art_key)
-	if art.is_empty():
-		return
-	var xs := [0.0, -1.3, 1.3]
-	var h := (2.4 if state.enemy_is_boss else 1.5) if i == 0 else 1.3
-	var tint := Color.WHITE if i == 0 else Color(0.8, 0.8, 0.85)
-	var rect := scene.sprite(self, art["tex"], xs[i], 3.0 + 0.55 * i, h, tint, sin(t * 2.2 + i) * 2.0)
-	if i == 0:
-		draw_rect(rect.grow(3), Color(1, 0.4, 0.35, 0.3 + 0.25 * sin(t * 4.0)), false, 2.0)
-	hit["m%d" % i] = rect.grow(8)
 
 func _draw_team() -> void:
 	var members: Array = state.party.members if state.party != null else []
@@ -247,3 +239,22 @@ func _draw_motes(mood: Dictionary) -> void:
 			_:
 				var tw := 0.5 + 0.5 * sin(t * 5.0 + p.x)
 				draw_rect(Rect2(p, Vector2(2, 2)), Color(c, (0.4 + 0.5 * tw) * a))
+
+## A campfire: logs and a flickering flame, lighting the floor around it.
+func _draw_campfire(x: float, z: float) -> Rect2:
+	var base := scene.proj(x, HallsScene.FLOOR_Y, z)
+	var s := scene.focal / z
+	for k in 5:
+		draw_set_transform(base, 0.0, Vector2(1.0, 0.35))
+		draw_circle(Vector2.ZERO, s * (0.5 + k * 0.25) * (1.0 + 0.05 * sin(t * 9.0)), Color(1.0, 0.55, 0.2, 0.08))
+		draw_set_transform(Vector2.ZERO)
+	var lw := s * 0.55
+	draw_line(base + Vector2(-lw, 0), base + Vector2(lw, -s * 0.08), Color("#4a2e1a"), maxf(3.0, s * 0.1))
+	draw_line(base + Vector2(-lw, -s * 0.08), base + Vector2(lw, 0), Color("#5c3a22"), maxf(3.0, s * 0.1))
+	for k in 3:
+		var fh := s * (0.7 - k * 0.18) * (1.0 + 0.15 * sin(t * (8.0 + k * 3.0) + k))
+		var fw := s * (0.28 - k * 0.07)
+		var col: Color = [Color("#e8541c"), Color("#f59e0b"), Color("#fde68a")][k]
+		var pts := PackedVector2Array([base + Vector2(-fw, -s * 0.05), base + Vector2(sin(t * 6.0 + k) * fw * 0.4, -s * 0.05 - fh), base + Vector2(fw, -s * 0.05)])
+		draw_colored_polygon(pts, col)
+	return Rect2(base - Vector2(lw, s * 0.8), Vector2(lw * 2.0, s * 0.8))
