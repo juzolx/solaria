@@ -1,5 +1,5 @@
 78098b89c88a74ebe8c20117b8754620
-::res://::1792421575
+::res://::1792422483
 achievements_tab.gd::GDScript::225817628144516105::1792399747::0::1::::AchievementsTab<>VBoxContainer<><>0<>0<><>::
 art_info.gd::GDScript::2121761137587333428::1792399749::0::1::::ArtInfo<>RefCounted<><>0<>0<><>::
 bag_tab.gd::GDScript::7963412957330005317::1792399749::0::1::::BagTab<>VBoxContainer<><>0<>0<><>::
@@ -34,6 +34,7 @@ hero_select.gd::GDScript::8343600548871778320::1792399749::0::1::::HeroSelect<>O
 hero_tab.gd::GDScript::1597247945663405098::1792399749::0::1::::HeroTab<>ScrollContainer<><>0<>0<><>::
 hidden.gd::GDScript::1256150158193937454::1792399749::0::1::::Hidden<>RefCounted<><>0<>0<><>::
 hold_tip.gd::GDScript::4581295197296855118::1792416800::0::1::::HoldTip<>Node<><>0<>0<><>::
+icon.png::CompressedTexture2D::3677897424769360782::1792422465::1792422485::1::::<><><>0<>0<>782d236cc562190f022a9a226abd2f71<>res://.godot/imported/icon.png-487276ed1e3a0c39cad0279d744ee560.ctex::
 inn_tab.gd::GDScript::2139531814093350896::1792399749::0::1::::InnTab<>ScrollContainer<><>0<>0<><>::
 item_grid.gd::GDScript::2025008339147045655::1792399749::0::1::::ItemGrid<>RefCounted<><>0<>0<><>::
 item_pool.gd::GDScript::1307026090172593099::1792399749::0::1::::ItemPool<>RefCounted<><>0<>0<><>::
@@ -78,6 +79,7 @@ signatures.gd::GDScript::5473582297840230887::1792399749::0::1::::Signatures<>Re
 skills_tab.gd::GDScript::5838519330532651803::1792403812::0::1::::SkillsTab<>VBoxContainer<><>0<>0<><>::
 skill_data.gd::GDScript::1490639940074352852::1792399749::0::1::::SkillData<>RefCounted<><>0<>0<><>::
 skill_icons.gd::GDScript::5056317378488552549::1792399749::0::1::::SkillIcons<>RefCounted<><>0<>0<><>::
+splash.png::CompressedTexture2D::727890213174191474::1792422465::1792422485::1::::<><><>0<>0<>90488f6bfe4c0b5a25fdb0988c2a2cd6<>res://.godot/imported/splash.png-929ed8a00b89ba36c51789452f874c77.ctex::
 sprites.gd::GDScript::7097386362148170550::1792399784::0::1::::Sprites<>RefCounted<><>0<>0<><>::
 sprite_light.gd::GDScript::3832775504783479797::1792420529::0::1::::SpriteLight<>RefCounted<><>0<>0<><>::
 stash_tab.gd::GDScript::3246610137660904356::1792399749::0::1::::StashTab<>VBoxContainer<><>0<>0<><>::
@@ -3334,7 +3336,7 @@ code-map.md::TextFile::-1::1792399484::0::1::::<><><>0<>0<><>::
 dungeon-revamp-design.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
 next-update-notes.md::TextFile::-1::1792399494::0::1::::<><><>0<>0<><>::
 stage1-progress.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
-stage2-progress.md::TextFile::-1::1792421417::0::1::::<><><>0<>0<><>::
+stage2-progress.md::TextFile::-1::1792422410::0::1::::<><><>0<>0<><>::
 study-and-implement-list.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
 ::res://proto/::1792399796
 room3d.gd::GDScript::9127945263395229099::1792399784::0::1::::<>Control<><>0<>0<><>::
@@ -3476,7 +3478,8 @@ test_phase11.gd::GDScript::1098794001118079870::1792399750::0::1::::<>SceneTree<
 town_logic.gd::GDScript::411414503291107240::1792399750::0::1::::<>SceneTree<><>0<>0<><>::
 town_shots.gd::GDScript::1500613879200887237::1792399750::0::1::::<>SceneTree<><>0<>0<><>::
 ui_tour.gd::GDScript::9202209506045927083::1792405735::0::1::::<>SceneTree<><>0<>0<><>::
-::res://tools/::1792420925
+::res://tools/::1792422465
+make_brand.gd::GDScript::7684674594627054757::1792422465::0::1::::<>SceneTree<><>0<>0<><>::
 make_fx.gd::GDScript::1904977020089756828::1792418201::0::1::::<>SceneTree<><>0<>0<><>::
 make_sounds.gd::GDScript::6909498110548672774::1792420850::0::1::::<>SceneTree<><>0<>0<><>::
 ::res://tools/old/::1792399750
