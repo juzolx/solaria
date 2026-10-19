@@ -1,6 +1,5 @@
 # Effects
 
-Hit and spell effects: "750 Effect and FX Pixel All" (free version) by BDragon1727.
-https://bdragon1727.itch.io/750-effect-and-fx-pixel-all
+Hit and spell effects (slash, claw, pierce, impact, crit, burst, fire, ice, lightning, poison, holy, shadow, nature, arcane, shatter, heal, level up, blood) were drawn for Solaria by tools/make_fx.gd. CC0.
 
-Free license: non-commercial games only. For a commercial release, contribute any amount to the artist first.
+They replace the free version of "750 Effect and FX Pixel All" by BDragon1727, whose license allows non-commercial games only. The old files are kept outside the game in C:\gamedev\solaria_sources\old_fx.
