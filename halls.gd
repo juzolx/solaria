@@ -138,14 +138,14 @@ static func on_doors_shown(g: GameState) -> void:
 
 ## door kind -> the one thing standing in that room
 const EVENT_ROOMS := {"treasure": "chest", "rest": "campfire", "merchant": "merchant", "altar": "altar",
-	"nest": "nest", "stranger": "npc", "beast": "beast", "rift": "rift"}
+	"nest": "nest", "stranger": "npc", "beast": "beast", "rift": "rift", "camp": "camp"}
 const ROOM_NAMES := {"fight": "Monsters", "elite": "Elite monster", "treasure": "Treasure room", "rest": "Campfire",
-	"merchant": "Goblin trader", "altar": "Shrine", "nest": "Nest", "stranger": "A stranger", "beast": "Dying beast", "rift": "A shimmer in the air"}
+	"merchant": "Goblin trader", "altar": "Shrine", "nest": "Nest", "stranger": "A stranger", "beast": "Dying beast", "rift": "A shimmer in the air", "camp": "Descenders' Camp"}
 const MIMIC_CHANCE := 12.5         # % of chests (about 1 in 8)
 const NEST_EGG_CHANCE := 40.0      # % a nest holds an egg (otherwise its mother is home)
 const PROP_NAMES := {"chest": "Chest", "altar": "Shrine", "nest": "Nest", "npc": "Wounded adventurer",
-	"beast": "Dying beast", "merchant": "Snik", "campfire": "Campfire", "rift": "Rift"}
-const PROP_HINTS := {"chest": "Tap the chest", "rift": "Tap the rift to step through", "altar": "Tap the shrine to pray", "nest": "Tap the nest",
+	"beast": "Dying beast", "merchant": "Snik", "campfire": "Campfire", "rift": "Rift", "camp": "Camp"}
+const PROP_HINTS := {"chest": "Tap the chest", "camp": "Tap the camp to trade or send gold home", "rift": "Tap the rift to step through", "altar": "Tap the shrine to pray", "nest": "Tap the nest",
 	"npc": "Tap to help them", "beast": "Tap to go to it", "merchant": "Tap Snik to trade", "campfire": "You rest by the fire"}
 
 ## Walk into a room that holds one thing instead of monsters.
@@ -170,6 +170,9 @@ static func enter_event_room(g: GameState, kind: String) -> void:
 			_done(g)
 		"merchant":
 			g._apply_path("merchant")
+			_done(g)
+		"camp":
+			Camp.enter(g)
 			_done(g)
 		"treasure":
 			if p["spotted"]:
@@ -203,12 +206,15 @@ static func interact(g: GameState, i: int) -> String:
 	if i < 0 or i >= g.room_props.size() or not can_interact(g):
 		return ""
 	var p: Dictionary = g.room_props[i]
-	if p.get("used", false) and String(p["kind"]) != "merchant":
+	if p.get("used", false) and not String(p["kind"]) in ["merchant", "camp"]:
 		return ""
 	var out := ""
 	match String(p["kind"]):
 		"merchant":
 			g.events.append({"type": "merchant"})
+			return ""
+		"camp":
+			g.events.append({"type": "descender_camp"})
 			return ""
 		"chest":
 			p["used"] = true

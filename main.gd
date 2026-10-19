@@ -1385,6 +1385,8 @@ func _handle_events() -> void:
 					GuideBook.open_book(self, e["id"], true)
 			"merchant":
 				MerchantPopup.new().show_for(self)
+			"descender_camp":
+				CampPopup.new().show_for(self)
 			"home_tally":
 				_show_home_tally.call_deferred(e)
 			"calamity":

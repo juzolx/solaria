@@ -146,12 +146,14 @@ func _draw_prop(i: int, font: Font) -> void:
 		rect = _draw_campfire(x, z)
 	elif kind == "rift":
 		rect = _draw_rift(x, z)
+	elif kind == "camp":
+		rect = _draw_camp(x, z)
 	elif tile != "":
 		var big := 1.6 if tile == "altar" else 1.1
 		rect = scene.sprite(self, scene.tx("res://art/dungeon/%s.png" % tile), x, z, big, Color(0.6, 0.6, 0.6) if used else Color.WHITE)
 	if not Halls.can_interact(state) or rect.size == Vector2.ZERO or kind == "campfire":
 		return
-	if used and kind != "merchant":
+	if used and not kind in ["merchant", "camp"]:
 		return
 	hit["p%d" % i] = rect.grow(8)
 	var lab := String(Halls.PROP_NAMES.get(kind, kind))
@@ -322,3 +324,20 @@ func _draw_menagerie_room(leader_feet: Vector2, leader_sz: float) -> void:
 		var asz: Vector2 = art["size"]
 		var w := s * asz.x / asz.y
 		draw_texture_rect(SpriteLight.lit(art["tex"], scene.zone), Rect2(at - Vector2(w / 2.0, s * 0.9 + hop), Vector2(w, s)), false, Color(0.9, 0.88, 0.85))
+
+## A Descenders' Camp: two tents around a fire, Snik's lantern hanging between them.
+func _draw_camp(x: float, z: float) -> Rect2:
+	var s := scene.focal / z
+	for side in [-1.0, 1.0]:
+		var base := scene.proj(x + side * 0.85, HallsScene.FLOOR_Y, z + 0.3)
+		var tw := s * 0.75
+		var th := s * 0.62
+		var pts := PackedVector2Array([base + Vector2(-tw / 2.0, 0), base + Vector2(0, -th), base + Vector2(tw / 2.0, 0)])
+		draw_colored_polygon(pts, Color("#5b4636").darkened(0.2))
+		draw_polyline(PackedVector2Array([pts[0], pts[1], pts[2]]), Color("#a08060"), 2.0)
+		draw_colored_polygon(PackedVector2Array([base + Vector2(-tw * 0.12, 0), base + Vector2(0, -th * 0.45), base + Vector2(tw * 0.12, 0)]), Color("#1a120c"))
+	var lamp := scene.proj(x, HallsScene.FLOOR_Y + 1.1, z + 0.3)
+	draw_circle(lamp, s * 0.06, Color(1.0, 0.8, 0.4, 0.9))
+	draw_circle(lamp, s * 0.16, Color(1.0, 0.7, 0.3, 0.15 + 0.05 * sin(t * 5.0)))
+	var fire := _draw_campfire(x, z)
+	return fire.merge(Rect2(scene.proj(x - 1.25, HallsScene.FLOOR_Y + 0.7, z), Vector2(s * 2.5, s * 0.7)))

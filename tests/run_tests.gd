@@ -495,7 +495,7 @@ func _initialize() -> void:
 	z.enemy_hp = 0
 	var mats_before := z.material_total()
 	z._enemy_defeated()
-	check(z.door_pending() and z.doors.size() == 3 and "merchant" in z.doors, "boss beaten: three blank doors, one hides Snik")
+	check(z.door_pending() and z.doors.size() == 3 and "camp" in z.doors, "boss beaten: three blank doors, one leads to a camp (Snik is there)")
 	check(Town.floor_clear(z), "a cleared room counts as between floors")
 	z.doors[0] = "fight"
 	z.choose_path("door_l")

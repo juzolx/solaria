@@ -3732,8 +3732,8 @@ func roll_doors(was_boss := false) -> Array:
 		if floor_num < 3 and kind in ["elite", "nest"]:
 			kind = "fight"
 		out.append(Rifts.maybe_door(self, kind))  # very rarely: a hidden portal
-	if was_boss and not "merchant" in out:
-		out[randi() % 3] = "merchant"
+	if was_boss and not "camp" in out:
+		out[randi() % 3] = "camp"  # 0.13+: a Descenders' Camp waits after every boss (camp.gd)
 	return out
 
 func door_pending() -> bool:
