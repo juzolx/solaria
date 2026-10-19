@@ -185,14 +185,27 @@ func show_title() -> void:
 	if fresh_start_notice:
 		_show_fresh_start.call_deferred()
 
-## Saves and goes back to the title screen (to switch heroes).
-func back_to_title() -> void:
+## Saves the hero, the party, the codex and the profile.
+func save_everything() -> void:
 	if started and not state.run_over:
 		state.save_game()
 		if state.party != null:
 			state.party.save_all()
-	codex.save()
-	profile.save()
+	if codex:
+		codex.save()
+	if profile:
+		profile.save()
+
+## Phones can kill a backgrounded app without warning (iOS allows about 5 s after a pause),
+## so save the moment the app is paused, loses focus or is asked to close.
+func _notification(what: int) -> void:
+	match what:
+		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST:
+			save_everything()
+
+## Saves and goes back to the title screen (to switch heroes).
+func back_to_title() -> void:
+	save_everything()
 	timer.stop()
 	get_tree().reload_current_scene()
 
