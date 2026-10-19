@@ -1265,7 +1265,7 @@ func _draw() -> void:
 				var rr := Rect2(pr.position + Vector2(side * pr.size.x * 0.62, -pr.size.y * 0.1), pr.size * 0.78)
 				rr.position.x += pr.size.x * 0.11
 				draw_ellipse_shadow(rr)
-				draw_texture_rect(part["tex"], rr, false, Color(0.62, 0.6, 0.66, 0.9 * enemy_alpha))
+				draw_texture_rect(SpriteLight.lit(part["tex"], clampi(GameData.zone_index(state.floor_num), 0, 9)), rr, false, Color(0.62, 0.6, 0.66, 0.9 * enemy_alpha))
 	# Current enemy
 	if enemy_alpha > 0.0:
 		var boss := state.enemy_is_boss
@@ -1305,6 +1305,8 @@ func _draw() -> void:
 			if not epose.is_empty():
 				etex = epose["tex"]
 				ewhite = epose["white"]
+		if state.enemy_calamity <= 0:
+			etex = SpriteLight.lit(etex, clampi(GameData.zone_index(state.floor_num), 0, 9))
 		var etint := Color(1, 1, 1, enemy_alpha)
 		var rank := GameData.zone_rank(state.floor_num)
 		if rank > 0:

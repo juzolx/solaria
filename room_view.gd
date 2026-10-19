@@ -139,7 +139,7 @@ func _draw_prop(i: int, font: Font) -> void:
 	elif kind == "merchant":
 		var sn := Sprites.enemy_by_key("treasure_goblin")
 		if sn.has("tex"):
-			rect = scene.sprite(self, sn["tex"], x, z, 1.4, Color.WHITE, bob)
+			rect = scene.sprite(self, SpriteLight.lit(sn["tex"], scene.zone), x, z, 1.4, Color.WHITE, bob)
 	elif kind == "campfire":
 		rect = _draw_campfire(x, z)
 	elif tile != "":

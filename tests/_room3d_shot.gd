@@ -36,6 +36,10 @@ func _initialize() -> void:
 	main.refresh()
 	await create_timer(0.9).timeout
 	root.get_texture().get_image().save_png(out.path_join("fight.png"))
+	SpriteLight.enabled = false
+	await create_timer(0.3).timeout
+	root.get_texture().get_image().save_png(out.path_join("fight_unlit.png"))
+	SpriteLight.enabled = true
 	# Low graphics falls back to the 2D room
 	HallsScene.low = true
 	st.exploring = true
