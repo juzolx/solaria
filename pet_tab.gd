@@ -99,7 +99,7 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 		main.refresh())
 	b.custom_minimum_size = Vector2(96, UI.TAP)
 	right.add_child(b)
-	var rn := UI.button("Rename", func():
+	var rn := UI.button("Less" if renaming == id else "More", func():
 		renaming = -1 if renaming == id else id
 		shown = ""
 		main.refresh())
@@ -114,13 +114,22 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 		le.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		le.custom_minimum_size = Vector2(0, UI.TAP)
 		row.add_child(le)
-		var ok := UI.button("Save", func():
+		var ok := UI.button("Rename", func():
 			Menagerie.rename(state, id, le.text)
 			renaming = -1
 			shown = ""
 			main.refresh())
 		ok.custom_minimum_size = Vector2(0, UI.TAP)
 		row.add_child(ok)
+		var rel := UI.button("Release", func():
+			main.confirm("Release %s?" % String(p["name"]), "%s goes back to the wild for good. Pets are hard to find, so be sure. Your Codex remembers you had one." % String(p["name"]), "Release", func():
+				Menagerie.release(state, id)
+				renaming = -1
+				shown = ""
+				main.refresh()))
+		rel.add_theme_color_override("font_color", UI.RED)
+		rel.custom_minimum_size = Vector2(0, UI.TAP)
+		row.add_child(rel)
 	return c[0]
 
 ## Your class companion: what it is, what it does, and what it becomes.

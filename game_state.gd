@@ -2396,7 +2396,7 @@ func filter_salvages(item: Dictionary) -> bool:
 func _give_item(item: Dictionary) -> void:
 	Milestones.on_item(self, item)
 	add_to_wardrobe(item)
-	codex.found_item(item)
+	_note_find(item)
 	var r := int(item["rarity"])
 	codex.bounty_progress("item", {"rarity": r})
 	events.append({"type": "loot", "name": GameData.display_name(item), "rarity": r, "up": compare_pct(item), "item": item})
@@ -3048,7 +3048,7 @@ func craft_set_piece(set_name: String, slot: String) -> void:
 	scrap -= GameData.SET_PIECE_SCRAP
 	var item := GameData.make_set_item(set_name, slot, best_floor, _new_id())
 	codex.add("sets_crafted")
-	codex.found_item(item)
+	_note_find(item)
 	add_to_wardrobe(item)
 	bag.append(item)
 	bag_version += 1
@@ -3095,7 +3095,7 @@ func craft_gear(slot: String) -> void:
 	scrap -= GameData.CRAFT_GEAR_SCRAP
 	var item := GameData.make_item(slot, _rarity(GameData.CRAFT_RARITY_BONUS, GameData.LEGENDARY_CHANCE_CRAFT), best_floor, _new_id())
 	add_to_wardrobe(item)
-	codex.found_item(item)
+	_note_find(item)
 	bag.append(item)
 	bag_version += 1
 	say("Crafted %s (+%d %s)." % [_tag(item), GameData.item_power(item), item["stat"]])
@@ -4071,7 +4071,7 @@ func buy_merchant(i: int) -> bool:
 	if m["kind"] == "item":
 		var item: Dictionary = m["item"]
 		add_to_wardrobe(item)
-		codex.found_item(item)
+		_note_find(item)
 		bag.append(item)
 		bag_version += 1
 		say("Bought %s from the merchant." % _tag(item))
@@ -4337,7 +4337,7 @@ func gamble(id: int) -> Dictionary:
 			GameData.add_legendary_effect(item)
 		add_to_wardrobe(item)
 		codex.add("gamble_wins")
-		codex.found_item(item)
+		_note_find(item)
 		bag_version += 1
 		say("[color=#4ade80]The wheel smiles![/color] It's now %s." % _tag(item))
 	else:
@@ -4595,3 +4595,9 @@ func sell_skill(id: String) -> int:
 	say("Broke %s down into %d dust." % [nm, paid])
 	save_game()
 	return paid
+
+## Next update (Juzo): the first Unique or Set piece of its name you ever find gets a fanfare.
+func _note_find(item: Dictionary) -> void:
+	var r := int(item["rarity"])
+	if codex.found_item(item) and r in [GameData.UNIQUE, GameData.SET_RARITY]:
+		events.append({"type": "first_find", "kind": "set" if r == GameData.SET_RARITY else "unique", "name": GameData.display_name(item), "item": item})

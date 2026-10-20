@@ -46,6 +46,7 @@ var raid_tab: RaidTab
 var codex_tabs: TabContainer
 var bestiary_tab: BestiaryTab
 var collection_tab: CollectionTab
+var pet_book_tab: PetBookTab
 var stats_tab: StatsTab
 var achievements_tab: AchievementsTab
 var bounty_tab: BountyTab
@@ -315,6 +316,9 @@ func _start(is_new: bool) -> void:
 	if not state.hardcore and not state.party_slots.is_empty():
 		state.set_party(state.party_slots)
 	Bench.refresh(state)  # next update: who is at home finding things
+	for pet in state.pets:  # next update: pets owned before the Codex kept a pet book
+		if not codex.pet_book.has(str(pet["species"])) or int(codex.pet_book[str(pet["species"])]) < int(pet["tier"]):
+			codex.pet_book[str(pet["species"])] = int(pet["tier"])
 	state.tip("tap", "Your hero fights on their own. Tap the enemy to hit it yourself for bonus damage!")
 	battle.state = state
 	battle.sfx = sfx
@@ -693,6 +697,7 @@ func _build_ui() -> void:
 	wheel_tab = WheelTab.new()
 	bestiary_tab = BestiaryTab.new()
 	collection_tab = CollectionTab.new()
+	pet_book_tab = PetBookTab.new()
 	stats_tab = StatsTab.new()
 	achievements_tab = AchievementsTab.new()
 	bounty_tab = BountyTab.new()
@@ -705,7 +710,7 @@ func _build_ui() -> void:
 			[town_tabs, shop_tab], [town_tabs, craft_tab], [town_tabs, wheel_tab], [town_tabs, inn_tab], [town_tabs, stash_tab],
 			[town_tabs, bounty_tab], [town_tabs, achievements_tab], [town_tabs, mail_tab], [town_tabs, clinic_tab],
 			[codex_tabs, bestiary_tab], [codex_tabs, collection_tab],
-			[codex_tabs, stats_tab], [codex_tabs, guide_tab], [codex_tabs, lore_tab],
+			[codex_tabs, stats_tab], [codex_tabs, guide_tab], [codex_tabs, lore_tab], [codex_tabs, pet_book_tab],
 			[online_tabs, leaderboard_tab], [online_tabs, guild_tab], [online_tabs, raid_tab]]:
 		pair[1].setup(self)
 		(pair[0] as TabContainer).add_child(pair[1])
@@ -1451,7 +1456,15 @@ func _handle_events() -> void:
 				moment_queue.append(["boss", e["name"], e["lore"], Color(e["color"]), e.get("sub", ""), null])
 			"hatch_moment":
 				var hart := Sprites.enemy_by_key(String(e["art"]))
-				moment_queue.append(["hatch", ("Cherished " if e["cherished"] else "") + "Baby " + String(e["name"]), "%s pet. It already looks at you like you're its whole world." % Monsters.tier_name(int(e["tier"])), Color(Monsters.tier_color(int(e["tier"]))), "", hart.get("tex", null)])
+				moment_queue.append(["first" if e.get("first", false) else "hatch", ("Cherished " if e["cherished"] else "") + "Baby " + String(e["name"]),
+					("%s pet, a kind you've never had. It's in your Codex now." if e.get("first", false) else "%s pet. It already looks at you like you're its whole world.") % Monsters.tier_name(int(e["tier"])), Color(Monsters.tier_color(int(e["tier"]))), "", hart.get("tex", null)])
+			"first_find":  # next update: the first pet of a kind, the first of a Unique or Set piece
+				if e["kind"] == "pet":
+					var fart := Sprites.enemy_by_key(String(e["art"]))
+					moment_queue.append(["first", String(e["name"]), "%s pet, a kind you've never had. It's in your Codex now." % Monsters.tier_name(int(e["tier"])), Color(Monsters.tier_color(int(e["tier"]))), "", fart.get("tex", null)])
+				else:
+					var fi: Dictionary = e["item"]
+					moment_queue.append(["first", String(e["name"]), ("Your first piece of this set. Wear more of it for its bonuses." if e["kind"] == "set" else "A Unique item. There's only one like it, and now it's in your collection."), Color(GameData.color_of(int(fi["rarity"]))), "", Sprites.item_icon(fi)])
 			"forge_moment":
 				var fit: Dictionary = e["item"]
 				moment_queue.append(["forge", String(fit["name"]), "+%d %s  -  part of the %s set" % [GameData.item_power(fit), fit["stat"], String(e.get("set", "?"))], Color(GameData.color_of(GameData.SET_RARITY)), "", Sprites.item_icon(fit)])

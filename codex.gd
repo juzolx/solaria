@@ -141,6 +141,7 @@ const LOGIN_REWARDS := [
 var bestiary := {}      # monster name -> {"kills": n, "tiers": [6 counts], "sig": bool}
 var stats := {}         # counter name -> number (see value())
 var collection := {}    # Unique / Signature / Set item name -> date found
+var pet_book := {}      # next update: pet species you have owned -> best tier (Codex > Pets)
 var achievements := {}  # id -> date unlocked
 var title := ""         # the achievement title you're showing ("" = your class)
 var name_color := ""    # Stage 3: the name color you show (cosmetics.gd), "" = Plain
@@ -171,6 +172,7 @@ func _from(d: Dictionary) -> void:
 	bestiary = d.get("bestiary", {})
 	stats = d.get("stats", {})
 	collection = d.get("collection", {})
+	pet_book = d.get("pet_book", {})
 	achievements = d.get("achievements", {})
 	title = str(d.get("title", ""))
 	name_color = str(d.get("name_color", ""))
@@ -189,7 +191,7 @@ func save() -> void:
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
 		return
-	f.store_var({"bestiary": bestiary, "stats": stats, "collection": collection, "achievements": achievements,
+	f.store_var({"bestiary": bestiary, "stats": stats, "collection": collection, "pet_book": pet_book, "achievements": achievements,
 		"title": title, "name_color": name_color, "frame": frame, "lore": lore, "bounties": bounties, "login": login, "guide": guide, "deeds": deeds, "extra_titles": extra_titles})
 
 static func delete() -> void:
@@ -241,8 +243,10 @@ func record_kill(monster: String, tier: int, boss: String) -> void:
 		add("boss_kills")
 	dirty = true
 
-func found_item(item: Dictionary) -> void:
+## Returns true the first time a Unique, Signature or Set piece goes in the collection.
+func found_item(item: Dictionary) -> bool:
 	var r := int(item["rarity"])
+	var first := false
 	add("items")
 	add("items_r%d" % r)
 	if r == GameData.LEGENDARY:
@@ -250,8 +254,17 @@ func found_item(item: Dictionary) -> void:
 	if r in [GameData.UNIQUE, GameData.SIGNATURE, GameData.SET_RARITY]:
 		if not collection.has(item["base_name"]):
 			collection[item["base_name"]] = Time.get_date_string_from_system()
+			first = true
 	if r == GameData.SIGNATURE and item.get("sig_of", "") != "":
 		entry(item["sig_of"])["sig"] = true
+	return first
+
+## Next update: a pet you own. Returns true for a species you never had before.
+func found_pet(species: String, tier: int) -> bool:
+	var first := not pet_book.has(species)
+	pet_book[species] = maxi(int(pet_book.get(species, -1)), tier)
+	dirty = true
+	return first
 
 ## A number for an achievement or the stats page.
 func value(key: String, state: GameState = null) -> int:

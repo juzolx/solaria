@@ -142,7 +142,7 @@ const EVENT_ROOMS := {"treasure": "chest", "rest": "campfire", "merchant": "merc
 const ROOM_NAMES := {"fight": "Monsters", "elite": "Elite monster", "treasure": "Treasure room", "rest": "Campfire",
 	"merchant": "Goblin trader", "altar": "Shrine", "nest": "Nest", "stranger": "A stranger", "beast": "Dying beast", "rift": "A shimmer in the air", "camp": "Descenders' Camp"}
 const MIMIC_CHANCE := 12.5         # % of chests (about 1 in 8)
-const NEST_EGG_CHANCE := 40.0      # % a nest holds an egg (otherwise its mother is home)
+const NEST_EGG_CHANCE := 15.0      # % a nest holds an egg (otherwise its mother is home). Next update: pets are a real find
 const PROP_NAMES := {"chest": "Chest", "altar": "Shrine", "nest": "Nest", "npc": "Wounded adventurer",
 	"beast": "Dying beast", "merchant": "Snik", "campfire": "Campfire", "rift": "Rift", "camp": "Camp"}
 const PROP_HINTS := {"chest": "Tap the chest", "camp": "Tap the camp to trade or send gold home", "rift": "Tap the rift to step through", "altar": "Tap the shrine to pray", "nest": "Tap the nest",
@@ -270,7 +270,7 @@ static func interact(g: GameState, i: int) -> String:
 		"beast":
 			p["used"] = true
 			g._faith(5)
-			if randf() < 0.6:
+			if randf() < 0.25:  # next update: pets are a real find
 				Menagerie.give_egg(g, "beast")
 				out = "The dying beast nudges something toward you before it goes still: its egg. Look after it."
 			else:

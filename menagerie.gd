@@ -15,7 +15,7 @@ extends RefCounted
 const TAMER_OUT := 3
 const OTHERS_OUT := 1
 const CATCH_AT := 80.0          # the monster's run-away chance must be over this
-const CATCH_BASE := 25.0        # % to catch right at the line, +3% per point above it
+const CATCH_BASE := 12.0        # % to catch right at the line, +3% per point above it (next update: rarer)
 const CATCH_PER_POINT := 3.0
 const WHISPER_CATCH := 20.0     # a Beast Whisperer on the team calms the beast first
 const WHISPER_POWER := 1.25     # and pets fight harder with their song
@@ -27,9 +27,9 @@ const KILLS_PER_LEVEL := 40
 const POWER_BASE := 0.08        # x your Attack per hit
 const POWER_PER_TIER := 0.03
 const POWER_PER_LEVEL := 0.004
-const EGG_SPARE_CHANCE := 0.4   # % chance a spared beast leaves an egg behind
-const EGG_SNIK_CHANCE := 3.0    # % chance Snik has an egg for sale
-const EGG_BOUNTY_CHANCE := 4.0  # % chance a WANTED poster pays with an egg too
+const EGG_SPARE_CHANCE := 0.15  # % chance a spared beast leaves an egg behind (next update: pets are a real find)
+const EGG_SNIK_CHANCE := 1.0    # % chance Snik has an egg for sale
+const EGG_BOUNTY_CHANCE := 1.5  # % chance a WANTED poster pays with an egg too
 
 static func is_tamer(g: GameState) -> bool:
 	return g.hidden_class == "beast_tamer"
@@ -87,6 +87,11 @@ static func make_pet(g: GameState, monster: String, art: String, tier: int, from
 	if g.pets_out.size() < max_out(g):
 		g.pets_out.append(int(p["id"]))
 	g.codex.add("pets")
+	if g.codex.found_pet(str(p["species"]), int(p["tier"])):  # next update: the first of its kind gets a fanfare
+		if from == "egg":
+			p["new_kind"] = true  # hatch() shows the fanfare itself
+		else:
+			g.events.append({"type": "first_find", "kind": "pet", "name": str(p["species"]), "tier": int(p["tier"]), "art": art})
 	return p
 
 static func power(p: Dictionary) -> float:
@@ -207,16 +212,17 @@ static func hatch(g: GameState, egg := {}) -> Dictionary:
 		if not Sprites.enemy_by_key(art).is_empty():
 			break
 	var roll := randf() * 100.0
-	var tier := 0 if roll < 55.0 else (1 if roll < 82.0 else (2 if roll < 95.0 else (3 if roll < 99.3 else 4)))
+	var tier := roll_tier()
 	var cherished := EggQuests.done(egg)
 	if cherished:
-		tier = mini(4, maxi(tier + 1, Monsters.RARE))  # its quest was done: it hatches stronger
+		tier = mini(5, maxi(tier + 1, Monsters.RARE))  # its quest was done: it hatches stronger (a Legendary can turn Mythic)
 	var p := make_pet(g, name, art, tier, "egg")
 	if cherished:
 		p["cherished"] = true
 		g.codex.add("cherished_pets")
 	g.say("[color=#fde68a]Your egg hatches: a %sbaby %s![/color]" % ["Cherished " if cherished else "", name])
-	g.events.append({"type": "hatch_moment", "name": name, "art": art, "cherished": cherished, "tier": tier})
+	g.events.append({"type": "hatch_moment", "name": name, "art": art, "cherished": cherished, "tier": tier, "first": p.has("new_kind")})
+	p.erase("new_kind")
 	g.events.append({"type": "mini_event", "kind": "pet", "title": "IT HATCHED!", "sub": ("A Cherished baby %s" if cherished else "A baby %s") % name})
 	return p
 
@@ -257,3 +263,28 @@ static func texture(p: Dictionary) -> Texture2D:
 	return e.get("tex", null)
 
 const TIER_NAMES := ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"]
+
+## Next update: hatch odds. Pets are a real find, and a Mythic is a legend.
+const HATCH_ODDS := [50.0, 28.0, 14.0, 6.0, 1.7, 0.3]   # Common .. Mythic, in %
+
+static func roll_tier() -> int:
+	var roll := randf() * 100.0
+	for t in HATCH_ODDS.size():
+		roll -= float(HATCH_ODDS[t])
+		if roll < 0.0:
+			return t
+	return 0
+
+## Next update (Juzo): let a pet go. It's gone from your pets for good, but the
+## Codex remembers you had one. Returns false if it isn't yours.
+static func release(g: GameState, id: int) -> bool:
+	var p := find(g, id)
+	if p.is_empty():
+		return false
+	g.pets.erase(p)
+	g.pets_out.erase(id)
+	g.say("[color=#d9a066]%s looks back once, then runs off into the wild.[/color]" % p["name"])
+	g.save_game()
+	return true
+
+const TIER_COLORS := ["#cbd5e1", "#4ade80", "#60a5fa", "#c084fc", "#f59e0b", "#f43f5e"]
