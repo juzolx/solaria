@@ -30,7 +30,7 @@ func setup(m) -> void:
 	head.add_child(title)
 	upgrade_button = UI.button("", _upgrade)
 	head.add_child(upgrade_button)
-	var note := UI.label("Shared by all your Regular heroes. Tap an item to look at it, then move it.", 12, UI.DIM)
+	var note := UI.label("Shared by the heroes of this town. Tap an item to look at it, then move it, or drag it across.", 12, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(note)
 	var scroll := ScrollContainer.new()
@@ -138,15 +138,21 @@ func refresh() -> void:
 	# The vault: its items, then empty squares for the free space
 	for i in p.stash.size():
 		var sel: bool = not picked.is_empty() and picked["where"] == "vault" and int(picked["key"]) == i
-		vault_grid.add_child(ItemGrid.cell(p.stash[i], _pick.bind("vault", i), sel))
+		var vc := ItemGrid.cell(p.stash[i], _pick.bind("vault", i), sel)
+		Drag.wire(vc, {"kind": "stash", "index": i}, Sprites.item_icon(p.stash[i]), _vault_takes, _drop_move)
+		vault_grid.add_child(vc)
 	for i in maxi(0, p.stash_capacity() - p.stash.size()):
-		vault_grid.add_child(ItemGrid.cell({}, Callable()))
+		var ec := ItemGrid.cell({}, Callable())
+		Drag.wire(ec, {}, null, _vault_takes, _drop_move)
+		vault_grid.add_child(ec)
 	bag_title.text = "YOUR BAG  %d / %d" % [state.bag.size(), state.bag_capacity()]
 	var items: Array = state.bag.duplicate()
 	items.reverse()
 	for it in items:
 		var sel2: bool = not picked.is_empty() and picked["where"] == "bag" and int(picked["key"]) == int(it["id"])
-		bag_grid.add_child(ItemGrid.cell(it, _pick.bind("bag", int(it["id"])), sel2))
+		var bc := ItemGrid.cell(it, _pick.bind("bag", int(it["id"])), sel2)
+		Drag.wire(bc, {"kind": "item", "id": int(it["id"])}, Sprites.item_icon(it), _bag_takes, _drop_move)
+		bag_grid.add_child(bc)
 	# The info strip
 	info.visible = not item.is_empty()
 	if not item.is_empty():
@@ -155,3 +161,14 @@ func refresh() -> void:
 		var to_vault: bool = picked["where"] == "bag"
 		info_button.text = "Put in the Vault" if to_vault else "Take it out"
 		info_button.disabled = (to_vault and p.stash.size() >= p.stash_capacity()) or (not to_vault and state.bag_full())
+
+# Next update: drag an item between your bag and the vault.
+func _vault_takes(d: Dictionary) -> bool:
+	return d.get("kind", "") == "item"
+
+func _bag_takes(d: Dictionary) -> bool:
+	return d.get("kind", "") == "stash"
+
+func _drop_move(d: Dictionary) -> void:
+	picked = {"where": "bag", "key": int(d["id"])} if d["kind"] == "item" else {"where": "vault", "key": int(d["index"])}
+	_move()

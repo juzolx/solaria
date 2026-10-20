@@ -95,7 +95,7 @@ func setup(m) -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(b)
 
-func _slot_button(id: String, open: bool, need: int, active: bool) -> Button:
+func _slot_button(id: String, open: bool, need: int, active: bool, index := -1) -> Button:
 	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -106,6 +106,14 @@ func _slot_button(id: String, open: bool, need: int, active: bool) -> Button:
 		b.text = "Lv %d" % need
 		b.disabled = true
 		return b
+	# Next update: drag a skill card onto a slot to put it there; drag a slotted skill back to the book to take it off
+	Drag.wire(b, {} if id == "" else {"kind": "skill", "id": id, "from_slot": true}, null if id == "" else SkillIcons.for_tag(String(SkillData.info(id)["tags"][0])),
+		func(d): return d.get("kind", "") == "skill" and SkillData.is_active(str(d["id"])) == active and state.skill_rank(str(d["id"])) > 0,
+		func(d):
+			state.equip_skill(str(d["id"]), index)
+			main.sfx.play("equip")
+			shown = ""
+			refresh())
 	if id == "":
 		b.text = "(empty)"
 		b.add_theme_color_override("font_color", UI.DIM)
@@ -166,9 +174,9 @@ func refresh() -> void:
 		sb.pressed.connect(func(): main.show_tab(0, 1))
 		sig_row.add_child(sb)
 	for i in 3:
-		slot_row_a.add_child(_slot_button(state.active_slots[i], i < state.active_slot_count(), int(SkillData.ACTIVE_SLOTS_AT[i]), true))
+		slot_row_a.add_child(_slot_button(state.active_slots[i], i < state.active_slot_count(), int(SkillData.ACTIVE_SLOTS_AT[i]), true, i))
 	for i in 5:
-		slot_row_p.add_child(_slot_button(state.passive_slots[i], i < state.passive_slot_count(), int(SkillData.PASSIVE_SLOTS_AT[i]), false))
+		slot_row_p.add_child(_slot_button(state.passive_slots[i], i < state.passive_slot_count(), int(SkillData.PASSIVE_SLOTS_AT[i]), false, i))
 	ids.clear()
 	var owned: Array = state.skill_book.keys()
 	owned.sort_custom(func(a, b):
@@ -210,6 +218,13 @@ func _card(id: String) -> Button:
 	b.add_theme_stylebox_override("hover", UI.style(rc.darkened(0.65), UI.GREEN if eq else rc, 6, 4, 3 if sel else 2))
 	b.add_theme_color_override("font_color", rc.lightened(0.35))
 	b.tooltip_text = SkillData.describe(id, maxi(1, r))
+	Drag.wire(b, {"kind": "skill", "id": id}, SkillIcons.for_tag(String(s["tags"][0])),
+		func(d): return d.get("kind", "") == "skill" and d.get("from_slot", false),
+		func(d):
+			state.unequip_skill(str(d["id"]))
+			main.sfx.play("click")
+			shown = ""
+			refresh())
 	b.pressed.connect(func():
 		if selected == id:
 			_toggle_equip()  # second tap: equip or unequip

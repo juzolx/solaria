@@ -26,7 +26,7 @@ func setup(m) -> void:
 
 	var head := UI.hbox(8)
 	add_child(head)
-	var hint := UI.label("Tap a slot, then tap an item to wear it", 13, UI.DIM)
+	var hint := UI.label("Tap a slot, then an item to wear it. Or drag it onto a slot", 13, UI.DIM)
 	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(hint)
@@ -62,6 +62,7 @@ func setup(m) -> void:
 		card.add_theme_stylebox_override("panel", st)
 		card.mouse_filter = Control.MOUSE_FILTER_STOP
 		card.gui_input.connect(_on_card_input.bind(s))
+		Drag.wire(card, {"kind": "worn", "slot": s}, func(): return slot_pics[s].texture, _takes.bind(s), _dropped_on_slot.bind(s))  # next update: drag and drop
 		var ch := UI.hbox(8)
 		ch.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(ch)
@@ -231,7 +232,9 @@ func _rebuild() -> void:
 		c.queue_free()
 	if state.equipped.has(slot):
 		var worn: Dictionary = state.equipped[slot]
-		item_grid.add_child(ItemGrid.cell(worn, _show.bind(int(worn["id"])), true, ItemGrid.CELL, "ON"))
+		var wc := ItemGrid.cell(worn, _show.bind(int(worn["id"])), true, ItemGrid.CELL, "ON")
+		Drag.wire(wc, {"kind": "worn", "slot": slot}, Sprites.item_icon(worn), _takes_off, _dropped_off)
+		item_grid.add_child(wc)
 	var best := state.best_for_slot(slot)
 	var items: Array = state.bag.filter(func(it): return it["slot"] == slot)
 	items.sort_custom(func(a, b): return state.score_with(a) > state.score_with(b))
@@ -242,6 +245,35 @@ func _rebuild() -> void:
 			badge = "BEST"
 		elif pct > 0.0:
 			badge = "+%d%%" % int(round(pct))
-		item_grid.add_child(ItemGrid.cell(item, _show.bind(int(item["id"])), false, ItemGrid.CELL, badge))
+		var ic := ItemGrid.cell(item, _show.bind(int(item["id"])), false, ItemGrid.CELL, badge)
+		Drag.wire(ic, {"kind": "item", "id": int(item["id"])}, Sprites.item_icon(item), _takes_off, _dropped_off)
+		item_grid.add_child(ic)
 	empty_note.visible = items.is_empty()
 	empty_note.text = "No %s items in your bag yet." % slot
+
+# =====================================================================
+# Next update: drag and drop. An item onto a slot wears it; a worn piece
+# dragged into the item list comes off.
+# =====================================================================
+
+func _takes(d: Dictionary, s: String) -> bool:
+	if d.get("kind", "") != "item":
+		return false
+	var found := state.find_item(int(d["id"]))
+	return not found.is_empty() and found["where"] == "bag" and found["item"]["slot"] == s
+
+func _dropped_on_slot(d: Dictionary, s: String) -> void:
+	state.equip(int(d["id"]))
+	main.sfx.play("equip")
+	slot = s
+	shown = ""
+	main.refresh()
+
+func _takes_off(d: Dictionary) -> bool:
+	return d.get("kind", "") == "worn" and state.equipped.has(str(d["slot"])) and not state.bag_full()
+
+func _dropped_off(d: Dictionary) -> void:
+	state.unequip(int(state.equipped[str(d["slot"])]["id"]))
+	main.sfx.play("click")
+	shown = ""
+	main.refresh()

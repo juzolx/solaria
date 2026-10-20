@@ -103,6 +103,8 @@ func setup(m) -> void:
 	upgrade_button = UI.button("Upgrade", func(): _act("upgrade"))
 	reroll_button = UI.button("Reroll", func(): _act("reroll"))
 	lock_button.tooltip_text = "Locked items can't be sold or salvaged"
+	for pair in [[equip_button, "equip"], [lock_button, "lock"], [sell_button, "sell"], [salvage_button, "salvage"]]:
+		Drag.wire(pair[0], {}, null, func(d): return d.get("kind", "") == "item" and not state.find_item(int(d["id"])).is_empty(), _dropped_on.bind(pair[1]))
 	for b in [equip_button, lock_button, sell_button, salvage_button]:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row1.add_child(b)
@@ -329,6 +331,8 @@ func refresh() -> void:
 			if over:
 				cell.modulate = Color(0.55, 0.5, 0.5)  # 0.13+: past the bag's limit: sell or salvage to use it
 				cell.tooltip_text = "Over your bag's limit. Sell or salvage something to use it (you can still sell or salvage this one)."
+			if not picking:
+				Drag.wire(cell, {"kind": "item", "id": id}, Sprites.item_icon(item))  # next update: drag onto Equip, Sell, Salvage or Lock
 			grid.add_child(cell)
 			ids.append(id)
 		empty_note.visible = ids.is_empty()
@@ -373,3 +377,9 @@ func _refresh_details() -> void:
 	else:
 		reroll_button.text = "Can't reroll"
 		reroll_button.disabled = true
+
+## Next update: an item dropped on Equip, Lock, Sell or Salvage gets that done.
+func _dropped_on(d: Dictionary, action: String) -> void:
+	selected_id = int(d["id"])
+	shown = ""
+	_act(action)
