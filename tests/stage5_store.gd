@@ -55,7 +55,41 @@ func _initialize() -> void:
 	d.path = ""
 	d._from({"bought": c.bought.duplicate(), "extra_titles": c.extra_titles.duplicate()})
 	check(Cosmetics.has(d, col) and Cosmetics.has(d, fr) and Cosmetics.has(d, title), "bought looks are saved")
+	_purchases()
 	GameState.delete_saves()
 	Profile.delete()
 	print("STAGE5 STORE TESTS DONE, failures: ", fails)
 	quit()
+
+## Real-money purchase code: switched off, and only slots and looks.
+func _purchases() -> void:
+	check(not Store.ENABLED and not Store.available(), "the App Store is switched off")
+	check(not Store.buy("solaria.heroslot6") and not Store.restore(), "buying and restoring do nothing while it's off")
+	check(not GameData.SLOT_LOCKS_ON, "hero slot locks stay off")
+	for id in Store.PRODUCTS:
+		check(String(Store.PRODUCTS[id]["kind"]) in ["slot", "looks"], "only slots and looks are sold (%s)" % id)
+	var p := Profile.new()
+	var c := Codex.new()
+	c.path = ""
+	var eclipse := {}
+	for e in Cosmetics.colors():
+		if String(e["id"]) == "eclipse":
+			eclipse = e
+	check(not eclipse.is_empty() and not Cosmetics.has(c, eclipse), "supporter color exists, not owned")
+	for e in Cosmetics.shop_list():
+		check(String(e[1]["need"]) == "shop", "supporter looks aren't sold for gold (%s)" % e[1]["name"])
+	# What Apple's plugin hands back
+	Store.handle({"type": "purchase", "result": "ok", "product_id": "solaria.heroslot6"}, p, c)
+	Store.handle({"type": "purchase", "result": "ok", "product_id": "solaria.heroslot7"}, p, c)
+	check(p.paid_slots == 2, "two slots bought (%d)" % p.paid_slots)
+	Store.handle({"type": "restore", "result": "ok", "product_id": "solaria.heroslot6"}, p, c)
+	check(p.paid_slots == 2 and p.owned_products.size() == 2, "a restore doesn't double up")
+	Store.handle({"type": "purchase", "result": "error", "product_id": "solaria.heroslot8"}, p, c)
+	check(p.paid_slots == 2 and not Store.busy, "a failed purchase gives nothing and frees the button")
+	Store.handle({"type": "purchase", "result": "ok", "product_id": "solaria.supporter"}, p, c)
+	check(Cosmetics.has(c, eclipse) and "Keeper of the Flame" in c.titles(), "supporter pack gives its looks and title")
+	Store.handle({"type": "purchase", "result": "ok", "product_id": "solaria.gems"}, p, c)
+	check(p.owned_products.size() == 3, "unknown products give nothing")
+	Store.handle({"type": "product_info", "ids": ["solaria.supporter"], "localized_prices": ["$2.99"]}, p, c)
+	check(String(Store.prices.get("solaria.supporter", "")) == "$2.99", "prices come from the App Store")
+	print("store: slots %d, owned %s" % [p.paid_slots, p.owned_products])

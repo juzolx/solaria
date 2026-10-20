@@ -220,3 +220,12 @@ drop trigger if exists cloud_save_touch on public.cloud_saves;
 create trigger cloud_save_touch before update on public.cloud_saves for each row execute function public.touch_cloud_save();
 
 grant insert, update on public.cloud_saves to authenticated;
+
+-- Stage 4 (Apple rule): players can delete their online account from inside the game.
+-- Deleting the login removes their name, runs, guild seats, raid hits and cloud backups (all cascade).
+create or replace function public.delete_my_account() returns void
+language sql security definer set search_path = public, auth as $$
+  delete from auth.users where id = auth.uid();
+$$;
+revoke all on function public.delete_my_account() from public;
+grant execute on function public.delete_my_account() to authenticated;

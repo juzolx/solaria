@@ -37,6 +37,8 @@ const FRAMES := [
 	{"id": "rust", "name": "Old Rust", "color": "#b45309", "need": "shop", "price": 60, "studs": true},
 	{"id": "grave", "name": "Gravestone", "color": "#6b7280", "need": "shop", "price": 90, "studs": true},
 	{"id": "blood", "name": "Blood Moon", "color": "#be123c", "need": "shop", "price": 150, "studs": true},
+	# Supporter pack (store.gd, real money, switched off): hidden until owned
+	{"id": "blacksun", "name": "Black Sun", "color": "#f59e0b", "need": "store", "studs": true},
 ]
 ## Shop-only name colors (colors() joins them to COLORS for the picker and saves)
 const SHOP_COLORS := [
@@ -44,6 +46,7 @@ const SHOP_COLORS := [
 	{"id": "torch", "name": "Torchlight", "color": "#f9905e", "need": "shop", "price": 50},
 	{"id": "rune", "name": "Rune Blue", "color": "#5ad1e6", "need": "shop", "price": 80},
 	{"id": "embergold", "name": "Ember Gold", "color": "#e8b25a", "need": "shop", "price": 120},
+	{"id": "eclipse", "name": "Eclipse", "color": "#ff7a45", "need": "store"},
 ]
 ## Titles you can buy: shown next to your name like deed titles
 const SHOP_TITLES := [
@@ -58,7 +61,7 @@ static func colors() -> Array:
 
 static func has(codex: Codex, entry: Dictionary) -> bool:
 	var need := String(entry["need"])
-	if need == "shop":
+	if need == "shop" or need == "store":
 		return codex.bought.has(key(entry))
 	return need == "" or codex.achievements.has(need)
 
@@ -77,7 +80,7 @@ static func shop_list() -> Array:
 	var out: Array = []
 	for e in SHOP_TITLES:
 		out.append(["Title", e])
-	for e in SHOP_COLORS:
+	for e in SHOP_COLORS.filter(func(x): return String(x["need"]) == "shop"):
 		out.append(["Name color", e])
 	for e in FRAMES:
 		if String(e["need"]) == "shop":

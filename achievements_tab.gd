@@ -40,7 +40,7 @@ func setup(m) -> void:
 	color_pick.clip_text = true
 	color_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	color_pick.item_selected.connect(func(i: int):
-		codex.name_color = String(Cosmetics.colors()[i]["id"])
+		codex.name_color = String(color_pick.get_item_metadata(i))
 		codex.save()
 		main.refresh())
 	looks.add_child(color_pick)
@@ -50,7 +50,7 @@ func setup(m) -> void:
 	frame_pick.clip_text = true
 	frame_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	frame_pick.item_selected.connect(func(i: int):
-		codex.frame = String(Cosmetics.FRAMES[i]["id"])
+		codex.frame = String(frame_pick.get_item_metadata(i))
 		codex.save()
 		main.refresh())
 	looks.add_child(frame_pick)
@@ -234,8 +234,11 @@ func _fill_looks(pick: OptionButton, list: Array, current: String) -> void:
 	pick.clear()
 	for e in list:
 		var got := Cosmetics.has(codex, e)
+		if not got and String(e["need"]) == "store":
+			continue  # supporter looks stay hidden until owned
 		pick.add_item(String(e["name"]) if got else ("%s (looks shop)" % e["name"] if String(e["need"]) == "shop" else "%s (deed: %s)" % [e["name"], Cosmetics.need_name(e)]))
 		var i := pick.item_count - 1
+		pick.set_item_metadata(pick.item_count - 1, String(e["id"]))
 		pick.set_item_disabled(i, not got)
 		if String(e.get("color", "")) != "":
 			pick.set_item_icon(i, _swatch(Color(String(e["color"]))))

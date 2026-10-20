@@ -51,6 +51,7 @@ var towns := {}              # str(town) -> {"name", and every TOWN_KEYS field}
 var towns_v1 := false        # old hero saves have been moved into towns
 var presets: Array = [{}, {}, {}]  # next update: saved team line-ups, {"slots": [leader, companions...]} (this town)
 var paid_slots := 0          # hero slots 6-9 bought (store, later; locks are off for now)
+var owned_products: Array = []  # Stage 4: App Store products bought (store.gd; the store is switched off)
 
 static func load_profile() -> Profile:
 	var p := Profile.new()
@@ -99,6 +100,7 @@ func _from(d: Dictionary) -> void:
 	towns = d.get("towns", {})
 	towns_v1 = bool(d.get("towns_v1", false))
 	paid_slots = int(d.get("paid_slots", 0))
+	owned_products = d.get("owned_products", [])
 	town = clampi(int(d.get("town", 1)), 1, GameData.MAX_TOWNS)
 	if towns.has(str(town)):
 		_load_town(town)
@@ -146,7 +148,7 @@ func save() -> void:
 		return
 	_store_town()
 	f.store_var({
-		"town": town, "towns": towns, "towns_v1": towns_v1, "paid_slots": paid_slots,
+		"town": town, "towns": towns, "towns_v1": towns_v1, "paid_slots": paid_slots, "owned_products": owned_products,
 		"last_mode": last_mode, "sound_on": sound_on, "volume": volume, "music_volume": music_volume,
 		"fullscreen": fullscreen, "dark_art": dark_art, "battery_saver": battery_saver, "low_graphics": low_graphics, "dev_mode": dev_mode, "hc_best": hc_best, "hc_runs": hc_runs,
 		"player_name": player_name, "online": online, "path_choice": path_choice,
@@ -197,7 +199,7 @@ func slot_lock_note(n: int) -> String:
 		return ""
 	if n <= GameData.SLOT_UNLOCKS.size():
 		return "Slot %d opens when a hero in this town reaches floor %d." % [n, int(GameData.SLOT_UNLOCKS[n - 1])]
-	return "Slot %d can be bought later." % n
+	return ("Slot %d: Menu > Supporter store." if Store.ENABLED else "Slot %d can be bought later.") % n
 
 func stash_capacity() -> int:
 	return GameData.STASH_START + stash_level * GameData.STASH_STEP

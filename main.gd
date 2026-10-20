@@ -589,6 +589,7 @@ func _on_hardcore_death() -> void:
 		row.add_child(b)
 
 func _on_tick() -> void:
+	Store.poll(profile, codex)  # App Store purchases (does nothing while the store is off)
 	# Manual play: nothing happens until you act (see _manual_turn)
 	if battle.busy():
 		return  # a boss is making its entrance

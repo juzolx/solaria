@@ -158,6 +158,19 @@ func register_name(player_name: String) -> Dictionary:
 		status_changed.emit()
 	return r
 
+
+## Apple rule: delete the online account from inside the game. Removes the name, runs,
+## guild seats, raid hits and cloud backups on the server (see delete_my_account in
+## supabase_setup.sql), then forgets the login here. Heroes on this device stay.
+func delete_account() -> Dictionary:
+	var r := await _rest("rpc/delete_my_account", HTTPClient.METHOD_POST, {})
+	if r["ok"]:
+		profile.online = {}
+		profile.player_name = ""
+		profile.save()
+		status_changed.emit()
+	return r
+
 # =====================================================================
 # Leaderboard (deepest Hardcore floor)
 # =====================================================================

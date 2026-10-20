@@ -17,7 +17,7 @@ func _initialize() -> void:
 	check(Cosmetics.name_color(c) == Color("#86efac"), "reaching floor 50 earns Moss")
 	check(String(Cosmetics.frame(c)["id"]) == "bark", "and the Barkwood frame")
 	for e in Cosmetics.COLORS + Cosmetics.FRAMES:
-		check(String(e["need"]) in ["", "shop"] or Cosmetics.need_name(e) != "", "every look names its deed (%s)" % e["name"])
+		check(String(e["need"]) in ["", "shop", "store"] or Cosmetics.need_name(e) != "", "every look names its deed (%s)" % e["name"])
 	var d := Codex.new()
 	d.path = ""
 	d._from({"name_color": "moss", "frame": "bark", "achievements": {"f50": "x"}})

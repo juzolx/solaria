@@ -115,6 +115,12 @@ func show_for(m) -> void:
 	cr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_child(cr)
 
+	if Store.ENABLED:
+		content.add_child(UI.heading("Supporter store"))
+		var sb := UI.button("Hero slots and supporter looks...", func(): StorePopup.new().show_for(main))
+		sb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		content.add_child(sb)
+
 	content.add_child(UI.heading("Cloud backup"))
 	var crow := UI.hbox(8)
 	content.add_child(crow)
@@ -128,6 +134,12 @@ func show_for(m) -> void:
 	cloud_label = UI.label(off_text if not main.online.is_configured() else "Saves your heroes to your online account, so you can get them back on a new device.", 11, UI.DIM)
 	cloud_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(cloud_label)
+	# Apple rule: the online account can be deleted from inside the game
+	if main.online.is_configured() and main.online.user_id() != "":
+		var del := UI.button("Delete my online account...", func():
+			main.confirm("Delete your online account?", "This removes your online name, leaderboard runs, guild seat and cloud backups from the server. It can't be undone. Your heroes on this device are not touched.", "Delete account", _delete_account))
+		del.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		content.add_child(del)
 
 	# Deleting a hero is rare and permanent: a quiet button at the bottom, behind a confirmation
 	content.add_child(UI.heading("This hero"))
@@ -244,6 +256,10 @@ func _toggle_a11y(key: String) -> void:
 	main.apply_settings()
 	main._fit_layout()
 	_update()
+
+func _delete_account() -> void:
+	var r: Dictionary = await main.online.delete_account()
+	main.toast("Your online account is deleted." if r["ok"] else String(r.get("error", "Couldn't reach the server.")))
 
 func _cloud_backup() -> void:
 	cloud_label.text = "Backing up..."
