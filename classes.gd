@@ -1,6 +1,6 @@
 class_name Classes
 extends RefCounted
-## The 9 starting classes. What they grow into (the family trees, unique
+## The 13 starting classes. What they grow into (the family trees, unique
 ## classes, branch-offs and ranks) is in class_tree.gd.
 ##
 ## Passive keys: atk / hp / def multiply; crit, dodge, lifesteal, regen,
@@ -28,10 +28,11 @@ const TAGS := {
 }
 const AFFINITY_POWER := 0.15  # skills with one of your class's tags hit this much harder
 
-# ---------- The 9 classes ----------
+# ---------- The 13 classes ----------
 # start: the skill stones a new hero starts with (active, passive).
 # look: the outfit a new hero starts in (item types for each slot).
-const ORDER := ["Warrior", "Knight", "Wanderer", "Cleric", "Acolyte", "Mage", "Trickster", "Ranger", "Bard"]
+const ORDER := ["Warrior", "Knight", "Wanderer", "Cleric", "Acolyte", "Mage", "Trickster", "Ranger", "Bard",
+	"Sentinel", "Ironbark", "Nightstalker", "Conjurer"]
 const CLASSES := {
 	"Warrior": {"color": "#dc2626", "role": "Fighter", "atk": 1.0, "hp": 1.3, "def": 1.2, "dodge": 0,
 		"tags": ["Blade", "Blood"], "start": ["cleave", "iron_will"], "build": {"STR": 3, "VIT": 1, "DEX": 1},
@@ -70,6 +71,22 @@ const CLASSES := {
 		"tags": ["Song", "Trick"], "start": ["battle_hymn", "encore"], "build": {"INT": 2, "CHA": 1, "DEX": 1, "AGI": 1},
 		"look": {"Weapon": "dagger", "Off Hand": "tome", "Helmet": "cap", "Chest": "tunic", "Feet": "boots"},
 		"blurb": "Songs that buff you for many turns and charm monsters. A great support for parties later."},
+	"Sentinel": {"color": "#38bdf8", "role": "Tank", "atk": 0.9, "hp": 1.4, "def": 1.5, "dodge": 0,
+		"tags": ["Holy", "Frost"], "start": ["divine_shield", "iron_skin"], "build": {"VIT": 3, "STR": 1, "WIS": 1},
+		"look": {"Weapon": "mace", "Off Hand": "tower", "Helmet": "helm", "Chest": "plate", "Legs": "greaves", "Feet": "sabatons"},
+		"blurb": "Sworn to protect. +50% Defense, +40% HP, -10% Attack. Shields itself and soaks hits; the party's wall."},
+	"Ironbark": {"color": "#65a30d", "role": "Tank", "atk": 1.0, "hp": 1.5, "def": 1.25, "dodge": 0,
+		"tags": ["Nature", "Fist"], "start": ["thorn_lash", "toughness"], "build": {"VIT": 3, "STR": 2},
+		"look": {"Weapon": "axe", "Off Hand": "buckler", "Helmet": "helm", "Chest": "tunic", "Legs": "greaves", "Feet": "boots"},
+		"blurb": "Bark and stone. +50% HP, +25% Defense. Hits back with thorns and heals with every lash."},
+	"Nightstalker": {"color": "#6d28d9", "role": "Skirmisher", "atk": 1.3, "hp": 0.95, "def": 0.95, "dodge": 8,
+		"tags": ["Shadow", "Blade"], "start": ["shadowstrike", "evasion"], "build": {"AGI": 2, "DEX": 2, "STR": 1},
+		"look": {"Weapon": "dagger", "Helmet": "hood", "Chest": "tunic", "Legs": "leggings", "Feet": "boots"},
+		"blurb": "Strikes from the dark and is gone. +30% Attack, 8% dodge. Fragile if caught."},
+	"Conjurer": {"color": "#0ea5e9", "role": "Summoner", "atk": 1.25, "hp": 0.95, "def": 0.95, "dodge": 0,
+		"tags": ["Arcane", "Shadow"], "start": ["raise_dead", "arcane_mind"], "build": {"INT": 3, "VIT": 1, "WIS": 1},
+		"look": {"Weapon": "staff", "Off Hand": "tome", "Helmet": "hood", "Chest": "robe", "Feet": "boots"},
+		"blurb": "Calls spirits, golems and devils to fight beside you. Fragile, so keep your summons up."},
 }
 
 # ---------- Faith (every hero) ----------

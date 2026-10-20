@@ -69,6 +69,23 @@ const NAMES := {
 	"Doom Chanter": ["Chant of Doom", "burst"], "Skald": ["Saga", "song"], "War Chanter": ["War Chant", "song"],
 	"Warhorn": ["Sound the Horn", "song"], "Skald King": ["Saga of Kings", "song"], "Spellsinger": ["Spellsong", "burst"],
 	"Arcane Harpist": ["Harp of Stars", "flurry"], "Echo Mage": ["Echo", "flurry"],
+	# Sentinel
+	"Oathguard": ["Sworn Stand", "bulwark"], "Aegis Bearer": ["Raise the Aegis", "bulwark"], "Aegis Eternal": ["Eternal Aegis", "bulwark"],
+	"Dawnwall": ["Wall of Dawn", "mend"], "Vowkeeper": ["Keep the Vow", "bulwark"], "Oath Eternal": ["Undying Oath", "bulwark"],
+	"Last Vow": ["Last Stand of Vows", "mend"], "Ironclad": ["Cold Iron", "bulwark"], "Frostwall": ["Frostwall", "bulwark"],
+	"Glacier Lord": ["Glacial Advance", "bulwark"], "Barrow Warden": ["Grave Watch", "drain"], "Tomb Sentinel": ["Tomb Guard", "drain"],
+	# Ironbark
+	"Thornback": ["Thorn Coat", "bulwark"], "Briarheart": ["Briar Burst", "bulwark"], "Bramble King": ["Crown of Thorns", "bulwark"],
+	"Mossback": ["Moss Mend", "mend"], "Elder Oak": ["Elder's Shade", "mend"], "Stonefist": ["Stone Fist", "strike"],
+	"Rockbreaker": ["Rockbreak", "strike"], "Cragborn": ["Crag Skin", "bulwark"], "Granite Titan": ["Granite Wall", "bulwark"],
+	# Nightstalker
+	"Stalker": ["Stalk", "veil"], "Cutthroat": ["Cutthroat", "execute"], "Night Reaper": ["Night Harvest", "execute"],
+	"Duskrunner": ["Dusk Dash", "veil"], "Moonlit Ghost": ["Ghost Step", "veil"], "Skirmisher": ["Skirmish", "flurry"],
+	"Knife Dancer": ["Knife Dance", "flurry"], "Ambusher": ["Ambush", "crit"], "Silent Death": ["Silent Kill", "crit"],
+	# Conjurer
+	"Binder": ["Binding Circle", "summon"], "Spiritcaller": ["Call Spirits", "summon"], "Ancestor Speaker": ["Ancestors' Aid", "summon"],
+	"Golemwright": ["Raise Golem", "summon"], "Stone Artificer": ["Stone Guardian", "summon"], "Demonologist": ["Infernal Pact", "summon"],
+	"Imp Master": ["Imp Swarm", "summon"], "Legion Lord": ["Legion", "summon"], "Voidbinder": ["Void Chains", "summon"],
 }
 const KEY_TEMPLATE := {"atk": "strike", "crit": "crit", "double_strike": "flurry", "lifesteal": "drain", "def": "bulwark",
 	"thorns": "bulwark", "hp": "bulwark", "regen": "mend", "skill": "burst", "dodge": "veil", "execute": "execute", "rage": "rage",

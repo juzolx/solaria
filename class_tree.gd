@@ -225,11 +225,76 @@ const TREES := {
 				["Arcane Harpist", "N", "skill:.6 double_strike:.4", "Arcane Song", "Strings of starlight", {}],
 				["Echo Mage", "N", "skill:.5 double_strike:.5", "Arcane", "Every spell twice", {}]]]]],
 	],
+	# ----- v0.14: four more base classes. Sentinel and Ironbark are tanks. -----
+	"Sentinel": [
+		["Oathguard", "G", "def:.6 hp:.4", "Holy", "Sworn to hold the line", [
+			["Aegis Bearer", "G", "def:.5 regen:.5", "Holy", "Carries the sacred shield", [
+				["Aegis Eternal", "G", "def:.6 hp:.4", "Holy", "A shield that never breaks", {}],
+				["Dawnwall", "G", "def:.5 regen:.3 thorns:.2", "Holy", "The sun shines off its armor", {}]]],
+			["Vowkeeper", "G", "hp:.5 def:.5", "Holy", "Never breaks a promise", [
+				["Oath Eternal", "G", "hp:.5 thorns:.5", "Holy", "Dies last, falls never", {}],
+				["Last Vow", "G", "hp:.4 def:.4 regen:.2", "Holy", "Holds on for one more sunrise", {}]]]]],
+		["Ironclad", "N", "def:.6 hp:.4", "Frost", "Cold iron from head to toe", [
+			["Frostwall", "N", "def:.5 hp:.5", "Frost", "A wall of ice and plate", [
+				["Glacier Lord", "N", "def:.6 hp:.4", "Frost", "Moves like a glacier", {}],
+				["Permafrost Colossus", "N", "hp:.5 def:.5", "Frost", "Nothing thaws it", {}]]],
+			["Barrow Warden", "E", "def:.5 lifesteal:.5", "Shadow Frost", "Guards the tombs", [
+				["Tomb Sentinel", "E", "def:.6 lifesteal:.4", "Shadow", "Drinks the cold of the grave", {}],
+				["Bone Rampart", "E", "hp:.5 thorns:.5", "Shadow Frost", "Walls of bone and spite", {}]]]]],
+	],
+	"Ironbark": [
+		["Thornback", "N", "hp:.5 thorns:.5", "Nature", "Wears the briar", [
+			["Briarheart", "N", "thorns:.6 hp:.4", "Nature", "Hurts whoever hits it", [
+				["Bramble King", "N", "thorns:.5 hp:.5", "Nature", "Crowned in thorns", {}],
+				["Thornlord", "N", "thorns:.6 def:.4", "Nature", "Every blow comes back", {}]]],
+			["Mossback", "G", "hp:.5 regen:.5", "Nature", "Slow, green and tough", [
+				["Elder Oak", "G", "hp:.5 regen:.5", "Nature", "Older than the dungeon", {}],
+				["Heartwood Guardian", "G", "def:.5 regen:.5", "Nature", "Hard heart, soft moss", {}]]]]],
+		["Stonefist", "N", "def:.5 atk:.5", "Fist", "Fights like a landslide", [
+			["Rockbreaker", "N", "atk:.5 def:.5", "Fist", "Breaks rock, then the monster", [
+				["Mountain Fist", "N", "atk:.5 hp:.5", "Fist", "A punch with a mountain behind it", {}],
+				["Quake Lord", "N", "atk:.6 double_strike:.4", "Fist", "The floor shakes first", {}]]],
+			["Cragborn", "N", "hp:.6 def:.4", "Nature", "Born of the cliffs", [
+				["Granite Titan", "N", "hp:.5 def:.5", "Nature", "Cannot be moved", {}],
+				["Avalanche", "N", "atk:.5 hp:.5", "Nature Fist", "Once it starts, it doesn't stop", {}]]]]],
+	],
+	"Nightstalker": [
+		["Stalker", "N", "dodge:.5 crit:.5", "Shadow", "Hunts from the dark", [
+			["Cutthroat", "E", "crit:.5 execute:.5", "Shadow Blade", "Ends it quietly", [
+				["Night Reaper", "E", "crit:.6 execute:.4", "Shadow", "Harvests the sleeping", {}],
+				["Gloom Blade", "E", "crit:.5 lifesteal:.5", "Shadow Blade", "Feeds on every cut", {}]]],
+			["Duskrunner", "N", "dodge:.6 double_strike:.4", "Shadow", "Faster than its own shadow", [
+				["Moonlit Ghost", "N", "dodge:.5 crit:.5", "Shadow", "Seen once, never twice", {}],
+				["Dusk Marauder", "N", "double_strike:.5 dodge:.5", "Shadow", "Strikes and is gone", {}]]]]],
+		["Skirmisher", "N", "crit:.5 double_strike:.5", "Blade Shadow", "Hit and run", [
+			["Knife Dancer", "N", "double_strike:.6 crit:.4", "Blade", "A dance of small cuts", [
+				["Razor Storm", "N", "double_strike:.6 atk:.4", "Blade", "A whirl of knives", {}],
+				["Whirling Fang", "N", "double_strike:.5 dodge:.5", "Blade Shadow", "Never stops moving", {}]]],
+			["Ambusher", "N", "atk:.5 crit:.5", "Shadow", "Waits, then strikes", [
+				["Silent Death", "N", "atk:.5 crit:.5", "Shadow", "The first blow is the last", {}],
+				["Pouncer", "N", "boss:.5 crit:.5", "Shadow", "Hunts what hunts others", {}]]]]],
+	],
+	"Conjurer": [
+		["Binder", "N", "skill:.6 atk:.4", "Arcane", "Binds spirits to serve", [
+			["Spiritcaller", "G", "skill:.5 regen:.5", "Arcane Holy", "Calls the kind dead", [
+				["Ancestor Speaker", "G", "skill:.5 regen:.5", "Arcane Holy", "The ancestors fight beside it", {"extra": {"summon_turns": 2}}],
+				["Spirit Warden", "G", "hp:.5 regen:.5", "Arcane Holy", "Spirits stand between it and harm", {"extra": {"summon_turns": 2}}]]],
+			["Golemwright", "N", "def:.4 skill:.6", "Arcane", "Builds things that fight", [
+				["Stone Artificer", "N", "skill:.5 def:.5", "Arcane", "Golems of living stone", {"extra": {"summon_turns": 2}}],
+				["Clockwork Sovereign", "N", "skill:.5 atk:.5", "Arcane", "An army of gears", {"extra": {"summon_turns": 2}}]]]]],
+		["Demonologist", "E", "skill:.6 lifesteal:.4", "Shadow", "Bargains with the pit", [
+			["Imp Master", "E", "skill:.5 atk:.5", "Shadow", "Imps do the dirty work", [
+				["Hellgate Keeper", "E", "skill:.6 execute:.4", "Shadow", "Keeps the gate open", {"extra": {"summon_turns": 2}}],
+				["Legion Lord", "E", "atk:.5 skill:.5", "Shadow", "A thousand small devils", {"extra": {"summon_turns": 2}}]]],
+			["Voidbinder", "E", "skill:.5 crit:.5", "Shadow Arcane", "Chains what lives between stars", [
+				["Abyss Caller", "E", "skill:.6 execute:.4", "Shadow Arcane", "Calls what answers", {"extra": {"summon_turns": 2}}],
+				["Elder Summoner", "E", "skill:.5 atk:.5", "Arcane", "The oldest contracts", {"extra": {"summon_turns": 2}}]]]]],
+	],
 }
 
 ## Extras on mid classes (level 15/35): same idea as a final's "extra".
 const MID_EXTRA := {"Skald": {"buff_turns": 2}, "Siren": {"confuse": 1}, "Beastmaster": {"summon_turns": 2},
-	"Necromancer": {"summon_turns": 2}, "Gambler": {"gamble": 5}}
+	"Necromancer": {"summon_turns": 2}, "Gambler": {"gamble": 5}, "Binder": {"summon_turns": 2}}
 
 # =====================================================================
 # Branch-offs: [from, name, special stat, focus, requirements, how-to text, easy]
@@ -371,6 +436,58 @@ const BRANCHES := [
 	["War Chanter", "Battle Hymnist", "Anthem", "atk:.5 boss:.5", [["boss_first_try", 20]], "Beat 20 bosses on your first try", false],
 	["Spellsinger", "Chorus Mage", "Harmony", "skill:.6 regen:.4", [["use_tag:Arcane", 3000]], "Use Arcane skills 3,000 times", false],
 	["Spellsinger", "Resonant", "Resonance", "skill:.5 double_strike:.5", [["skill_repeat10", 100]], "Use the same skill 10 times in a row, 100 times", false],
+	# ----- Sentinel -----
+	["Oathguard", "Shield Saint", "Faith", "def:.5 regen:.5", [["blocks", 3000]], "Block 3,000 hits with a shield", false],
+	["Oathguard", "Bannerguard", "Vow", "def:.5 hp:.5", [["boss_above50", 30]], "Win 30 boss fights without dropping below 50% HP", false],
+	["Ironclad", "Plate Titan", "Weight", "def:.6 hp:.4", [["dmg_taken", 2000000]], "Take 2,000,000 damage in total", false],
+	["Ironclad", "Frozen Bastion", "Chill", "def:.5 regen:.5", [["use_tag:Frost", 2000]], "Use Frost skills 2,000 times", false],
+	["Aegis Bearer", "Sunshield", "Dawn", "def:.5 regen:.5", [["use_tag:Holy", 3000]], "Use Holy skills 3,000 times", false],
+	["Aegis Bearer", "Lightwall", "Beacon", "def:.6 thorns:.4", [["hits_shielded", 800]], "Take 800 hits while a shield is up", false],
+	["Vowkeeper", "Sentry of Dawn", "Watch", "hp:.5 def:.5", [["flawless_fights", 300]], "Win 300 fights without taking damage", false],
+	["Vowkeeper", "Penitent", "Penance", "hp:.6 regen:.4", [["healed", 300000]], "Heal 300,000 HP", false],
+	["Frostwall", "Rime Guard", "Rime", "def:.6 hp:.4", [["hits_shielded", 500]], "Take 500 hits while a shield or Frozen Armor is up", false],
+	["Frostwall", "Winter Bulwark", "Hoarfrost", "def:.5 thorns:.5", [["kill_tag:Frost", 3000]], "Kill 3,000 enemies with Frost skills", false],
+	["Barrow Warden", "Crypt Guard", "Crypt", "def:.5 lifesteal:.5", [["kill_dark", 1500]], "Kill 1,500 enemies with Shadow or Blood skills", false],
+	["Barrow Warden", "Marrow Knight", "Marrow", "hp:.5 thorns:.5", [["kill_unholy", 400]], "Kill 400 Undead or Demons", false],
+	# ----- Ironbark -----
+	["Thornback", "Briar Witch", "Briar", "thorns:.6 regen:.4", [["dmg_taken", 800000]], "Take 800,000 damage in total", false],
+	["Thornback", "Spine Beast", "Quills", "thorns:.5 atk:.5", [["blocks", 1500]], "Block 1,500 hits with a shield", false],
+	["Stonefist", "Cairn Fist", "Cairn", "atk:.5 def:.5", [["kill_stone", 200]], "Kill 200 Golems or stone monsters", false],
+	["Stonefist", "Boulder Monk", "Stillness", "def:.6 double_strike:.4", [["double_strikes", 800]], "Land 800 double strikes", false],
+	["Briarheart", "Thorn Mother", "Thorns", "thorns:.6 hp:.4", [["hit_tag:Nature", 1500]], "Land 1,500 Nature skill hits", false],
+	["Briarheart", "Bramble Knight", "Bramble", "thorns:.5 def:.5", [["staggers", 60]], "Break 60 telegraphed blows before they land", false],
+	["Mossback", "Mosswalker", "Moss", "hp:.5 regen:.5", [["healed", 250000]], "Heal 250,000 HP", false],
+	["Mossback", "Seed Keeper", "Seeds", "regen:.5 potion:.5", [["materials", 300]], "Gather 300 materials", true],
+	["Rockbreaker", "Quarry Brute", "Quarry", "atk:.5 hp:.5", [["kill_stone", 500]], "Kill 500 Golems or stone monsters", false],
+	["Rockbreaker", "Shatterhand", "Shatter", "atk:.6 double_strike:.4", [["use_tag:Fist", 3000]], "Use Fist skills 3,000 times", false],
+	["Cragborn", "Mountain Heart", "Peak", "hp:.6 def:.4", [["dmg_taken", 1200000]], "Take 1,200,000 damage in total", false],
+	["Cragborn", "Cliff Walker", "Cliff", "hp:.5 atk:.5", [["boss_kills", 60]], "Beat 60 bosses", false],
+	# ----- Nightstalker -----
+	["Stalker", "Gloom Hunter", "Gloom", "crit:.5 dodge:.5", [["use_tag:Shadow", 2500]], "Use Shadow skills 2,500 times", false],
+	["Stalker", "Night Runner", "Pace", "dodge:.6 escape:.4", [["dodges", 2500]], "Dodge 2,500 attacks", false],
+	["Skirmisher", "Raider", "Raid", "atk:.5 crit:.5", [["first_hit_kill", 500]], "Kill 500 enemies with your first hit", false],
+	["Skirmisher", "Reaver Scout", "Scouting", "double_strike:.5 scout:.5", [["short_fights", 600]], "Win 600 fights in 3 turns or less", false],
+	["Cutthroat", "Alley King", "Alley", "crit:.6 execute:.4", [["big_crit_kill", 300]], "Kill 300 enemies with crits of 3x or more", false],
+	["Cutthroat", "Garrote", "Wire", "execute:.5 crit:.5", [["dot_kill", 600]], "Kill 600 enemies with poison or burns", false],
+	["Duskrunner", "Haze Walker", "Haze", "dodge:.6 crit:.4", [["dodge_streak", 8]], "Dodge 8 attacks in a row", false],
+	["Duskrunner", "Eclipse Runner", "Eclipse", "dodge:.5 escape:.5", [["escapes", 80]], "Escape 80 fights", false],
+	["Knife Dancer", "Razor Dancer", "Razor", "crit:.5 double_strike:.5", [["crits", 1500]], "Land 1,500 crits", false],
+	["Knife Dancer", "Edge Weaver", "Weave", "double_strike:.6 atk:.4", [["use_tag:Blade", 3000]], "Use Blade skills 3,000 times", false],
+	["Ambusher", "Trap Master", "Snare", "atk:.5 execute:.5", [["quick_win", 200]], "Win 200 fights before the enemy acts", false],
+	["Ambusher", "Sunder Fang", "Fang", "atk:.5 boss:.5", [["boss_first_try", 15]], "Beat 15 bosses on your first try", false],
+	# ----- Conjurer -----
+	["Binder", "Pact Weaver", "Pact", "skill:.6 atk:.4", [["use_tag:Arcane", 2500]], "Use Arcane skills 2,500 times", false],
+	["Binder", "Spirit Tamer", "Spirit", "skill:.5 lifesteal:.5", [["kill_tag:Shadow", 2500]], "Kill 2,500 enemies with Shadow skills", false],
+	["Demonologist", "Brimstone Binder", "Brimstone", "skill:.6 execute:.4", [["kill_debuffed", 800]], "Kill 800 enemies while they're weakened, stunned or charmed", false],
+	["Demonologist", "Fiend Lord", "Fiend", "skill:.5 atk:.5", [["kill_unholy", 400]], "Kill 400 Undead or Demons", false],
+	["Spiritcaller", "Ghost Shepherd", "Shepherd", "regen:.6 skill:.4", [["healed", 200000]], "Heal 200,000 HP", false],
+	["Spiritcaller", "Medium", "Seance", "regen:.5 charm:.5", [["spares", 80]], "Spare 80 enemies", false],
+	["Golemwright", "Rune Smith", "Rune", "skill:.5 def:.5", [["kill_stone", 300]], "Kill 300 Golems or stone monsters", false],
+	["Golemwright", "Clay Sage", "Clay", "def:.5 hp:.5", [["hits_shielded", 400]], "Take 400 hits while a shield is up", false],
+	["Imp Master", "Imp Prince", "Mischief", "skill:.5 atk:.5", [["kill_rare", 150]], "Kill 150 rare monsters", false],
+	["Imp Master", "Pit Warden", "Pit", "atk:.5 boss:.5", [["boss_kills", 40]], "Beat 40 bosses", false],
+	["Voidbinder", "Void Tamer", "Void", "skill:.6 crit:.4", [["use_tag:Shadow", 4000]], "Use Shadow skills 4,000 times", false],
+	["Voidbinder", "Star Eater", "Hunger", "skill:.5 boss:.5", [["boss_nopot", 15]], "Kill 15 bosses without drinking a potion", false],
 ]
 
 # =====================================================================

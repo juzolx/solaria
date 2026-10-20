@@ -7,17 +7,17 @@ extends RefCounted
 ## id -> {name, text, test(classes) via _has}
 const LIST := {
 	"shield_prayer": {"name": "Shield and Prayer", "color": "#fde68a",
-		"text": "A front-liner (Warrior, Knight, Wanderer) and a believer (Cleric, Acolyte, Bard): the whole team takes 10% less damage."},
+		"text": "A front-liner (Warrior, Knight, Wanderer, Sentinel, Ironbark) and a believer (Cleric, Acolyte, Bard): the whole team takes 10% less damage."},
 	"spellweave": {"name": "Spellweave", "color": "#c084fc",
-		"text": "Two spell-slingers (Mage, Trickster, Acolyte, Bard): skills hit 15% harder."},
+		"text": "Two spell-slingers (Mage, Trickster, Acolyte, Bard, Conjurer): skills hit 15% harder."},
 	"three_paths": {"name": "Three Paths", "color": "#4ade80",
 		"text": "Three different classes: +10% XP and gold."},
 	"hunting_pair": {"name": "Hunting Pair", "color": "#86efac",
-		"text": "A Ranger with a Wanderer or Trickster: +8% crit chance for the team."},
+		"text": "A Ranger with a Wanderer, Trickster or Nightstalker: +8% crit chance for the team."},
 }
-const FRONT := ["Warrior", "Knight", "Wanderer"]
+const FRONT := ["Warrior", "Knight", "Wanderer", "Sentinel", "Ironbark"]
 const FAITH := ["Cleric", "Acolyte", "Bard"]
-const SPELL := ["Mage", "Trickster", "Acolyte", "Bard"]
+const SPELL := ["Mage", "Trickster", "Acolyte", "Bard", "Conjurer"]
 const DAMAGE_CUT := 0.9
 const SKILL_BOOST := 1.15
 const REWARD_BOOST := 1.1
@@ -51,7 +51,7 @@ static func active(g: GameState) -> Array:
 		unique[c] = true
 	if cl.size() >= 3 and unique.size() >= 3:
 		out.append("three_paths")
-	if "Ranger" in cl and ("Wanderer" in cl or "Trickster" in cl):
+	if "Ranger" in cl and ("Wanderer" in cl or "Trickster" in cl or "Nightstalker" in cl):
 		out.append("hunting_pair")
 	return out
 

@@ -174,6 +174,9 @@ var equipped := {}  # slot name -> item
 var shop: Array[Dictionary] = []
 var featured := {}      # the shop's featured deal (Epic or better)
 var elixirs := {}       # active elixir id -> turns left
+var elixir_pack := {}   # next update (Juzo): elixirs carried on this dive, id -> count (drink one any time down there; lost if you fall)
+var supplies_home := {} # next update: supplies kept safe at home, "potion" / "scroll" / elixir id -> count (pick what to take in Into the dungeon)
+var formation := {}     # next update: "front" or "back" per hero, keyed "0" for you and the slot number for companions
 var path_offer: Array = []  # room choices waiting for you ("fight", "treasure", "rest", "elite")
 var path_rooms_on := true   # off = never offer room choices
 var enemy_elite := false
@@ -2309,6 +2312,12 @@ func _death_losses() -> String:
 	if return_scrolls > 0:
 		parts.append("%d Return Scroll%s" % [return_scrolls, "" if return_scrolls == 1 else "s"])
 		return_scrolls = 0
+	var packed := 0
+	for k in elixir_pack:
+		packed += int(elixir_pack[k])
+	if packed > 0:
+		parts.append("%d elixir%s" % [packed, "" if packed == 1 else "s"])
+	elixir_pack.clear()  # carried elixirs are lost too; the ones at home are safe
 	elixirs.clear()
 	luck_turns = 0
 	hunt_spawns = 0
@@ -2802,9 +2811,80 @@ func buy_elixir(id: String) -> void:
 		say("Not enough gold.")
 		return
 	gold -= elixir_cost(id)
+	# Next update (Juzo): elixirs are supplies now. Bought in town they wait at home
+	# until you take them down (Into the dungeon); bought down there they're carried.
+	if in_town:
+		supplies_home[id] = int(supplies_home.get(id, 0)) + 1
+		say("[color=#c4b5fd]%s[/color] stored at home. Take it down with you from Into the dungeon, and drink it when you need it." % info["name"])
+	else:
+		elixir_pack[id] = int(elixir_pack.get(id, 0)) + 1
+		say("[color=#c4b5fd]%s[/color] in your pack. Drink it from Supplies." % info["name"])
+	save_game()
+
+# =====================================================================
+# Next update (Juzo): supplies. Potions, Return Scrolls and elixirs can wait
+# safe at home or come down with you (at risk if you fall). Pick in Into the
+# dungeon; drink elixirs and read scrolls from Supplies down there.
+# =====================================================================
+
+static func supply_keys() -> Array:
+	return ["potion", "scroll"] + GameData.ELIXIR_ORDER
+
+static func supply_name(key: String) -> String:
+	match key:
+		"potion":
+			return "Potions"
+		"scroll":
+			return "Return Scrolls"
+	return String(GameData.ELIXIRS.get(key, {}).get("name", key))
+
+func supply_carried(key: String) -> int:
+	match key:
+		"potion":
+			return potions
+		"scroll":
+			return return_scrolls
+	return int(elixir_pack.get(key, 0))
+
+func supply_home(key: String) -> int:
+	return int(supplies_home.get(key, 0))
+
+## Moves n of a supply from home into your pack (n < 0 puts it back). Town only.
+func move_supply(key: String, n: int) -> bool:
+	if not in_town or n == 0:
+		return false
+	if (n > 0 and supply_home(key) < n) or (n < 0 and supply_carried(key) < -n):
+		return false
+	supplies_home[key] = supply_home(key) - n
+	match key:
+		"potion":
+			potions += n
+		"scroll":
+			return_scrolls += n
+		_:
+			elixir_pack[key] = supply_carried(key) + n
+	save_game()
+	return true
+
+## Drink a carried elixir: its buff starts now.
+func drink_elixir(id: String) -> bool:
+	if supply_carried(id) <= 0 or not GameData.ELIXIRS.has(id):
+		return false
+	elixir_pack[id] = supply_carried(id) - 1
+	var info: Dictionary = GameData.ELIXIRS[id]
 	elixirs[id] = int(info["turns"])
 	events.append({"type": "buff", "name": info["name"]})
 	say("[color=#c4b5fd]%s![/color] %s" % [info["name"], info["text"]])
+	save_game()
+	return true
+
+## Front or back row (next update): the front row draws the monsters' attacks.
+## Default: tanks in front, everyone else behind.
+func row_of(key: String, tank: bool) -> String:
+	return String(formation.get(key, "front" if tank else "back"))
+
+func set_row(key: String, row: String) -> void:
+	formation[key] = row
 	save_game()
 
 ## Sells every bag item of a rarity, keeping locked items and upgrades.
@@ -3187,6 +3267,9 @@ func save_game() -> void:
 		"discovered": discovered,
 		"featured": featured,
 		"elixirs": elixirs,
+		"elixir_pack": elixir_pack,
+		"supplies_home": supplies_home,
+		"formation": formation,
 		"dev_mode": dev_mode,
 		"volume": volume,
 		"music_volume": music_volume,
@@ -3482,6 +3565,9 @@ func load_game() -> bool:
 	discovered = data.get("discovered", {})
 	featured = data.get("featured", {})
 	elixirs = data.get("elixirs", {})
+	elixir_pack = data.get("elixir_pack", {})
+	supplies_home = data.get("supplies_home", {})
+	formation = data.get("formation", {})
 	dev_mode = bool(data.get("dev_mode", false))
 	volume = float(data.get("volume", 0.8))
 	music_volume = float(data.get("music_volume", 0.5))

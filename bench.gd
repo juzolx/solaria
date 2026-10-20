@@ -18,6 +18,10 @@ const RATES := {
 	"Trickster": {"gold": 1.9, "scrap": 0.8, "item": 1.0, "job": "lightens a few purses"},
 	"Ranger": {"gold": 1.0, "scrap": 1.0, "item": 1.7, "job": "hunts the woods past the walls"},
 	"Bard": {"gold": 1.7, "scrap": 0.8, "item": 1.0, "job": "plays the tavern every night"},
+	"Sentinel": {"gold": 1.1, "scrap": 1.4, "item": 0.9, "job": "stands watch on the town gate"},
+	"Ironbark": {"gold": 0.9, "scrap": 1.3, "item": 1.3, "job": "tends the woods and hauls timber"},
+	"Nightstalker": {"gold": 1.5, "scrap": 0.9, "item": 1.3, "job": "walks the rooftops after dark"},
+	"Conjurer": {"gold": 1.0, "scrap": 1.2, "item": 1.4, "job": "sends spirits to fetch lost things"},
 }
 const HIDDEN_RATE := {"gold": 1.3, "scrap": 1.3, "item": 1.3, "job": "knows paths no one else does"}
 

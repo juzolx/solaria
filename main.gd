@@ -97,6 +97,7 @@ var auto_potion_button: Button
 var floors_button: Button
 var speed_button: Button
 var more_button: Button
+var supplies_button: Button  # next update: elixirs and scrolls you carried down
 var drawer: HBoxContainer
 var drawer_open := false
 var class_overlay: Overlay
@@ -982,7 +983,9 @@ func _build_fight(parent: Control) -> void:
 	action_row.add_child(more_button)
 	drawer = UI.hbox(6)
 	col.add_child(drawer)
-	for b in [auto_potion_button, speed_button, floors_button]:
+	supplies_button = UI.button("Supplies", func(): SuppliesPopup.new().show_for(self))
+	supplies_button.tooltip_text = "Drink an elixir or read a Return Scroll you carried down"
+	for b in [auto_potion_button, speed_button, floors_button, supplies_button]:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		drawer.add_child(b)
 

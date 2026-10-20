@@ -12,8 +12,10 @@ const MAX_COMPANIONS := 2
 const HP_PER_MEMBER := 0.45    # monster HP +45% for each companion
 const ATK_PER_MEMBER := 0.1    # monster Attack +10% for each companion
 const LOOT_PER_MEMBER := 0.3   # chance of an extra drop per companion
-const TANK_CLASSES := ["Warrior", "Knight"]
+const TANK_CLASSES := ["Warrior", "Knight", "Sentinel", "Ironbark"]
 const TANK_WEIGHT := 3.0       # monsters attack tanks this many times more often
+const FRONT_WEIGHT := 1.6      # next update (Juzo): the front row draws attacks...
+const BACK_WEIGHT := 0.5       # ...and the back row is hit less
 const SUPPORT_HEAL_AT := 0.6   # healers heal party members under 60% HP
 const REVIVE_HP := 0.4         # knocked-out companions get up with 40% HP on the next floor
 
@@ -81,11 +83,15 @@ func hp_mult() -> float:
 func atk_mult() -> float:
 	return 1.0 + ATK_PER_MEMBER * members.size()
 
+static func row_weight(row: String) -> float:
+	return FRONT_WEIGHT if row == "front" else BACK_WEIGHT
+
 ## Who the monster swings at: "" = the leader, otherwise a Member.
 func pick_target(leader: GameState) -> Variant:
-	var options: Array = [] if leader.leader_down else [[null, TANK_WEIGHT if leader.hero_class in TANK_CLASSES else 1.0]]
+	var lt := leader.hero_class in TANK_CLASSES
+	var options: Array = [] if leader.leader_down else [[null, (TANK_WEIGHT if lt else 1.0) * row_weight(leader.row_of("0", lt))]]
 	for m in living():
-		options.append([m, TANK_WEIGHT if m.is_tank() else 1.0])
+		options.append([m, (TANK_WEIGHT if m.is_tank() else 1.0) * row_weight(leader.row_of(str(m.slot), m.is_tank()))])
 	var total := 0.0
 	for o in options:
 		total += float(o[1])

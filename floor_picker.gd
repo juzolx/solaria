@@ -15,6 +15,8 @@ var from_town := false   # picking where to go down to from town (main._leave_to
 var carry_buttons: Array = []
 var carry_note: Label
 var risk_note: Label
+var team_box: VBoxContainer
+var supply_box: VBoxContainer
 
 ## From town: the same picker, plus quick picks, and choosing a floor takes you down.
 func show_from_town(main_node) -> void:
@@ -53,27 +55,15 @@ func show_for(main_node) -> void:
 		carry_note = UI.label("", 11, UI.DIM)
 		carry_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		content.add_child(carry_note)
-		# 0.13+: prepare the dive: who goes, and what a fall would cost
-		content.add_child(UI.label("YOUR TEAM", 11, UI.DIM))
-		var team := UI.hbox(8)
-		content.add_child(team)
-		var heroes: Array = [state]
-		if state.party != null:
-			for mem in state.party.members:
-				heroes.append(mem.hero)
-		for hg in heroes:
-			var col := UI.vbox(0)
-			team.add_child(col)
-			var tp := TextureRect.new()
-			tp.texture = Sprites.portrait(hg.appearance, hg.hero_looks())
-			tp.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-			tp.custom_minimum_size = Vector2(48, 48)
-			tp.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			tp.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			col.add_child(tp)
-			col.add_child(UI.label("%s Lv %d" % [hg.hero_class, hg.level], 11, Color(hg.class_info().get("color", "#e5e7eb"))))
-		if heroes.size() == 1:
-			team.add_child(UI.wrap("Going alone. Bring up to 2 of your other heroes from Character > Party.", 11, UI.DIM))
+		# Next update (Juzo): pick your team and where they stand, and what to bring
+		content.add_child(UI.wrap("YOUR TEAM: the front row draws the attacks, the back row is hit less", 11, UI.DIM))
+		team_box = UI.vbox(6)
+		content.add_child(team_box)
+		content.add_child(UI.wrap("SUPPLIES TO BRING: what you carry is lost if you fall; what stays home is safe", 11, UI.DIM))
+		supply_box = UI.vbox(4)
+		content.add_child(supply_box)
+		_fill_team()
+		_fill_supplies()
 		risk_note = UI.label("", 12, Color("#fca5a5"))
 		risk_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		content.add_child(risk_note)
@@ -222,7 +212,7 @@ func _show_carry() -> void:
 			if not GameState.is_bound(state.equipped[s]):
 				worn += 1
 		var packed := state.bag.filter(func(it): return not GameState.is_bound(it)).size()
-		risk_note.text = "AT RISK THIS DIVE: %d gold, %d worn item%s and %d in your bag (bound items are always safe). Fall, and the gear plus half that gold wait in your grave on that floor, guarded by your killer; potions and scrolls are lost." % [c, worn, "" if worn == 1 else "s", packed]
+		risk_note.text = "AT RISK THIS DIVE: %d gold, %d worn item%s and %d in your bag (bound items are always safe). Fall, and the gear plus half that gold wait in your grave on that floor, guarded by your killer; potions, scrolls and elixirs you carry are lost." % [c, worn, "" if worn == 1 else "s", packed]
 
 func _show_zone(zb: int) -> void:
 	zone_shown = zb
@@ -266,3 +256,98 @@ static func _fill_curses(mm, o: Overlay, st: GameState) -> void:
 			_fill_curses(mm, o, st), UI.PURPLE if on else UI.DIM)
 		b.custom_minimum_size = Vector2(64, UI.TAP)
 		h.add_child(b)
+
+# =====================================================================
+# Next update (Juzo): the team and the supplies, picked right before a dive
+# =====================================================================
+
+func _fill_team() -> void:
+	OnlineUI.clear(team_box)
+	var rows: Array = [["0", state, state.hero_class in Party.TANK_CLASSES, -1]]
+	if state.party != null:
+		for mem in state.party.members:
+			rows.append([str(mem.slot), mem.hero, mem.is_tank(), mem.slot])
+	for r in rows:
+		var hg: GameState = r[1]
+		var h := UI.hbox(8)
+		team_box.add_child(h)
+		var tp := TextureRect.new()
+		tp.texture = Sprites.portrait(hg.appearance, hg.hero_looks())
+		tp.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		tp.custom_minimum_size = Vector2(40, 40)
+		tp.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tp.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		h.add_child(tp)
+		var nm := UI.label("%s  Lv %d %s" % [hg.hero_name if hg.hero_name != "" else "Hero", hg.level, hg.title()], 12, Color(hg.class_info().get("color", "#e5e7eb")))
+		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nm.clip_text = true
+		h.add_child(nm)
+		var row := state.row_of(String(r[0]), bool(r[2]))
+		var rb := UI.button("Front" if row == "front" else "Back", func():
+			state.set_row(String(r[0]), "back" if row == "front" else "front")
+			m.sfx.play("click")
+			_fill_team())
+		rb.add_theme_color_override("font_color", UI.GOLD if row == "front" else UI.BLUE)
+		rb.tooltip_text = "Tap to move between the front and back row"
+		h.add_child(rb)
+		if int(r[3]) > 0:
+			h.add_child(UI.button("Leave", func():
+				var slots: Array = state.party_slots.duplicate()
+				slots.erase(int(r[3]))
+				state.party.save_all()
+				state.set_party(slots)
+				_fill_team()))
+	if state.hardcore:
+		team_box.add_child(UI.wrap("Hardcore heroes go down alone.", 11, UI.DIM))
+		return
+	if state.party_slots.size() >= Party.MAX_COMPANIONS:
+		return
+	var add := HFlowContainer.new()
+	add.add_theme_constant_override("h_separation", 6)
+	add.add_theme_constant_override("v_separation", 6)
+	team_box.add_child(add)
+	for n in range(1, GameData.MAX_HEROES + 1):
+		if n == state.slot or n in state.party_slots:
+			continue
+		var meta := GameState.slot_meta(n)
+		if meta.is_empty() or meta.get("hardcore", false) or str(meta.get("class", "")) == "":
+			continue
+		add.add_child(UI.button("+ %s" % str(meta.get("name", "Hero")), func():
+			var slots: Array = state.party_slots.duplicate()
+			slots.append(n)
+			state.set_party(slots)
+			m.sfx.play("equip")
+			_fill_team()))
+	if add.get_child_count() == 0:
+		add.add_child(UI.wrap("Going alone. Recruit more heroes at the Inn as your town grows.", 11, UI.DIM))
+
+func _fill_supplies() -> void:
+	OnlineUI.clear(supply_box)
+	for key in GameState.supply_keys():
+		var carried := state.supply_carried(key)
+		var home := state.supply_home(key)
+		if carried + home == 0 and not key in ["potion", "scroll"]:
+			continue  # elixirs you don't own yet stay off the list
+		var h := UI.hbox(6)
+		supply_box.add_child(h)
+		var l := UI.label("%s: %d carried  ·  %d at home" % [GameState.supply_name(key), carried, home], 12, UI.TEXT if carried > 0 else UI.DIM)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(l)
+		var minus := UI.button("-", func():
+			state.move_supply(key, -1)
+			_fill_supplies()
+			_show_carry())
+		minus.disabled = carried <= 0
+		minus.tooltip_text = "Leave one at home (safe)"
+		minus.custom_minimum_size = Vector2(UI.TAP, UI.TAP)
+		h.add_child(minus)
+		var plus := UI.button("+", func():
+			state.move_supply(key, 1)
+			_fill_supplies()
+			_show_carry())
+		plus.disabled = home <= 0
+		plus.tooltip_text = "Take one down with you"
+		plus.custom_minimum_size = Vector2(UI.TAP, UI.TAP)
+		h.add_child(plus)
+	if state.supply_home("potion") + state.potions == 0:
+		supply_box.add_child(UI.wrap("No potions. Buy some at the Inn first.", 11, Color("#fca5a5")))

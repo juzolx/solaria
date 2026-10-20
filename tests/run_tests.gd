@@ -624,7 +624,7 @@ func _initialize() -> void:
 	GameState.delete_slot(3)
 
 	# ---------- Phase 8: classes, specializations, evolutions ----------
-	check(Classes.ORDER.size() == 9, "9 classes")
+	check(Classes.ORDER.size() == 13, "13 classes")
 	for cname in Classes.ORDER:
 		var ci := Classes.info(cname)
 		for sid in ci["start"]:
@@ -651,8 +651,8 @@ func _initialize() -> void:
 		if sk["kind"] == "active":
 			check(sk.has("cd") and (sk.has("power") or sk.has("buff") or sk.has("shield") or sk.has("summon") or sk.has("song") or sk.has("wild")), "active skill does something: " + sid)
 	print("Skills: %d active, %d passive" % [SkillData.all_of("active").size(), SkillData.all_of("passive").size()])
-	check(ClassTree.all_nodes().size() == 9 * 14 + ClassTree.BRANCHES.size(), "every class name is unique (%d nodes)" % ClassTree.all_nodes().size())
-	check(ClassTree.BRANCHES.size() == 125, "125 branch-offs (got %d)" % ClassTree.BRANCHES.size())
+	check(ClassTree.all_nodes().size() == 13 * 14 + ClassTree.BRANCHES.size(), "every class name is unique (%d nodes)" % ClassTree.all_nodes().size())
+	check(ClassTree.BRANCHES.size() == 173, "173 branch-offs (got %d)" % ClassTree.BRANCHES.size())
 	for itk in ClassTree.ITEMS:
 		check(not ClassTree.node(ClassTree.ITEMS[itk]["node"]).is_empty() and not ClassTree.node(ClassTree.ITEMS[itk]["at"]).is_empty(), "item nodes exist: " + itk)
 	var gods := 0

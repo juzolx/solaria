@@ -270,9 +270,9 @@ func refresh() -> void:
 		var info: Dictionary = GameData.ELIXIRS[id]
 		var entry: Array = supplies[id]
 		var active := int(state.elixirs.get(id, 0))
-		(entry[1] as RichTextLabel).text = "[color=%s]%s[/color]%s" % [UI.hex(UI.DIM), entry[2],
+		(entry[1] as RichTextLabel).text = "[color=%s]%s[/color]\n[color=#c4b5fd]At home: %d   Carried: %d[/color]%s" % [UI.hex(UI.DIM), entry[2], state.supply_home(id), state.supply_carried(id),
 			("\n[color=#c4b5fd]Active: %d turns left[/color]" % active) if active > 0 else ""]
-		(entry[0] as Button).text = ("Refresh  -  %d gold" if active > 0 else "Buy  -  %d gold") % state.elixir_cost(id)
+		(entry[0] as Button).text = "Buy  -  %d gold" % state.elixir_cost(id)
 		(entry[0] as Button).disabled = state.gold < state.elixir_cost(id)
 
 	# Bag
