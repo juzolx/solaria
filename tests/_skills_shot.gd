@@ -24,6 +24,9 @@ func _initialize() -> void:
 			n += 1
 	main.show_tab(0, 3)
 	main.refresh()
+	main.skills_tab.selected = st.skill_book.keys()[3]
+	main.skills_tab.shown = ""
+	main.refresh()
 	await create_timer(0.6).timeout
 	root.get_texture().get_image().save_png(TestHero.shots_dir("skills").path_join("book.png"))
 	print("SKILLS SHOT DONE")

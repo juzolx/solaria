@@ -4495,3 +4495,40 @@ func _blocked_over(id: int) -> bool:
 		return false
 	say("That's over your bag's limit (%d). Sell or salvage something to use it." % bag_capacity())
 	return true
+
+# =====================================================================
+# 0.13+ (Juzo): sell skills you don't use
+# =====================================================================
+
+## What a skill sells for: its rarity and rank, sized to how deep you've been.
+func skill_sell_price(id: String) -> int:
+	if not skill_book.has(id):
+		return 0
+	var s := SkillData.info(id)
+	return price((20 + best_floor * 5) * (int(s.get("rarity", 0)) + 1) * maxi(1, skill_rank(id)))
+
+## Why a skill can't be sold ("" = it can).
+func skill_sell_block(id: String) -> String:
+	if not skill_book.has(id):
+		return "You don't have that skill"
+	if is_skill_equipped(id):
+		return "Unequip it first"
+	if id in class_info().get("start", []) and skill_book.size() <= 2:
+		return "You need at least one skill"
+	return ""
+
+## Sell a skill from your book for gold. Returns the gold paid (0 = not sold).
+func sell_skill(id: String) -> int:
+	if skill_sell_block(id) != "":
+		say("Can't sell that: %s." % skill_sell_block(id).to_lower())
+		return 0
+	var paid := skill_sell_price(id)
+	var nm := SkillData.skill_name(id)
+	skill_book.erase(id)
+	skill_cds.erase(id)
+	skill_priority.erase(id)
+	gold += paid
+	codex.add("skills_sold")
+	say("Sold %s for %d gold." % [nm, paid])
+	save_game()
+	return paid

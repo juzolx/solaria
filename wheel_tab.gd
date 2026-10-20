@@ -88,6 +88,7 @@ func setup(m) -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	left.add_child(scroll)
+	scroll.custom_minimum_size = Vector2(0, 130)  # phones stack the wheel under this: it was squeezed to nothing
 	var sv := UI.vbox(4)
 	sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(sv)
@@ -141,6 +142,11 @@ func _on_left_resized(left: Control) -> void:
 func _pick(id: int) -> void:
 	if spinning:
 		return
+	if state.over_limit(id):  # 0.13+ (Juzo): say so instead of quietly refusing
+		main.toast("Your bag is full: that item is over its limit. Sell or salvage something to bet it.")
+		result_label.text = "[color=#f87171]Bag full: that item is over the limit. Sell or salvage something first.[/color]"
+		main.sfx.play("error")
+		return
 	if high:
 		if id in slate:
 			slate.erase(id)
@@ -173,12 +179,18 @@ func refresh() -> void:
 				continue
 			var id := int(item["id"])
 			var sel: bool = (id in slate) if high else id == selected_id
-			grid.add_child(ItemGrid.cell(item, _pick.bind(id), sel, ItemGrid.CELL, "%d%%" % state.gamble_chance(item)))
+			var over := state.over_limit(id)
+			var wcell := ItemGrid.cell(item, _pick.bind(id), sel, ItemGrid.CELL, "OVER" if over else "%d%%" % state.gamble_chance(item))
+			if over:
+				wcell.modulate = Color(0.55, 0.5, 0.5)
+			grid.add_child(wcell)
 			ids.append(id)
 		empty_note.visible = ids.is_empty()
 	_update()
 
 func _update() -> void:
+	if state.bag.size() >= state.bag_capacity() and not spinning and result_label.text == "":
+		result_label.text = "[color=#f87171]Your bag is full (%d / %d). You can still bet items in it, but items over the limit can't go on the wheel until you sell or salvage.[/color]" % [state.bag.size(), state.bag_capacity()]
 	mode_button.text = "High stakes: ON  (many wheels at once)" if high else "High stakes: OFF  (one wheel)"
 	normal_box.visible = not high
 	high_box.visible = high
@@ -282,7 +294,7 @@ func _load_rarity(r: int) -> void:
 		if slate.size() >= wheel_cap():
 			break
 		var id := int(it["id"])
-		if int(it["rarity"]) == r and GameData.can_gamble(it) and not ItemText.is_precious(it) and not id in slate:
+		if int(it["rarity"]) == r and GameData.can_gamble(it) and not ItemText.is_precious(it) and not id in slate and not state.over_limit(id):
 			slate.append(id)
 	shown = ""
 	refresh()

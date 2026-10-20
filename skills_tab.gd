@@ -16,6 +16,7 @@ var ids: Array[String] = []
 var detail: RichTextLabel
 var equip_button: Button
 var craft_button: Button
+var sell_button: Button
 var dust_label: Label
 var selected := ""
 var shown := ""
@@ -75,12 +76,22 @@ func setup(m) -> void:
 	var row := UI.hbox(6)
 	add_child(row)
 	equip_button = UI.primary("Equip", _toggle_equip, UI.GREEN)
+	sell_button = UI.button("Sell", func():
+		if selected == "":
+			return
+		var sid := selected
+		main.confirm("Sell %s?" % SkillData.skill_name(sid), "You get %d gold, and the skill is gone from your book (you'd have to find or craft it again)." % state.skill_sell_price(sid), "Sell it", func():
+			if state.sell_skill(sid) > 0:
+				main.sfx.play("sell")
+				selected = ""
+			shown = ""
+			main.refresh()))
 	craft_button = UI.button("", func():
 		if state.craft_skill(selected):
 			main.sfx.play("craft")
 		shown = ""
 		main.refresh())
-	for b in [equip_button, craft_button]:
+	for b in [equip_button, craft_button, sell_button]:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(b)
 
@@ -215,6 +226,8 @@ func _show_detail() -> void:
 		equip_button.disabled = true
 		craft_button.disabled = true
 		craft_button.text = "Rank up"
+		sell_button.disabled = true
+		sell_button.text = "Sell"
 		return
 	var s := SkillData.info(selected)
 	var r := state.skill_rank(selected)
@@ -228,6 +241,10 @@ func _show_detail() -> void:
 		s["name"], SkillData.RARITY_COLORS[int(s["rarity"])], SkillData.RARITY_NAMES[int(s["rarity"])], "active" if s["kind"] == "active" else "passive",
 		" ".join(tags), r, SkillData.describe(selected, maxi(1, r)), extra]
 	equip_button.disabled = r <= 0
+	var block := state.skill_sell_block(selected)
+	sell_button.text = "Sell (%d gold)" % state.skill_sell_price(selected) if state.skill_book.has(selected) else "Sell"
+	sell_button.disabled = block != ""
+	sell_button.tooltip_text = block if block != "" else "Sell it for gold (it leaves your book)"
 	equip_button.text = "Unequip" if state.is_skill_equipped(selected) else "Equip"
 	if r >= SkillData.MAX_RANK:
 		craft_button.text = "Max rank"
