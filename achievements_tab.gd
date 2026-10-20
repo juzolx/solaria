@@ -12,6 +12,7 @@ var color_pick: OptionButton
 var frame_pick: OptionButton
 var box: VBoxContainer
 var shown := 0
+var shop_open := false  # the looks shop list is folded away until you open it
 
 func setup(m) -> void:
 	main = m
@@ -39,7 +40,7 @@ func setup(m) -> void:
 	color_pick.clip_text = true
 	color_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	color_pick.item_selected.connect(func(i: int):
-		codex.name_color = String(Cosmetics.COLORS[i]["id"])
+		codex.name_color = String(Cosmetics.colors()[i]["id"])
 		codex.save()
 		main.refresh())
 	looks.add_child(color_pick)
@@ -63,7 +64,7 @@ func setup(m) -> void:
 	scroll.add_child(box)
 
 func refresh() -> void:
-	var key := hash(str(codex.deeds) + str(codex.achievements.size()) + str(codex.stat("kills")) + str(main.state.in_town))
+	var key := hash(str(codex.deeds) + str(codex.achievements.size()) + str(codex.stat("kills")) + str(main.state.in_town) + str(codex.bought.size()) + str(shop_open) + (str(main.state.gold) if shop_open else ""))
 	if key == shown:
 		return
 	shown = key
@@ -74,9 +75,10 @@ func refresh() -> void:
 		title_pick.add_item(t)
 		if t == codex.title:
 			title_pick.select(title_pick.item_count - 1)
-	_fill_looks(color_pick, Cosmetics.COLORS, codex.name_color)
+	_fill_looks(color_pick, Cosmetics.colors(), codex.name_color)
 	_fill_looks(frame_pick, Cosmetics.FRAMES, codex.frame)
 	OnlineUI.clear(box)
+	_looks_shop()
 	# Rewards waiting to be claimed come first
 	if not codex.deeds.is_empty():
 		box.add_child(UI.label("REWARDS WAITING FOR YOU", 11, UI.GOLD))
@@ -171,12 +173,68 @@ static func _reward_text(r: Dictionary) -> String:
 		parts.append("%d materials" % int(r["mats"]))
 	return ", ".join(parts)
 
+## Stage 4: titles, name colors and frames for gold (looks only, never power).
+func _looks_shop() -> void:
+	var list := Cosmetics.shop_list()
+	var owned := 0
+	for p in list:
+		if Cosmetics.has(codex, p[1]):
+			owned += 1
+	var b := UI.button("%s Looks shop  -  %d / %d owned" % ["▾" if shop_open else "▸", owned, list.size()], func():
+		shop_open = not shop_open
+		refresh())
+	b.custom_minimum_size = Vector2(0, UI.TAP)
+	box.add_child(b)
+	if not shop_open:
+		return
+	var note := UI.label("Looks only: they never change your power. Paid with this hero's gold; every hero in every town can wear them.", 11, UI.DIM)
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.custom_minimum_size = Vector2(120, 0)
+	box.add_child(note)
+	for p in list:
+		box.add_child(_shop_row(String(p[0]), p[1]))
+
+func _shop_row(kind: String, e: Dictionary) -> PanelContainer:
+	var got := Cosmetics.has(codex, e)
+	var col := Color(String(e.get("color", "#e8b14a")))
+	var card := UI.panel(UI.INSET, col.darkened(0.3) if e.has("color") else UI.BORDER, 6, 8, 1)
+	var h := UI.hbox(10)
+	card.add_child(h)
+	var sw := TextureRect.new()
+	sw.texture = _swatch(col) if e.has("color") else null
+	sw.custom_minimum_size = Vector2(18, 18)
+	sw.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(sw)
+	var v := UI.vbox(0)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(v)
+	var nl := UI.label(String(e["name"]), 14, col if kind == "Name color" else UI.TEXT)
+	nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(nl)
+	v.add_child(UI.label(kind, 11, UI.DIM))
+	if got:
+		h.add_child(UI.label("Owned", 12, UI.GREEN))
+	else:
+		var cost := Cosmetics.shop_price(main.state, e)
+		var buy := UI.primary("%d gold" % cost, func():
+			if Cosmetics.buy(main.state, codex, e):
+				main.sfx.play("buy")
+				main.toast("Bought: %s. Pick it at the top of the Guild Hall." % e["name"])
+			shown = 0
+			main.refresh(), UI.GOLD)
+		buy.disabled = main.state.gold < cost
+		buy.custom_minimum_size = Vector2(110, UI.TAP)
+		buy.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(buy)
+	return card
+
 ## Every look in the list; the ones you haven't earned say which deed unlocks them.
 func _fill_looks(pick: OptionButton, list: Array, current: String) -> void:
 	pick.clear()
 	for e in list:
 		var got := Cosmetics.has(codex, e)
-		pick.add_item(String(e["name"]) if got else "%s (deed: %s)" % [e["name"], Cosmetics.need_name(e)])
+		pick.add_item(String(e["name"]) if got else ("%s (looks shop)" % e["name"] if String(e["need"]) == "shop" else "%s (deed: %s)" % [e["name"], Cosmetics.need_name(e)]))
 		var i := pick.item_count - 1
 		pick.set_item_disabled(i, not got)
 		if String(e.get("color", "")) != "":

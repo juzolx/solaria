@@ -1,6 +1,6 @@
 78098b89c88a74ebe8c20117b8754620
-::res://::1792488042
-achievements_tab.gd::GDScript::225817628144516105::1792426149::0::1::::AchievementsTab<>VBoxContainer<><>0<>0<><>::
+::res://::1792498980
+achievements_tab.gd::GDScript::225817628144516105::1792498980::0::1::::AchievementsTab<>VBoxContainer<><>0<>0<><>::
 art_info.gd::GDScript::2121761137587333428::1792440491::0::1::::ArtInfo<>RefCounted<><>0<>0<><>::
 auto_rules.gd::GDScript::2405800427113084060::1792444644::0::1::::AutoRules<>RefCounted<><>0<>0<><>::
 bag_tab.gd::GDScript::7963412957330005317::1792486377::0::1::::BagTab<>VBoxContainer<><>0<>0<><>::
@@ -17,12 +17,12 @@ class_tab.gd::GDScript::2242816760745440118::1792399749::0::1::::ClassTab<>Scrol
 class_tree.gd::GDScript::144847341442138040::1792440223::0::1::::ClassTree<>RefCounted<><>0<>0<><>::
 CLAUDE.md::TextFile::-1::1792399817::0::1::::<><><>0<>0<><>::
 clinic_tab.gd::GDScript::1332373833977833578::1792462892::0::1::::ClinicTab<>ScrollContainer<><>0<>0<><>::
-codex.gd::GDScript::8699120073566472490::1792485513::0::1::::Codex<>RefCounted<><>0<>0<><>::
+codex.gd::GDScript::8699120073566472490::1792498923::0::1::::Codex<>RefCounted<><>0<>0<><>::
 CODE_INDEX.md::TextFile::-1::1792399747::0::1::::<><><>0<>0<><>::
 collection_tab.gd::GDScript::3273171438237057211::1792399749::0::1::::CollectionTab<>ScrollContainer<><>0<>0<><>::
 combat.gd::GDScript::5978949549637127472::1792446092::0::1::::Combat<>RefCounted<><>0<>0<><>::
 cooldown_ring.gd::GDScript::2140856540742764870::1792442955::0::1::::CooldownRing<>Control<><>0<>0<><>::
-cosmetics.gd::GDScript::955545429438594497::1792425657::0::1::::Cosmetics<>RefCounted<><>0<>0<><>::
+cosmetics.gd::GDScript::955545429438594497::1792498940::0::1::::Cosmetics<>RefCounted<><>0<>0<><>::
 craft_tab.gd::GDScript::6139851508629389909::1792454001::0::1::::CraftTab<>ScrollContainer<><>0<>0<><>::
 credits.gd::GDScript::4567747528896080687::1792418239::0::1::::Credits<>RefCounted<><>0<>0<><>::
 dark_grade.gd::GDScript::1981912469824197290::1792399784::0::1::::DarkGrade<>RefCounted<><>0<>0<><>::
@@ -3369,13 +3369,13 @@ town_autumn.png::CompressedTexture2D::94479244335991672::1792399749::1792399749:
 town_spring.png::CompressedTexture2D::6727777026229099893::1792399749::1792399749::1::::<><><>0<>0<>623c0da43aa1a9d3910306dfda35e51c<>res://.godot/imported/town_spring.png-aeafd4155723369251283717dc522a3c.ctex::
 town_summer.png::CompressedTexture2D::3014895444935011510::1792399749::1792399749::1::::<><><>0<>0<>05566f2d18ec0bb23d2dce5e79b59e3f<>res://.godot/imported/town_summer.png-4c6afb7f4e282570d1cb1377aff9cc0b.ctex::
 town_winter.png::CompressedTexture2D::3291773191120406346::1792399749::1792399749::1::::<><><>0<>0<>c6cab8e4d953d72545dab01d75f596d0<>res://.godot/imported/town_winter.png-fddf56144e21a7a1c98c425beb605da6.ctex::
-::res://claude/::1792487408
+::res://claude/::1792488323
 code-map.md::TextFile::-1::1792399484::0::1::::<><><>0<>0<><>::
 dungeon-revamp-design.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
-next-update-checklist.md::TextFile::-1::1792487408::0::1::::<><><>0<>0<><>::
+next-update-checklist.md::TextFile::-1::1792488323::0::1::::<><><>0<>0<><>::
 next-update-notes.md::TextFile::-1::1792399494::0::1::::<><><>0<>0<><>::
 stage1-progress.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
-stage2-progress.md::TextFile::-1::1792487408::0::1::::<><><>0<>0<><>::
+stage2-progress.md::TextFile::-1::1792488323::0::1::::<><><>0<>0<><>::
 study-and-implement-list.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
 ::res://proto/::1792399796
 room3d.gd::GDScript::9127945263395229099::1792399784::0::1::::<>Control<><>0<>0<><>::
@@ -3457,7 +3457,7 @@ trap.wav::AudioStreamWAV::5886903482315739742::1792420851::1792420925::1::::<><>
 unique.wav::AudioStreamWAV::8636343434808806334::1792399749::1792399749::1::::<><><>0<>0<>24b953901c641877be8bd90b0855e4f1<>res://.godot/imported/unique.wav-01a11a3f6299a52159d56bc3979efc29.sample::
 weak_hit.wav::AudioStreamWAV::274863471046238212::1792399749::1792399749::1::::<><><>0<>0<>97037ddd4d71eda073d42530b2de2f5c<>res://.godot/imported/weak_hit.wav-2b1222b25052fbed1eab50fdb4b254b0.sample::
 whoosh.wav::AudioStreamWAV::1026168785560146225::1792420851::1792420925::1::::<><><>0<>0<>ad513f44c1eb5c39d6cf2d945c9dd358<>res://.godot/imported/whoosh.wav-e4488afa67299d9e17083d9f3d4c308c.sample::
-::res://tests/::1792488020
+::res://tests/::1792499014
 _auto_shot.gd::GDScript::5866594794658957856::1792444676::0::1::::<>SceneTree<><>0<>0<><>::
 _bagfull_shot.gd::GDScript::5190479162097615942::1792457874::0::1::::<>SceneTree<><>0<>0<><>::
 _bagpick_shot.gd::GDScript::6204233063876534730::1792483161::0::1::::<>SceneTree<><>0<>0<><>::
@@ -3492,6 +3492,7 @@ _room3d_shot.gd::GDScript::1091020687373335100::1792419538::0::1::::<>SceneTree<
 _skills_shot.gd::GDScript::1132383174116517624::1792463489::0::1::::<>SceneTree<><>0<>0<><>::
 _smith_shot.gd::GDScript::7097109454469922845::1792481968::0::1::::<>SceneTree<><>0<>0<><>::
 _snik_shot.gd::GDScript::341919956889541762::1792434829::0::1::::<>SceneTree<><>0<>0<><>::
+_store_shot.gd::GDScript::9075418955329686054::1792499014::0::1::::<>SceneTree<><>0<>0<><>::
 _strip_shot.gd::GDScript::3897584853497098943::1792443232::0::1::::<>SceneTree<><>0<>0<><>::
 _team_preset_shot.gd::GDScript::6966837291827164374::1792485133::0::1::::<>SceneTree<><>0<>0<><>::
 _team_shot.gd::GDScript::4661515701742640833::1792421227::0::1::::<>SceneTree<><>0<>0<><>::
@@ -3548,7 +3549,7 @@ stage3_auto.gd::GDScript::5792505858201746165::1792445166::0::1::::<>SceneTree<>
 stage3_auto_rules.gd::GDScript::4557173122522197030::1792444660::0::1::::<>SceneTree<><>0<>0<><>::
 stage3_branches.gd::GDScript::8683922105901868872::1792440447::0::1::::<>SceneTree<><>0<>0<><>::
 stage3_camp.gd::GDScript::4294401271156347382::1792454346::0::1::::<>SceneTree<><>0<>0<><>::
-stage3_cosmetics.gd::GDScript::183482610299545666::1792425732::0::1::::<>SceneTree<><>0<>0<><>::
+stage3_cosmetics.gd::GDScript::183482610299545666::1792498985::0::1::::<>SceneTree<><>0<>0<><>::
 stage3_eggs.gd::GDScript::3500877571337842901::1792438086::0::1::::<>SceneTree<><>0<>0<><>::
 stage3_grave.gd::GDScript::7248608222993798387::1792424335::0::1::::<>SceneTree<><>0<>0<><>::
 stage3_hazards.gd::GDScript::7394473785406751072::1792425945::0::1::::<>SceneTree<><>0<>0<><>::
@@ -3575,6 +3576,7 @@ stage4_snik.gd::GDScript::1059717480001653801::1792454359::0::1::::<>SceneTree<>
 stage4_wheel.gd::GDScript::3268522095165436437::1792453336::0::1::::<>SceneTree<><>0<>0<><>::
 stage5_bag.gd::GDScript::4131955471482066449::1792483715::0::1::::<>SceneTree<><>0<>0<><>::
 stage5_pets.gd::GDScript::7824808662078062071::1792485674::0::1::::<>SceneTree<><>0<>0<><>::
+stage5_store.gd::GDScript::2890247554695618365::1792499000::0::1::::<>SceneTree<><>0<>0<><>::
 stage5_team.gd::GDScript::21509662912828049::1792485103::0::1::::<>SceneTree<><>0<>0<><>::
 stage5_towns.gd::GDScript::1475385256723944518::1792484570::0::1::::<>SceneTree<><>0<>0<><>::
 stage5_world.gd::GDScript::1621516832435343165::1792487108::0::1::::<>SceneTree<><>0<>0<><>::

@@ -32,11 +32,73 @@ const FRAMES := [
 	{"id": "curio", "name": "Curator's Gilt", "color": "#fde047", "need": "uniq15", "studs": true},
 	{"id": "crown", "name": "Bossbreaker Crown", "color": "#fbbf24", "need": "boss100", "studs": true},
 	{"id": "legend", "name": "Living Legend", "color": "#ffffff", "need": "lv100", "studs": true},
+	# Stage 4: sold in the Guild Hall's looks shop for gold ("price" in potions' worth, see shop_price)
+	{"id": "candle", "name": "Candlewax", "color": "#f5e6c8", "need": "shop", "price": 40, "studs": false},
+	{"id": "rust", "name": "Old Rust", "color": "#b45309", "need": "shop", "price": 60, "studs": true},
+	{"id": "grave", "name": "Gravestone", "color": "#6b7280", "need": "shop", "price": 90, "studs": true},
+	{"id": "blood", "name": "Blood Moon", "color": "#be123c", "need": "shop", "price": 150, "studs": true},
 ]
+## Shop-only name colors (colors() joins them to COLORS for the picker and saves)
+const SHOP_COLORS := [
+	{"id": "ash", "name": "Ashen Grey", "color": "#a8a29e", "need": "shop", "price": 30},
+	{"id": "torch", "name": "Torchlight", "color": "#f9905e", "need": "shop", "price": 50},
+	{"id": "rune", "name": "Rune Blue", "color": "#5ad1e6", "need": "shop", "price": 80},
+	{"id": "embergold", "name": "Ember Gold", "color": "#e8b25a", "need": "shop", "price": 120},
+]
+## Titles you can buy: shown next to your name like deed titles
+const SHOP_TITLES := [
+	{"id": "lamplighter", "name": "Lamplighter", "need": "shop", "price": 35},
+	{"id": "wanderer", "name": "Grey Wanderer", "need": "shop", "price": 60},
+	{"id": "patron", "name": "Patron of the Guild", "need": "shop", "price": 100},
+	{"id": "nightwalker", "name": "Nightwalker", "need": "shop", "price": 140},
+]
+
+static func colors() -> Array:
+	return COLORS + SHOP_COLORS
 
 static func has(codex: Codex, entry: Dictionary) -> bool:
 	var need := String(entry["need"])
+	if need == "shop":
+		return codex.bought.has(key(entry))
 	return need == "" or codex.achievements.has(need)
+
+## Save key of a shop look: "color:id", "frame:id" or "title:id".
+static func key(entry: Dictionary) -> String:
+	if entry.has("color"):
+		return ("frame:" if entry.has("studs") else "color:") + String(entry["id"])
+	return "title:" + String(entry["id"])
+
+## Gold price: grows with your deepest floor so it stays a real choice (Charisma and town events apply).
+static func shop_price(state: GameState, entry: Dictionary) -> int:
+	return state.price(int(GameData.POTION_GOLD * int(entry["price"]) * (1.0 + state.best_floor / 20.0)))
+
+## Every shop look in display order: [kind, entry].
+static func shop_list() -> Array:
+	var out: Array = []
+	for e in SHOP_TITLES:
+		out.append(["Title", e])
+	for e in SHOP_COLORS:
+		out.append(["Name color", e])
+	for e in FRAMES:
+		if String(e["need"]) == "shop":
+			out.append(["Frame", e])
+	return out
+
+## Buys a look with the current hero's gold. Returns false (and says why) if it can't.
+static func buy(state: GameState, codex: Codex, entry: Dictionary) -> bool:
+	if has(codex, entry):
+		return false
+	var cost := shop_price(state, entry)
+	if state.gold < cost:
+		state.say("Not enough gold (need %d)." % cost)
+		return false
+	state.gold -= cost
+	codex.bought.append(key(entry))
+	if not entry.has("color") and not String(entry["name"]) in codex.extra_titles:
+		codex.extra_titles.append(String(entry["name"]))
+	codex.save()
+	state.save_game()
+	return true
 
 static func _find(list: Array, id: String) -> Dictionary:
 	for e in list:
@@ -55,7 +117,7 @@ static func need_name(entry: Dictionary) -> String:
 static func name_color(codex: Codex) -> Color:
 	if codex == null:
 		return Color("#e5e7eb")
-	var e := _find(COLORS, codex.name_color)
+	var e := _find(colors(), codex.name_color)
 	return Color(String(e["color"])) if has(codex, e) else Color("#e5e7eb")
 
 static func frame(codex: Codex) -> Dictionary:

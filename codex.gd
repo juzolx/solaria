@@ -149,6 +149,7 @@ var frame := ""         # the plate frame you show, "" = none
 var lore: Array = []     # Stage 3: lore pages found, in order (lore.gd)
 var bounties := {"day": "", "daily": [], "week": "", "weekly": []}
 var extra_titles: Array = []  # titles from feats, not deeds (a slain Calamity)
+var bought: Array = []  # Stage 4: looks bought in the Guild Hall shop ("color:id", "frame:id", "title:id")
 var deeds: Array = []   # achievement ids whose rewards wait at the Guild Hall
 var login := {"last": "", "streak": 0}
 var guide := {}         # guide page id -> true (unlocked)
@@ -183,6 +184,7 @@ func _from(d: Dictionary) -> void:
 	guide = d.get("guide", {})
 	deeds = d.get("deeds", [])
 	extra_titles = d.get("extra_titles", [])
+	bought = d.get("bought", [])
 
 func save() -> void:
 	dirty = false
@@ -192,7 +194,7 @@ func save() -> void:
 	if f == null:
 		return
 	f.store_var({"bestiary": bestiary, "stats": stats, "collection": collection, "pet_book": pet_book, "achievements": achievements,
-		"title": title, "name_color": name_color, "frame": frame, "lore": lore, "bounties": bounties, "login": login, "guide": guide, "deeds": deeds, "extra_titles": extra_titles})
+		"title": title, "name_color": name_color, "frame": frame, "lore": lore, "bounties": bounties, "login": login, "guide": guide, "deeds": deeds, "extra_titles": extra_titles, "bought": bought})
 
 static func delete() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))
