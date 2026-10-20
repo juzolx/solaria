@@ -1,5 +1,5 @@
 78098b89c88a74ebe8c20117b8754620
-::res://::1792455289
+::res://::1792455652
 achievements_tab.gd::GDScript::225817628144516105::1792426149::0::1::::AchievementsTab<>VBoxContainer<><>0<>0<><>::
 art_info.gd::GDScript::2121761137587333428::1792440491::0::1::::ArtInfo<>RefCounted<><>0<>0<><>::
 auto_rules.gd::GDScript::2405800427113084060::1792444644::0::1::::AutoRules<>RefCounted<><>0<>0<><>::
@@ -59,7 +59,7 @@ mail_tab.gd::GDScript::566253842409161562::1792399749::0::1::::MailTab<>ScrollCo
 main.gd::GDScript::4980085469003106584::1792453629::0::1::::<>Node2D<><>0<>0<><>::
 main.tscn::PackedScene::-1::1792399749::0::1::::<><><>0<>0<><>::res://main.gd
 mastery.gd::GDScript::1886379589401195059::1792399749::0::1::::Mastery<>RefCounted<><>0<>0<><>::
-menagerie.gd::GDScript::5392785014434943395::1792443808::0::1::::Menagerie<>RefCounted<><>0<>0<><>::
+menagerie.gd::GDScript::5392785014434943395::1792455627::0::1::::Menagerie<>RefCounted<><>0<>0<><>::
 merchant_popup.gd::GDScript::451759874068470914::1792434813::0::1::::MerchantPopup<>Overlay<><>0<>0<><>::
 milestones.gd::GDScript::610497143366922815::1792439109::0::1::::Milestones<>RefCounted<><>0<>0<><>::
 moments.gd::GDScript::6782787899098517277::1792443809::0::1::::Moments<>Control<><>0<>0<><>::
@@ -76,7 +76,7 @@ party_tab.gd::GDScript::8710709347152546727::1792437762::0::1::::PartyTab<>Scrol
 patch_notes.gd::GDScript::1875155048585678515::1792399784::0::1::::PatchNotes<>RefCounted<><>0<>0<><>::
 peoples.gd::GDScript::5640027398902835484::1792440224::0::1::::Peoples<>RefCounted<><>0<>0<><>::
 pets.gd::GDScript::4749792959444787763::1792399784::0::1::::Pets<>RefCounted<><>0<>0<><>::
-pet_tab.gd::GDScript::6111652928813170708::1792438086::0::1::::PetTab<>ScrollContainer<><>0<>0<><>::
+pet_tab.gd::GDScript::6111652928813170708::1792455652::0::1::::PetTab<>ScrollContainer<><>0<>0<><>::
 profile.gd::GDScript::2840780159477354692::1792420898::0::1::::Profile<>RefCounted<><>0<>0<><>::
 races.gd::GDScript::9205983686033439577::1792399749::0::1::::Races<>RefCounted<><>0<>0<><>::
 race_tab.gd::GDScript::2220945611450801819::1792399749::0::1::::RaceTab<>ScrollContainer<><>0<>0<><>::
@@ -173,11 +173,11 @@ zone_9_1.png::CompressedTexture2D::3429214719410984159::1792399747::1792399747::
 zone_9_2.png::CompressedTexture2D::4579958839051810296::1792399747::1792399747::1::::<><><>0<>0<>0985bfdd07a31bb89e644b9721f896a0<>res://.godot/imported/zone_9_2.png-4c89f69de72606dc9627b21873403bb9.ctex::
 zone_9_3.png::CompressedTexture2D::7732260666720492458::1792399747::1792399747::1::::<><><>0<>0<>cb39fc9503a16ce04ba499ea56ba579e<>res://.godot/imported/zone_9_3.png-0c41598d1c660258812eb754cf1c5b79.ctex::
 zone_9_4.png::CompressedTexture2D::6700940823402691654::1792399747::1792399747::1::::<><><>0<>0<>131ce3865639616693b334f4291bb110<>res://.godot/imported/zone_9_4.png-8755ae93c0e3d4b0b28780cbe79add32.ctex::
-::res://art/consumables/::1792399747
+::res://art/consumables/::1792455680
 backpack.png::CompressedTexture2D::1650223362479808497::1792399747::1792399747::1::::<><><>0<>0<>41b0c5723d61da21c842ca590e91fd25<>res://.godot/imported/backpack.png-3f3801035687c4821dbbca95008487a9.ctex::
 box.png::CompressedTexture2D::458772305459273124::1792399747::1792399747::1::::<><><>0<>0<>3333588c88095b04c5b8de8595b15010<>res://.godot/imported/box.png-8d0e12ff7dbeff561ab70992e1366566.ctex::
 CREDITS.md::TextFile::-1::1792399747::0::1::::<><><>0<>0<><>::
-egg.png::CompressedTexture2D::7567331268234308676::1792399747::1792399747::1::::<><><>0<>0<>8dbf66ccb064b85765e31c4352b3f1ea<>res://.godot/imported/egg.png-c6451f4f951b1ce11cb2bc6c6682a102.ctex::
+egg.png::CompressedTexture2D::7567331268234308676::1792455678::1792455680::1::::<><><>0<>0<>8dbf66ccb064b85765e31c4352b3f1ea<>res://.godot/imported/egg.png-c6451f4f951b1ce11cb2bc6c6682a102.ctex::
 fortune.png::CompressedTexture2D::4075088983818491160::1792399747::1792399747::1::::<><><>0<>0<>dd29a57b1762b0ae4e99d43b308169ad<>res://.godot/imported/fortune.png-e8f62e4fb3b17bfec878fe086240ff1b.ctex::
 greater.png::CompressedTexture2D::2212908315634466047::1792399747::1792399747::1::::<><><>0<>0<>aa36e7243bd240b2839e25c99fc06b2b<>res://.godot/imported/greater.png-44889bc6c8cbee64394daf86d16a96a0.ctex::
 hunt.png::CompressedTexture2D::2582682674451352630::1792399747::1792399747::1::::<><><>0<>0<>446bbfccb4c37d047118351c77f91a6b<>res://.godot/imported/hunt.png-fb99c19b1683b2be7a08a33dbf27c399.ctex::
@@ -3366,7 +3366,7 @@ code-map.md::TextFile::-1::1792399484::0::1::::<><><>0<>0<><>::
 dungeon-revamp-design.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
 next-update-notes.md::TextFile::-1::1792399494::0::1::::<><><>0<>0<><>::
 stage1-progress.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
-stage2-progress.md::TextFile::-1::1792454874::0::1::::<><><>0<>0<><>::
+stage2-progress.md::TextFile::-1::1792455572::0::1::::<><><>0<>0<><>::
 study-and-implement-list.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
 ::res://proto/::1792399796
 room3d.gd::GDScript::9127945263395229099::1792399784::0::1::::<>Control<><>0<>0<><>::
@@ -3448,7 +3448,7 @@ trap.wav::AudioStreamWAV::5886903482315739742::1792420851::1792420925::1::::<><>
 unique.wav::AudioStreamWAV::8636343434808806334::1792399749::1792399749::1::::<><><>0<>0<>24b953901c641877be8bd90b0855e4f1<>res://.godot/imported/unique.wav-01a11a3f6299a52159d56bc3979efc29.sample::
 weak_hit.wav::AudioStreamWAV::274863471046238212::1792399749::1792399749::1::::<><><>0<>0<>97037ddd4d71eda073d42530b2de2f5c<>res://.godot/imported/weak_hit.wav-2b1222b25052fbed1eab50fdb4b254b0.sample::
 whoosh.wav::AudioStreamWAV::1026168785560146225::1792420851::1792420925::1::::<><><>0<>0<>ad513f44c1eb5c39d6cf2d945c9dd358<>res://.godot/imported/whoosh.wav-e4488afa67299d9e17083d9f3d4c308c.sample::
-::res://tests/::1792454597
+::res://tests/::1792455701
 _auto_shot.gd::GDScript::5866594794658957856::1792444676::0::1::::<>SceneTree<><>0<>0<><>::
 _boss_shot.gd::GDScript::4379987889203406784::1792421528::0::1::::<>SceneTree<><>0<>0<><>::
 _camp_shot.gd::GDScript::5456053022506633982::1792439732::0::1::::<>SceneTree<><>0<>0<><>::
@@ -3467,6 +3467,7 @@ _mimic_probe.gd::GDScript::6981729724951593798::1792405259::0::1::::<>SceneTree<
 _minw.gd::GDScript::8410735918571722626::1792399749::0::1::::<>SceneTree<><>0<>0<><>::
 _moment_shot.gd::GDScript::6415341431281663411::1792439152::0::1::::<>SceneTree<><>0<>0<><>::
 _myth_sheet.gd::GDScript::7666428451472732616::1792436355::0::1::::<>SceneTree<><>0<>0<><>::
+_petrows_shot.gd::GDScript::4735610508981199161::1792455602::0::1::::<>SceneTree<><>0<>0<><>::
 _pets_shot.gd::GDScript::8696021299785636614::1792438835::0::1::::<>SceneTree<><>0<>0<><>::
 _rift_shot.gd::GDScript::906296518665649426::1792427126::0::1::::<>SceneTree<><>0<>0<><>::
 _room3d_shot.gd::GDScript::1091020687373335100::1792419538::0::1::::<>SceneTree<><>0<>0<><>::
@@ -3543,6 +3544,7 @@ stage3_telegraph.gd::GDScript::9135106742571147591::1792435636::0::1::::<>SceneT
 stage3_town_events.gd::GDScript::4335205203882788885::1792435099::0::1::::<>SceneTree<><>0<>0<><>::
 stage3_variants.gd::GDScript::3701660592346325777::1792440804::0::1::::<>SceneTree<><>0<>0<><>::
 stage3_wanderers.gd::GDScript::3658710554815027104::1792446104::0::1::::<>SceneTree<><>0<>0<><>::
+stage4_pets.gd::GDScript::6467465752288723829::1792455701::0::1::::<>SceneTree<><>0<>0<><>::
 stage4_smith.gd::GDScript::7849896719223584357::1792454015::0::1::::<>SceneTree<><>0<>0<><>::
 stage4_snik.gd::GDScript::1059717480001653801::1792454359::0::1::::<>SceneTree<><>0<>0<><>::
 stage4_wheel.gd::GDScript::3268522095165436437::1792453336::0::1::::<>SceneTree<><>0<>0<><>::
@@ -3551,8 +3553,9 @@ test_phase11.gd::GDScript::1098794001118079870::1792399750::0::1::::<>SceneTree<
 town_logic.gd::GDScript::411414503291107240::1792399750::0::1::::<>SceneTree<><>0<>0<><>::
 town_shots.gd::GDScript::1500613879200887237::1792399750::0::1::::<>SceneTree<><>0<>0<><>::
 ui_tour.gd::GDScript::9202209506045927083::1792405735::0::1::::<>SceneTree<><>0<>0<><>::
-::res://tools/::1792436353
+::res://tools/::1792455680
 make_brand.gd::GDScript::7684674594627054757::1792422465::0::1::::<>SceneTree<><>0<>0<><>::
+make_egg.gd::GDScript::171599974354262695::1792455677::0::1::::<>SceneTree<><>0<>0<><>::
 make_fx.gd::GDScript::1904977020089756828::1792423022::0::1::::<>SceneTree<><>0<>0<><>::
 make_myths.gd::GDScript::2663686397113506562::1792436304::0::1::::<>SceneTree<><>0<>0<><>::
 make_sounds.gd::GDScript::6909498110548672774::1792420850::0::1::::<>SceneTree<><>0<>0<><>::

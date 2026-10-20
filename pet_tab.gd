@@ -88,7 +88,8 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 	var right := UI.vbox(4)
 	right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(right)
-	var b := UI.button("Coming" if going else ("Resting" if hurt else "At home"), func():
+	var full := Menagerie.out(state).size() >= Menagerie.max_out(state)
+	var b := UI.button("Coming along" if going else ("Resting" if hurt else ("Swap in" if full else "Bring along")), func():
 		if Menagerie.toggle_out(state, id):
 			main.sfx.play("click")
 			state.save_game()

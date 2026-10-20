@@ -72,8 +72,11 @@ static func toggle_out(g: GameState, id: int) -> bool:
 	if id in g.pets_out:
 		g.pets_out.erase(id)
 		return true
-	if int(p["hurt"]) > 0 or g.pets_out.size() >= max_out(g):
+	if int(p["hurt"]) > 0:
 		return false
+	# 0.13+ (Juzo): pets swap: with every spot taken, the one out longest goes home
+	while g.pets_out.size() >= max_out(g) and not g.pets_out.is_empty():
+		g.pets_out.remove_at(0)
 	g.pets_out.append(id)
 	return true
 
