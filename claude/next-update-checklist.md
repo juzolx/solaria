@@ -24,8 +24,8 @@
 - [ ] Interface and backgrounds look much better, mostly the basic screens (menus, tabs, town pages), following Juzo's reference images and the dark fantasy direction (iron/stone frames, bone text, torchlight). Screen transitions, loading screen.
 
 ## The world
-- [ ] NPCs in the dungeon (no fast-travel; one town).
-- [ ] Bigger portals: multi-floor side dungeons.
+- [x] NPCs in the dungeon (no fast-travel; one town).
+- [x] Bigger portals: multi-floor side dungeons.
 
 ## Store (later)
 - [ ] Rest of Stage 4: cosmetics shop, purchase code (off), privacy policy, store listing, cloud build file.
