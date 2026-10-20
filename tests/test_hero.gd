@@ -33,6 +33,7 @@ static func make(floor_num := 30, hero_class := "Warrior") -> void:
 	prof.active_slot = 1
 	prof.notes_seen = PatchNotes.VERSION
 	prof.towns_v1 = true
+	LoadingScreen.enabled = false  # screenshots shouldn't catch the loading screen
 	prof.save()
 	var g := GameState.new()
 	g.slot = 1

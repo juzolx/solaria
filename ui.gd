@@ -2,15 +2,15 @@ class_name UI
 extends RefCounted
 ## Shared colors and building blocks, so every screen looks and feels the same.
 
-const BG := Color("#0b1020")       # deep midnight
-const PANEL := Color("#141b2e")    # panels
-const BORDER := Color("#26324d")   # panel edges
-const INSET := Color("#0f1526")    # boxes inside panels
-const EMPTY := Color("#1f2940")    # empty / disabled edges
-const TEXT := Color("#ece4d0")     # warm parchment text
-const DIM := Color("#8590a8")      # secondary text
+const BG := Color("#0b0a1d")       # catacomb ink (next update: the Art Direction palette)
+const PANEL := Color("#15142a")    # panels: indigo slate
+const BORDER := Color("#2e2d48")   # panel edges
+const INSET := Color("#0f0e20")    # boxes inside panels
+const EMPTY := Color("#25243c")    # empty / disabled edges
+const TEXT := Color("#e2dac6")     # bone text, never white
+const DIM := Color("#a89d84")      # dust: secondary text
 const GOLD := Color("#e8b14a")     # the accent color
-const HILITE := Color("#1d2740")   # selected rows
+const HILITE := Color("#24213c")   # selected rows
 const GREEN := Color("#4ade80")
 const RED := Color("#f87171")
 const BLUE := Color("#60a5fa")
@@ -23,10 +23,11 @@ static var tip_layer: CanvasLayer  # set by main: where tap-tips appear
 static var _tip: Control
 const TAP := 44  # smallest comfortable tap target on a phone (pixels at the design size)
 const BUTTON_H := 42  # every button is at least this tall (~36 pt on a phone; Apple asks for 44 pt on main controls)
-const EDGE := Color("#64759b")  # edges of things you can press: 3:1 contrast or better
+const EDGE := Color("#7a7493")  # edges of things you can press: 3:1 contrast or better
 const MIN_FONT := 13  # ~11 pt on a phone at the 504-wide layout
 static var colorblind := false  # set from the settings: adds words and symbols where color carries meaning
 static var high_contrast := false  # set from the settings: secondary (DIM) text is drawn brighter
+static var calm := false  # set from the settings (Reduce motion): no page fades
 const DIM_CONTRAST := Color("#c3cbdc")  # DIM in high-contrast mode
 
 ## 9680 -> "9680", 12400 -> "12.4k", 3500000 -> "3.5M": short numbers for tight spots.
@@ -87,7 +88,7 @@ static func panel(bg := INSET, border := EMPTY, radius := 8, margin := 10, width
 
 ## Small caps heading for a section.
 static func heading(text: String) -> Label:
-	var l := label(text.to_upper(), 12, DIM)
+	var l := label("◆ " + text.to_upper(), 12, Color("#c9a36a"))  # next update: a small gold diamond, like a bestiary page
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # long headings wrap instead of widening the screen
 	return l
 
@@ -108,9 +109,9 @@ static func button(text: String, on_press: Callable) -> Button:
 ## A colored button for the main action on a screen.
 static func primary(text: String, on_press: Callable, color := GOLD) -> Button:
 	var b := button(text, on_press)
-	b.add_theme_stylebox_override("normal", style(color.darkened(0.55), color, 6, 8))
-	b.add_theme_stylebox_override("hover", style(color.darkened(0.4), color.lightened(0.2), 6, 8))
-	b.add_theme_stylebox_override("pressed", style(color.darkened(0.25), color.lightened(0.3), 6, 8))
+	b.add_theme_stylebox_override("normal", UiSkin.bevel(color.darkened(0.55), color, 8))
+	b.add_theme_stylebox_override("hover", UiSkin.bevel(color.darkened(0.4), color.lightened(0.2), 8))
+	b.add_theme_stylebox_override("pressed", UiSkin.bevel(color.darkened(0.25), color.lightened(0.3), 8, true))
 	b.add_theme_color_override("font_color", color.lightened(0.55))
 	b.add_theme_color_override("font_hover_color", Color.WHITE)
 	return b
@@ -255,12 +256,12 @@ static func make_theme() -> Theme:
 	t.default_font_size = 14
 	t.set_color("font_color", "Label", TEXT)
 	t.set_color("default_color", "RichTextLabel", TEXT)
-	t.set_stylebox("panel", "PanelContainer", style(PANEL, BORDER, 10, 12))
+	t.set_stylebox("panel", "PanelContainer", UiSkin.frame(PANEL, UiSkin.IRON, 12))  # next update: iron frames on stone
 
-	t.set_stylebox("normal", "Button", style(Color("#1b2438"), EDGE, 6, 6))
-	t.set_stylebox("hover", "Button", style(Color("#232f49"), Color("#8a6d3b"), 6, 6))
-	t.set_stylebox("pressed", "Button", style(Color("#8a6420"), GOLD, 6, 6))
-	t.set_stylebox("disabled", "Button", style(Color("#111829"), Color("#1a2236"), 6, 6))
+	t.set_stylebox("normal", "Button", UiSkin.bevel(Color("#211f36"), EDGE, 6))  # stone buttons
+	t.set_stylebox("hover", "Button", UiSkin.bevel(Color("#2b2843"), Color("#b08a4a"), 6))
+	t.set_stylebox("pressed", "Button", UiSkin.bevel(Color("#8a6420"), GOLD, 6, true))
+	t.set_stylebox("disabled", "Button", UiSkin.bevel(Color("#13121f"), Color("#2a2840"), 6))
 	var ring := style(Color(0, 0, 0, 0), Color("#f6d88f"), 7, 6, 2)
 	ring.draw_center = false
 	ring.expand_margin_left = 2
@@ -273,7 +274,7 @@ static func make_theme() -> Theme:
 	t.set_color("font_color", "Button", TEXT)
 	t.set_color("font_hover_color", "Button", Color("#f6d88f"))
 	t.set_color("font_pressed_color", "Button", BG)
-	t.set_color("font_disabled_color", "Button", Color("#4a5470"))
+	t.set_color("font_disabled_color", "Button", Color("#5a5670"))
 
 	t.set_stylebox("panel", "ItemList", style(INSET, EMPTY, 6, 4))
 	t.set_stylebox("selected", "ItemList", style(HILITE, HILITE, 4, 2))
@@ -282,7 +283,7 @@ static func make_theme() -> Theme:
 	t.set_stylebox("focus", "ItemList", StyleBoxEmpty.new())
 	t.set_color("guide_color", "ItemList", Color(1, 1, 1, 0.04))
 
-	t.set_stylebox("panel", "TabContainer", style(PANEL, BORDER, 10, 12))
+	t.set_stylebox("panel", "TabContainer", UiSkin.frame(Color(PANEL, 0.84), UiSkin.IRON, 12))  # see-through: the torchlit wall shows behind
 	var tab_on := style(PANEL, GOLD, 6, 8, 0)
 	tab_on.border_width_top = 3
 	t.set_stylebox("tab_selected", "TabContainer", tab_on)
@@ -305,8 +306,8 @@ static func make_theme() -> Theme:
 	t.set_font_size("font_size", "SubTabs", 13)
 	t.set_color("font_selected_color", "SubTabs", TEXT)
 
-	t.set_stylebox("normal", "OptionButton", style(Color("#1b2438"), EDGE, 6, 6))
-	t.set_stylebox("hover", "OptionButton", style(Color("#232f49"), Color("#8a6d3b"), 6, 6))
+	t.set_stylebox("normal", "OptionButton", UiSkin.bevel(Color("#211f36"), EDGE, 6))
+	t.set_stylebox("hover", "OptionButton", UiSkin.bevel(Color("#2b2843"), Color("#b08a4a"), 6))
 	t.set_stylebox("panel", "PopupMenu", style(PANEL, BORDER, 6, 6))
 	t.set_stylebox("grabber_area", "HSlider", style(GOLD, GOLD, 3, 0, 0))
 	t.set_stylebox("grabber_area_highlight", "HSlider", style(GOLD, GOLD, 3, 0, 0))
@@ -314,3 +315,11 @@ static func make_theme() -> Theme:
 	t.set_color("font_color", "TooltipLabel", TEXT)
 	t.set_stylebox("panel", "TooltipPanel", style(INSET, GOLD, 6, 8))
 	return t
+
+## Next update: a quick fade when a page opens (none with Reduce motion).
+static func fade_in(c: CanvasItem) -> void:
+	if c == null or calm or not c.is_inside_tree():
+		return
+	c.modulate.a = 0.0
+	var tw := c.create_tween()
+	tw.tween_property(c, "modulate:a", 1.0, 0.16)

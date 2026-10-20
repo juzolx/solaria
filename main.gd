@@ -82,6 +82,8 @@ var room_view: RoomView
 var _room_ready := false
 var _room_waiting := false
 var log_label: RichTextLabel
+var bg_wall: TextureRect  # next update: the torchlit wall (sized with the screen)
+var _last_nav := -1
 var ui_root: MarginContainer
 var goal_label: Label
 var goal_bar: ProgressBar
@@ -118,6 +120,8 @@ func _ready() -> void:
 	# Let the layout stretch when the window is resized (and on phones later)
 	get_tree().root.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
 	get_tree().root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
+	if LoadingScreen.enabled:
+		add_child.call_deferred(LoadingScreen.new())  # next update: covers the build, then fades
 
 	add_child(sfx)
 	UI.sfx = sfx
@@ -621,6 +625,16 @@ func _manual_turn() -> void:
 
 func _build_ui() -> void:
 	RenderingServer.set_default_clear_color(UI.BG)
+	# Next update: a torchlit stone wall behind the menus and town pages (skin.gd)
+	var wall := TextureRect.new()
+	wall.texture = UiSkin.backdrop()
+	wall.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	wall.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	wall.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	wall.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	wall.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(wall)
+	bg_wall = wall
 	var root := MarginContainer.new()
 	root.theme = UI.make_theme()
 	for side in ["left", "right", "top", "bottom"]:
@@ -650,7 +664,7 @@ func _build_ui() -> void:
 	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	tabs.size_flags_stretch_ratio = 1.2
-	tabs.tab_changed.connect(func(_i): sfx.play("click"); refresh())
+	tabs.tab_changed.connect(func(_i): sfx.play("click"); refresh(); UI.fade_in(tabs.get_current_tab_control()))
 	body.add_child(tabs)
 	_build_nav(main_v)
 	char_tabs = _group("Character")
@@ -723,6 +737,8 @@ func _build_ui() -> void:
 func _fit_root() -> void:
 	if ui_root:
 		ui_root.size = get_viewport().get_visible_rect().size
+	if bg_wall:
+		bg_wall.size = get_viewport().get_visible_rect().size
 
 func _fit_layout() -> void:
 	var win := get_tree().root.size
@@ -764,12 +780,13 @@ func _group(title: String) -> TabContainer:
 	var t := TabContainer.new()
 	t.name = title
 	t.theme_type_variation = "SubTabs"
-	t.tab_changed.connect(func(_i): sfx.play("click"); refresh())
+	t.tab_changed.connect(func(_i): sfx.play("click"); refresh(); UI.fade_in(t.get_current_tab_control()))
 	tabs.add_child(t)
 	return t
 
 func _build_top_bar(parent: Control) -> void:
-	var bar := UI.panel(UI.PANEL, UI.BORDER, 10, 8, 1)
+	var bar := PanelContainer.new()
+	bar.add_theme_stylebox_override("panel", UiSkin.frame(UI.PANEL, UiSkin.IRON, 8))
 	bar.get_theme_stylebox("panel").content_margin_left = 14
 	bar.get_theme_stylebox("panel").content_margin_right = 10
 	parent.add_child(bar)
@@ -1324,6 +1341,7 @@ func apply_settings() -> void:
 	state.dev_mode = profile.dev_mode
 	state.path_rooms_on = profile.path_choice != "fight"
 	UI.colorblind = profile.colorblind
+	UI.calm = profile.reduce_motion  # next update: no page fades with Reduce motion on
 	UI.high_contrast = profile.high_contrast
 	DarkGrade.set_enabled(profile.dark_art)
 	Engine.max_fps = 30 if profile.battery_saver else 0
@@ -1695,6 +1713,9 @@ func _apply_nav() -> void:
 		nav_page = 0
 	left_panel.visible = nav_page == 0
 	tabs.visible = nav_page != 0
+	if nav_page != _last_nav:  # next update: pages fade in
+		_last_nav = nav_page
+		UI.fade_in(left_panel if nav_page == 0 else tabs)
 	if nav_page > 0 and tabs.current_tab != nav_page - 1:
 		tabs.current_tab = nav_page - 1
 	for i in nav_buttons.size():

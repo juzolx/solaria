@@ -22,7 +22,8 @@ func open(parent: Node, title: String, width := 560.0, border := UI.GOLD, closab
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
-	box = UI.panel(UI.PANEL, border, 12, 18, 2)
+	box = PanelContainer.new()
+	box.add_theme_stylebox_override("panel", UiSkin.frame(UI.PANEL, border, 18))  # next update: an iron frame in the popup's color
 	box.custom_minimum_size = Vector2(minf(width, size.x - 24.0), 0)  # phones are narrow
 	center.add_child(box)
 	scroll = ScrollContainer.new()
