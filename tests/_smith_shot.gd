@@ -15,7 +15,7 @@ func _initialize() -> void:
 		if c is Overlay:
 			c.queue_free()
 	var st: GameState = main.state
-	main.go_to_town()
+	main.go_to_town(true)
 	await create_timer(0.3).timeout
 	for c in main.get_children():
 		if c is Overlay or c is Moments:

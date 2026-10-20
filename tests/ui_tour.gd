@@ -74,7 +74,7 @@ func _initialize() -> void:
 		main.state.codex.add("kills", 9)
 		main.state.return_scrolls = maxi(main.state.return_scrolls, 1)
 		var _home := Town.use_return(main.state)
-	if main.go_to_town():
+	if main.go_to_town(true):
 		main.nav_page = 0
 		main._apply_nav()
 		main.refresh()

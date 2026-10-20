@@ -1036,9 +1036,13 @@ func toast(text: String) -> void:
 	tw.tween_callback(p.queue_free)
 
 ## Goes to town (if you can). Returns false and says why if not.
-func go_to_town() -> bool:
+func go_to_town(confirmed := false) -> bool:
 	if state.in_town:
 		return true
+	# Next update (Juzo): ask first, with the fight paused and what's at risk shown
+	if not confirmed and Town.blocked(state) == "":
+		_confirm_leave()
+		return false
 	if not Town.enter(state):
 		var why := Town.blocked(state)
 		if why == Town.PORTAL_BLOCK and state.return_scrolls <= 0:
@@ -1739,3 +1743,36 @@ func _refresh_tabs() -> void:
 	var page = group.get_current_tab_control()
 	if page and page.has_method("refresh"):
 		page.refresh()
+
+## "Leave the dungeon?": everything pauses while you decide, and it shows what you carry home.
+func _confirm_leave() -> void:
+	for c in get_children():
+		if c is Overlay and c.has_meta("leave_confirm"):
+			return
+	var o := Overlay.new().open(self, "Leave the dungeon?", 440.0, UI.GOLD)
+	o.set_meta("leave_confirm", true)
+	timer.paused = true
+	o.tree_exiting.connect(func(): timer.paused = false)
+	var finds := Town.dive_finds(state)
+	var worn := state.equipped.size()
+	var lines := "You head back to town and bank everything you carry:\n\n[color=#e8b14a]%d gold[/color] carried and [color=#4ade80]%d new item%s[/color] found this dive%s." % [
+		state.gold, finds, "" if finds == 1 else "s", (", plus the %d piece%s you wear" % [worn, "" if worn == 1 else "s"]) if worn > 0 else ""]
+	lines += "\n\n[color=%s]Your next dive starts again from a checkpoint.[/color]" % UI.hex(UI.DIM)
+	var body := UI.rich(14)
+	body.text = lines
+	o.content.add_child(body)
+	var row := UI.hbox(8)
+	o.content.add_child(row)
+	var stay := UI.button("Stay down here", o.close)
+	var go := UI.primary("Head home", func():
+		o.close()
+		if go_to_town(true):
+			nav_page = 0
+			if not is_tall:
+				tabs.current_tab = 2
+			_apply_nav()
+			refresh(), UI.GOLD)
+	for b in [stay, go]:
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size = Vector2(0, UI.TAP)
+		row.add_child(b)

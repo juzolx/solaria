@@ -68,7 +68,7 @@ func _initialize() -> void:
 	var hurt := Menagerie.make_pet(st, "Will-o'-Wisp", Sprites.enemy_key("Will-o'-Wisp", false), 1, "caught")
 	hurt["hurt"] = 6
 	st.eggs.append({"id": st._new_id(), "floors": 4, "from": "reward"})
-	main.go_to_town()
+	main.go_to_town(true)
 	main.refresh()
 	await shot(prefix + "_1_map", 1.0)
 	print("town walkers: ", main.town_view.folk.size(), " heroes: ", main.town_view.folk.filter(func(f): return f.get("hero", false)).size())

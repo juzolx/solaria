@@ -18,7 +18,7 @@ func _initialize() -> void:
 	var b := Menagerie.make_pet(st, "Gullinbursti", "gullinbursti", 3, "t")
 	b["hurt"] = 4
 	Menagerie.make_pet(st, "Will-o'-Wisp", "will_o_wisp", 2, "t")
-	main.go_to_town()
+	main.go_to_town(true)
 	await create_timer(0.3).timeout
 	for c in main.get_children():
 		if c is Overlay or c is Moments:

@@ -37,7 +37,7 @@ func _initialize() -> void:
 	walk(main.ui_root, 0)
 	main.state.return_scrolls = maxi(main.state.return_scrolls, 1)
 	var _home := Town.use_return(main.state)
-	if main.go_to_town():
+	if main.go_to_town(true):
 		var tg: TabContainer = main._groups()[2]
 		for s in tg.get_tab_count():
 			if tg.is_tab_hidden(s):
