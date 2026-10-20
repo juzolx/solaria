@@ -21,7 +21,7 @@
 - [x] "Are you sure you want to leave the dungeon?" pop-up when going back to town: pauses everything and shows what's at risk.
 - [x] Drag and drop for everything equippable (gear, skills), plus anywhere else it helps.
 - [x] Declutter the fight screen: keep the damage counter underneath, drop the floating damage numbers; remove unnecessary info above the monster (labels stay).
-- [ ] Interface and backgrounds look much better, mostly the basic screens (menus, tabs, town pages), following Juzo's reference images and the dark fantasy direction (iron/stone frames, bone text, torchlight). Screen transitions, loading screen.
+- [x] Interface and backgrounds look much better, mostly the basic screens (menus, tabs, town pages), following Juzo's reference images and the dark fantasy direction (iron/stone frames, bone text, torchlight). Screen transitions, loading screen.
 
 ## The world
 - [x] NPCs in the dungeon (no fast-travel; one town).
