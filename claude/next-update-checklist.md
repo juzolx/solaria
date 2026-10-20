@@ -7,10 +7,10 @@
 - [x] Benched heroes bring back gold, scrap and occasionally an item while others dive (only while playing, no offline progress). What they find depends on their class; some classes are better at it.
 
 ## Pets and rare finds
-- [ ] Pets are very hard to get (a real find).
-- [ ] Pet rarity tiers (Mythic = legend-level find) and a Seen / Owned pet page in the Codex.
-- [ ] Release a pet.
-- [ ] "First find" fanfare for a new pet, unique or set piece.
+- [x] Pets are very hard to get (a real find).
+- [x] Pet rarity tiers (Mythic = legend-level find) and a Seen / Owned pet page in the Codex.
+- [x] Release a pet.
+- [x] "First find" fanfare for a new pet, unique or set piece.
 
 ## Items
 - [x] Multi-select to sell or salvage many at once.
