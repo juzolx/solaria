@@ -656,7 +656,7 @@ static func stat_name(g: GameState) -> String:
 
 ## Which tier you can pick next (0, 1, 2), or -1.
 static func pick_tier(g: GameState) -> int:
-	if g.hero_class == "" or g.class_branch != "":
+	if g.hero_class == "" or g.class_branch != "" or g.hidden_class != "":  # a hidden class ends the main route
 		return -1
 	var t := g.class_path.size()
 	if t >= PICK_LEVELS.size() or g.level < int(PICK_LEVELS[t]):
@@ -665,7 +665,7 @@ static func pick_tier(g: GameState) -> int:
 
 ## The classes you can choose between now (or next).
 static func options(g: GameState) -> Array:
-	if g.hero_class == "" or g.class_branch != "":
+	if g.hero_class == "" or g.class_branch != "" or g.hidden_class != "":
 		return []
 	if g.class_path.is_empty():
 		return roots(g.hero_class).map(func(id): return node(String(id)))
@@ -761,7 +761,7 @@ static func auto_pick(g: GameState) -> void:
 
 ## The branch-offs you could take right now (you must be their parent class).
 static func open_branches(g: GameState) -> Array:
-	if g.class_branch != "" or g.class_path.is_empty() or g.class_path.size() >= 3:
+	if g.class_branch != "" or g.hidden_class != "" or g.class_path.is_empty() or g.class_path.size() >= 3:
 		return []
 	return branches(String(g.class_path[g.class_path.size() - 1]))
 

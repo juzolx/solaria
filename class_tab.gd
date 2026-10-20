@@ -26,7 +26,7 @@ func refresh() -> void:
 	var key := "%s|%s|%d|%d|%s|%s|%s|%s|%s|%s|%s|%d|%s|%d" % [state.hero_class, str(state.class_path), state.level, int(state.faith), state.class_branch,
 		str(state.class_items), selected, state.dev_mode, str(state.hidden), state.hidden_class, str(state.hidden_stage),
 		int(state.ctrack.get("kills", 0)) / 25, sn, int(state.unique_value(sn)) if sn != "" else 0]
-	key += "|%s|%d|%s|%s" % [state.sig_slot, ClassTree.divinity(state), state.trial_active, state.enemy_is_boss]
+	key += "|%s|%d|%s|%s|%s" % [state.sig_slot, ClassTree.divinity(state), state.trial_active, state.enemy_is_boss, str(state.hidden_offer)]
 	if key == shown:
 		return
 	shown = key
@@ -36,6 +36,7 @@ func refresh() -> void:
 		return
 	_header()
 	_pick_panel()
+	_hidden_classes()  # a hidden path on offer, or yours, right under the choice
 	_tree()
 	_detail()
 	_signatures()
@@ -43,7 +44,6 @@ func refresh() -> void:
 	_branches()
 	if state.hero_class == "Wanderer":
 		_items()
-	_hidden_classes()
 
 # =====================================================================
 # Header: who you are now
@@ -179,6 +179,9 @@ static func class_card(m, n: Dictionary, with_button: bool, on_pick: Callable) -
 # =====================================================================
 
 func _tree() -> void:
+	if state.hidden_class != "":
+		UI.section(box, "Your path", "Your main route ended when you took a hidden class. It grows on its own now, at levels 15, 35 and 60.")
+		return
 	UI.section(box, "Your path", "Your class evolves at levels 15, 35 and 60. What it becomes stays a mystery until you get there and choose.")
 	var row := UI.hbox(6)
 	box.add_child(row)
@@ -392,82 +395,82 @@ func _items() -> void:
 # =====================================================================
 
 func _hidden_classes() -> void:
-	# Secret until earned: nothing about them shows before you have one
-	if state.hidden.is_empty() and not state.dev_mode:
-		return
-	box.add_child(UI.heading("Hidden classes"))
-	var intro := UI.label("Earned by how you play. They sit on top of your class: you keep everything and gain their title, bonuses and their own special stat.", 11, UI.DIM)
-	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(intro)
-	if not state.hidden.is_empty():
-		var row := UI.hbox(6)
-		box.add_child(row)
-		row.add_child(UI.label("Using:", 12, UI.DIM))
-		var pick := OptionButton.new()
-		pick.add_item("None")
-		var ids: Array = [""]
-		for id in Hidden.ORDER:
-			if state.hidden.has(id):
-				pick.add_item(Hidden.info(id)["name"])
-				ids.append(id)
-				if id == state.hidden_class:
-					pick.select(ids.size() - 1)
-		pick.item_selected.connect(func(i: int): Hidden.use(state, ids[i]); main.refresh())
-		row.add_child(pick)
-	for tier in [1, 2, 3]:
-		for id in Hidden.ORDER:
-			var c := Hidden.info(id)
-			if int(c["tier"]) != tier:
-				continue
-			if not state.hidden.has(id) and not state.dev_mode:
-				continue
-			_hidden_card(id, c)
-
-func _hidden_card(id: String, c: Dictionary) -> void:
-	var have := state.hidden.has(id)
-	var close := Hidden.closeness(state, id)
-	var col := Color(c["color"])
-	var tier := int(c["tier"])
-	var tcol := Color(Hidden.TIER_COLORS[tier])
-	var p := UI.panel(Color("#2a2010") if state.hidden_class == id else UI.INSET, col.darkened(0.2) if have else UI.BORDER, 8, 8, 2 if have else 1)
-	box.add_child(p)
-	var v := UI.vbox(3)
-	p.add_child(v)
-	var head := UI.hbox(6)
-	v.add_child(head)
-	var shown_name: String = Hidden.title(state) if state.hidden_class == id else c["name"]
-	var nl := UI.label(shown_name if have or state.dev_mode else "???", 14, col if have else UI.TEXT)
-	nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(nl)
-	head.add_child(UI.label(Hidden.TIER_NAMES[tier], 11, tcol))
-	var t := UI.rich(11)
-	if have:
-		var st := int(state.hidden_stage.get(id, 1))
-		var lines: Array = ["[color=%s]%s[/color]  Stage %d of %d: %s. Special stat: [b]%s[/b] %.1f" % [UI.hex(UI.DIM), c["lore"], st, c["stages"].size(),
-			" > ".join(c["stages"]), c["stat"], state.unique_value(c["stat"])]]
-		for line in Hidden.stage_progress(state, id):
-			lines.append(_line(line))
+	# Juzo: a surprise. Nothing shows until you hit 15, 35 or 60 with one earned.
+	if state.hidden_class != "":
+		var id := state.hidden_class
+		var c := Hidden.info(id)
+		var col := Color(c["color"])
+		var st := Hidden.stage(state)
+		box.add_child(UI.heading("Your hidden class"))
+		var p := UI.panel(Color("#2a2010"), col.darkened(0.2), 8, 10, 2)
+		box.add_child(p)
+		var v := UI.vbox(4)
+		p.add_child(v)
+		var head := UI.hbox(6)
+		v.add_child(head)
+		var nl := UI.label(Hidden.title(state), 16, col)
+		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		head.add_child(nl)
+		head.add_child(UI.label(Hidden.TIER_NAMES[int(c["tier"])], 11, Color(Hidden.TIER_COLORS[int(c["tier"])])))
+		var t := UI.rich(12)
+		var lines: Array = ["[color=%s]%s[/color]" % [UI.hex(UI.DIM), c["lore"]],
+			"Step %d of 3:  %s" % [st, " > ".join(c["stages"])],
+			"[color=#4ade80]Now:[/color] %s" % Hidden.stage_text(id, st)]
+		if st < 3:
+			lines.append("[color=%s]At level %d (%s):[/color] %s" % [UI.hex(UI.GOLD), int(Hidden.STAGE_LEVELS[st]), c["stages"][st], Hidden.stage_text(id, st + 1)])
+		lines.append("[color=%s]%s %.1f. %s[/color]" % [UI.hex(UI.DIM), c["stat"], state.unique_value(c["stat"]), Hidden.stat_text(state).replace("\n", ". ")])
 		t.text = "\n".join(lines)
-	elif close >= 0.5 or state.dev_mode:
-		var lines: Array = ["[color=%s]%s[/color]" % [UI.hex(UI.DIM), c["rumor"]]]
+		v.add_child(t)
+		return
+	if not state.hidden_offer.is_empty():
+		box.add_child(UI.heading("A hidden path"))
+		hidden_offer_cards(main, box, func(): shown = ""; main.refresh())
+		return
+	if not state.dev_mode:
+		return
+	box.add_child(UI.heading("Hidden classes (Dev Mode)"))
+	for id in Hidden.ORDER:
+		var c := Hidden.info(id)
+		var r := UI.rich(11)
+		var lines: Array = ["[b]%s[/b]  %s  [color=%s]%s[/color]" % [c["name"], "EARNED" if state.hidden.has(id) else "", UI.hex(UI.DIM), c["rumor"]]]
 		for line in Hidden.progress(state, id):
 			lines.append(_line(line))
-		var why := Hidden.block_reason(state, id)
-		if why.begins_with("Another"):
-			lines.append("[color=#f87171]%s[/color]" % why)
+		r.text = "\n".join(lines)
+		box.add_child(r)
+
+## The hidden classes on offer, as cards with a Take button (the level-up popup uses this too).
+static func hidden_offer_cards(m, parent: Control, on_done: Callable) -> void:
+	var st: GameState = m.state
+	var stage := Hidden.stage(st)
+	var note := UI.wrap("Secret classes you earned by how you play. Take one instead of the main route, until level %d. It becomes your class for good: no more evolutions." % (st.hidden_offer_level + 1), 12, Color("#c4b5fd"))
+	parent.add_child(note)
+	for id in st.hidden_offer:
+		var c := Hidden.info(id)
+		var col := Color(c["color"])
+		var p := UI.panel(UI.INSET, col.darkened(0.15), 8, 10, 2)
+		parent.add_child(p)
+		var v := UI.vbox(4)
+		p.add_child(v)
+		var head := UI.hbox(6)
+		v.add_child(head)
+		var nl := UI.label(c["stages"][stage - 1], 16, col)
+		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		head.add_child(nl)
+		head.add_child(UI.label(Hidden.TIER_NAMES[int(c["tier"])], 11, Color(Hidden.TIER_COLORS[int(c["tier"])])))
+		var t := UI.rich(12)
+		var lines: Array = ["[color=%s]%s[/color]" % [UI.hex(UI.DIM), c["lore"]], "[color=#4ade80]Gives:[/color] %s" % Hidden.stage_text(id, stage)]
+		if stage < 3:
+			lines.append("[color=%s]Grows at level %s into %s.[/color]" % [UI.hex(UI.DIM), " and ".join(Hidden.STAGE_LEVELS.slice(stage).map(func(x): return str(x))), " and ".join(c["stages"].slice(stage))])
 		t.text = "\n".join(lines)
-	elif close >= 0.2:
-		t.text = "[color=%s]%s[/color]" % [UI.hex(UI.DIM), c["rumor"]]
-	else:
-		t.text = "[color=%s]Nobody has heard of this one yet.[/color]" % UI.hex(UI.DIM)
-	v.add_child(t)
-	if not have and Hidden.ready_for_trial(state, id):
-		var tb := UI.primary("Face %s" % c["trial"]["name"], func():
-			if Hidden.start_trial(state, id):
-				main.sfx.play("boss_intro")
-			main.refresh(), col)
-		tb.disabled = state.enemy_is_boss or state.trial_active
-		v.add_child(tb)
+		v.add_child(t)
+		var trial: bool = c.has("trial") and not st.feats.get("trial_" + id, 0)
+		var b := UI.primary("Take this path" + ((" (beat %s first)" % c["trial"]["name"]) if trial else ""), func():
+			m.confirm("Become %s?" % c["stages"][stage - 1], "This is for good. Your class stops evolving and %s becomes your class." % c["name"], "Take it", func():
+				if Hidden.take(st, id):
+					m.sfx.play("boss_intro" if trial else "spec")
+				on_done.call()), col)
+		b.custom_minimum_size = Vector2(0, UI.TAP)
+		v.add_child(b)
 
 func _line(line: Array) -> String:
 	var ok := int(line[1]) >= int(line[2])

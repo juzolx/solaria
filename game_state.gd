@@ -97,9 +97,12 @@ var phylactery_used := false  # Lich: the once-per-floor save
 var rep := {}               # race -> standing, -100..100
 var feats := {}             # counters for hidden-class unlocks
 var realm_order: Array = [] # the realms in the order you chose them
-var hidden := {}            # hidden classes unlocked: id -> true
-var hidden_class := ""      # the hidden class you're using ("" = none)
-var hidden_stage := {}      # id -> stage reached (1..3)
+var hidden := {}            # hidden classes earned (a surprise until 15, 35 or 60): id -> true
+var hidden_class := ""      # your hidden class, for good ("" = none): it replaces the main route (hidden.gd)
+var hidden_stage := {}      # id -> step reached (1..3, levels 15, 35, 60)
+var hidden_offer: Array = []  # hidden classes you can take right now (shown at 15, 35, 60; open until your next level-up)
+var hidden_offer_level := 0   # the level the offer opened at
+var hidden_seen := {}        # hidden classes already shown to you once
 var trial_kind := "god"     # what the current trial is for: god, race, cure, hidden
 var encounter := {}         # someone you met on the road (realms)
 var quest := {}             # the camp quest board's current job
@@ -446,7 +449,7 @@ func top_tag() -> String:
 
 ## Your class name: the last class on your path (or your branch-off).
 func title() -> String:
-	return ClassTree.title(self)
+	return Hidden.title(self) if hidden_class != "" else ClassTree.title(self)  # a hidden class is your class now
 
 ## Specializations and evolutions stay hidden until you reach them (or Dev Mode is on).
 func is_discovered(class_title: String) -> bool:
@@ -1224,6 +1227,7 @@ func gain_xp(amount: int) -> void:
 		if level == Classes.SPEC_LEVEL - 5:
 			tip("spec_soon", "At level %d you choose your first class branch. Check the Class tab to see the tree." % Classes.SPEC_LEVEL)
 		_check_spec()
+		Hidden.on_level(self)  # 15, 35, 60: what you've earned comes out of hiding
 
 ## New slots get filled with skills you own but aren't using.
 func _fill_empty_slots() -> void:

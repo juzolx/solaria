@@ -1314,23 +1314,28 @@ func _give_class_outfit() -> void:
 
 ## Levels 15, 35 and 60: choose where your Evolution Tree goes.
 func _show_tree_picker() -> void:
-	if ClassTree.pick_tier(state) < 0 or _popup_open():
+	var t := ClassTree.pick_tier(state)
+	var hidden_open := not state.hidden_offer.is_empty() and state.hidden_class == ""
+	if (t < 0 and not hidden_open) or _popup_open():
 		return
 	timer.stop()
-	var t := ClassTree.pick_tier(state)
-	var o := Overlay.new().open(self, "Level %d: choose your class" % int(ClassTree.PICK_LEVELS[t]), 820.0, Color(state.class_info().get("color", "#e8b14a")), true)
+	var head := ("Level %d: choose your class" % int(ClassTree.PICK_LEVELS[t])) if t >= 0 else "Level %d: a hidden path" % state.level
+	var o := Overlay.new().open(self, head, 820.0, Color(state.class_info().get("color", "#e8b14a")) if t >= 0 else Color("#c4b5fd"), true)
 	o.tree_exited.connect(func(): timer.start())
-	var al := ClassTree.alignment(state)
-	var intro := UI.rich(13)
-	intro.text = "[color=%s]Your deeds are [color=%s][b]%s[/b][/color] (faith %+d). %s[/color]" % [UI.hex(UI.DIM), ClassTree.ALIGN_COLORS[al], ClassTree.ALIGN_NAMES[al], int(state.faith),
-		"Good heroes can't take Evil classes, and Evil heroes can't take Good ones." if state.hero_class != "Wanderer" else "The Wanderer is always Neutral."]
-	o.content.add_child(intro)
-	for n in ClassTree.options(state):
-		o.content.add_child(ClassTab.class_card(self, n, true, func():
-			if ClassTree.pick(state, n["id"]):
-				sfx.play("spec")
-			o.close()
-			refresh()))
+	if t >= 0:
+		var al := ClassTree.alignment(state)
+		var intro := UI.rich(13)
+		intro.text = "[color=%s]Your deeds are [color=%s][b]%s[/b][/color] (faith %+d). %s[/color]" % [UI.hex(UI.DIM), ClassTree.ALIGN_COLORS[al], ClassTree.ALIGN_NAMES[al], int(state.faith),
+			"Good heroes can't take Evil classes, and Evil heroes can't take Good ones." if state.hero_class != "Wanderer" else "The Wanderer is always Neutral."]
+		o.content.add_child(intro)
+		for n in ClassTree.options(state):
+			o.content.add_child(ClassTab.class_card(self, n, true, func():
+				if ClassTree.pick(state, n["id"]):
+					sfx.play("spec")
+				o.close()
+				refresh()))
+	if hidden_open:  # Juzo: the hidden classes you've earned, a surprise every time
+		ClassTab.hidden_offer_cards(self, o.content, func(): o.close(); refresh())
 
 func apply_settings() -> void:
 	sfx.enabled = profile.sound_on
@@ -1456,7 +1461,7 @@ func _handle_events() -> void:
 				_show_calamity.call_deferred(e)
 			"blackout":
 				_blackout.call_deferred(String(e["name"]))
-			"class_pick":
+			"class_pick", "hidden_offer":
 				_show_tree_picker.call_deferred()
 			"class_up":
 				var after_looks := state.hero_looks()
@@ -1557,8 +1562,8 @@ func _refresh_top() -> void:
 	if state.hero_class != "":
 		var nm := state.hero_name + "  " if state.hero_name != "" else ""
 		var honor := "  \"%s\"" % codex.title if codex.title != "" else ""
-		var hid := Hidden.title(state)
-		class_label.text = "%sLv %d  %s%s%s" % [nm, state.level, state.title(), "  /  " + hid if hid != "" else "", honor]
+
+		class_label.text = "%sLv %d  %s%s" % [nm, state.level, state.title(), honor]  # a hidden class is the title itself now
 		class_label.add_theme_color_override("font_color", Color(state.class_info()["color"]).lightened(0.3))
 		if codex.name_color != "":
 			class_label.add_theme_color_override("font_color", Cosmetics.name_color(codex))  # an earned name color

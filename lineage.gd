@@ -439,7 +439,8 @@ static func to_save(g: GameState) -> Dictionary:
 	return {"race_power": g.race_power, "race_power_points": g.race_power_points, "awaken": g.awaken, "race_keys": g.race_keys,
 		"form": g.form, "lycan_pending": g.lycan_pending, "cure_active": g.cure_active, "cure_kills": g.cure_kills,
 		"rep": g.rep, "feats": g.feats, "realm_order": g.realm_order, "hidden": g.hidden, "hidden_class": g.hidden_class,
-		"hidden_stage": g.hidden_stage, "quest": g.quest, "merchant_who": g.merchant_who}
+		"hidden_stage": g.hidden_stage, "hidden_offer": g.hidden_offer, "hidden_offer_level": g.hidden_offer_level, "hidden_seen": g.hidden_seen, "hidden_v2": true,
+		"quest": g.quest, "merchant_who": g.merchant_who}
 
 static func from_save(g: GameState, d: Dictionary) -> void:
 	g.race_power = float(d.get("race_power", 0.0))
@@ -460,6 +461,11 @@ static func from_save(g: GameState, d: Dictionary) -> void:
 	g.hidden = d.get("hidden", {})
 	g.hidden_class = String(d.get("hidden_class", ""))
 	g.hidden_stage = d.get("hidden_stage", {})
+	g.hidden_offer = d.get("hidden_offer", [])
+	g.hidden_offer_level = int(d.get("hidden_offer_level", 0))
+	g.hidden_seen = d.get("hidden_seen", {})
+	if not d.has("hidden_v2"):
+		g.hidden_class = ""  # before the rework a hidden class sat on top of your class; now taking one is a choice at 15, 35 or 60
 	g.quest = d.get("quest", {})
 	g.merchant_who = String(d.get("merchant_who", ""))
 	update_look(g)

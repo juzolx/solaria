@@ -261,7 +261,8 @@ func _initialize() -> void:
 	var h := hero("Goblin")
 	for _i in 5:
 		Hidden.on_wheel(h, true)
-	check(h.hidden.has("jester") and h.hidden_class == "jester", "5 wheel wins in a row: Jester")
+	check(h.hidden.has("jester") and h.hidden_class == "", "5 wheel wins in a row: Jester is earned, quietly (a surprise until 15, 35 or 60)")
+	h.hidden_class = "jester"
 	check("Luck" in h.unique_stats(), "Jester's special stat")
 	var c0 := h.effect_value("crit")
 	h.unique["Luck"] = 50.0
@@ -273,15 +274,14 @@ func _initialize() -> void:
 	var gl := hero("Human")
 	gl.level = 60
 	gl.feats["clean_best"] = 1000
-	check(Hidden.ready_for_trial(gl, "gladiator") and not gl.hidden.has("gladiator"), "gladiator needs the arena trial")
-	check(Hidden.start_trial(gl, "gladiator") and gl.trial_kind == "hidden", "arena trial starts")
+	Hidden.check(gl)
+	check(gl.hidden.has("gladiator") and gl.hidden_class == "", "Gladiator earned (the arena trial comes when you take it)")
+	Hidden.on_level(gl)
+	check("gladiator" in gl.hidden_offer, "level 60: it's on offer")
+	check(Hidden.take(gl, "gladiator") and gl.trial_kind == "hidden" and gl.hidden_class == "", "taking it starts the arena trial")
 	gl.enemy_hp = 0
 	gl._enemy_defeated()
-	check(gl.hidden.has("gladiator"), "Gladiator unlocked")
-	gl.level = 100
-	gl.feats["class_kills"] = {"gladiator": 3000}
-	Hidden.check(gl)
-	check(int(gl.hidden_stage["gladiator"]) == 2 and Hidden.title(gl) == "Arena Lord", "Gladiator grows into Arena Lord")
+	check(gl.hidden_class == "gladiator" and Hidden.title(gl) == "The Undefeated", "won: The Undefeated at level 60 (%s)" % Hidden.title(gl))
 	var cp := hero("Human")
 	check(Hidden.closeness(cp, "fool") == 0.0, "no progress yet")
 	cp.feats["deaths"] = 125
