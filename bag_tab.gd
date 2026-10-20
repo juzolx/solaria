@@ -25,6 +25,12 @@ var salvage_all_buttons := {}
 var auto_salvage_button: Button
 var selected_id := -1
 var shown := ""
+var select_button: Button
+var picking := false      # next update: multi-select mode
+var picked := {}          # id -> true
+var pick_row: HBoxContainer
+var pick_sell: Button
+var pick_salvage: Button
 
 func setup(m) -> void:
 	main = m
@@ -35,6 +41,8 @@ func setup(m) -> void:
 	var head := UI.hbox(6)
 	add_child(head)
 	title = UI.label("", 14, UI.TEXT)
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # long notes wrap instead of widening the page
+	title.custom_minimum_size = Vector2(60, 0)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(title)
@@ -49,6 +57,9 @@ func setup(m) -> void:
 		filter_pick.add_item(s)
 	filter_pick.item_selected.connect(func(_i): shown = ""; main.refresh())
 	head.add_child(filter_pick)
+	select_button = UI.button("Select", _toggle_picking)
+	select_button.tooltip_text = "Pick several items, then sell or salvage them all at once"
+	head.add_child(select_button)
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -68,6 +79,18 @@ func setup(m) -> void:
 	details = UI.rich(12)
 	details.custom_minimum_size = Vector2(0, 74)
 	box.add_child(details)
+
+	pick_row = UI.hbox(6)
+	pick_row.visible = false
+	add_child(pick_row)
+	pick_sell = UI.button("", func(): _bulk("sell"))
+	pick_salvage = UI.button("", func(): _bulk("salvage"))
+	var pick_all := UI.button("All", _pick_all)
+	pick_all.tooltip_text = "Pick every unlocked item shown"
+	for b in [pick_sell, pick_salvage]:
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		pick_row.add_child(b)
+	pick_row.add_child(pick_all)
 
 	var row1 := UI.hbox(6)
 	var row2 := UI.hbox(6)
@@ -108,15 +131,71 @@ func setup(m) -> void:
 func _on_resized() -> void:
 	ItemGrid.fit([grid], size.x)
 
-## Tap: select (details below). Tap it again: the full compare popup.
+## Tap: select it and open the side-by-side compare popup. In Select mode a tap
+## picks or unpicks it instead.
 func _tap(id: int) -> void:
 	main.sfx.play("click")
-	if id == selected_id:
-		_popup(id)
+	if picking:
+		var found := state.find_item(id)
+		if found.is_empty() or found["item"].get("locked", false) or state.is_bound(found["item"]):
+			return
+		if picked.has(id):
+			picked.erase(id)
+		else:
+			picked[id] = true
+		shown = ""
+		main.refresh()
 		return
 	selected_id = id
 	shown = ""
 	main.refresh()
+	_popup(id)
+
+func _toggle_picking() -> void:
+	picking = not picking
+	picked.clear()
+	shown = ""
+	main.refresh()
+
+func _pick_all() -> void:
+	for it in _sorted_items():
+		if not it.get("locked", false) and not state.is_bound(it):
+			picked[int(it["id"])] = true
+	shown = ""
+	main.refresh()
+
+## Picked items still in the bag (things can vanish while picking).
+func _picked_items() -> Array:
+	var out := []
+	for id in picked.keys():
+		var found := state.find_item(int(id))
+		if not found.is_empty() and found["where"] == "bag":
+			out.append(found["item"])
+	return out
+
+## Sell or salvage everything picked; one confirm if any of it is precious.
+func _bulk(action: String) -> void:
+	var items := _picked_items()
+	if items.is_empty():
+		return
+	var run := func():
+		for it in items:
+			if action == "sell":
+				state.sell(int(it["id"]))
+			else:
+				state.salvage(int(it["id"]))
+		main.sfx.play(action)
+		picked.clear()
+		picking = false
+		if state.find_item(selected_id).is_empty():
+			selected_id = -1
+		shown = ""
+		main.refresh()
+	var precious := items.filter(func(it): return ItemText.is_precious(it)).size()
+	if precious > 0:
+		main.confirm("%s %d items?" % ["Sell" if action == "sell" else "Salvage", items.size()], "%d of them %s Legendary or better. They're gone for good." % [precious, "is" if precious == 1 else "are"], "Sell them" if action == "sell" else "Salvage them", run)
+		return
+	run.call()
 
 ## The compare popup for one item, with what you can do with it.
 func _popup(id: int) -> void:
@@ -211,13 +290,28 @@ func refresh() -> void:
 	title.add_theme_color_override("font_color", UI.RED if state.bag_full() else UI.TEXT)
 	var salvage_names := ["Off", "Commons", "Uncommon and below", "Rare and below", "Epic and below"]
 	auto_salvage_button.text = "Auto-salvage new drops: %s" % salvage_names[state.auto_salvage + 1]
+	if state.loot_filter.get("below_gs", false):
+		auto_salvage_button.text += " + below GS %d" % state.average_gear_score()
+	select_button.text = "Done" if picking else "Select"
+	pick_row.visible = picking
+	if picking:
+		var items := _picked_items()
+		var gold_total := 0
+		var scrap_total := 0
+		for it in items:
+			gold_total += state.sell_price(it)
+			scrap_total += int(GameData.scrap_value(it) * state.scrap_mult())
+		pick_sell.text = "Sell %d (%d gold)" % [items.size(), gold_total]
+		pick_salvage.text = "Salvage %d (%d scrap)" % [items.size(), scrap_total]
+		pick_sell.disabled = items.is_empty()
+		pick_salvage.disabled = items.is_empty()
 	for r in salvage_all_buttons:
 		var n := state.salvage_all_count(r)
 		var b: Button = salvage_all_buttons[r]
 		b.text = "%s (%d)" % [GameData.RARITY_NAMES[r], n]
 		b.disabled = n == 0
 
-	var key := "%d|%d|%d|%d" % [state.bag_version, sort_pick.selected, filter_pick.selected, selected_id]
+	var key := "%d|%d|%d|%d|%s|%s" % [state.bag_version, sort_pick.selected, filter_pick.selected, selected_id, picking, str(picked.keys())]
 	if key != shown:
 		shown = key
 		ItemGrid.fit([grid], size.x)
@@ -231,7 +325,7 @@ func refresh() -> void:
 			var over := state.over_limit(id)
 			if over:
 				badge = "OVER"
-			var cell := ItemGrid.cell(item, _tap.bind(id), id == selected_id, ItemGrid.CELL, badge)
+			var cell := ItemGrid.cell(item, _tap.bind(id), picked.has(id) if picking else id == selected_id, ItemGrid.CELL, ("PICK" if picked.has(id) else badge) if picking else badge)
 			if over:
 				cell.modulate = Color(0.55, 0.5, 0.5)  # 0.13+: past the bag's limit: sell or salvage to use it
 				cell.tooltip_text = "Over your bag's limit. Sell or salvage something to use it (you can still sell or salvage this one)."

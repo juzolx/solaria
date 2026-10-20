@@ -22,7 +22,9 @@ func _build(m, item: Dictionary, actions: Array) -> void:
 		if worn.is_empty():
 			var empty := UI.panel(UI.INSET, UI.BORDER, 8, 12, 1)
 			empty.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			empty.add_child(UI.label("You're not wearing anything in this slot.", 13, UI.DIM))
+			var el := UI.label("You're not wearing anything in this slot.", 13, UI.DIM)
+			el.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			empty.add_child(el)
 			row.add_child(empty)
 		else:
 			row.add_child(_card(state, worn, "WEARING NOW"))
@@ -38,6 +40,8 @@ func _build(m, item: Dictionary, actions: Array) -> void:
 			var b := UI.primary(str(a[0]), func(): close(); cb.call(), color)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			b.custom_minimum_size = Vector2(0, 40)
+			if size.x < 600.0:
+				b.add_theme_font_size_override("font_size", 12)
 			buttons.add_child(b)
 
 func _card(state: GameState, item: Dictionary, label: String) -> PanelContainer:
@@ -51,13 +55,18 @@ func _card(state: GameState, item: Dictionary, label: String) -> PanelContainer:
 	var pic := TextureRect.new()
 	pic.texture = Sprites.item_icon(item)
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(48, 48)
+	var narrow := size.x < 600.0  # phones: two slim columns, still side by side
+	pic.custom_minimum_size = Vector2(32, 32) if narrow else Vector2(48, 48)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	head.add_child(pic)
 	head.add_child(UI.label(label, 11, UI.DIM))
 	var t := UI.rich(13)
-	t.custom_minimum_size = Vector2(300, 0)
+	if narrow:
+		t.add_theme_font_size_override("normal_font_size", 11)
+		t.add_theme_font_size_override("bold_font_size", 11)
+		t.add_theme_font_size_override("italics_font_size", 11)
+	t.custom_minimum_size = Vector2(0 if narrow else 300, 0)
 	t.text = ItemText.describe(state, item)
 	v.add_child(t)
 	return card

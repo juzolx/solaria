@@ -2377,6 +2377,8 @@ func filter_salvages(item: Dictionary) -> bool:
 		return false  # Legendary and better are always kept
 	if r <= auto_salvage:
 		return true
+	if bool(loot_filter.get("below_gs", false)) and not equipped.is_empty() and GameData.gear_score(item) < average_gear_score():
+		return true  # next update: anything below your average Gear Score (Epic and below)
 	if r <= 2:
 		if bool(loot_filter.get("slots", {}).get(item["slot"], false)):
 			return true

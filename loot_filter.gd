@@ -8,6 +8,7 @@ var state: GameState
 var rarity_button: Button
 var slot_buttons := {}
 var weaker_button: Button
+var gs_button: Button
 
 func show_for(main_node) -> void:
 	m = main_node
@@ -37,6 +38,12 @@ func show_for(main_node) -> void:
 		_update())
 	weaker_button.tooltip_text = "Common to Rare drops that are weaker than what you wear in that slot (and wouldn't make your build stronger) become scrap."
 	content.add_child(weaker_button)
+	gs_button = UI.button("", func():
+		state.loot_filter["below_gs"] = not bool(state.loot_filter.get("below_gs", false))
+		state.save_game()
+		_update())
+	gs_button.tooltip_text = "Common to Epic drops with a Gear Score below the average of what you wear become scrap."
+	content.add_child(gs_button)
 	_update()
 
 func _toggle_slot(s: String) -> void:
@@ -56,4 +63,5 @@ func _update() -> void:
 		b.text = "%s: %s" % [s, "salvage" if on else "keep"]
 		b.add_theme_color_override("font_color", UI.RED if on else UI.TEXT)
 	weaker_button.text = "Salvage drops weaker than what I wear: %s" % ("ON" if state.loot_filter.get("weaker", false) else "OFF")
+	gs_button.text = "Salvage drops below my Gear Score (%d): %s" % [state.average_gear_score(), "ON" if state.loot_filter.get("below_gs", false) else "OFF"]
 	m.refresh()
