@@ -2720,10 +2720,14 @@ func restock_shop() -> void:
 	var feat_rarity := GameData.LEGENDARY if randf() * 100.0 < GameData.FEATURED_LEGENDARY_CHANCE else 3
 	var feat_slot: String = GameData.SLOT_ORDER.pick_random()
 	featured = Town.local_goods(self, GameData.make_item(feat_slot, feat_rarity, best_floor, _new_id()))
+	var favg := average_gear_score()  # 0.13+: the featured deal is never weaker than your average gear
+	var fgs := GameData.gear_score(featured)
+	if favg > 0 and fgs < favg:
+		featured["bonus"] = int(ceil(int(featured["bonus"]) * float(favg) / maxf(1.0, fgs)))
 	shop.clear()
 	for _i in GameData.SHOP_SIZE:
 		var slot: String = GameData.SLOT_ORDER.pick_random()
-		shop.append(Town.local_goods(self, GameData.make_item(slot, _rarity(GameData.SHOP_RARITY_BONUS, GameData.LEGENDARY_CHANCE_SHOP), best_floor, _new_id())))
+		shop.append(Town.local_goods(self, GameData.make_item(slot, maxi(1, _rarity(GameData.SHOP_RARITY_BONUS, GameData.LEGENDARY_CHANCE_SHOP)), best_floor, _new_id())))
 	shop_zone = GameData.zone_index(maxi(1, floor_num))
 	shop_version += 1
 

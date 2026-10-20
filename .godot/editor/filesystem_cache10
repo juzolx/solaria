@@ -1,5 +1,5 @@
 78098b89c88a74ebe8c20117b8754620
-::res://::1792454359
+::res://::1792455289
 achievements_tab.gd::GDScript::225817628144516105::1792426149::0::1::::AchievementsTab<>VBoxContainer<><>0<>0<><>::
 art_info.gd::GDScript::2121761137587333428::1792440491::0::1::::ArtInfo<>RefCounted<><>0<>0<><>::
 auto_rules.gd::GDScript::2405800427113084060::1792444644::0::1::::AutoRules<>RefCounted<><>0<>0<><>::
@@ -27,11 +27,11 @@ credits.gd::GDScript::4567747528896080687::1792418239::0::1::::Credits<>RefCount
 dark_grade.gd::GDScript::1981912469824197290::1792399784::0::1::::DarkGrade<>RefCounted<><>0<>0<><>::
 egg_quests.gd::GDScript::406899198733525481::1792438042::0::1::::EggQuests<>RefCounted<><>0<>0<><>::
 floor_picker.gd::GDScript::5370141465407826933::1792444382::0::1::::FloorPicker<>Overlay<><>0<>0<><>::
-game_data.gd::GDScript::560847022751701286::1792453267::0::1::::GameData<>RefCounted<><>0<>0<><>::
-game_state.gd::GDScript::1935207822301543411::1792454332::0::1::::GameState<>RefCounted<><>0<>0<><>::
+game_data.gd::GDScript::560847022751701286::1792454917::0::1::::GameData<>RefCounted<><>0<>0<><>::
+game_state.gd::GDScript::1935207822301543411::1792454949::0::1::::GameState<>RefCounted<><>0<>0<><>::
 gear_tab.gd::GDScript::452513172291051429::1792453321::0::1::::GearTab<>VBoxContainer<><>0<>0<><>::
 grave.gd::GDScript::200013624428680804::1792440224::0::1::::Grave<>RefCounted<><>0<>0<><>::
-guide.gd::GDScript::3980021912403035507::1792399749::0::1::::Guide<>RefCounted<><>0<>0<><>::
+guide.gd::GDScript::3980021912403035507::1792455289::0::1::::Guide<>RefCounted<><>0<>0<><>::
 guide_book.gd::GDScript::6387689471949660813::1792403813::0::1::::GuideBook<>Overlay<><>0<>0<><>::
 guide_tab.gd::GDScript::4020391701664571940::1792445743::0::1::::GuideTab<>HBoxContainer<><>0<>0<><>::
 guild_tab.gd::GDScript::1853830981013115675::1792399749::0::1::::GuildTab<>ScrollContainer<><>0<>0<><>::
@@ -88,7 +88,7 @@ room_view.gd::GDScript::6869631946227115779::1792439676::0::1::::RoomView<>Contr
 run_log.gd::GDScript::5516613817604830149::1792445438::0::1::::RunLog<>RefCounted<><>0<>0<><>::
 settings_menu.gd::GDScript::1087608805111442744::1792420898::0::1::::SettingsMenu<>Overlay<><>0<>0<><>::
 sfx.gd::GDScript::1267953317640007820::1792420883::0::1::::Sfx<>Node<><>0<>0<><>::
-shop_tab.gd::GDScript::6518725852383496533::1792403527::0::1::::ShopTab<>ScrollContainer<><>0<>0<><>::
+shop_tab.gd::GDScript::6518725852383496533::1792455289::0::1::::ShopTab<>ScrollContainer<><>0<>0<><>::
 signatures.gd::GDScript::5473582297840230887::1792399749::0::1::::Signatures<>RefCounted<><>0<>0<><>::
 skills_tab.gd::GDScript::5838519330532651803::1792445805::0::1::::SkillsTab<>VBoxContainer<><>0<>0<><>::
 skill_data.gd::GDScript::1490639940074352852::1792453382::0::1::::SkillData<>RefCounted<><>0<>0<><>::
@@ -102,7 +102,7 @@ stash_tab.gd::GDScript::3246610137660904356::1792399749::0::1::::StashTab<>VBoxC
 stats_tab.gd::GDScript::5226249994653909891::1792445461::0::1::::StatsTab<>ScrollContainer<><>0<>0<><>::
 synergies.gd::GDScript::1362652335322642851::1792440224::0::1::::Synergies<>RefCounted<><>0<>0<><>::
 title_screen.gd::GDScript::3075163210149101760::1792399784::0::1::::TitleScreen<>Control<><>0<>0<><>::
-town.gd::GDScript::8996315446016523242::1792453917::0::1::::Town<>RefCounted<><>0<>0<><>::
+town.gd::GDScript::8996315446016523242::1792454938::0::1::::Town<>RefCounted<><>0<>0<><>::
 town_events.gd::GDScript::6336222254605929271::1792435116::0::1::::TownEvents<>RefCounted<><>0<>0<><>::
 town_view.gd::GDScript::8481272260531048230::1792399750::0::1::::TownView<>Control<><>0<>0<><>::
 ui.gd::GDScript::3869571513905975118::1792417764::0::1::::UI<>RefCounted<><>0<>0<><>::
@@ -3366,7 +3366,7 @@ code-map.md::TextFile::-1::1792399484::0::1::::<><><>0<>0<><>::
 dungeon-revamp-design.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
 next-update-notes.md::TextFile::-1::1792399494::0::1::::<><><>0<>0<><>::
 stage1-progress.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
-stage2-progress.md::TextFile::-1::1792454248::0::1::::<><><>0<>0<><>::
+stage2-progress.md::TextFile::-1::1792454874::0::1::::<><><>0<>0<><>::
 study-and-implement-list.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
 ::res://proto/::1792399796
 room3d.gd::GDScript::9127945263395229099::1792399784::0::1::::<>Control<><>0<>0<><>::

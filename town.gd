@@ -118,9 +118,8 @@ static func enter(g: GameState, floor_done := false) -> bool:
 	g.shield_hp = 0
 	g.kill_streak = 0
 	refresh_board(g)
-	# Traders follow the roads: new zone, new wares
-	if g.shop_zone != GameData.zone_index(maxi(1, g.floor_num)):
-		g.restock_shop()
+	# 0.13+ (Juzo): new wares every time you come home, made for how deep you have been
+	g.restock_shop()
 	g.say("[color=#e8b14a]You head back to town.[/color] Nothing can attack you here.%s" % (" You bank the %d gold you carried home." % carried if carried > 0 else ""))
 	g.tip("town", "Welcome to town! Tap a building to go in. Take contracts at the Bounty Board, collect your rewards from the Mailbox, and rest at the Inn. Head back down through the cave when you're ready.")
 	g.events.append({"type": "town", "in": true})

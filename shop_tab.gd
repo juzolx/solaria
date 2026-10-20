@@ -1,6 +1,6 @@
 class_name ShopTab
 extends ScrollContainer
-## Town > Shop: Grimble's Wares. A featured deal, gear on the shelves as
+## Town > Shop: Marta's Goods. A featured deal, gear on the shelves as
 ## item squares, supplies (potions and elixirs), upgrades, and quick selling.
 
 const GREETINGS := [
@@ -61,7 +61,7 @@ func setup(m) -> void:
 	v.add_child(wander_box)
 
 	# ---- Featured deal ----
-	v.add_child(UI.heading("Featured deal  -  new one after every boss (every 25 floors)"))
+	v.add_child(UI.heading("Featured deal  -  new stock every time you come home"))
 	featured_box = PanelContainer.new()
 	featured_style = UI.style(UI.INSET, UI.GOLD, 10, 12, 3)
 	featured_box.add_theme_stylebox_override("panel", featured_style)
