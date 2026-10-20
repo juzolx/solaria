@@ -28,4 +28,4 @@
 - [x] Bigger portals: multi-floor side dungeons.
 
 ## Store (later)
-- [ ] Rest of Stage 4: cosmetics shop, purchase code (off), privacy policy, store listing, cloud build file.
+- [x] Rest of Stage 4: cosmetics shop, purchase code (off), privacy policy, store listing, cloud build file.

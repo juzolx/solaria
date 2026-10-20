@@ -1,0 +1,48 @@
+# Codemagic cloud build for the App Store (DRAFT, untested: needs the Apple Developer
+# membership and a Codemagic account). Builds on a cloud Mac, since there's no Mac here.
+#
+# Before the first run:
+# 1. In Codemagic: add this repo, then Teams > Integrations > Developer Portal (App Store
+#    Connect API key) and name the integration "solaria_asc".
+# 2. Fill application/app_store_team_id and the bundle id in export_presets.cfg (and below).
+# 3. For purchases later: put Godot's iOS InAppStore plugin in ios/plugins, set
+#    plugins/InAppStore=true in export_presets.cfg and Store.ENABLED = true.
+workflows:
+  ios-release:
+    name: Solaria iOS (TestFlight)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: solaria_asc
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.solaria.game
+      vars:
+        GODOT_VERSION: "4.7.2"
+      xcode: latest
+    scripts:
+      - name: Get Godot and its export templates
+        script: |
+          curl -sL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
+          unzip -q godot.zip
+          curl -sL -o templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          T="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$T"
+          unzip -q templates.tpz -d tpl && mv tpl/templates/* "$T/"
+      - name: Export the Xcode project
+        script: |
+          mkdir -p build/ios
+          ./Godot.app/Contents/MacOS/Godot --headless --path . --import || true
+          ./Godot.app/Contents/MacOS/Godot --headless --path . --export-release "iOS" build/ios/Solaria.xcodeproj
+      - name: Signing
+        script: xcode-project use-profiles --project build/ios/Solaria.xcodeproj
+      - name: Build the .ipa
+        script: |
+          xcode-project build-ipa --project build/ios/Solaria.xcodeproj --scheme Solaria
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
