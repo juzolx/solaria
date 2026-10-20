@@ -1,5 +1,5 @@
 78098b89c88a74ebe8c20117b8754620
-::res://::1792456056
+::res://::1792456655
 achievements_tab.gd::GDScript::225817628144516105::1792426149::0::1::::AchievementsTab<>VBoxContainer<><>0<>0<><>::
 art_info.gd::GDScript::2121761137587333428::1792440491::0::1::::ArtInfo<>RefCounted<><>0<>0<><>::
 auto_rules.gd::GDScript::2405800427113084060::1792444644::0::1::::AutoRules<>RefCounted<><>0<>0<><>::
@@ -90,7 +90,7 @@ settings_menu.gd::GDScript::1087608805111442744::1792420898::0::1::::SettingsMen
 sfx.gd::GDScript::1267953317640007820::1792420883::0::1::::Sfx<>Node<><>0<>0<><>::
 shop_tab.gd::GDScript::6518725852383496533::1792455289::0::1::::ShopTab<>ScrollContainer<><>0<>0<><>::
 signatures.gd::GDScript::5473582297840230887::1792399749::0::1::::Signatures<>RefCounted<><>0<>0<><>::
-skills_tab.gd::GDScript::5838519330532651803::1792445805::0::1::::SkillsTab<>VBoxContainer<><>0<>0<><>::
+skills_tab.gd::GDScript::5838519330532651803::1792456655::0::1::::SkillsTab<>VBoxContainer<><>0<>0<><>::
 skill_data.gd::GDScript::1490639940074352852::1792453382::0::1::::SkillData<>RefCounted<><>0<>0<><>::
 skill_icons.gd::GDScript::5056317378488552549::1792399749::0::1::::SkillIcons<>RefCounted<><>0<>0<><>::
 smith.gd::GDScript::3020533605763675132::1792454303::0::1::::Smith<>RefCounted<><>0<>0<><>::
@@ -3366,7 +3366,7 @@ code-map.md::TextFile::-1::1792399484::0::1::::<><><>0<>0<><>::
 dungeon-revamp-design.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
 next-update-notes.md::TextFile::-1::1792399494::0::1::::<><><>0<>0<><>::
 stage1-progress.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
-stage2-progress.md::TextFile::-1::1792455939::0::1::::<><><>0<>0<><>::
+stage2-progress.md::TextFile::-1::1792456580::0::1::::<><><>0<>0<><>::
 study-and-implement-list.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
 ::res://proto/::1792399796
 room3d.gd::GDScript::9127945263395229099::1792399784::0::1::::<>Control<><>0<>0<><>::

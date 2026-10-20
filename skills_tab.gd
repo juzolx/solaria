@@ -10,7 +10,8 @@ var slot_row_a: HBoxContainer
 var slot_row_p: HBoxContainer
 var sig_row: HBoxContainer
 var filter_pick: OptionButton
-var list: ItemList
+var cards: GridContainer
+var empty_note: Label
 var ids: Array[String] = []
 var detail: RichTextLabel
 var equip_button: Button
@@ -52,15 +53,20 @@ func setup(m) -> void:
 		filter_pick.add_item(tag)
 	filter_pick.item_selected.connect(func(_i): shown = ""; refresh())
 	add_child(filter_pick)
-	list = ItemList.new()
-	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	list.add_theme_font_size_override("font_size", UI.MIN_FONT)
-	list.item_selected.connect(func(i: int):
-		if i >= 0 and i < ids.size():
-			selected = ids[i]
-			_show_detail())
-	list.item_activated.connect(func(_i): _toggle_equip())
-	add_child(list)
+	# 0.13+ (Juzo): the skill book as cards, like the bag: icon, name, rank pips, rarity frame
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
+	cards = GridContainer.new()
+	cards.columns = 4
+	cards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cards.add_theme_constant_override("h_separation", 6)
+	cards.add_theme_constant_override("v_separation", 6)
+	scroll.add_child(cards)
+	empty_note = UI.label("", 12, UI.DIM)
+	empty_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	add_child(empty_note)
 	var box := UI.panel(UI.INSET, UI.EMPTY, 8, 8, 1)
 	add_child(box)
 	detail = UI.rich(12)
@@ -98,7 +104,11 @@ func _slot_button(id: String, open: bool, need: int, active: bool) -> Button:
 			refresh())
 		return b
 	var s := SkillData.info(id)
-	b.text = "%s %d" % [s["name"], state.skill_rank(id)]
+	b.text = "%s
+Rank %d" % [s["name"], state.skill_rank(id)]
+	b.icon = SkillIcons.for_tag(String(s["tags"][0]))  # 0.13+: slots show the skill's icon
+	b.add_theme_constant_override("icon_max_width", 22)
+	b.custom_minimum_size = Vector2(0, 46)
 	var c := Color(Classes.tag_color(s["tags"][0]))
 	b.add_theme_stylebox_override("normal", UI.style(c.darkened(0.7), c.darkened(0.2), 6, 4, 1))
 	b.add_theme_color_override("font_color", c.lightened(0.4))
@@ -148,7 +158,6 @@ func refresh() -> void:
 		slot_row_a.add_child(_slot_button(state.active_slots[i], i < state.active_slot_count(), int(SkillData.ACTIVE_SLOTS_AT[i]), true))
 	for i in 5:
 		slot_row_p.add_child(_slot_button(state.passive_slots[i], i < state.passive_slot_count(), int(SkillData.PASSIVE_SLOTS_AT[i]), false))
-	list.clear()
 	ids.clear()
 	var owned: Array = state.skill_book.keys()
 	owned.sort_custom(func(a, b):
@@ -157,28 +166,51 @@ func refresh() -> void:
 		if ea != eb:
 			return ea
 		return SkillData.skill_name(a) < SkillData.skill_name(b))
+	OnlineUI.clear(cards)
 	for id in owned:
 		if not _passes(id):
 			continue
-		var s := SkillData.info(id)
-		var tags := "/".join(s["tags"])
-		var eq := "  [equipped]" if state.is_skill_equipped(id) else ""
-		var i := list.add_item("%s  %d/5   %s  -  %s%s" % [s["name"], state.skill_rank(id), "Active" if s["kind"] == "active" else "Passive", tags, eq])
-		list.set_item_custom_fg_color(i, Color(SkillData.RARITY_COLORS[int(s["rarity"])]))
-		list.set_item_tooltip(i, SkillData.describe(id, state.skill_rank(id)))
+		cards.add_child(_card(id))
 		ids.append(id)
-		if id == selected:
-			list.select(i)
-	if ids.is_empty():
-		var e := list.add_item("No skills here yet. Monsters drop ability stones (bosses always do).")
-		list.set_item_selectable(e, false)
-		list.set_item_custom_fg_color(e, UI.DIM)
-		ids.append("")
+	empty_note.visible = ids.is_empty()
+	empty_note.text = "No skills here yet. Monsters drop ability stones (bosses always do)."
 	_show_detail()
+
+## One skill as a card: its tag icon, name, rank pips, framed in its rarity color
+## (a green edge when equipped). Tap to look; tap again to equip or unequip.
+func _card(id: String) -> Button:
+	var s := SkillData.info(id)
+	var r := state.skill_rank(id)
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.custom_minimum_size = Vector2(0, 92)
+	b.icon = SkillIcons.for_tag(String(s["tags"][0]))
+	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+	b.add_theme_constant_override("icon_max_width", 34)
+	b.clip_text = true
+	b.add_theme_font_size_override("font_size", 11)
+	b.text = "%s\n%s" % [s["name"], "●".repeat(r) + "○".repeat(maxi(0, SkillData.MAX_RANK - r))]
+	var rc := Color(SkillData.RARITY_COLORS[int(s["rarity"])])
+	var eq := state.is_skill_equipped(id)
+	var sel := id == selected
+	b.add_theme_stylebox_override("normal", UI.style(rc.darkened(0.78), UI.GREEN if eq else rc.darkened(0.15), 6, 4, 3 if sel else (2 if eq else 1)))
+	b.add_theme_stylebox_override("hover", UI.style(rc.darkened(0.65), UI.GREEN if eq else rc, 6, 4, 3 if sel else 2))
+	b.add_theme_color_override("font_color", rc.lightened(0.35))
+	b.tooltip_text = SkillData.describe(id, maxi(1, r))
+	b.pressed.connect(func():
+		if selected == id:
+			_toggle_equip()  # second tap: equip or unequip
+		else:
+			selected = id
+			shown = ""
+			refresh())
+	return b
 
 func _show_detail() -> void:
 	if selected == "" or not SkillData.SKILLS.has(selected):
-		detail.text = "[color=%s]Select a skill. Double-tap to equip or unequip. Skills that share a tag with your class (%s) hit %d%% harder.[/color]" % [
+		detail.text = "[color=%s]Tap a skill to see it, tap it again to equip or unequip. Skills that share a tag with your class (%s) hit %d%% harder.[/color]" % [
 			UI.hex(UI.DIM), ", ".join(state.class_info().get("tags", [])), int(Classes.AFFINITY_POWER * 100)]
 		equip_button.disabled = true
 		craft_button.disabled = true
