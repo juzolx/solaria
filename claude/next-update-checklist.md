@@ -13,9 +13,9 @@
 - [ ] "First find" fanfare for a new pet, unique or set piece.
 
 ## Items
-- [ ] Multi-select to sell or salvage many at once.
-- [ ] Side-by-side compare when tapping an item in the bag.
-- [ ] Gear Score loot filter: auto-salvage anything below your average.
+- [x] Multi-select to sell or salvage many at once.
+- [x] Side-by-side compare when tapping an item in the bag.
+- [x] Gear Score loot filter: auto-salvage anything below your average.
 
 ## Controls and interface
 - [x] "Are you sure you want to leave the dungeon?" pop-up when going back to town: pauses everything and shows what's at risk.
