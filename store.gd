@@ -1,24 +1,21 @@
 class_name Store
 extends RefCounted
 ## Stage 4: real-money purchases through Apple's App Store (StoreKit), SWITCHED OFF.
-## Only two kinds of things are ever sold: hero slots 6-9 and looks (never power,
+## Only looks are ever sold (never power, never hero slots,
 ## never random items). With ENABLED false nothing shows to players and nothing
 ## talks to the App Store.
 ##
 ## Turning it on later (needs the Apple Developer membership):
 ## 1. Add Godot's iOS "InAppStore" plugin (godot-ios-plugins) to the iOS export.
 ## 2. Create the products below in App Store Connect with the same ids (all non-consumable).
-## 3. Set ENABLED = true (and GameData.SLOT_LOCKS_ON = true so slots 6-9 need buying).
+## 3. Set ENABLED = true.
 
 const ENABLED := false
 const SINGLETON := "InAppStore"
 
-## id -> {name, text, kind}. kind "slot" = one more hero slot (6-9), "looks" = the supporter pack.
+## id -> {name, text, kind}. kind "looks" = the supporter pack. (Hero slots are never
+## sold: Juzo, Oct 20: a town's five heroes are all earned by depth.)
 const PRODUCTS := {
-	"solaria.heroslot6": {"name": "Hero Slot 6", "text": "One more hero in every town.", "kind": "slot"},
-	"solaria.heroslot7": {"name": "Hero Slot 7", "text": "One more hero in every town.", "kind": "slot"},
-	"solaria.heroslot8": {"name": "Hero Slot 8", "text": "One more hero in every town.", "kind": "slot"},
-	"solaria.heroslot9": {"name": "Hero Slot 9", "text": "One more hero in every town.", "kind": "slot"},
 	"solaria.supporter": {"name": "Supporter's Looks", "text": "The Eclipse name color, the Black Sun frame and the title Keeper of the Flame. Looks only.", "kind": "looks"},
 }
 ## What the supporter pack unlocks (Cosmetics keys; the entries have need "store")
@@ -94,19 +91,12 @@ static func grant(id: String, profile: Profile, codex: Codex) -> bool:
 		return false
 	if not id in profile.owned_products:
 		profile.owned_products.append(id)
-	if PRODUCTS[id]["kind"] == "slot":
-		var n := 0
-		for p in profile.owned_products:
-			if PRODUCTS.has(p) and PRODUCTS[p]["kind"] == "slot":
-				n += 1
-		profile.paid_slots = mini(n, GameData.PAID_SLOTS)
-	else:
-		for k in SUPPORTER_KEYS:
-			if not k in codex.bought:
-				codex.bought.append(k)
-		if not "Keeper of the Flame" in codex.extra_titles:
-			codex.extra_titles.append("Keeper of the Flame")
-		codex.save()
+	for k in SUPPORTER_KEYS:  # looks: the only thing sold
+		if not k in codex.bought:
+			codex.bought.append(k)
+	if not "Keeper of the Flame" in codex.extra_titles:
+		codex.extra_titles.append("Keeper of the Flame")
+	codex.save()
 	profile.save()
 	return true
 

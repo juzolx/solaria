@@ -187,7 +187,7 @@ func _fill_menu() -> void:
 				p.active_slot = n
 				meta = GameState.slot_meta(n)
 				break
-	var town_l := UI.label("%s  ·  %d / %d heroes" % [p.town_name(p.town).to_upper(), GameState.town_heroes(p.town), GameData.MAX_HEROES], 12, UI.GOLD)
+	var town_l := UI.label("%s  ·  %s  ·  %d / %d heroes" % [p.town_name(p.town).to_upper(), "HARDCORE" if p.town_hardcore(p.town) else "REGULAR", GameState.town_heroes(p.town), p.slots_open()], 12, UI.GOLD)
 	town_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	town_l.tooltip_text = "The town you're in. Switch or found another from Towns."
 	menu_box.add_child(town_l)
@@ -197,17 +197,12 @@ func _fill_menu() -> void:
 		cont.add_theme_font_size_override("font_size", 20)
 		menu_box.add_child(cont)
 		menu_box.add_child(_hero_line(meta))
-	var free := _free_slot()
-	var new_b := UI.primary("New hero", func(): NewHeroPicker.new().show_for(m, free), UI.GREEN)
-	new_b.custom_minimum_size = Vector2(0, 44 if meta.is_empty() else 38)
-	new_b.disabled = free == 0
-	if free == 0:
-		new_b.tooltip_text = _locked_text()
-	menu_box.add_child(new_b)
-	if free == 0:
-		var lk := UI.label(_locked_text(), 11, UI.DIM)
-		lk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		menu_box.add_child(lk)
+	# Juzo: no "New hero" here. A town's first hero comes with founding it; later
+	# heroes are recruited at the Inn when a slot opens.
+	if meta.is_empty():
+		var found := UI.primary("Found your town", func(): FoundTown.new().show_for(m, p.town), UI.GREEN)
+		found.custom_minimum_size = Vector2(0, 48)
+		menu_box.add_child(found)
 	var row := UI.hbox(8)
 	menu_box.add_child(row)
 	for entry in [["Heroes", func(): HeroSelect.new().show_for(m, self)], ["Towns", func(): TownSelect.new().show_for(m, self)], ["Settings", func(): SettingsMenu.new().show_for(m)],
@@ -234,18 +229,6 @@ func _hero_line(meta: Dictionary) -> Control:
 	info.text = HeroSelect.describe(meta)
 	row.add_child(info)
 	return row
-
-func _free_slot() -> int:
-	for n in range(1, m.profile.slots_open() + 1):
-		if not GameState.has_slot(n):
-			return n
-	return 0
-
-func _locked_text() -> String:
-	var p: Profile = m.profile
-	if p.slots_open() >= GameData.MAX_HEROES:
-		return "All %d hero slots in %s are in use. Delete one in Heroes, or found another town." % [GameData.MAX_HEROES, p.town_name(p.town)]
-	return p.slot_lock_note(p.slots_open() + 1)
 
 func _fill_side() -> void:
 	OnlineUI.clear(side_box)

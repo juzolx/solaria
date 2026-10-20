@@ -67,11 +67,7 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 		h.add_child(v0)
 		v0.add_child(UI.label("SLOT %d" % n, 11, UI.DIM))
 		v0.add_child(UI.label("Empty slot" if open_slot else "Locked", 14, UI.TEXT if open_slot else UI.DIM))
-		var b := UI.primary("New hero", func(): close(); NewHeroPicker.new().show_for(m, n), UI.GREEN)
-		b.disabled = not open_slot
-		b.custom_minimum_size = Vector2(120, UI.TAP)
-		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		h.add_child(b)
+		v0.add_child(UI.wrap("Recruit a new hero at the Inn in town." if open_slot else m.profile.slot_lock_note(n), 12, UI.DIM))
 		return card
 	var pic := TextureRect.new()
 	pic.texture = Sprites.portrait(meta.get("appearance", {}), meta.get("looks", {}))

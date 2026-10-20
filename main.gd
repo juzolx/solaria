@@ -182,9 +182,9 @@ func _show_fresh_start() -> void:
 ## their own town (GameState.migrate_to_towns). Every town gets a copy of the old
 ## shared skill book; the old stash goes to the town of the hero played last.
 func _migrate_towns() -> void:
-	if profile.towns_v1:
-		return
-	profile.build_towns(GameState.migrate_to_towns())
+	if not profile.towns_v1:
+		profile.build_towns(GameState.migrate_to_towns())
+	profile.fill_town_modes()  # Juzo: a town is Regular or Hardcore
 
 ## Older versions had one Regular and one Hardcore save: move them into hero slots.
 func _migrate_old_saves() -> void:

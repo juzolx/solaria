@@ -54,12 +54,35 @@ func _initialize() -> void:
 	p.save()
 	var q := Profile.load_profile()
 	check(q.town == 1 and q.stash.size() == 1 and int(q.towns["2"]["stash"].size()) == 1, "towns survive a reload")
-	check(q.slots_open() == GameData.MAX_HEROES, "locks off: all 9 hero slots open")
+	check(q.slots_open() == 1, "town 1 (deepest floor 40): one hero slot (%d)" % q.slots_open())
 	q.max_floor = 300
-	check(q.earned_slots() == 3, "earned slots by depth: start, floor 51, floor 250")
-	check(q.slot_lock_note(9).contains("bought") or not GameData.SLOT_LOCKS_ON, "slots 6-9 are the paid ones")
+	check(q.slots_open() == 3, "floor 300: three slots (start, floor 100, floor 250)")
+	q.max_floor = 99
+	check(q.slots_open() == 1 and q.slot_lock_note(2).contains("100"), "the second opens at floor 100")
+	q.max_floor = 750
+	check(q.slots_open() == 5, "five at floor 750, and no more")
 	q.towns_v1 = true
 	check(GameState.migrate_to_towns().is_empty(), "migration runs once")
+	# Juzo: a town is Regular or Hardcore, and you name it
+	check(q.towns.size() == 3 and not q.town_hardcore(1), "migrated towns are Regular (their heroes were)")
+	GameState.delete_saves()
+	var f := Profile.new()
+	f.towns_v1 = true
+	check(not f.town_founded(2), "empty land is not a town")
+	f.found_town(2, "  Ravenhold the Great and Mighty  ", true)
+	check(f.town == 2 and f.town_hardcore(2) and f.town_founded(2), "founded a Hardcore town")
+	check(f.town_name(2) == "Ravenhold the Gr", "named, trimmed to %d letters (%s)" % [Profile.TOWN_NAME_MAX, f.town_name(2)])
+	f.rename_town(2, "Ravenhold")
+	check(f.town_name(2) == "Ravenhold", "renamed")
+	f.rename_town(2, "   ")
+	check(f.town_name(2) == "Ravenhold", "a blank name changes nothing")
+	check(f.free_slot() == 1 and f.recruit_note() == "", "an empty town has room for its first hero")
+	var hero := GameState.new()
+	hero.codex.path = ""
+	hero.slot = 1
+	hero.new_game()
+	hero.save_game()
+	check(f.free_slot() == 0 and f.recruit_note().contains("100"), "then one hero until floor 100")
 	GameState.delete_saves()
 	Profile.delete()
 	GameState.town = 1
