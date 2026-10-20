@@ -22,7 +22,7 @@ func refresh() -> void:
 	if state.party != null:
 		for mem in state.party.members:
 			hp_key += "%d/%d," % [mem.hp, mem.hero.level]
-	var key := "%s|%s|%d|%s|%s|%d" % [str(state.party_slots), hp_key, state.level, state.pet_on, state.pet_name, World.pet_stage(state)]
+	var key := "%s|%s|%d|%s|%s|%d|%s|%s|%s" % [str(state.party_slots), hp_key, state.level, state.pet_on, state.pet_name, World.pet_stage(state), str(main.profile.presets), state.in_town, str(state.bench_haul.get("gold", 0))]
 	if key == shown:
 		return
 	shown = key
@@ -30,11 +30,12 @@ func refresh() -> void:
 	box.add_child(UI.label("YOUR PARTY", 15, UI.GOLD))
 	var note := UI.label("Take a team of 3: you plus up to 2 of your other Regular heroes. They use their own gear, stats and skills, level up with you, and share one skill book. Monsters get tougher with a bigger team and aim mostly at tanks (Warrior, Knight). A hero who falls loses only their own worn gear (bound items stay) and gets back up on the next floor. The run fails only when all three are down. Leave gear you love at home, or send a team with nothing to lose.", 12, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_synergy_rows()
-	box.add_child(note)
 	if state.hardcore:
+		box.add_child(note)
 		box.add_child(UI.label("Hardcore heroes fight alone. One life, no backup.", 14, UI.RED))
 		return
+	_preset_rows()
+	box.add_child(note)
 	box.add_child(_card_for_leader())
 	if state.party != null:
 		for mem in state.party.members:
@@ -74,6 +75,74 @@ func refresh() -> void:
 		add.disabled = state.party_slots.size() >= Party.MAX_COMPANIONS
 		add.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(add)
+	_bench_rows()
+	_synergy_rows()
+
+## Next update: three saved line-ups for this town. One tap puts the team together
+## (a different leader means switching heroes, so that one waits until you're in town).
+func _preset_rows() -> void:
+	box.add_child(UI.heading("Team presets"))
+	var p: Profile = main.profile
+	for i in 3:
+		var pr: Dictionary = p.presets[i] if i < p.presets.size() else {}
+		var slots: Array = pr.get("slots", []).filter(func(n): return GameState.has_slot(int(n)))
+		var names: Array = []
+		for n in slots:
+			names.append(str(GameState.slot_meta(int(n)).get("name", "Hero")))
+		var row := UI.hbox(6)
+		box.add_child(row)
+		var use := UI.button("%d: %s" % [i + 1, " + ".join(names) if not names.is_empty() else "empty"], _apply_preset.bind(i))
+		use.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		use.clip_text = true
+		var other_leader := not slots.is_empty() and int(slots[0]) != state.slot
+		use.disabled = slots.is_empty() or (other_leader and not state.in_town)
+		use.tooltip_text = "Leads with %s: switch heroes in town." % names[0] if other_leader else "Put this team together"
+		row.add_child(use)
+		var save := UI.button("Save", func():
+			while p.presets.size() < 3:
+				p.presets.append({})
+			p.presets[i] = {"slots": [state.slot] + state.party_slots}
+			p.save()
+			main.sfx.play("click")
+			shown = ""
+			main.refresh())
+		save.tooltip_text = "Save your current team here"
+		row.add_child(save)
+
+func _apply_preset(i: int) -> void:
+	var slots: Array = main.profile.presets[i].get("slots", []).filter(func(n): return GameState.has_slot(int(n)))
+	if slots.is_empty():
+		return
+	var comps: Array = slots.slice(1)
+	main.sfx.play("equip")
+	if int(slots[0]) == state.slot:
+		if state.party != null:
+			state.party.save_all()
+		state.set_party(comps)
+		shown = ""
+		main.refresh()
+		return
+	TitleScreen.pending = {"play": int(slots[0]), "party": comps}
+	main.back_to_title()
+
+## Next update: heroes at home bring in gold, scrap and now and then an item while you dive.
+func _bench_rows() -> void:
+	box.add_child(UI.heading("At home"))
+	if state.bench_roster.is_empty():
+		box.add_child(UI.wrap("Heroes you leave at home find gold, scrap and sometimes an item while you dive. What they find depends on their class.", 12, UI.DIM))
+		return
+	for h in state.bench_roster:
+		var r := Bench.rate(str(h["class"]))
+		var best := []
+		for k in ["gold", "scrap", "item"]:
+			if float(r[k]) > 1.0:
+				best.append(k + "s" if k == "item" else k)
+		var l := UI.rich(12)
+		l.text = "[b]%s[/b], Lv %d %s: %s%s" % [h["name"], int(h["level"]), h["class"], r["job"], ("  [color=%s](good at %s)[/color]" % [UI.hex(UI.GREEN), " and ".join(best)]) if not best.is_empty() else ""]
+		box.add_child(l)
+	var haul := state.bench_haul
+	var n_items: int = haul.get("items", []).size()
+	box.add_child(UI.wrap("Found so far this dive: %d gold, %d scrap, %d item%s. Paid out when you get home." % [int(haul.get("gold", 0)), int(haul.get("scrap", 0)), n_items, "" if n_items == 1 else "s"], 12, UI.GOLD))
 
 func _pic(app: Dictionary, looks := {}) -> TextureRect:
 	var pic := TextureRect.new()

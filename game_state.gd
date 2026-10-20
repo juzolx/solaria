@@ -246,6 +246,8 @@ var hunt_spawns := 0        # Hunter's Scroll: next monsters are more often rare
 var merchant: Array = []    # the wandering merchant's stock while you're with them
 var merchant_haggle := ""   # Stage 3: "" (not tried), "won" or "lost" this visit (snik.gd)
 var town_event := ""        # Stage 3: what's on in town until you're next home (town_events.gd)
+var bench_haul := {}        # next update: what your heroes at home found this dive (bench.gd), paid out at home
+var bench_roster: Array = []  # heroes at home right now (Bench.refresh; not saved)
 var smith_stock: Array = []   # 0.13+: the dwarf smith's forged wares (smith.gd)
 var loadouts: Array = [{}, {}, {}]  # saved gear sets: slot -> item id
 var loot_filter := {"slots": {}, "weaker": false}  # extra auto-salvage rules (Common-Rare only)
@@ -1843,6 +1845,7 @@ func _enemy_defeated() -> void:
 	if was_goblin:
 		gold_gain = (2 + floor_num) * GameData.GOBLIN_GOLD
 	_add_gold(gold_gain)
+	Bench.on_kill(self)  # next update: heroes at home find things too
 	_maybe_find_pack(was_boss)
 
 	# Ability stones: rare, but rarer monsters and bosses drop them more
@@ -3206,7 +3209,7 @@ func save_game() -> void:
 		"curse_turns": curse_turns,
 		"luck_turns": luck_turns,
 		"hunt_spawns": hunt_spawns,
-		"merchant": merchant, "merchant_haggle": merchant_haggle, "town_event": town_event, "smith_stock": smith_stock,
+		"merchant": merchant, "merchant_haggle": merchant_haggle, "town_event": town_event, "smith_stock": smith_stock, "bench_haul": bench_haul,
 		"loadouts": loadouts,
 		"loot_filter": loot_filter,
 		"enemy_goblin": enemy_goblin,
@@ -3519,6 +3522,7 @@ func load_game() -> bool:
 	merchant_haggle = String(data.get("merchant_haggle", ""))
 	town_event = String(data.get("town_event", ""))
 	smith_stock = data.get("smith_stock", [])
+	bench_haul = data.get("bench_haul", {})
 	var saved_loadouts: Array = data.get("loadouts", [])
 	for i in mini(saved_loadouts.size(), loadouts.size()):
 		loadouts[i] = saved_loadouts[i]
@@ -4469,6 +4473,7 @@ func set_party(slots: Array) -> void:
 	party = Party.new()
 	party.load_members(party_slots, self)
 	party_slots = party.members.map(func(m): return m.slot)
+	Bench.refresh(self)
 	spawn_enemy()
 	save_game()
 

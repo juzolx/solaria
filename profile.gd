@@ -44,11 +44,12 @@ var high_contrast := false   # brighter secondary text
 var save_epoch := 0          # the SAVE_EPOCH these saves were made under
 # Next update (Juzo): a save is a town holding a roster of heroes. The fields in
 # TOWN_KEYS fields belong to the town you're in; every town keeps its own copy here.
-const TOWN_KEYS := ["active_slot", "max_floor", "stash", "stash_level", "skill_book", "calamities"]
+const TOWN_KEYS := ["active_slot", "max_floor", "stash", "stash_level", "skill_book", "calamities", "presets"]
 const TOWN_NAMES := ["Emberfall", "Greyhollow", "Duskmere"]
 var town := 1                # the town you're in (1..GameData.MAX_TOWNS)
 var towns := {}              # str(town) -> {"name", and every TOWN_KEYS field}
 var towns_v1 := false        # old hero saves have been moved into towns
+var presets: Array = [{}, {}, {}]  # next update: saved team line-ups, {"slots": [leader, companions...]} (this town)
 var paid_slots := 0          # hero slots 6-9 bought (store, later; locks are off for now)
 
 static func load_profile() -> Profile:
@@ -119,6 +120,7 @@ func _load_town(n: int) -> void:
 	stash_level = int(t.get("stash_level", 0))
 	skill_book = t.get("skill_book", {})
 	calamities = t.get("calamities", {})
+	presets = t.get("presets", [{}, {}, {}])
 
 ## Moves to another town: its heroes, stash, skill book and slots. Settings stay.
 func switch_town(n: int) -> void:

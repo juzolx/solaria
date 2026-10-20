@@ -32,6 +32,7 @@ static func make(floor_num := 30, hero_class := "Warrior") -> void:
 	prof.max_floor = floor_num
 	prof.active_slot = 1
 	prof.notes_seen = PatchNotes.VERSION
+	prof.towns_v1 = true
 	prof.save()
 	var g := GameState.new()
 	g.slot = 1

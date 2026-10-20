@@ -140,6 +140,8 @@ func _ready() -> void:
 		new_hero(int(action["new"]), bool(action.get("hc", false)))
 	elif action.has("play") and GameState.has_slot(int(action["play"])):
 		play_slot(int(action["play"]))
+		if action.has("party") and not state.hardcore:
+			state.set_party(action["party"])  # a team preset with another leader
 	else:
 		show_title()
 
@@ -227,6 +229,8 @@ func _show_home_tally(e: Dictionary) -> void:
 		lines.append("%d floor%s deeper" % [floors, "" if floors == 1 else "s"])
 	if kills > 0:
 		lines.append("%d monster%s defeated" % [kills, "" if kills == 1 else "s"])
+	if e.has("bench"):
+		lines.append("[color=%s]Heroes at home:[/color] +%s" % [UI.hex(UI.GOLD), str(e["bench"])])
 	t.text = "\n".join(lines)
 	o.content.add_child(t)
 	var row := UI.hbox(8)
@@ -310,6 +314,7 @@ func _start(is_new: bool) -> void:
 	_share_skill_book()
 	if not state.hardcore and not state.party_slots.is_empty():
 		state.set_party(state.party_slots)
+	Bench.refresh(state)  # next update: who is at home finding things
 	state.tip("tap", "Your hero fights on their own. Tap the enemy to hit it yourself for bonus damage!")
 	battle.state = state
 	battle.sfx = sfx

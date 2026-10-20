@@ -107,6 +107,7 @@ static func enter(g: GameState, floor_done := false) -> bool:
 		g.packs_carried = 0
 		g.bag_version += 1
 	_home_tally(g, carried)
+	Bench.collect(g)  # next update: what your heroes at home found
 	TownEvents.on_home(g)  # a fair, a bard, a bounty day...
 	Smith.restock(g)  # Hilde forges new pieces while you're away
 	Milestones.on_home(g)
