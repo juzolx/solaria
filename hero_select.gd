@@ -1,7 +1,7 @@
 class_name HeroSelect
 extends Overlay
-## Your roster: up to 9 heroes. Slots open as any hero reaches deeper floors
-## (GameData.SLOT_UNLOCKS). Play, delete, or make a new hero in an open slot.
+## Your roster in this town: up to 9 heroes (Profile.slots_open: all 9 for now).
+## Play, delete, or make a new hero in an open slot.
 ## Any 3 Regular heroes can go down together (you plus 2 companions).
 
 var m
@@ -10,15 +10,18 @@ var title_screen
 func show_for(main_node, from_title = null) -> void:
 	m = main_node
 	title_screen = from_title
-	open(m, "Your heroes", 860.0)
+	open(m, "Heroes of %s" % m.profile.town_name(m.profile.town), 860.0)
 	var p: Profile = m.profile
 	var count := 0
 	for n in range(1, GameData.MAX_HEROES + 1):
 		if GameState.has_slot(n):
 			count += 1
-	var note := UI.label("Roster %d / %d  ·  %d slots open. Pick any 3 Regular heroes to go down together from the Party page. Regular heroes share the stash; the Codex is shared by everyone." % [count, GameData.MAX_HEROES, p.slots_open()], 13, UI.DIM)
+	var note := UI.label("Roster %d / %d  ·  %d slots open. Pick any 3 Regular heroes to go down together from the Party page. Heroes in this town share its stash and skill book; the Codex is shared by every town." % [count, GameData.MAX_HEROES, p.slots_open()], 13, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(note)
+	var towns_b := UI.button("Switch town...", func(): close(); TownSelect.new().show_for(m, title_screen))
+	towns_b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	content.add_child(towns_b)
 	var row := HFlowContainer.new()
 	row.add_theme_constant_override("h_separation", 12)
 	row.add_theme_constant_override("v_separation", 10)
@@ -36,8 +39,7 @@ func show_for(main_node, from_title = null) -> void:
 			locked.append(n)
 	if not locked.is_empty():
 		var n0: int = locked[0]
-		var more := UI.label("Slot %d opens when any hero reaches floor %d.%s" % [n0, int(GameData.SLOT_UNLOCKS[n0 - 1]),
-			(" %d more open deeper down (last at floor %d)." % [locked.size() - 1, int(GameData.SLOT_UNLOCKS[-1])]) if locked.size() > 1 else ""], 12, UI.DIM)
+		var more := UI.label(p.slot_lock_note(n0) + ((" %d more locked." % (locked.size() - 1)) if locked.size() > 1 else ""), 12, UI.DIM)
 		more.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		content.add_child(more)
 

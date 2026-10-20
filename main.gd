@@ -124,6 +124,7 @@ func _ready() -> void:
 	codex = Codex.load_codex()
 	state.codex = codex
 	_fresh_start_check()
+	_migrate_towns()
 	_migrate_old_saves()
 	online = Online.new()
 	online.setup(profile)
@@ -169,6 +170,14 @@ func _show_fresh_start() -> void:
 	var b := UI.primary("Begin", o.close, UI.GOLD)
 	b.custom_minimum_size = Vector2(0, 44)
 	o.content.add_child(b)
+
+## Next update (Juzo): saves are towns. Each old hero becomes the first hero of
+## their own town (GameState.migrate_to_towns). Every town gets a copy of the old
+## shared skill book; the old stash goes to the town of the hero played last.
+func _migrate_towns() -> void:
+	if profile.towns_v1:
+		return
+	profile.build_towns(GameState.migrate_to_towns())
 
 ## Older versions had one Regular and one Hardcore save: move them into hero slots.
 func _migrate_old_saves() -> void:

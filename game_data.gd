@@ -147,7 +147,10 @@ static func can_gamble(item: Dictionary) -> bool:
 const FAVORED_SLOT_CHANCE := 0.6  # a monster's drop is one of its 2 favorite slots this often
 # ---------- Heroes ----------
 const MAX_HEROES := 9  # your roster; any 3 Regular heroes go down together
-const SLOT_UNLOCKS := [0, 10, 25, 50, 100, 150, 250, 350, 500]  # deepest floor any hero has reached to open slot 1..9
+const SLOT_UNLOCKS := [0, 51, 250, 500, 750]  # next update: deepest floor a hero in this town reached to earn slots 1..5 (51 = the second area)
+const PAID_SLOTS := 4          # slots 6-9 are bought (later, store rules apply)
+const SLOT_LOCKS_ON := false   # Juzo: all 9 open for now; flip on to use the earn / buy rules above
+const MAX_TOWNS := 3           # next update: a save is a town holding a roster of heroes
 const STASH_START := 20
 const STASH_STEP := 5
 const STASH_MAX_LEVEL := 8

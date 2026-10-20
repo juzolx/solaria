@@ -50,7 +50,7 @@ func refresh() -> void:
 		options.append([n, meta])
 	box.add_child(UI.heading("Bring along"))
 	if options.is_empty():
-		var t := UI.label("No other Regular heroes yet. Make more from the title screen: your roster grows to %d heroes as you go deeper (slot 2 opens at floor %d)." % [GameData.MAX_HEROES, int(GameData.SLOT_UNLOCKS[1])], 12, UI.DIM)
+		var t := UI.label("No other Regular heroes yet. Make more from the title screen: each town holds up to %d heroes." % GameData.MAX_HEROES, 12, UI.DIM)
 		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(t)
 	for o in options:

@@ -9,9 +9,13 @@ const TEMP_PATH := "user://save.tmp"
 const HC_SAVE_PATH := "user://save_hc.dat"
 const HC_BACKUP_PATH := "user://save_hc.bak"
 const HC_TEMP_PATH := "user://save_hc.tmp"
-const SLOT_PATH := "user://hero_%d.dat"   # one save per hero slot (1-9)
-const SLOT_BACKUP := "user://hero_%d.bak"
-const SLOT_TEMP := "user://hero_%d.tmp"
+const SLOT_PATH := "user://town%d_hero_%d.dat"   # next update: one save per hero slot (1-9) in each town
+const OLD_SLOT_PATH := "user://hero_%d.dat"      # before towns (moved by migrate_to_towns)
+const SLOT_BACKUP := "user://town%d_hero_%d.bak"
+const OLD_SLOT_BACKUP := "user://hero_%d.bak"
+const SLOT_TEMP := "user://town%d_hero_%d.tmp"
+const OLD_SLOT_TEMP := "user://hero_%d.tmp"
+static var town := 1   # the town whose heroes slot numbers point at (Profile.town)
 const BASE_ATTACK := 10
 const BASE_HP := 100
 const UNIQUE_CAP := 300.0   # special stats from actions: they slow down near this
@@ -2073,7 +2077,7 @@ func _next_floor() -> void:
 		_page("races")
 	if best_floor >= GameData.GAMBLE_UNLOCK_FLOOR:
 		_page("wheel")
-	if best_floor >= GameData.SLOT_UNLOCKS[1]:
+	if best_floor >= 10:  # Heroes and Party pages (all 9 hero slots are open for now)
 		_page("heroes")
 		_page("party")
 	Realms.on_floor(self)
@@ -3241,7 +3245,52 @@ func save_paths() -> Array:
 	return slot_paths(slot)
 
 static func slot_paths(n: int) -> Array:
-	return [SLOT_PATH % n, SLOT_BACKUP % n, SLOT_TEMP % n]
+	return town_slot_paths(town, n)
+
+static func town_slot_paths(t: int, n: int) -> Array:
+	return [SLOT_PATH % [t, n], SLOT_BACKUP % [t, n], SLOT_TEMP % [t, n]]
+
+## How many heroes live in a town.
+static func town_heroes(t: int) -> int:
+	var c := 0
+	for n in range(1, GameData.MAX_HEROES + 1):
+		var p := town_slot_paths(t, n)
+		if FileAccess.file_exists(p[0]) or FileAccess.file_exists(p[1]):
+			c += 1
+	return c
+
+## Next update (Juzo): saves are towns. Hero saves from before (user://hero_N.dat)
+## each become the first hero of their own town, up to GameData.MAX_TOWNS; any
+## more join town 1. Every old file is copied to user://pre_towns_backup first.
+## Returns [{"old", "town", "slot"}, ...] in old slot order.
+static func migrate_to_towns() -> Array:
+	var old: Array = []
+	for n in range(1, GameData.MAX_HEROES + 1):
+		if FileAccess.file_exists(OLD_SLOT_PATH % n) or FileAccess.file_exists(OLD_SLOT_BACKUP % n):
+			old.append(n)
+	if old.is_empty():
+		return []
+	var bdir := ProjectSettings.globalize_path("user://pre_towns_backup")
+	DirAccess.make_dir_recursive_absolute(bdir)
+	var placed: Array = []
+	var extra := 2
+	for i in old.size():
+		var n: int = old[i]
+		var t := i + 1
+		var s := 1
+		if i >= GameData.MAX_TOWNS:
+			t = 1
+			s = extra
+			extra += 1
+		var to := town_slot_paths(t, s)
+		var from := [OLD_SLOT_PATH % n, OLD_SLOT_BACKUP % n, OLD_SLOT_TEMP % n]
+		for k in 3:
+			var src := ProjectSettings.globalize_path(from[k])
+			if FileAccess.file_exists(from[k]):
+				DirAccess.copy_absolute(src, bdir.path_join(src.get_file()))
+				DirAccess.rename_absolute(src, ProjectSettings.globalize_path(to[k]))
+		placed.append({"old": n, "town": t, "slot": s})
+	return placed
 
 ## Deletes only this hero's save (a fallen Hardcore hero, or Delete hero).
 func delete_own_saves() -> void:
@@ -3308,7 +3357,11 @@ static func delete_saves() -> void:
 	for path in [SAVE_PATH, BACKUP_PATH, TEMP_PATH, HC_SAVE_PATH, HC_BACKUP_PATH, HC_TEMP_PATH]:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	for n in range(1, GameData.MAX_HEROES + 1):
-		delete_slot(n)
+		for path in [OLD_SLOT_PATH % n, OLD_SLOT_BACKUP % n, OLD_SLOT_TEMP % n]:
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+		for t in range(1, GameData.MAX_TOWNS + 1):
+			for path in town_slot_paths(t, n):
+				DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 ## Returns true if a save was found and loaded. Falls back to the backup if the main save is damaged.
 func load_game() -> bool:

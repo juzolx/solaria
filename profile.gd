@@ -42,6 +42,14 @@ var reduce_motion := false   # no idle bobbing, floating motes, shake or hit sto
 var haptics := true          # short buzzes on phones for big hits, drops and moments
 var high_contrast := false   # brighter secondary text
 var save_epoch := 0          # the SAVE_EPOCH these saves were made under
+# Next update (Juzo): a save is a town holding a roster of heroes. The fields in
+# TOWN_KEYS fields belong to the town you're in; every town keeps its own copy here.
+const TOWN_KEYS := ["active_slot", "max_floor", "stash", "stash_level", "skill_book", "calamities"]
+const TOWN_NAMES := ["Emberfall", "Greyhollow", "Duskmere"]
+var town := 1                # the town you're in (1..GameData.MAX_TOWNS)
+var towns := {}              # str(town) -> {"name", and every TOWN_KEYS field}
+var towns_v1 := false        # old hero saves have been moved into towns
+var paid_slots := 0          # hero slots 6-9 bought (store, later; locks are off for now)
 
 static func load_profile() -> Profile:
 	var p := Profile.new()
@@ -87,12 +95,56 @@ func _from(d: Dictionary) -> void:
 	mail_seen = d.get("mail_seen", [])
 	calamities = d.get("calamities", {})
 	save_epoch = int(d.get("save_epoch", 0))
+	towns = d.get("towns", {})
+	towns_v1 = bool(d.get("towns_v1", false))
+	paid_slots = int(d.get("paid_slots", 0))
+	town = clampi(int(d.get("town", 1)), 1, GameData.MAX_TOWNS)
+	if towns.has(str(town)):
+		_load_town(town)
+	GameState.town = town
+
+## Copies the town you're in into towns (save does this every time).
+func _store_town() -> void:
+	var t: Dictionary = towns.get(str(town), {})
+	t["name"] = town_name(town)
+	for k in TOWN_KEYS:
+		t[k] = get(k)
+	towns[str(town)] = t
+
+func _load_town(n: int) -> void:
+	var t: Dictionary = towns.get(str(n), {})
+	active_slot = int(t.get("active_slot", 1))
+	max_floor = int(t.get("max_floor", 0))
+	stash = t.get("stash", [])
+	stash_level = int(t.get("stash_level", 0))
+	skill_book = t.get("skill_book", {})
+	calamities = t.get("calamities", {})
+
+## Moves to another town: its heroes, stash, skill book and slots. Settings stay.
+func switch_town(n: int) -> void:
+	n = clampi(n, 1, GameData.MAX_TOWNS)
+	_store_town()
+	town = n
+	_load_town(n)
+	if not towns.has(str(n)):
+		_store_town()
+	GameState.town = n
+	save()
+
+func town_name(n: int) -> String:
+	return str(towns.get(str(n), {}).get("name", TOWN_NAMES[(n - 1) % TOWN_NAMES.size()]))
+
+## True if a town has been founded (it has a record or any hero).
+func town_founded(n: int) -> bool:
+	return towns.has(str(n)) or GameState.town_heroes(n) > 0
 
 func save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
 	if f == null:
 		return
+	_store_town()
 	f.store_var({
+		"town": town, "towns": towns, "towns_v1": towns_v1, "paid_slots": paid_slots,
 		"last_mode": last_mode, "sound_on": sound_on, "volume": volume, "music_volume": music_volume,
 		"fullscreen": fullscreen, "dark_art": dark_art, "battery_saver": battery_saver, "low_graphics": low_graphics, "dev_mode": dev_mode, "hc_best": hc_best, "hc_runs": hc_runs,
 		"player_name": player_name, "online": online, "path_choice": path_choice,
@@ -118,14 +170,32 @@ func reset_progress() -> void:
 	last_mode = ""
 	notes_seen = ""
 	save_epoch = SAVE_EPOCH
+	town = 1
+	towns = {}
+	towns_v1 = true
+	GameState.town = 1
 
-## How many hero slots are open (GameData.SLOT_UNLOCKS: the 2nd at floor 10, up to the 9th at 500).
+## How many hero slots this town has open. Locks are off for now (all 9). When on:
+## 5 are earned by depth (GameData.SLOT_UNLOCKS) and slots 6-9 are bought.
 func slots_open() -> int:
+	if not GameData.SLOT_LOCKS_ON:
+		return GameData.MAX_HEROES
+	return mini(earned_slots() + clampi(paid_slots, 0, GameData.PAID_SLOTS), GameData.MAX_HEROES)
+
+func earned_slots() -> int:
 	var n := 0
 	for need in GameData.SLOT_UNLOCKS:
 		if max_floor >= int(need):
 			n += 1
 	return n
+
+## Why slot n is shut ("" if it's open).
+func slot_lock_note(n: int) -> String:
+	if n <= slots_open():
+		return ""
+	if n <= GameData.SLOT_UNLOCKS.size():
+		return "Slot %d opens when a hero in this town reaches floor %d." % [n, int(GameData.SLOT_UNLOCKS[n - 1])]
+	return "Slot %d can be bought later." % n
 
 func stash_capacity() -> int:
 	return GameData.STASH_START + stash_level * GameData.STASH_STEP
@@ -152,3 +222,35 @@ func record_hc_run(state: GameState) -> bool:
 
 static func delete() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))
+
+## Next update: turns the old shared profile into towns after GameState.migrate_to_towns
+## moved the hero saves (main._migrate_towns). Every town gets a copy of the old
+## skill book; the old stash goes to the town of the hero played last.
+func build_towns(placed: Array) -> void:
+	var home := 1
+	var home_slot := 1
+	for p in placed:
+		if int(p["old"]) == active_slot:
+			home = int(p["town"])
+			home_slot = int(p["slot"])
+	var book: Dictionary = skill_book
+	var cal: Dictionary = calamities
+	var old_stash: Array = stash
+	var old_level := stash_level
+	towns = {}
+	for t in range(1, GameData.MAX_TOWNS + 1):
+		if t != 1 and not placed.any(func(p): return int(p["town"]) == t):
+			continue
+		var best := 0
+		for p in placed:
+			if int(p["town"]) == t:
+				GameState.town = t
+				best = maxi(best, int(GameState.slot_meta(int(p["slot"])).get("best", 0)))
+		towns[str(t)] = {"name": town_name(t), "active_slot": home_slot if t == home else 1, "max_floor": best,
+			"stash": old_stash if t == home else [], "stash_level": old_level if t == home else 0,
+			"skill_book": book.duplicate(true), "calamities": cal.duplicate(true)}
+	town = home
+	_load_town(home)
+	GameState.town = home
+	towns_v1 = true
+	save()

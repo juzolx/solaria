@@ -187,6 +187,10 @@ func _fill_menu() -> void:
 				p.active_slot = n
 				meta = GameState.slot_meta(n)
 				break
+	var town_l := UI.label("%s  ·  %d / %d heroes" % [p.town_name(p.town).to_upper(), GameState.town_heroes(p.town), GameData.MAX_HEROES], 12, UI.GOLD)
+	town_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	town_l.tooltip_text = "The town you're in. Switch or found another from Towns."
+	menu_box.add_child(town_l)
 	if not meta.is_empty():
 		var cont := UI.primary("Continue", func(): close_and(func(): m.play_slot(p.active_slot)), UI.GOLD)
 		cont.custom_minimum_size = Vector2(0, 52)
@@ -206,7 +210,7 @@ func _fill_menu() -> void:
 		menu_box.add_child(lk)
 	var row := UI.hbox(8)
 	menu_box.add_child(row)
-	for entry in [["Heroes", func(): HeroSelect.new().show_for(m, self)], ["Settings", func(): SettingsMenu.new().show_for(m)],
+	for entry in [["Heroes", func(): HeroSelect.new().show_for(m, self)], ["Towns", func(): TownSelect.new().show_for(m, self)], ["Settings", func(): SettingsMenu.new().show_for(m)],
 			["Guide", func(): GuideBook.open_book(m, "")]]:
 		var b := UI.button(entry[0], entry[1])
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -240,8 +244,8 @@ func _free_slot() -> int:
 func _locked_text() -> String:
 	var p: Profile = m.profile
 	if p.slots_open() >= GameData.MAX_HEROES:
-		return "All %d hero slots are in use. Delete one in Heroes to make room." % GameData.MAX_HEROES
-	return "Your next hero slot opens when any hero reaches floor %d." % int(GameData.SLOT_UNLOCKS[p.slots_open()])
+		return "All %d hero slots in %s are in use. Delete one in Heroes, or found another town." % [GameData.MAX_HEROES, p.town_name(p.town)]
+	return p.slot_lock_note(p.slots_open() + 1)
 
 func _fill_side() -> void:
 	OnlineUI.clear(side_box)
