@@ -114,7 +114,7 @@ static func read_door(g: GameState, i: int) -> Dictionary:
 	var kind: String = g.doors[i]
 	var trapped: bool = i < g.door_traps.size() and bool(g.door_traps[i])
 	var danger := kind == "elite" or (trapped and lvl < 3)
-	var safe := kind in ["treasure", "rest", "merchant", "altar", "stranger", "beast"]
+	var safe := kind in ["treasure", "rest", "merchant", "altar", "stranger", "beast", "traveler"]
 	var col := "#f87171" if danger else ("#4ade80" if safe else "#fbbf24")
 	if lvl == 1:
 		var word := "danger" if danger else ("safe" if safe else "a fight")
@@ -138,15 +138,15 @@ static func on_doors_shown(g: GameState) -> void:
 
 ## door kind -> the one thing standing in that room
 const EVENT_ROOMS := {"treasure": "chest", "rest": "campfire", "merchant": "merchant", "altar": "altar",
-	"nest": "nest", "stranger": "npc", "beast": "beast", "rift": "rift", "camp": "camp"}
+	"nest": "nest", "stranger": "npc", "beast": "beast", "rift": "rift", "camp": "camp", "traveler": "traveler"}
 const ROOM_NAMES := {"fight": "Monsters", "elite": "Elite monster", "treasure": "Treasure room", "rest": "Campfire",
-	"merchant": "Goblin trader", "altar": "Shrine", "nest": "Nest", "stranger": "A stranger", "beast": "Dying beast", "rift": "A shimmer in the air", "camp": "Descenders' Camp"}
+	"merchant": "Goblin trader", "altar": "Shrine", "nest": "Nest", "stranger": "A stranger", "beast": "Dying beast", "rift": "A shimmer in the air", "camp": "Descenders' Camp", "traveler": "A traveler"}
 const MIMIC_CHANCE := 12.5         # % of chests (about 1 in 8)
 const NEST_EGG_CHANCE := 15.0      # % a nest holds an egg (otherwise its mother is home). Next update: pets are a real find
 const PROP_NAMES := {"chest": "Chest", "altar": "Shrine", "nest": "Nest", "npc": "Wounded adventurer",
-	"beast": "Dying beast", "merchant": "Snik", "campfire": "Campfire", "rift": "Rift", "camp": "Camp"}
+	"beast": "Dying beast", "merchant": "Snik", "campfire": "Campfire", "rift": "Rift", "camp": "Camp", "traveler": "Traveler"}
 const PROP_HINTS := {"chest": "Tap the chest", "camp": "Tap the camp to trade or send gold home", "rift": "Tap the rift to step through", "altar": "Tap the shrine to pray", "nest": "Tap the nest",
-	"npc": "Tap to help them", "beast": "Tap to go to it", "merchant": "Tap Snik to trade", "campfire": "You rest by the fire"}
+	"npc": "Tap to help them", "beast": "Tap to go to it", "merchant": "Tap Snik to trade", "campfire": "You rest by the fire", "traveler": "Tap to talk"}
 
 ## Walk into a room that holds one thing instead of monsters.
 static func enter_event_room(g: GameState, kind: String) -> void:
@@ -159,6 +159,8 @@ static func enter_event_room(g: GameState, kind: String) -> void:
 		p["spotted"] = p["mimic"] and randf() * 100.0 < spot_chance(g)
 		if p["spotted"]:
 			g.say("[color=#fbbf24]Something about that chest isn't right...[/color]")
+	if kind == "traveler":
+		p["who"] = Travelers.pick()  # next update: someone else is down here
 	g.room_props = [p]
 	g.exploring = true
 	g.explore_wait = 0
@@ -199,6 +201,14 @@ static func auto_room(g: GameState) -> void:
 		g.say("You leave the mimic alone.")
 		_done(g)
 		return
+	if String(p["kind"]) == "traveler" and not p.get("used", false):  # next update: Auto talks to travelers too
+		if g.autoplay:
+			Travelers.auto_choose(g, p)
+		else:
+			p["used"] = true  # waited too long: walk past, never spend your gold for you
+			g.say("You nod to the traveler and move on.")
+		_done(g)
+		return
 	interact(g, 0)
 
 ## Tap the room's thing. Returns what happened (for the log).
@@ -212,6 +222,9 @@ static func interact(g: GameState, i: int) -> String:
 	match String(p["kind"]):
 		"merchant":
 			g.events.append({"type": "merchant"})
+			return ""
+		"traveler":
+			g.events.append({"type": "traveler"})
 			return ""
 		"camp":
 			g.events.append({"type": "descender_camp"})

@@ -3812,7 +3812,7 @@ func _room_cleared(was_boss := false) -> void:
 
 ## What's behind each door: one thing per room. After a boss, one door always hides
 ## Snik; before a boss floor every door leads to the boss.
-const DOOR_WEIGHTS := {"fight": 52, "elite": 12, "treasure": 9, "rest": 7, "altar": 5, "nest": 4, "stranger": 4, "beast": 3}
+const DOOR_WEIGHTS := {"fight": 52, "elite": 12, "treasure": 9, "rest": 7, "altar": 5, "nest": 4, "stranger": 4, "beast": 3, "traveler": Travelers.DOOR_WEIGHT}
 
 func roll_doors(was_boss := false) -> Array:
 	var out: Array = []
@@ -3832,7 +3832,7 @@ func roll_doors(was_boss := false) -> Array:
 				if r < 0:
 					kind = String(k)
 					break
-		if floor_num < 3 and kind in ["elite", "nest"]:
+		if (floor_num < 3 and kind in ["elite", "nest"]) or (floor_num < Travelers.FROM_FLOOR and kind == "traveler"):
 			kind = "fight"
 		out.append(Rifts.maybe_door(self, kind))  # very rarely: a hidden portal
 	if was_boss and not "camp" in out:
@@ -4490,7 +4490,7 @@ func auto_door() -> String:
 		var kind: String = doors[i]
 		var trapped: bool = i < door_traps.size() and bool(door_traps[i])
 		var danger := kind == "elite" or (trapped and lvl < 3)
-		var safe := kind in ["treasure", "rest", "merchant", "altar", "stranger", "beast"]
+		var safe := kind in ["treasure", "rest", "merchant", "altar", "stranger", "beast", "traveler"]
 		var score := 0.5
 		if danger:
 			score = 1.2 if hp > 0.75 else -2.0

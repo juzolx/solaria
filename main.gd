@@ -1426,6 +1426,9 @@ func _handle_events() -> void:
 					GuideBook.open_book(self, e["id"], true)
 			"merchant":
 				MerchantPopup.new().show_for(self)
+			"traveler":  # next update: someone to talk to in the dungeon
+				if not state.room_props.is_empty() and state.room_props[0].get("kind", "") == "traveler":
+					TravelerPopup.new().show_for(self, state.room_props[0])
 			"descender_camp":
 				CampPopup.new().show_for(self)
 			"home_tally":

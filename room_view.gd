@@ -134,6 +134,8 @@ func _draw_prop(i: int, font: Font) -> void:
 	var bob := sin(t * 2.0) * 1.5
 	if kind == "npc":
 		rect = scene.sprite(self, scene.tx("res://art/dungeon/npc.png"), x, z, 1.7, Color(0.9, 0.85, 0.85))
+	elif kind == "traveler":
+		rect = scene.sprite(self, Travelers.portrait(String(p.get("who", ""))), x, z, 1.5, Color(0.92, 0.88, 0.85), bob * 0.5)
 	elif kind == "beast":
 		var who := Sprites.enemy_by_key("barghest")
 		if who.has("tex"):
@@ -157,6 +159,8 @@ func _draw_prop(i: int, font: Font) -> void:
 		return
 	hit["p%d" % i] = rect.grow(8)
 	var lab := String(Halls.PROP_NAMES.get(kind, kind))
+	if kind == "traveler":
+		lab = String(Travelers.info(String(p.get("who", "")))["name"])
 	var lc := Color("#f6d88f")
 	if tile == "mimic":
 		lab = "Mimic!"
