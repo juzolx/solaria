@@ -2189,6 +2189,8 @@ func _draw_hero_status(r: Rect2, font: Font) -> void:
 		if not info.is_empty():
 			var stk := int(state.hero_stacks.get(k, 1))
 			chips.append(["%s%s %d" % [info["name"], (" x%d" % stk) if stk > 1 else "", int(state.hero_status[k])], Color(info["color"])])
+	if state.bag_full() and not state.in_town:
+		chips.append(["BAG FULL: sell to use new drops" if state.bag.size() < state.bag_capacity() + GameState.OVERFLOW_MAX else "BAG OVERFLOWING: drops become scrap", Color("#f87171")])
 	_chip_row(chips, r.get_center().x, maxf(34.0, r.position.y - 4.0), font)
 
 ## Your menagerie pets on the run (caught or hatched), at the hero's right. They grow

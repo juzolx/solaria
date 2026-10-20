@@ -203,7 +203,7 @@ func _sorted_items() -> Array:
 	return items
 
 func refresh() -> void:
-	title.text = "BAG  %d / %d" % [state.bag.size(), state.bag_capacity()]
+	title.text = "BAG  %d / %d%s" % [state.bag.size(), state.bag_capacity(), ("  (%d over: sell to use them)" % (state.bag.size() - state.bag_capacity())) if state.bag.size() > state.bag_capacity() else ""]
 	if state.packs_carried > 0:
 		title.text += "   +%d backpack%s to bring home" % [state.packs_carried, "" if state.packs_carried == 1 else "s"]
 	if state.return_scrolls > 0:
@@ -228,7 +228,14 @@ func refresh() -> void:
 			var id := int(item["id"])
 			var pct := state.compare_pct(item)
 			var badge := "LOCK" if item.get("locked", false) else ("+%d%%" % int(round(pct)) if pct > 0.0 else "")
-			grid.add_child(ItemGrid.cell(item, _tap.bind(id), id == selected_id, ItemGrid.CELL, badge))
+			var over := state.over_limit(id)
+			if over:
+				badge = "OVER"
+			var cell := ItemGrid.cell(item, _tap.bind(id), id == selected_id, ItemGrid.CELL, badge)
+			if over:
+				cell.modulate = Color(0.55, 0.5, 0.5)  # 0.13+: past the bag's limit: sell or salvage to use it
+				cell.tooltip_text = "Over your bag's limit. Sell or salvage something to use it (you can still sell or salvage this one)."
+			grid.add_child(cell)
 			ids.append(id)
 		empty_note.visible = ids.is_empty()
 		empty_note.text = "Nothing here yet." if state.bag.is_empty() else "No items match this filter."

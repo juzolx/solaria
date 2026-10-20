@@ -899,7 +899,8 @@ func score_with(item: Dictionary) -> float:
 func best_for_slot(slot: String) -> Dictionary:
 	var best := {}
 	var best_score := build_score() * 1.001
-	for item in bag:
+	for i in mini(bag.size(), bag_capacity()):  # 0.13+: items over the bag's limit can't be worn yet
+		var item: Dictionary = bag[i]
 		if item["slot"] != slot or not Races.can_wear(self, item):
 			continue
 		var sc := score_with(item)
@@ -2396,17 +2397,22 @@ func _give_item(item: Dictionary) -> void:
 		var s := GameData.scrap_value(item)
 		scrap += s
 		say("Auto-salvaged %s (+%d scrap)" % [_tag(item), s])
-	elif bag_full() and not keep:
+	elif bag.size() >= bag_capacity() + OVERFLOW_MAX and not keep:
 		var s := GameData.scrap_value(item)
 		scrap += s
-		say("Bag full! Salvaged %s (+%d scrap)" % [_tag(item), s])
-		tip("bag_full", "Your bag is full, so new drops turn into scrap. Sell or salvage items in the Bag tab to make room.")
+		say("Bag overflowing! Salvaged %s (+%d scrap)" % [_tag(item), s])
+		tip("bag_full", "Your bag is past its limit, so new drops turn into scrap. Sell or salvage items in the Bag tab to make room.")
 	else:
 		if keep:
 			item["locked"] = true  # never lose a unique by accident
 		bag.append(item)
 		bag_version += 1
 		say("Found %s (+%d %s)" % [_tag(item), GameData.item_power(item), item["stat"]])
+		if bag.size() > bag_capacity():
+			say("[color=#f87171]%s is over your bag's limit:[/color] sell or salvage something to use it." % _tag(item))
+		if bag.size() == bag_capacity():  # 0.13+ (Juzo): say so the moment it fills
+			events.append({"type": "toast", "text": "Your bag is full! New drops still come in, but you'll have to sell or salvage to use them."})
+			events.append({"type": "bag_full"})
 		if r == GameData.LEGENDARY:
 			tip("legendary", "A Legendary! Every Legendary has a special effect. Check it in the Bag or Gear tab.")
 		if has_upgrade(item["slot"]):
@@ -2483,6 +2489,8 @@ func find_item(id: int) -> Dictionary:
 func equip(id: int) -> void:
 	var found := find_item(id)
 	if found.is_empty() or found["where"] != "bag":
+		return
+	if _blocked_over(id):
 		return
 	var item: Dictionary = found["item"]
 	if not Races.can_wear(self, item):
@@ -2573,6 +2581,8 @@ func salvage(id: int) -> void:
 	save_game()
 
 func upgrade(id: int) -> void:
+	if _blocked_over(id):
+		return
 	var found := find_item(id)
 	if found.is_empty():
 		return
@@ -2595,6 +2605,8 @@ func upgrade(id: int) -> void:
 func reroll(id: int) -> void:
 	var found := find_item(id)
 	if found.is_empty():
+		return
+	if _blocked_over(id):
 		return
 	var item: Dictionary = found["item"]
 	if not GameData.can_reroll(item):
@@ -4071,6 +4083,8 @@ func _open_box() -> String:
 
 ## Moves a bag item into the shared stash (Regular heroes only).
 func to_stash(id: int, stash: Array, capacity: int) -> bool:
+	if _blocked_over(id):
+		return false
 	if not stash_ok or hardcore:
 		say("Hardcore heroes can't use the shared stash.")
 		return false
@@ -4229,6 +4243,8 @@ func gamble_unlocked() -> bool:
 func gamble(id: int) -> Dictionary:
 	var found := find_item(id)
 	if found.is_empty() or found["where"] != "bag":
+		return {"ok": false}
+	if _blocked_over(id):
 		return {"ok": false}
 	var item: Dictionary = found["item"]
 	if not GameData.can_gamble(item):
@@ -4459,3 +4475,23 @@ func average_gear_score() -> int:
 	for s in equipped:
 		t += GameData.gear_score(equipped[s])
 	return int(round(float(t) / equipped.size()))
+
+# =====================================================================
+# 0.13+ (Juzo): a full bag still takes drops, over the limit, but those can't be
+# used until you sell or salvage to make room
+# =====================================================================
+const OVERFLOW_MAX := 10   # how far past the limit drops can pile up (then they're scrapped)
+
+## True for a bag item sitting past your bag's limit.
+func over_limit(id: int) -> bool:
+	for i in bag.size():
+		if int(bag[i].get("id", -1)) == id:
+			return i >= bag_capacity()
+	return false
+
+## Says why an over-the-limit item can't be used yet. Returns true if it's locked.
+func _blocked_over(id: int) -> bool:
+	if not over_limit(id):
+		return false
+	say("That's over your bag's limit (%d). Sell or salvage something to use it." % bag_capacity())
+	return true
