@@ -141,3 +141,4 @@ Helpers (395071c): `CLAUDE.md` in the repo (rules, auto-read each session), `COD
 
 - 2026-10-20 01:16: Next update, items done (a975cb32): bag Select mode (sell/salvage many, one confirm for Legendary+), compare popup opens on first tap and fits phones, loot filter rule "below my Gear Score".
 - 2026-10-20 01:27: Towns (e46720b8): up to 3 towns, each with its own heroes, stash, skill book, slot progress; old heroes each become their own town (copies in user://pre_towns_backup). Dry run on copies of Juzo's saves: Aldric/Emberfall (with stash), Hilde/Greyhollow, Talia/Duskmere. Slot locks coded (earn at 0/51/250/500/750, 4 paid) but off.
+- 2026-10-20 01:37: Team presets + heroes at home (4f2b3cbb). Bench: 8% of kill gold per hero x class rate, 10% scrap roll, 0.4% item roll (up to Epic); paid at homecoming; shown on Party page and welcome-home card. Future: new classes built for this (e.g. a Scavenger).

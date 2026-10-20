@@ -3,8 +3,8 @@
 ## Your team and your town
 - [x] Towns save, not characters: a save is a town holding a roster of heroes. Up to 3 towns for now. Juzo's 3 existing hero saves each become their own town (backups kept).
 - [x] Hero slots: 9 open for now, with locking coded in. When switched on: 5 earned free (1 at start, 2 at the second area, 3 at floor 250, then two deeper milestones, e.g. 500 and 750), slots 6-9 paid (later, cosmetic store rules still apply to everything else).
-- [ ] Team presets: save line-ups, switch with one tap before a dive.
-- [ ] Benched heroes bring back gold, scrap and occasionally an item while others dive (only while playing, no offline progress). What they find depends on their class; some classes are better at it.
+- [x] Team presets: save line-ups, switch with one tap before a dive.
+- [x] Benched heroes bring back gold, scrap and occasionally an item while others dive (only while playing, no offline progress). What they find depends on their class; some classes are better at it.
 
 ## Pets and rare finds
 - [ ] Pets are very hard to get (a real find).
