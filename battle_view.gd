@@ -1094,8 +1094,13 @@ func _float_kind(text: String) -> String:
 ## never pile on top of each other; each one pops in, holds so you can read it,
 ## then drifts up and fades (see _process).
 func _float(text: String, pos: Vector2, color: Color, font_size: int) -> void:
-	if profile and not profile.damage_numbers and (text.is_valid_int() or text.begins_with("-") or text.begins_with("+") or text.begins_with("CRIT")):
-		return
+	if profile == null or not profile.damage_numbers:
+		# one damage display (the counter under the bar): numbers go, words stay
+		if text.is_valid_int() or (text.begins_with("-") and text.substr(1).is_valid_int()) or (text.begins_with("+") and text.substr(1).is_valid_int()) or text.begins_with("CRIT"):
+			return
+		var sp := text.rfind(" ")
+		if sp > 0 and text.substr(sp + 1).is_valid_int():
+			text = text.substr(0, sp)  # "CLEAVE 579" -> "CLEAVE"
 	var lp := _lane_for(pos, font_size)
 	var base: Vector2 = lp[0]
 	var lane: int = lp[1]
@@ -2136,12 +2141,16 @@ func _chip_row(chips: Array, x: float, y: float, font: Font, fs := 13) -> void:
 func _draw_enemy_info(r: Rect2, font: Font) -> void:
 	# One chip each for weaknesses and resistances ("Weak: Fire, Holy"), so a
 	# monster with several doesn't get a stack of labels over its head
+	# Next update (Juzo): less clutter: weaknesses and resistances share one short chip
 	var chips: Array = []
+	var parts: Array = []
 	if not state.enemy_weak.is_empty():
-		var first: String = String(state.enemy_weak[0])
-		chips.append(["Weak: " + ", ".join(state.enemy_weak.map(func(e): return String(e))), Color(Combat.ELEMENT_COLORS.get(first, "#ffffff")).lightened(0.15)])
+		parts.append("Weak " + ", ".join(state.enemy_weak.map(func(e): return String(e))))
 	if not state.enemy_resist.is_empty():
-		chips.append(["Resists: " + ", ".join(state.enemy_resist.map(func(e): return String(e))), Color("#94a3b8")])
+		parts.append("Res. " + ", ".join(state.enemy_resist.map(func(e): return String(e))))
+	if not parts.is_empty():
+		var wcol := Color(Combat.ELEMENT_COLORS.get(String(state.enemy_weak[0]), "#ffffff")).lightened(0.15) if not state.enemy_weak.is_empty() else Color("#94a3b8")
+		chips.append(["  ·  ".join(parts), wcol])
 	var st: Array = []
 	if state.burn_turns > 0:
 		st.append(["Burning", Color("#fb923c")])
@@ -2157,19 +2166,17 @@ func _draw_enemy_info(r: Rect2, font: Font) -> void:
 		st.append(["Stunned", Color("#fde68a")])
 	if state.enemy_grave:
 		st.append(["Wears your gear", Color("#fbbf24")])
-	if state.enemy_variant != "" and Variants.LIST.has(state.enemy_variant):
-		st.append(["%s: %s" % [state.enemy_variant, Variants.LIST[state.enemy_variant]["text"]], Color(String(Variants.LIST[state.enemy_variant]["tint"]))])
 	if state.enemy_peaceful:
-		st.append(["Friendly: they won't fight", Color("#4ade80")])
+		st.append(["Friendly", Color("#4ade80")])
 	var wl := Wanderers.turns_left(state)
 	if wl >= 0:
-		st.append(["Wanders off in %d" % wl, Color("#fde68a")])
+		st.append(["Leaves in %d" % wl, Color("#fde68a")])
 	var hz := Hazards.turns_left(state)
 	if hz >= 0 and Hazards.KINDS.has(state.hazard):
 		var hk: Dictionary = Hazards.KINDS[state.hazard]
 		st.append(["%s in %d" % [hk["name"], hz], Color(hk["color"])])
 	if Combat.winding(state):
-		st.append(["WINDING UP! Use a skill", Color("#f59e0b")])
+		st.append(["WINDING UP", Color("#f59e0b")])
 	var el := Combat.enrage_left(state)
 	if el > 0:
 		st.append(["Enrage in %d" % el, Color("#ef4444")])

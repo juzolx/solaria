@@ -29,7 +29,7 @@ var max_floor := 0           # deepest floor any of your heroes has reached (ope
 var stash: Array = []        # shared stash items (Regular heroes only)
 var stash_level := 0
 var shake := true            # accessibility: screen shake
-var damage_numbers := true   # accessibility: floating damage numbers
+var damage_numbers := false  # floating damage numbers (off by default since the next update: the HP counter under the monster shows damage)
 var flashes := true          # accessibility: bright flashes
 var text_size := 1           # 0 small, 1 normal, 2 large
 var notes_seen := ""         # last patch notes version shown
@@ -73,7 +73,8 @@ func _from(d: Dictionary) -> void:
 	stash = d.get("stash", [])
 	stash_level = int(d.get("stash_level", 0))
 	shake = bool(d.get("shake", true))
-	damage_numbers = bool(d.get("damage_numbers", true))
+	# Next update (Juzo): one damage display, the counter under the bar. Old saves had this on by default.
+	damage_numbers = bool(d.get("damage_numbers", false)) if d.has("dmgnum_v2") else false
 	flashes = bool(d.get("flashes", true))
 	text_size = int(d.get("text_size", 1))
 	notes_seen = str(d.get("notes_seen", ""))
@@ -96,7 +97,7 @@ func save() -> void:
 		"fullscreen": fullscreen, "dark_art": dark_art, "battery_saver": battery_saver, "low_graphics": low_graphics, "dev_mode": dev_mode, "hc_best": hc_best, "hc_runs": hc_runs,
 		"player_name": player_name, "online": online, "path_choice": path_choice,
 		"active_slot": active_slot, "max_floor": max_floor, "stash": stash, "stash_level": stash_level,
-		"shake": shake, "damage_numbers": damage_numbers, "flashes": flashes, "text_size": text_size, "notes_seen": notes_seen, "skill_book": skill_book, "show_recap": show_recap, "colorblind": colorblind, "reduce_motion": reduce_motion, "haptics": haptics, "high_contrast": high_contrast, "mail_seen": mail_seen, "calamities": calamities, "save_epoch": save_epoch,
+		"shake": shake, "damage_numbers": damage_numbers, "dmgnum_v2": true, "flashes": flashes, "text_size": text_size, "notes_seen": notes_seen, "skill_book": skill_book, "show_recap": show_recap, "colorblind": colorblind, "reduce_motion": reduce_motion, "haptics": haptics, "high_contrast": high_contrast, "mail_seen": mail_seen, "calamities": calamities, "save_epoch": save_epoch,
 	})
 
 ## True when saves from an older epoch exist and must be wiped.

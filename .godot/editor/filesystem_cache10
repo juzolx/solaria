@@ -1,10 +1,10 @@
 78098b89c88a74ebe8c20117b8754620
-::res://::1792482328
+::res://::1792482658
 achievements_tab.gd::GDScript::225817628144516105::1792426149::0::1::::AchievementsTab<>VBoxContainer<><>0<>0<><>::
 art_info.gd::GDScript::2121761137587333428::1792440491::0::1::::ArtInfo<>RefCounted<><>0<>0<><>::
 auto_rules.gd::GDScript::2405800427113084060::1792444644::0::1::::AutoRules<>RefCounted<><>0<>0<><>::
 bag_tab.gd::GDScript::7963412957330005317::1792457973::0::1::::BagTab<>VBoxContainer<><>0<>0<><>::
-battle_view.gd::GDScript::1321114398721736239::1792457933::0::1::::BattleView<>Control<><>0<>0<><>::
+battle_view.gd::GDScript::1321114398721736239::1792482658::0::1::::BattleView<>Control<><>0<>0<><>::
 bestiary_tab.gd::GDScript::3473921906557743363::1792438576::0::1::::BestiaryTab<>HBoxContainer<><>0<>0<><>::
 bounty_tab.gd::GDScript::6266114143799082059::1792399749::0::1::::BountyTab<>ScrollContainer<><>0<>0<><>::
 calamity.gd::GDScript::1610204335130373049::1792399749::0::1::::Calamity<>RefCounted<><>0<>0<><>::
@@ -77,7 +77,7 @@ patch_notes.gd::GDScript::1875155048585678515::1792399784::0::1::::PatchNotes<>R
 peoples.gd::GDScript::5640027398902835484::1792440224::0::1::::Peoples<>RefCounted<><>0<>0<><>::
 pets.gd::GDScript::4749792959444787763::1792399784::0::1::::Pets<>RefCounted<><>0<>0<><>::
 pet_tab.gd::GDScript::6111652928813170708::1792455652::0::1::::PetTab<>ScrollContainer<><>0<>0<><>::
-profile.gd::GDScript::2840780159477354692::1792420898::0::1::::Profile<>RefCounted<><>0<>0<><>::
+profile.gd::GDScript::2840780159477354692::1792482631::0::1::::Profile<>RefCounted<><>0<>0<><>::
 races.gd::GDScript::9205983686033439577::1792399749::0::1::::Races<>RefCounted<><>0<>0<><>::
 race_tab.gd::GDScript::2220945611450801819::1792399749::0::1::::RaceTab<>ScrollContainer<><>0<>0<><>::
 raid_tab.gd::GDScript::1428950295531821644::1792399749::0::1::::RaidTab<>ScrollContainer<><>0<>0<><>::
@@ -3361,13 +3361,13 @@ town_autumn.png::CompressedTexture2D::94479244335991672::1792399749::1792399749:
 town_spring.png::CompressedTexture2D::6727777026229099893::1792399749::1792399749::1::::<><><>0<>0<>623c0da43aa1a9d3910306dfda35e51c<>res://.godot/imported/town_spring.png-aeafd4155723369251283717dc522a3c.ctex::
 town_summer.png::CompressedTexture2D::3014895444935011510::1792399749::1792399749::1::::<><><>0<>0<>05566f2d18ec0bb23d2dce5e79b59e3f<>res://.godot/imported/town_summer.png-4c6afb7f4e282570d1cb1377aff9cc0b.ctex::
 town_winter.png::CompressedTexture2D::3291773191120406346::1792399749::1792399749::1::::<><><>0<>0<>c6cab8e4d953d72545dab01d75f596d0<>res://.godot/imported/town_winter.png-fddf56144e21a7a1c98c425beb605da6.ctex::
-::res://claude/::1792481924
+::res://claude/::1792482562
 code-map.md::TextFile::-1::1792399484::0::1::::<><><>0<>0<><>::
 dungeon-revamp-design.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
-next-update-checklist.md::TextFile::-1::1792481924::0::1::::<><><>0<>0<><>::
+next-update-checklist.md::TextFile::-1::1792482562::0::1::::<><><>0<>0<><>::
 next-update-notes.md::TextFile::-1::1792399494::0::1::::<><><>0<>0<><>::
 stage1-progress.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
-stage2-progress.md::TextFile::-1::1792464208::0::1::::<><><>0<>0<><>::
+stage2-progress.md::TextFile::-1::1792482562::0::1::::<><><>0<>0<><>::
 study-and-implement-list.md::TextFile::-1::1792399464::0::1::::<><><>0<>0<><>::
 ::res://proto/::1792399796
 room3d.gd::GDScript::9127945263395229099::1792399784::0::1::::<>Control<><>0<>0<><>::
@@ -3449,7 +3449,7 @@ trap.wav::AudioStreamWAV::5886903482315739742::1792420851::1792420925::1::::<><>
 unique.wav::AudioStreamWAV::8636343434808806334::1792399749::1792399749::1::::<><><>0<>0<>24b953901c641877be8bd90b0855e4f1<>res://.godot/imported/unique.wav-01a11a3f6299a52159d56bc3979efc29.sample::
 weak_hit.wav::AudioStreamWAV::274863471046238212::1792399749::1792399749::1::::<><><>0<>0<>97037ddd4d71eda073d42530b2de2f5c<>res://.godot/imported/weak_hit.wav-2b1222b25052fbed1eab50fdb4b254b0.sample::
 whoosh.wav::AudioStreamWAV::1026168785560146225::1792420851::1792420925::1::::<><><>0<>0<>ad513f44c1eb5c39d6cf2d945c9dd358<>res://.godot/imported/whoosh.wav-e4488afa67299d9e17083d9f3d4c308c.sample::
-::res://tests/::1792482281
+::res://tests/::1792482331
 _auto_shot.gd::GDScript::5866594794658957856::1792444676::0::1::::<>SceneTree<><>0<>0<><>::
 _bagfull_shot.gd::GDScript::5190479162097615942::1792457874::0::1::::<>SceneTree<><>0<>0<><>::
 _boss_shot.gd::GDScript::4379987889203406784::1792421528::0::1::::<>SceneTree<><>0<>0<><>::
