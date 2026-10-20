@@ -152,6 +152,7 @@ var autoplay := true      # the fight runs by itself; off = you take every turn 
 var auto_rules := {}       # Stage 3: when Autoplay pauses for you (auto_rules.gd)
 var auto_rule_seen := ""   # the last thing a rule paused for (so it pauses once)
 var skip_easy := false        # 0.13+: monsters far below you fall in one turn (Autoplay option)
+var song_xp_turns := 0        # 0.13+: a bard sang of you: +50% XP while it lasts
 var auto_paths := true    # forks pick a room by themselves after a few turns
 var auto_salvage := -1  # -1 = off, otherwise salvage new drops of this rarity and below
 var fast_mode := false   # kept in step with speed (older saves only have this)
@@ -1189,7 +1190,7 @@ func toggle_skill_auto(id: String) -> void:
 	save_game()
 
 func gain_xp(amount: int) -> void:
-	xp += int(amount * float(race_info().get("xp", 1.0)) * (1.0 + _flat("xp") / 100.0) * TownEvents.xp_mult(self) * Synergies.reward_mult(self))
+	xp += int(amount * float(race_info().get("xp", 1.0)) * (1.0 + _flat("xp") / 100.0) * TownEvents.xp_mult(self) * Synergies.reward_mult(self) * (1.5 if song_xp_turns > 0 else 1.0))
 	while xp >= GameData.xp_to_next(level):
 		xp -= GameData.xp_to_next(level)
 		level += 1
@@ -1472,6 +1473,8 @@ func take_turn() -> void:
 		return
 	codex.add("turns")
 	ClassTree.on_turn(self)
+	if song_xp_turns > 0:
+		song_xp_turns -= 1
 	if auto_potion and potions > 0 and hero_hp < get_max_hp() * auto_potion_at and not (trial_active and trial_data.get("no_potions", false)):
 		use_potion()
 	elif potions == 0 and hero_hp < get_max_hp() * auto_potion_at and shop_unlocked():
@@ -1910,6 +1913,7 @@ func _enemy_defeated() -> void:
 		World.champion_reward(self)
 	Grave.recover(self)
 	Wanderers.reward(self)
+	World.prisoner_reward(self)
 	Lore.maybe_find(self, Lore.DROP_CHANCE)  # now and then, a torn page of the story
 	hero_hp = mini(hero_hp + int(get_max_hp() * 0.15 * (0.0 if curses.has("frailty") else 1.0)), get_max_hp())
 
@@ -3673,11 +3677,11 @@ func _maybe_start_event() -> void:
 			Realms.start_realm_event(self)
 			return
 		roll = randf() * 100.0
-	if roll < 25.0:
+	if roll < 15.0:  # 0.13+: more choice events (with people) and fewer of the rest
 		start_event("goblin")
-	elif roll < 45.0:
+	elif roll < 28.0:
 		start_event("horde")
-	elif roll < 60.0:
+	elif roll < 38.0:
 		start_event("shrine")
 	elif path_rooms_on:
 		World.start_event(self)
@@ -3848,7 +3852,7 @@ func _apply_path(kind: String) -> void:
 			ClassTree.encounter_choice(self, kind == "cenc_yes")
 		"camp":
 			Realms.camp(self)
-		"altar", "chest_open", "bet", "well":
+		"altar", "chest_open", "bet", "well", "give_potion", "free_prisoner", "buy_bundle", "hear_song", "follow_scout":
 			World.choose(self, kind)
 			return
 		"treasure":

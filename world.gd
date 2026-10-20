@@ -152,11 +152,17 @@ const EVENT_PATHS := {
 	"chest_open": {"name": "Open the chest", "text": "Epic or better gear... but it might be cursed (-20% Defense for 40 turns). Luck helps.", "color": "#c084fc"},
 	"bet": {"name": "Take the bet", "text": "Bet a stack of gold on a coin toss. Luck and Charisma tilt the coin.", "color": "#fbbf24"},
 	"well": {"name": "Drink from the well", "text": "Something old lives in this well. It might bless you, or not.", "color": "#2dd4bf"},
+	# 0.13+ (Juzo): people in the dark, each with a choice
+	"give_potion": {"name": "Give a potion", "text": "Spend one potion. The pilgrim's blessing brings luck (better loot for 40 turns).", "color": "#f472b6"},
+	"free_prisoner": {"name": "Break the chains", "text": "Their jailer won't like it (an Epic fight). Freed prisoners pay well.", "color": "#f59e0b"},
+	"buy_bundle": {"name": "Buy the bundle", "text": "Pay the smuggler. Inside: anything from junk to a Legendary.", "color": "#a78bfa"},
+	"hear_song": {"name": "Pay for a song", "text": "A song of your deeds: +50% XP for 40 turns.", "color": "#c084fc"},
+	"follow_scout": {"name": "Follow the scout", "text": "A shortcut one floor down, and what the scout found on the way.", "color": "#4ade80"},
 }
 
 ## A new event: an altar, a cursed chest, a gambler, a wishing well.
 static func start_event(g: GameState) -> void:
-	var kind: String = ["altar", "chest", "gambler", "well"].pick_random()
+	var kind: String = ["altar", "chest", "gambler", "well", "pilgrim", "prisoner", "smuggler", "bard", "scout"].pick_random()
 	g.path_wait = 0
 	match kind:
 		"altar":
@@ -175,7 +181,46 @@ static func start_event(g: GameState) -> void:
 			g.path_offer = ["well", "leave"]
 			g.events.append({"type": "mini_event", "kind": "well", "title": "AN OLD WELL", "sub": "Drink?"})
 			g.say("[color=#2dd4bf]An old well, and something breathing at the bottom of it.[/color]")
+		"pilgrim":
+			g.path_offer = ["give_potion", "leave"] if g.potions > 0 else ["leave"]
+			g.events.append({"type": "mini_event", "kind": "people", "title": "A LOST PILGRIM", "sub": "\"Please... a potion?\""})
+			g.say("[color=#f472b6]A pilgrim sits by a guttering candle, too weak to go on.[/color]")
+		"prisoner":
+			g.path_offer = ["free_prisoner", "leave"]
+			g.events.append({"type": "mini_event", "kind": "people", "title": "A PRISONER", "sub": "Chained to the wall, begging"})
+			g.say("[color=#f59e0b]Someone is chained to the wall. Footsteps echo nearby: the jailer.[/color]")
+		"smuggler":
+			g.path_offer = ["buy_bundle", "leave"]
+			g.events.append({"type": "mini_event", "kind": "people", "title": "A SMUGGLER", "sub": "\"No questions, no refunds.\""})
+			g.say("[color=#a78bfa]A hooded smuggler pats a lumpy bundle. %d gold, take it or leave it.[/color]" % bundle_price(g))
+		"bard":
+			g.path_offer = ["hear_song", "leave"]
+			g.events.append({"type": "mini_event", "kind": "people", "title": "A WANDERING BARD", "sub": "A song, for a coin?"})
+			g.say("[color=#c084fc]A bard tunes a lute in the dark. \"A song of your deeds? %d gold.\"[/color]" % song_price(g))
+		"scout":
+			g.path_offer = ["follow_scout", "leave"]
+			g.events.append({"type": "mini_event", "kind": "people", "title": "A WOUNDED SCOUT", "sub": "\"I know a way down.\""})
+			g.say("[color=#4ade80]A wounded scout waves you over. \"There's a crack in the floor. Shortcut.\"[/color]")
 	g.codex.bounty_progress("event")
+
+## 0.13+ people events: prices sized to how deep you've been.
+static func bundle_price(g: GameState) -> int:
+	return g.price((20 + g.best_floor * 10) * 4)
+
+static func song_price(g: GameState) -> int:
+	return g.price((20 + g.best_floor * 10) * 2)
+
+## Beat the jailer: the prisoner pays you back.
+static func prisoner_reward(g: GameState) -> void:
+	if not bool(g.cfight.get("prisoner", false)):
+		return
+	g.cfight["prisoner"] = false
+	var gold := (10 + g.floor_num * 8) * 4
+	g._add_gold(gold)
+	g._faith(4.0)
+	g.codex.add("prisoners_freed")
+	g.say("[color=#4ade80]The prisoner is free.[/color] They press %d gold into your hands and vanish into the dark." % gold)
+	g.events.append({"type": "mini_event", "kind": "people", "title": "FREED", "sub": "The prisoner thanks you (+%d gold)" % gold})
 
 ## How much gold the gambler wants.
 static func bet_amount(g: GameState) -> int:
@@ -185,6 +230,52 @@ static func bet_amount(g: GameState) -> int:
 static func choose(g: GameState, kind: String) -> void:
 	var luck := g.luck_odds() / 100.0
 	match kind:
+		"give_potion":
+			if g.potions > 0:
+				g.potions -= 1
+				g.luck_turns += 40
+				g._faith(3.0)
+				g.codex.add("pilgrims_helped")
+				g.say("[color=#f472b6]The pilgrim drinks and blesses you.[/color] Luck is with you (better loot for 40 turns).")
+				g.events.append({"type": "buff", "name": "Pilgrim's blessing"})
+		"free_prisoner":
+			g.spawn_enemy()
+			g.horde_left = 0
+			g.horde_pack = false
+			g.enemy_name = "Jailer " + g.enemy_species
+			g._apply_tier(maxi(g.enemy_tier, Monsters.EPIC))
+			g.cfight["prisoner"] = true
+			g.say("[color=#f59e0b]You break the chains. The jailer comes running![/color]")
+		"buy_bundle":
+			var bp := bundle_price(g)
+			if g.gold < bp:
+				g.say("The smuggler laughs at your empty purse.")
+			else:
+				g.gold -= bp
+				var roll := randf() * 100.0
+				var r := 0 if roll < 25.0 else (2 if roll < 60.0 else (3 if roll < 92.0 else GameData.LEGENDARY))
+				var it := GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, maxi(g.floor_num, g.best_floor), g._new_id())
+				if r == GameData.LEGENDARY and not it.has("effect"):
+					GameData.add_legendary_effect(it)
+				g._give_item(it)
+				g.codex.add("bundles")
+				g.say(("[color=#f87171]Junk.[/color] The smuggler is long gone." if r == 0 else "[color=#a78bfa]Not bad.[/color] The bundle held %s." % GameData.display_name(it)))
+		"hear_song":
+			var sp := song_price(g)
+			if g.gold < sp:
+				g.say("The bard shrugs. \"No coin, no song.\"")
+			else:
+				g.gold -= sp
+				g.song_xp_turns = 40
+				g.say("[color=#c084fc]The bard sings of you, louder than you deserve.[/color] +50%% XP for 40 turns.")
+				g.events.append({"type": "buff", "name": "A song of your deeds"})
+		"follow_scout":
+			var sg := (10 + g.floor_num * 6) * 2
+			g._add_gold(sg)
+			g._give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), 2, g.floor_num, g._new_id()))
+			g._next_floor()
+			g.fight = 1
+			g.say("[color=#4ade80]You squeeze through the crack after the scout.[/color] One floor down, and they share what they found (+%d gold)." % sg)
 		"altar":
 			var cost := int(g.get_max_hp() * 0.2)
 			g.hero_hp = maxi(1, g.hero_hp - cost)
