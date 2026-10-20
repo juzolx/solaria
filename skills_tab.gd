@@ -80,7 +80,7 @@ func setup(m) -> void:
 		if selected == "":
 			return
 		var sid := selected
-		main.confirm("Sell %s?" % SkillData.skill_name(sid), "You get %d gold, and the skill is gone from your book (you'd have to find or craft it again)." % state.skill_sell_price(sid), "Sell it", func():
+		main.confirm("Sell %s for dust?" % SkillData.skill_name(sid), "You get %d dust to rank up your other skills, and this one is gone from your book (you'd have to find or craft it again)." % state.skill_sell_price(sid), "Sell it", func():
 			if state.sell_skill(sid) > 0:
 				main.sfx.play("sell")
 				selected = ""
@@ -242,9 +242,9 @@ func _show_detail() -> void:
 		" ".join(tags), r, SkillData.describe(selected, maxi(1, r)), extra]
 	equip_button.disabled = r <= 0
 	var block := state.skill_sell_block(selected)
-	sell_button.text = "Sell (%d gold)" % state.skill_sell_price(selected) if state.skill_book.has(selected) else "Sell"
+	sell_button.text = "Sell (%d dust)" % state.skill_sell_price(selected) if state.skill_book.has(selected) else "Sell"
 	sell_button.disabled = block != ""
-	sell_button.tooltip_text = block if block != "" else "Sell it for gold (it leaves your book)"
+	sell_button.tooltip_text = block if block != "" else "Sell it for dust to rank up your other skills (it leaves your book)"
 	equip_button.text = "Unequip" if state.is_skill_equipped(selected) else "Equip"
 	if r >= SkillData.MAX_RANK:
 		craft_button.text = "Max rank"

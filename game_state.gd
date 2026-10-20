@@ -4500,12 +4500,15 @@ func _blocked_over(id: int) -> bool:
 # 0.13+ (Juzo): sell skills you don't use
 # =====================================================================
 
-## What a skill sells for: its rarity and rank, sized to how deep you've been.
+## What a skill sells for, in dust (Juzo: dust upgrades your other skills): half of
+## what crafting it up to its rank would cost.
 func skill_sell_price(id: String) -> int:
 	if not skill_book.has(id):
 		return 0
-	var s := SkillData.info(id)
-	return price((20 + best_floor * 5) * (int(s.get("rarity", 0)) + 1) * maxi(1, skill_rank(id)))
+	var total := 0
+	for k in maxi(1, skill_rank(id)):
+		total += SkillData.craft_cost(id, k)
+	return maxi(1, int(total * 0.5))
 
 ## Why a skill can't be sold ("" = it can).
 func skill_sell_block(id: String) -> String:
@@ -4517,7 +4520,7 @@ func skill_sell_block(id: String) -> String:
 		return "You need at least one skill"
 	return ""
 
-## Sell a skill from your book for gold. Returns the gold paid (0 = not sold).
+## Sell a skill from your book for dust. Returns the dust paid (0 = not sold).
 func sell_skill(id: String) -> int:
 	if skill_sell_block(id) != "":
 		say("Can't sell that: %s." % skill_sell_block(id).to_lower())
@@ -4527,8 +4530,8 @@ func sell_skill(id: String) -> int:
 	skill_book.erase(id)
 	skill_cds.erase(id)
 	skill_priority.erase(id)
-	gold += paid
+	dust += paid
 	codex.add("skills_sold")
-	say("Sold %s for %d gold." % [nm, paid])
+	say("Broke %s down into %d dust." % [nm, paid])
 	save_game()
 	return paid
