@@ -3744,7 +3744,7 @@ func roll_doors(was_boss := false) -> Array:
 		total += int(DOOR_WEIGHTS[k])
 	for i in 3:
 		var kind := "fight"
-		if randf() * 100.0 < minf(12.0, floor_num * GameData.GOBLIN_ROAM_PER_FLOOR * 0.6):
+		if randf() * 100.0 < minf(6.0, floor_num * GameData.GOBLIN_ROAM_PER_FLOOR * 0.3):  # 0.13+: Snik is rarer (was x0.6, max 12%)
 			kind = "merchant"
 		else:
 			var r := randi() % total
@@ -3924,13 +3924,15 @@ func _make_merchant() -> void:
 	merchant = []
 	merchant_haggle = ""
 	merchant_who = ""
+	# 0.13+ (Juzo): Snik is rarer, so his stall is worth it: one of his own curios (only he
+	# sells them) and two Epic-or-better pieces made for how deep you've been
+	var cur := Snik.curio(self)
+	merchant.append({"kind": "item", "item": cur, "price": price(int(GameData.shop_price(cur) * 1.5)), "sold": false})
 	for _i in 2:
-		var r := 2
-		if randf() * 100.0 < GameData.MERCHANT_LEGENDARY_CHANCE * GameData.depth_legendary(floor_num):
-			r = GameData.LEGENDARY
-		elif randf() < 0.25 + floor_num / 2000.0:
-			r = 3
-		var item := GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, floor_num, _new_id())
+		var r := GameData.LEGENDARY if randf() * 100.0 < 30.0 else 3
+		var item := GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, maxi(floor_num, best_floor), _new_id())
+		if r == GameData.LEGENDARY and not item.has("effect"):
+			GameData.add_legendary_effect(item)
 		merchant.append({"kind": "item", "item": item, "price": price(int(GameData.shop_price(item) * GameData.MERCHANT_PRICE_MULT)), "sold": false})
 	merchant.append({"kind": "potions", "amount": 3, "price": price(int(GameData.POTION_GOLD * 3 * GameData.MERCHANT_PRICE_MULT)), "sold": false})
 	# Priced for where you are now, like everything else Snik sells

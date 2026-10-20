@@ -24,7 +24,9 @@ func _initialize() -> void:
 	g.hero_hp = 5
 	g.choose_path("door_m")
 	check(g.hero_hp == g.get_max_hp(), "the fire heals you")
-	check(not g.merchant.is_empty(), "Snik sets up shop")
+	var p0 := g.potions
+	g.gold = 100000
+	check(Camp.buy_potions(g) and g.potions == p0 + Camp.POTION_PACK, "the quartermaster sells potions")
 	check(g.door_pending(), "the doors are open while you're here")
 	g.events.clear()
 	Halls.interact(g, 0)

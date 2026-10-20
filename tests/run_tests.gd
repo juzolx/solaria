@@ -537,7 +537,7 @@ func _initialize() -> void:
 	# Merchant
 	z.bag.clear()
 	z._make_merchant()
-	check(z.merchant.size() == 5, "merchant stock")
+	check(z.merchant.size() >= 6, "merchant stock (0.13+: a curio, two pieces, potions, scrolls)")
 	z.gold = 10000000
 	var bag_n := z.bag.size()
 	check(z.buy_merchant(0) and z.bag.size() == bag_n + 1 and z.merchant[0]["sold"], "buy from merchant")

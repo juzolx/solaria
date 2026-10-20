@@ -63,3 +63,28 @@ static func haggle(g: GameState) -> String:
 static func thanks(g: GameState) -> String:
 	var lines := ["Pleasure! Mostly Snik's.", "No refunds. No questions. No refunds.", "Good choice. Snik would have bought it. Snik did buy it. Now you did.", "Come back alive! Dead customers don't pay."]
 	return "\"%s\"" % lines[randi() % lines.size()]
+
+# =====================================================================
+# 0.13+ (Juzo's notes): Snik is rarer now, and only he sells these curios
+# =====================================================================
+
+## Snik's exclusive unique items: one of these in every stock.
+const CURIOS := [
+	{"name": "Snik's Lucky Spoon", "slot": "Weapon", "effect": "gold_find", "value": 40, "flavor": "He swears it was a sword once. It still finds gold."},
+	{"name": "Pocket Full of Teeth", "slot": "Off Hand", "effect": "crit", "value": 22, "flavor": "Nobody asks whose. Snik doesn't say."},
+	{"name": "The Haggler's Hat", "slot": "Helmet", "effect": "gold_find", "value": 35, "flavor": "Wear it and prices look worried."},
+	{"name": "Coat of Many Pockets", "slot": "Chest", "effect": "dodge", "value": 14, "flavor": "Some pockets are bigger on the inside. One of them bites."},
+	{"name": "Second-Hand Greaves", "slot": "Legs", "effect": "thorns", "value": 28, "flavor": "The first owner left the spikes in."},
+	{"name": "Boots of Quick Exits", "slot": "Feet", "effect": "dodge", "value": 15, "flavor": "Snik's own design. Mostly used for leaving."},
+]
+
+## A curio made for your depth (never below your average Gear Score).
+static func curio(g: GameState) -> Dictionary:
+	var def: Dictionary = CURIOS.pick_random()
+	var item := GameData.make_unique(def, maxi(1, g.best_floor), g._new_id())
+	var avg := g.average_gear_score()
+	var gs := GameData.gear_score(item)
+	if avg > 0 and gs < avg:
+		item["bonus"] = int(ceil(int(item["bonus"]) * float(avg) / maxf(1.0, gs)))
+	item["snik"] = true
+	return item
