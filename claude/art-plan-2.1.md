@@ -1,0 +1,50 @@
+# Solaria art plan (2.1), no budget (agreed Oct 20 2026)
+
+No money for commissions now: commissions come later, paid from store income.
+Rule: art quality comes from consistency. Mixed free packs look cheap because
+sizes, palettes, outlines and lighting don't match: fix those and the same
+assets look like one game.
+
+Schedule: Juzo builds Sunday, Monday, Tuesday (a bigger update plus bug fixes);
+playtesting the rest of the week. Each session: playtest bugs first, then art.
+
+## Working method (most improvement per session)
+- Contact sheets, not single screenshots: many assets in one image, before/after.
+- Fix in code with tunable dials (palette, outline, rim, fog), never hand edits:
+  it applies to every current and future asset.
+- Every change behind a setting so testers can flip old/new on their phones.
+
+## Week 1: one game
+- Sunday: art bible in the repo (palette per region, one warm light, sizes
+  64/128/320x180, 1px dark outline + top-left moonlit rim, one pixel scale per
+  screen, region looks). Audit tool rendering contact sheets of all monsters per
+  region, heroes per class, icons, backgrounds, UI. Mark keep / fix in code / replace.
+- Monday: region palette shader (upgrade of the dark grade, optional dithering),
+  automatic outline + rim on every sprite, whole-number sizes and pixel snapping,
+  shared torchlight / vignette / fog per region, performance check (low graphics).
+  Before/after sheet per region.
+- Tuesday: replace the non-commercial effects pack (BDragon1727) with Gothicvania
+  Magic Pack 9 (CC0); Shikashi item icons recolored; backgrounds the audit flags;
+  credits and LICENSES updated (license-clean build).
+
+## Week 2: motion and feel
+Hit flash, squash and stretch, wind-up before attacks, consistent death
+dissolves, particles per element, screen shake rules, idle breathing, UI motion
+polish, a pixel font if it fits (Pixelify Sans, OFL).
+
+## Week 3: store face
+App icon, title screen from the unified assets, App Store screenshots with
+captions, a short gameplay capture for the preview video.
+
+## Later, with store income (commissions)
+1. Style kit from one artist (hero in 2 classes, 3-5 monsters, a UI frame, a room).
+2. The 10 Calamities (128x128). 3. Title / splash art. 4. A region at a time.
+Paperwork: full commercial rights in writing, no AI, 50/50 payment, credit them.
+
+## Research (at the start of the session that needs it)
+1. Godot 4 palette-snap and outline shaders on phones (cost, best method).
+2. How free-asset pixel games got a unified look.
+3. More commercial-OK, no-AI packs: monsters per region, effects, UI, fonts.
+4. Juice for auto-battle games: what feedback matters when the player watches.
+5. App Store screenshots and icons that convert for dark fantasy.
+6. Later: commission pricing and a full-rights contract template.
