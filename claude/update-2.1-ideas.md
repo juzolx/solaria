@@ -103,8 +103,7 @@ Brainstorm only for now: nothing gets built until Juzo says so.
   Deeds build up over time. Staying on the base route keeps doors open: unique
   classes taken past level 75 are God classes, really hard to get. God is the rank
   above the highest rank, reached through secret variables, and there are a few
-  other secret routes to a God class too. (Open: after 75, does an earned God class
-  show at the next level-up, or only at certain levels?)
+other secret routes to a God class too. God classes are unknown: each has its  own very particular set of secret things to do, and the moment you complete it  you get the choice to swap into it right then (not tied to a level).
 
 ## The Wheel and the age rating (Juzo: gambling stays no matter what)
 - Keep the Wheel. Keep it a place (the Tavern), with game gold only: that argues
