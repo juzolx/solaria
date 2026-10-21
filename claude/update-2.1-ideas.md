@@ -42,6 +42,28 @@ Brainstorm only for now: nothing gets built until Juzo says so.
   17+ depending on how often it happens: pick the App Store age rating on purpose.
 - A tester plays for two weeks before release while updates continue.
 
+## Release blockers (agreed Oct 20)
+1. Apple Developer Program ($99 a year): needed to publish and for TestFlight.
+2. iPhone testing through TestFlight: a first Codemagic build so testers play on
+   a real iPhone (touch, notch, performance, battery, the drag-and-drop hold).
+3. A hosted privacy policy (free GitHub Pages or Google Sites page; text is in store/).
+4. A credits and licenses screen listing every free pack (with the effects-pack swap).
+
+## Also in 2.1 (agreed Oct 20)
+5. Balance pass on 2.0's systems: hidden classes (x2.1), the 4 new classes, bench,
+   front/back rows, supplies, slot gates at floors 100/250/500/750 (testers say
+   what feels off; a quick economy sheet says why).
+6. Onboarding for the new systems: towns, recruiting at the Inn, Into the dungeon,
+   Supplies, hidden-class surprises (first-time tips plus updated guide pages).
+7. Save safety 2.0 -> 2.1: test real saves carry over; backups before any change.
+8. Sound pass: check every sound and music license; fill gaps with free CC0 audio.
+9. A What's New screen for 2.1 in plain words (doubles as App Store update text).
+10. Cosmetics store stays OFF at launch.
+12. The story lands in 2.1, before release, so names, lore, store screenshots and
+    text don't go stale.
+- Still to decide: an endgame answer for marketing (seasons, Calamity hunts,
+  leaderboard later).
+
 ## The Wheel and the age rating (Juzo: gambling stays no matter what)
 - Keep the Wheel. Keep it a place (the Tavern), with game gold only: that argues
   for Apple's "infrequent/mild" simulated gambling, so a lower rating and a bigger
