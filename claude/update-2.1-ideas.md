@@ -67,18 +67,34 @@ Brainstorm only for now: nothing gets built until Juzo says so.
 ## New features picked for 2.1 (Oct 20)
 - Town buildings that level up (gold + materials): Inn, Smith, Vault and more grow
   with your team.
-- Hero bonds: heroes who dive together build a bond: small team perks and banter.
 - Cursed loot: rare, very strong items with a downside until cleansed. Juzo: add a
   **Church** to the town to cleanse them (new building).
 - Wheel tiers: a high-stakes table that unlocks deeper (game gold only).
 - Collection rewards: finish a bestiary region, a pet region or a set for a
   cosmetic or title.
-- Trophy room in town: best finds, rare pets, Calamity kills (good for screenshots).
+- Trophy room as its own town building (a cabin or a house): best finds, rare pets,
+  Calamity kills (good for screenshots). Juzo: the town is a place with buildings.
 - Pet abilities by rank: Epic and up get one special trick (shield, heal, steal gold).
 - Hidden class hints: an NPC rumor now and then points toward one you're close to.
 - Auto-dive settings: go home when the bag is full, below X potions, and so on.
 - Share card: an end-of-dive card (floor, team, best find) to share.
 - Undecided: retirement (retire a maxed hero for a permanent town bonus).
+
+## Cut and merge decisions (Oct 20)
+- Cut: hero bonds.
+- Currencies: just gold, scrap and dust. Fold materials and stones into those.
+- One loot filter screen (merge auto-salvage by rarity, slot filter, "weaker" rule,
+  Gear Score rule).
+- One presets screen (merge builds, gear loadouts and team presets).
+- One portal system: keep realms plus one rift type with depth levels (merge Rifts
+  and Deep Rifts).
+- One pet system: only nest pets; class companions become a class skill.
+- Online tabs stay: Juzo gets online working before release (hide them only if it
+  doesn't work at release).
+- To work out in its own session (lots of detail): simplify class progression
+  (evolution tree, branch-offs, God trials, signatures, divinity, Wanderer items,
+  hidden classes). Claude's starting suggestion: cut branch-offs, keep the tree,
+  God classes and hidden classes.
 
 ## The Wheel and the age rating (Juzo: gambling stays no matter what)
 - Keep the Wheel. Keep it a place (the Tavern), with game gold only: that argues
