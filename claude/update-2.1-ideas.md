@@ -108,14 +108,7 @@ other secret routes to a God class too. God classes are unknown: each has its  o
 ## Answers (Oct 20)
 - **Release target: November 10, 2026.** That's about 8 build days (Oct 25-27,
   Nov 1-3, Nov 8-9) against an estimate of 20-28 for the full list, so Claude
-  suggested a split (Juzo to confirm):
-  - Ship by Nov 10: release blockers; class rules (15/35/75, unique and God
-    classes, cuts) with the save wipe; pets from region nests; art week 1 (unify in
-    code, effects-pack license swap, icons); store face (icon, title, screenshots);
-    light balance + onboarding + What's New; the story if written by Nov 1.
-  - Right after release: town building levels, Church + cursed loot, trophy cabin,
-    legendary Wheel tier, collections, pet abilities, hidden-class hints, auto-dive,
-    share card, the merges (currencies, filters, presets, portals), art weeks 2-3.
+Claude suggested a split, but **Juzo's decision: everything on this list goes  into 2.1 by Nov 10** (2.0 got done in about 2 days of work, so this fits), with a  reality check at the end of each build day. **3.0 = updates from player reviews  and bugs after release.** Outside risks: sign up for the Apple developer account  early (approval can take days), the story arriving in time, art-sheet reviews.
 - Existing heroes: none to worry about. Wipe the game files at 2.1 (fresh start)
   so the new rules get tested with new characters.
 - Class extras: rank letters stay, signatures stay. Everything else (branch-offs,
