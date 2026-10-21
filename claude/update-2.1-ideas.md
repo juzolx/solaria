@@ -105,6 +105,32 @@ Brainstorm only for now: nothing gets built until Juzo says so.
   above the highest rank, reached through secret variables, and there are a few
 other secret routes to a God class too. God classes are unknown: each has its  own very particular set of secret things to do, and the moment you complete it  you get the choice to swap into it right then (not tied to a level).
 
+## Answers (Oct 20)
+- **Release target: November 10, 2026.** That's about 8 build days (Oct 25-27,
+  Nov 1-3, Nov 8-9) against an estimate of 20-28 for the full list, so Claude
+  suggested a split (Juzo to confirm):
+  - Ship by Nov 10: release blockers; class rules (15/35/75, unique and God
+    classes, cuts) with the save wipe; pets from region nests; art week 1 (unify in
+    code, effects-pack license swap, icons); store face (icon, title, screenshots);
+    light balance + onboarding + What's New; the story if written by Nov 1.
+  - Right after release: town building levels, Church + cursed loot, trophy cabin,
+    legendary Wheel tier, collections, pet abilities, hidden-class hints, auto-dive,
+    share card, the merges (currencies, filters, presets, portals), art weeks 2-3.
+- Existing heroes: none to worry about. Wipe the game files at 2.1 (fresh start)
+  so the new rules get tested with new characters.
+- Class extras: rank letters stay, signatures stay. Everything else (branch-offs,
+  divinity, Wanderer items, God trials) goes.
+- A unique-class hero can still swap into a God class, but most God classes are so
+  specific that many won't work from a unique class (each God class sets its own rules).
+- Town buildings: Claude's call (levels, what each gives, how the Church cleanses,
+  what the trophy cabin shows).
+- Pets: stay mostly the same after removing the other egg sources (keep the egg
+  care task and Beast Tamer catching).
+- Wheel tiers: a **Legendary table** you have to unlock, with chances so absurdly
+  low it almost never hits. It's for luck builds, goblin builds and the like.
+- Still open: online at release (which parts), an endgame line for marketing,
+  retirement, when the story arrives.
+
 ## The Wheel and the age rating (Juzo: gambling stays no matter what)
 - Keep the Wheel. Keep it a place (the Tavern), with game gold only: that argues
   for Apple's "infrequent/mild" simulated gambling, so a lower rating and a bigger
