@@ -39,3 +39,16 @@ Reality check: where we stand against this plan.
 - Hunt down every flaky test once.
 - Phone performance budget (frame time, battery) checked by the perf run.
 - Patch notes drafted from each day's changes (What's New writes itself).
+
+## Built to scale (for growing after release)
+1. **Stable IDs** for every monster, item, class and pet (today much is keyed by
+   name: Codex bestiary, pet species, some classes). Story renames make this urgent.
+2. Content as data: classes, unique classes, monsters, buildings, collections and
+   Wheel prizes in tables, so new content is filling in a table.
+3. Save versions with tested migrations (2.1 wipes; from 3.0 on saves must survive).
+4. Remote settings once online is up: odds, events and switches from the server,
+   no App Store review needed for a balance fix or a weekend event.
+5. All on-screen text in one table (writing pass; translations later).
+6. Screenshot checks: compare the screen tour with the last approved one each day.
+7. Bake the art processing (palette, outline, rim) at build time, not every frame.
+8. One event and season framework: weekly modifiers, holidays, seasons as data.
