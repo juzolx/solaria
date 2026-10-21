@@ -98,7 +98,8 @@ Brainstorm only for now: nothing gets built until Juzo says so.
   special way and shows up as an option at 15, 35 or 75 once earned, so every
   player's run is a bit different. Branch-offs, God trials, signatures, divinity
   and Wanderer items are cut or folded in: show Juzo a keep / fold in / cut list
-  before removing.
+  before removing. The higher a unique class's rank, the more things it takes to
+  unlock (e.g. a low rank: one hard deed; a God class: several deeds across the game).
 
 ## The Wheel and the age rating (Juzo: gambling stays no matter what)
 - Keep the Wheel. Keep it a place (the Tavern), with game gold only: that argues
