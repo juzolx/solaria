@@ -100,7 +100,6 @@ Brainstorm only for now: nothing gets built until Juzo says so.
   and Wanderer items are cut or folded in: show Juzo a keep / fold in / cut list
   before removing. The higher a unique class's rank, the more things it takes to
   unlock (e.g. a low rank: one hard deed; a God class: several deeds across the game).
-Deeds build up over time. Staying on the base route keeps doors open: unique  classes taken past level 75 are God classes, really hard to get. God is the rank  above the highest rank, reached through secret variables, and there are a few  other secret routes to a God class too. (Open: after 75, does an earned God class  show at the next level-up, or only at certain levels?)
   Deeds build up over time. Staying on the base route keeps doors open: unique
   classes taken past level 75 are God classes, really hard to get. God is the rank
   above the highest rank, reached through secret variables, and there are a few
