@@ -149,6 +149,6 @@ A wide town (about 3 screens) you swipe through, tap buildings to open them,
 parallax layers, empty plots that fill as you build and upgrade, small life
 (people, smoke, torches, pets), position dots and a jump-to-building list.
 Works with the custom town art if the artist delivers it in layers.
-- Juzo: keep it **similar to the current town, same style**, just wider and
-  refreshed (not a redesign). For the artist: "extend and redraw our existing town
-  in the same style", with the current town screenshot as the main reference.
+- Juzo: the artist makes a **brand-new town in the same style** (wide and
+  swipeable). Brief to send: claude/town-artist-brief.md. Current town and a
+  monster screenshot plus a palette file go with it.

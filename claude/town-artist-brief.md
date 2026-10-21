@@ -1,0 +1,41 @@
+# Solaria town: art brief
+
+**What it is:** the home town of a dark-fantasy pixel-art dungeon game for iPhone.
+Players return here between dives; tapping a building opens it. The new town is a
+**wide scene players swipe left and right through.**
+
+## Style
+- Pixel art, matching our current town and monsters (screenshots attached). One
+  pixel size throughout: no mixed resolutions, no smoothing, no blur.
+- Dark fantasy mood: deep indigo or teal shadows (never plain grey or black), warm
+  off-white highlights, and one warm torchlight color as the main light.
+- Our palette file is attached.
+
+## Size and layout
+- About **3 phone screens wide**, built for portrait (tall) phones. Suggested
+  canvas: about 960 x 540 pixels (or work at our pixel scale and we'll adjust).
+- **Separate layers**, each its own PNG with transparency:
+  1. Sky  2. Far background (hills, a castle or ruins)  3. The ground or street
+  4. Each building on its own layer  5. Foreground (lamps, fences, plants)
+
+## Buildings (each on its own layer)
+- Shop, Blacksmith, Tavern (with a big fortune wheel), Inn, Vault, Bounty Board,
+  Guild Hall, Mailbox, Clinic (pet healer), a cave or gate down to the dungeon.
+- New: **Church** (cleanses cursed items) and a **trophy cabin or house** (shows off
+  rare finds).
+- **2-3 upgrade looks per building** (small, bigger, grand); small changes are fine
+  (banners, an extra floor, more lights).
+- **2-3 empty plots** for future buildings.
+
+## Nice to have
+- Small animations as separate sprite strips: chimney smoke, torch flicker, the
+  wheel turning.
+- A night version of the sky and lighting.
+
+## Delivery
+- PNG files, one per layer, clearly named (e.g. `inn_level2.png`), plus a full
+  combined preview image of the whole town.
+
+## Rights
+- Full commercial rights for the game (App Store, ads, marketing, future updates),
+  in writing. Hand-made, no AI generation. Credit in the game's credits.
