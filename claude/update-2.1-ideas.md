@@ -1,7 +1,7 @@
-# Solaria 3.0: brainstorm (started Oct 20 2026)
+# Solaria 2.1: brainstorm (started Oct 20 2026)
 
 Version names (Juzo, Oct 20): the original game was 1.0. The big update we just
-finished is 2.0 (it goes out at release). The next update after release is 3.0.
+finished is 2.0. This next update, still before release, is 2.1. After release: 3.0.
 Brainstorm only for now: nothing gets built until Juzo says so.
 
 ## Pets
@@ -16,7 +16,7 @@ Brainstorm only for now: nothing gets built until Juzo says so.
   dying beasts, spared monsters.
 - Keep (to confirm with Juzo): the egg's little care task before it hatches,
   and Beast Tamer catching (that hidden class's ability).
-- Started code is saved in claude/patches/3.0-pets-nests-started.patch (not applied).
+- Started code is saved in claude/patches/2.1-pets-nests-started.patch (not applied).
 
 ## Story
 - Juzo writes a real story, based on the game. Claude then fits the game to it:
