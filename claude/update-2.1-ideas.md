@@ -91,7 +91,14 @@ Brainstorm only for now: nothing gets built until Juzo says so.
 - One pet system: only nest pets; class companions become a class skill.
 - Online tabs stay: Juzo gets online working before release (hide them only if it
   doesn't work at release).
-- Class progression (Juzo's rule, simple): choose a beginning class; upgrade it  at levels 15, 35 and **75** (not 60: change class picks and hidden-class steps);  unique (hidden) classes you've unlocked, each in its own unique way, show up as  an option at those same levels, so every player's run is a bit different.  Everything else (branch-offs, God trials, signatures, divinity, Wanderer items)  is cut or folded in: show Juzo a keep / fold in / cut list before removing.
+- Class progression (Juzo's rule, simple): only two kinds of class. (1) The base route:
+  choose a beginning class and upgrade it at levels 15, 35 and **75** (not 60:
+  change class picks and hidden-class steps). (2) Unique classes: everything else,
+  including ALL God classes and today's hidden classes. Each is unlocked its own
+  special way and shows up as an option at 15, 35 or 75 once earned, so every
+  player's run is a bit different. Branch-offs, God trials, signatures, divinity
+  and Wanderer items are cut or folded in: show Juzo a keep / fold in / cut list
+  before removing.
 
 ## The Wheel and the age rating (Juzo: gambling stays no matter what)
 - Keep the Wheel. Keep it a place (the Tavern), with game gold only: that argues
