@@ -61,3 +61,10 @@ An artist may make a pixel (8-bit) town. Brief to send them:
   palette file); send a screenshot of the current town and a monster.
 - Nice extras: chimney smoke, torch flicker, the Wheel turning; night/season versions.
 - Paperwork: full commercial rights in writing, no AI, credit in the game.
+- Juzo's idea: a **wide town you swipe through** (about 3 portrait screens long),
+  tap a building to open its page (already how the town works). Parallax layers
+  (sky, far hills/castle, town, foreground) for depth; empty plots where new
+  buildings and upgrades appear (Church, trophy cabin); people, smoke, torches,
+  pets in the pen; position dots and a "jump to building" list. Ask the artist for
+  the wide scene split into background layers plus each building on its own layer,
+  with a few empty plots.

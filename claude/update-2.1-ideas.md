@@ -143,3 +143,9 @@ Claude suggested a split, but **Juzo's decision: everything on this list goes  i
   up often and read clearly.
 - A short living design doc (rules, numbers, the reasons), so decisions like
   9 -> 5 hero slots or hidden classes becoming permanent stay written down.
+
+## Town: wide and swipeable (Oct 20)
+A wide town (about 3 screens) you swipe through, tap buildings to open them,
+parallax layers, empty plots that fill as you build and upgrade, small life
+(people, smoke, torches, pets), position dots and a jump-to-building list.
+Works with the custom town art if the artist delivers it in layers.
