@@ -42,6 +42,15 @@ Brainstorm only for now: nothing gets built until Juzo says so.
   17+ depending on how often it happens: pick the App Store age rating on purpose.
 - A tester plays for two weeks before release while updates continue.
 
+## The Wheel and the age rating (Juzo: gambling stays no matter what)
+- Keep the Wheel. Keep it a place (the Tavern), with game gold only: that argues
+  for Apple's "infrequent/mild" simulated gambling, so a lower rating and a bigger
+  audience. Never prompts mid-fight, never real money (that's an App Store reject).
+- Check Apple's current age tiers at release prep (they changed recently).
+- Store text: "Fortune's Wheel"; no "casino" or "gambling" in the title or keywords.
+  Lead with the extraction hook, classes and dark art; show the Wheel in
+  screenshot 3 or 4.
+
 ## From Claude's design review (to consider)
 - An economy sheet: every source and sink of gold, scrap, dust and materials.
 - Target times for milestones (how long to floor 100, which now opens a town's
