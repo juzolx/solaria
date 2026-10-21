@@ -64,6 +64,22 @@ Brainstorm only for now: nothing gets built until Juzo says so.
 - Still to decide: an endgame answer for marketing (seasons, Calamity hunts,
   leaderboard later).
 
+## New features picked for 2.1 (Oct 20)
+- Town buildings that level up (gold + materials): Inn, Smith, Vault and more grow
+  with your team.
+- Hero bonds: heroes who dive together build a bond: small team perks and banter.
+- Cursed loot: rare, very strong items with a downside until cleansed. Juzo: add a
+  **Church** to the town to cleanse them (new building).
+- Wheel tiers: a high-stakes table that unlocks deeper (game gold only).
+- Collection rewards: finish a bestiary region, a pet region or a set for a
+  cosmetic or title.
+- Trophy room in town: best finds, rare pets, Calamity kills (good for screenshots).
+- Pet abilities by rank: Epic and up get one special trick (shield, heal, steal gold).
+- Hidden class hints: an NPC rumor now and then points toward one you're close to.
+- Auto-dive settings: go home when the bag is full, below X potions, and so on.
+- Share card: an end-of-dive card (floor, team, best find) to share.
+- Undecided: retirement (retire a maxed hero for a permanent town bonus).
+
 ## The Wheel and the age rating (Juzo: gambling stays no matter what)
 - Keep the Wheel. Keep it a place (the Tavern), with game gold only: that argues
   for Apple's "infrequent/mild" simulated gambling, so a lower rating and a bigger
