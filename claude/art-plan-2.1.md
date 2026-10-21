@@ -48,3 +48,16 @@ Paperwork: full commercial rights in writing, no AI, 50/50 payment, credit them.
 4. Juice for auto-battle games: what feedback matters when the player watches.
 5. App Store screenshots and icons that convert for dark fantasy.
 6. Later: commission pricing and a full-rights contract template.
+
+## Custom town art (Juzo reached out to an artist, Oct 20)
+An artist may make a pixel (8-bit) town. Brief to send them:
+- Every building: Shop, Blacksmith, Tavern (Wheel), Inn, Vault, Bounty Board,
+  Guild Hall, Mailbox, Clinic, the cave entrance, and the new Church and trophy cabin.
+- 2-3 upgrade looks per building (buildings level up in 2.1).
+- Each building on its own transparent layer, plus the empty background, so
+  upgrades swap in and buildings stay tappable (town.json hotspots).
+- Portrait phone scene, whole-number pixel scale, the same pixel size as the
+  monsters; palette and rules from the Art Direction page (Claude can export a
+  palette file); send a screenshot of the current town and a monster.
+- Nice extras: chimney smoke, torch flicker, the Wheel turning; night/season versions.
+- Paperwork: full commercial rights in writing, no AI, credit in the game.
