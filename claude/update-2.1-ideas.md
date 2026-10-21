@@ -91,10 +91,7 @@ Brainstorm only for now: nothing gets built until Juzo says so.
 - One pet system: only nest pets; class companions become a class skill.
 - Online tabs stay: Juzo gets online working before release (hide them only if it
   doesn't work at release).
-- To work out in its own session (lots of detail): simplify class progression
-  (evolution tree, branch-offs, God trials, signatures, divinity, Wanderer items,
-  hidden classes). Claude's starting suggestion: cut branch-offs, keep the tree,
-  God classes and hidden classes.
+- Class progression (Juzo's rule, simple): choose a beginning class; upgrade it  at levels 15, 35 and **75** (not 60: change class picks and hidden-class steps);  unique (hidden) classes you've unlocked, each in its own unique way, show up as  an option at those same levels, so every player's run is a bit different.  Everything else (branch-offs, God trials, signatures, divinity, Wanderer items)  is cut or folded in: show Juzo a keep / fold in / cut list before removing.
 
 ## The Wheel and the age rating (Juzo: gambling stays no matter what)
 - Keep the Wheel. Keep it a place (the Tavern), with game gold only: that argues
