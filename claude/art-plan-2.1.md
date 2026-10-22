@@ -68,3 +68,14 @@ An artist may make a pixel (8-bit) town. Brief to send them:
   pets in the pen; position dots and a "jump to building" list. Ask the artist for
   the wide scene split into background layers plus each building on its own layer,
   with a few empty plots.
+
+## Town artist talks (Oct 22)
+- Artist ("Prince john") is open to long-term work in stages. Juzo's budget:
+  **$50-100 every two weeks**, more for bigger pieces. Juzo told him: no AI art.
+- Staged plan: (1) paid style test, one building (~$50); (2) sky, far background,
+  ground for the wide scene; (3+) buildings by priority: Tavern + Wheel, Shop,
+  Blacksmith, Inn upgrades, cave entrance, then Church and trophy cabin, then the
+  rest and upgrade looks; last: animations and night. Likely 2-5 months total, so
+  the new town may arrive in an update after the Nov 10 release.
+- Protection: pay per stage after seeing work in progress (PayPal Goods and
+  Services); ask for WIP shots or layered files (no-AI check); rights in writing.
