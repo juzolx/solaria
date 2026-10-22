@@ -39,3 +39,15 @@ Players return here between dives; tapping a building opens it. The new town is 
 ## Rights
 - Full commercial rights for the game (App Store, ads, marketing, future updates),
   in writing. Hand-made, no AI generation. Credit in the game's credits.
+
+## Update (Oct 22): top-down town
+Juzo likes the artist's top-down town style (his portfolio sample). Changes to the
+brief above:
+- **Top-down view** (like the sample), not a side-on panorama. The map is bigger
+  than one phone screen in both directions; players pan around it and tap buildings.
+- Each building still a separate sprite (so upgrade looks can swap in), plus the
+  ground/map without buildings, plus 2-3 **empty lots** for future buildings.
+- Mood: the same style but at **dusk**: warmer and moodier light, torches and lit
+  windows, a bit darker, so the town feels like a glowing safe haven next to the
+  dark dungeon.
+- Still: hand-made, no AI (ask for full-size files or zoomed crops and WIP shots).
