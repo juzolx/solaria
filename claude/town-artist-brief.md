@@ -51,3 +51,12 @@ brief above:
   windows, a bit darker, so the town feels like a glowing safe haven next to the
   dark dungeon.
 - Still: hand-made, no AI (ask for full-size files or zoomed crops and WIP shots).
+
+## Update (Oct 22): redraw the current town by hand
+The current town is already top-down (and AI-made, which Juzo wants gone). So the
+job: **redraw this town by hand, keeping its layout** (Guild Hall, Inn, Shop,
+Bounty Board, Blacksmith, Market, Tavern, Vault, Clinic, the road into the dungeon,
+the central fountain), at dusk, every building as its own piece with upgrade
+looks, plus the Church, the trophy cabin and empty lots, on a map bigger than one
+screen. Building names stay as game labels (not drawn). Send a screenshot of the
+current town as the layout reference.
