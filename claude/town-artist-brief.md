@@ -53,10 +53,21 @@ brief above:
 - Still: hand-made, no AI (ask for full-size files or zoomed crops and WIP shots).
 
 ## Update (Oct 22): redraw the current town by hand
-The current town is already top-down (and AI-made, which Juzo wants gone). So the
-job: **redraw this town by hand, keeping its layout** (Guild Hall, Inn, Shop,
+The current town is already top-down. (Correction: it is NOT AI art; it is built
+from the hand-drawn LPC free packs, credited in art/town/CREDITS.md. Find out
+which parts Juzo means by AI and spend the art budget there first.) The job:
+**redraw this town by hand, keeping its layout** (Guild Hall, Inn, Shop,
 Bounty Board, Blacksmith, Market, Tavern, Vault, Clinic, the road into the dungeon,
 the central fountain), at dusk, every building as its own piece with upgrade
 looks, plus the Church, the trophy cabin and empty lots, on a map bigger than one
 screen. Building names stay as game labels (not drawn). Send a screenshot of the
 current town as the layout reference.
+
+## Sizes for the artist (Oct 22)
+- Tiles: **32x32** (matches the LPC town and character sprites).
+- Current map: 704 x 1088 px (22 x 34 tiles); the new one can be bigger (~40 x 56
+  tiles, artist's suggestion welcome).
+- Ground tiles (grass, dirt road, cobblestone, river edges, fences) plus each
+  building as a separate object.
+- Artist's quote (Oct 22): test building $100-200 (Claude suggests countering at
+  $60-80), full town $800-1,800. He has not yet sent WIP/timelapse proof.
