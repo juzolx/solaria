@@ -79,7 +79,6 @@ const CRAFT_RARITY_BONUS := 10
 const SHOP_SIZE := 6
 const SHOP_RARITY_BONUS := 5
 const SHOP_PRICE_MULT := 4
-const SHOP_RESTOCK_GOLD := 30
 const MERCHANT_NAME := "Marta's Goods"
 const FEATURED_LEGENDARY_CHANCE := 4.0  # % the featured deal is Legendary instead of Epic
 const FEATURED_PRICE_MULT := 3            # on top of the normal shop price
@@ -252,55 +251,52 @@ const DODGE_CAP := 60  # or dodges more than this %
 static func diminishing(points: int, curve: Array) -> float:
 	return float(curve[0]) * (1.0 - exp(-points / float(curve[1])))
 
-# ---------- Boss materials and crafting sets ----------
-# Every boss drops its zone's material. Materials craft Set items (strong,
-# with bonuses for wearing 2 or 3 pieces of the same set) and bigger bags.
+# ---------- Crafting sets ----------
+# Set items (strong, with bonuses for wearing 2 or 3 pieces of the same set) are
+# crafted with dust and scrap (2.1: zone materials are gone, see economy.gd).
+# "zone" is the zone the set belongs to: reach it to craft the set.
 # Sets are keyed by a permanent id (items store it in "set"); "name" is for showing.
 # A piece's id is the set id plus its slot (piece_id()).
-const BOSS_MATERIAL_DROP := [5, 8]  # min, max per boss kill
-const SALVAGE_MATERIALS := {3: 1, 4: 2}  # salvaging Epic / Legendary gear gives its zone's material
-const SET_PIECE_MATERIALS := 10
 const SET_PIECE_SCRAP := 40
-const MATERIALS := ["Grendel's Claw", "Grave Silk", "Charybdis Pearl", "Surtr's Ember", "Typhon Scale"] + Realms.MATERIALS
 const SETS := {
-	"grendels_kin": {"name": "Grendel's Kin", "material": 0, "pieces": {"Weapon": "Mere-Hag Cleaver", "Chest": "Hall-Breaker Hide", "Legs": "Moor Stalker Greaves"},
+	"grendels_kin": {"name": "Grendel's Kin", "zone": 0, "pieces": {"Weapon": "Mere-Hag Cleaver", "Chest": "Hall-Breaker Hide", "Legs": "Moor Stalker Greaves"},
 		"types": {"Weapon": "axe", "Chest": "tunic", "Legs": "greaves"},
 		"bonus2": {"hp": 1.1}, "bonus3": {"lifesteal": 6},
 		"text": "2 pieces: +10% HP. 3 pieces: +6% lifesteal."},
-	"hels_shroud": {"name": "Hel's Shroud", "material": 1, "pieces": {"Helmet": "Shroud Veil", "Chest": "Deathless Mantle", "Feet": "Helroad Boots"},
+	"hels_shroud": {"name": "Hel's Shroud", "zone": 1, "pieces": {"Helmet": "Shroud Veil", "Chest": "Deathless Mantle", "Feet": "Helroad Boots"},
 		"types": {"Helmet": "hood", "Chest": "robe", "Feet": "boots"},
 		"bonus2": {"regen": 1}, "bonus3": {"dodge": 8},
 		"text": "2 pieces: 1% regen. 3 pieces: +8% dodge."},
-	"tidecaller": {"name": "Tidecaller", "material": 2, "pieces": {"Weapon": "Maelstrom Trident", "Off Hand": "Tide Ward", "Feet": "Seafoam Treads"},
+	"tidecaller": {"name": "Tidecaller", "zone": 2, "pieces": {"Weapon": "Maelstrom Trident", "Off Hand": "Tide Ward", "Feet": "Seafoam Treads"},
 		"types": {"Weapon": "spear", "Off Hand": "shield", "Feet": "sandals"},
 		"bonus2": {"gold_find": 15}, "bonus3": {"double_strike": 10},
 		"text": "2 pieces: +15% gold. 3 pieces: +10% double strike."},
-	"muspel_forge": {"name": "Muspel Forge", "material": 3, "pieces": {"Weapon": "Ember Greatsword", "Helmet": "Forgeborn Helm", "Legs": "Cinder Greaves"},
+	"muspel_forge": {"name": "Muspel Forge", "zone": 3, "pieces": {"Weapon": "Ember Greatsword", "Helmet": "Forgeborn Helm", "Legs": "Cinder Greaves"},
 		"types": {"Weapon": "sword", "Helmet": "helm", "Legs": "greaves"},
 		"bonus2": {"crit": 6}, "bonus3": {"atk": 1.15},
 		"text": "2 pieces: +6% crit. 3 pieces: +15% Attack."},
-	"titanborn": {"name": "Titanborn", "material": 4, "pieces": {"Off Hand": "Scaled Bulwark", "Chest": "Serpentcoil Plate", "Helmet": "Hundred-Eye Circlet"},
+	"titanborn": {"name": "Titanborn", "zone": 4, "pieces": {"Off Hand": "Scaled Bulwark", "Chest": "Serpentcoil Plate", "Helmet": "Hundred-Eye Circlet"},
 		"types": {"Off Hand": "tower", "Chest": "plate", "Helmet": "crown"},
 		"bonus2": {"thorns": 15}, "bonus3": {"def": 1.2},
 		"text": "2 pieces: reflect 15%. 3 pieces: +20% Defense."},
 	# The realms (floors 251-500)
-	"last_light_of_the_elves": {"name": "Last Light of the Elves", "material": 5, "pieces": {"Weapon": "Lastlight Bow", "Helmet": "Leafcrown of the Wardens", "Feet": "Hushstep Boots"},
+	"last_light_of_the_elves": {"name": "Last Light of the Elves", "zone": 5, "pieces": {"Weapon": "Lastlight Bow", "Helmet": "Leafcrown of the Wardens", "Feet": "Hushstep Boots"},
 		"types": {"Weapon": "bow", "Helmet": "crown", "Feet": "boots"},
 		"bonus2": {"dodge": 8}, "bonus3": {"crit": 10},
 		"text": "2 pieces: +8% dodge. 3 pieces: +10% crit."},
-	"court_of_glamour": {"name": "Court of Glamour", "material": 6, "pieces": {"Off Hand": "Mirror of the Court", "Chest": "Glamourweave Gown", "Legs": "Revelry Leggings"},
+	"court_of_glamour": {"name": "Court of Glamour", "zone": 6, "pieces": {"Off Hand": "Mirror of the Court", "Chest": "Glamourweave Gown", "Legs": "Revelry Leggings"},
 		"types": {"Off Hand": "orb", "Chest": "robe", "Legs": "leggings"},
 		"bonus2": {"gold_find": 20}, "bonus3": {"skill": 1.15},
 		"text": "2 pieces: +20% gold. 3 pieces: +15% skill damage."},
-	"undermountain_oath": {"name": "Undermountain Oath", "material": 7, "pieces": {"Off Hand": "Oathstone Bulwark", "Chest": "Kingsguard Runeplate", "Feet": "Deepforge Sabatons"},
+	"undermountain_oath": {"name": "Undermountain Oath", "zone": 7, "pieces": {"Off Hand": "Oathstone Bulwark", "Chest": "Kingsguard Runeplate", "Feet": "Deepforge Sabatons"},
 		"types": {"Off Hand": "tower", "Chest": "plate", "Feet": "sabatons"},
 		"bonus2": {"thorns": 15}, "bonus3": {"def": 1.2},
 		"text": "2 pieces: reflect 15%. 3 pieces: +20% Defense."},
-	"choir_of_dawn": {"name": "Choir of Dawn", "material": 8, "pieces": {"Weapon": "Dawnchoir Spear", "Helmet": "Halo of the Choir", "Chest": "Seraph-Feather Mantle"},
+	"choir_of_dawn": {"name": "Choir of Dawn", "zone": 8, "pieces": {"Weapon": "Dawnchoir Spear", "Helmet": "Halo of the Choir", "Chest": "Seraph-Feather Mantle"},
 		"types": {"Weapon": "spear", "Helmet": "crown", "Chest": "robe"},
 		"bonus2": {"regen": 1}, "bonus3": {"hp": 1.2},
 		"text": "2 pieces: 1% regen. 3 pieces: +20% HP."},
-	"pact_of_the_abyss": {"name": "Pact of the Abyss", "material": 9, "pieces": {"Weapon": "Pactbound Cleaver", "Helmet": "Hornhelm of the Pact", "Legs": "Cinderchain Greaves"},
+	"pact_of_the_abyss": {"name": "Pact of the Abyss", "zone": 9, "pieces": {"Weapon": "Pactbound Cleaver", "Helmet": "Hornhelm of the Pact", "Legs": "Cinderchain Greaves"},
 		"types": {"Weapon": "axe", "Helmet": "helm", "Legs": "greaves"},
 		"bonus2": {"lifesteal": 6}, "bonus3": {"atk": 1.15},
 		"text": "2 pieces: +6% lifesteal. 3 pieces: +15% Attack."},
@@ -394,9 +390,7 @@ static func soul_level(item: Dictionary) -> int:
 			lv += 1
 	return lv
 
-# Crafting a bigger bag: any boss materials + scrap, cost grows with bag level
-const BAG_CRAFT_MATERIALS := 5
-const BAG_CRAFT_SCRAP := 30
+# Crafting a bigger bag: scrap only (Economy.bag_craft_scrap)
 
 # ---------- Levels ----------
 const LEVEL_ATTACK := 1      # per level, on top of your stat points
@@ -958,11 +952,7 @@ static func make_set_item(set_id: String, slot: String, floor_num: int, id: int)
 		"set": set_id,
 	}
 
-## Materials needed to craft the next bag size.
-static func bag_craft_materials(bag_level: int) -> int:
-	return BAG_CRAFT_MATERIALS + floori(bag_level / 4.0)
-
 static func bag_craft_scrap(bag_level: int) -> int:
-	return BAG_CRAFT_SCRAP + bag_level * 10
+	return Economy.bag_craft_scrap(bag_level)
 
 

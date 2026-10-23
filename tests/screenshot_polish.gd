@@ -41,7 +41,7 @@ func _initialize() -> void:
 			s.equip_best()
 			while s.stat_points > 0:
 				s.spend_point("STR" if i % 80 == 0 else "VIT", 1)
-	s.dev_grant("materials")
+	s.dev_grant("dust")
 	s.dev_grant("legendary")
 	s.dev_grant("unique")
 	s.gold += 5000

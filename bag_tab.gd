@@ -368,12 +368,12 @@ func _refresh_details() -> void:
 		upgrade_button.disabled = true
 	else:
 		var cost := GameData.upgrade_cost(item)
-		upgrade_button.text = "Upgrade +%d (%d scrap)" % [int(item["level"]) + 1, cost]
-		upgrade_button.disabled = state.scrap < cost
+		upgrade_button.text = "Upgrade +%d (%s)" % [int(item["level"]) + 1, Economy.cost_text(cost, Economy.upgrade_dust(item))]
+		upgrade_button.disabled = Economy.upgrade_short(state, item) != ""
 	if GameData.can_reroll(item):
 		var rcost := GameData.reroll_cost(item)
-		reroll_button.text = "Reroll: %d%% to %s (%d scrap)" % [GameData.reroll_chance(item), GameData.RARITY_NAMES[int(item["rarity"]) + 1], rcost]
-		reroll_button.disabled = state.scrap < rcost
+		reroll_button.text = "Reroll: %d%% to %s (%s)" % [GameData.reroll_chance(item), GameData.RARITY_NAMES[int(item["rarity"]) + 1], Economy.cost_text(rcost, Economy.reroll_dust(item))]
+		reroll_button.disabled = Economy.reroll_short(state, item) != ""
 	else:
 		reroll_button.text = "Can't reroll"
 		reroll_button.disabled = true

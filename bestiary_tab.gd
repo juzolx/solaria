@@ -192,8 +192,8 @@ func _show() -> void:
 				lines.append("[color=#ff6b9d][b]Signature: ???[/b][/color]  [color=%s]A %s, 1 in %s kills. No pity: every kill is a fresh chance.[/color]" % [dim, str(sig["slot"]).to_lower(), _num(Monsters.SIGNATURE_CHANCE)])
 	else:
 		lines.append("")
-		lines.append("[b]Drops[/b]: %d items, %d-%d materials, and sometimes a Unique (your chance right now: %d%%)" % [
-			GameData.BOSS_LOOT_DROPS, GameData.BOSS_MATERIAL_DROP[0], GameData.BOSS_MATERIAL_DROP[1], int(main.state.unique_chance())])
+		lines.append("[b]Drops[/b]: %d items, %d-%d dust, and sometimes a Unique (your chance right now: %d%%)" % [
+			GameData.BOSS_LOOT_DROPS, Economy.BOSS_DUST[0], Economy.BOSS_DUST[1], int(main.state.unique_chance())])
 		lines.append(_odds_line("Each item", GameData.rarity_odds(GameData.BOSS_RARITY_BONUS, GameData.LEGENDARY_CHANCE_BOSS)))
 		var def: Dictionary = GameData.boss_for_floor(_boss_floor(home))
 		for u in def.get("uniques", []):

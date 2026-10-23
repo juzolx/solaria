@@ -169,8 +169,8 @@ static func _reward_text(r: Dictionary) -> String:
 		parts.append("%d potions" % int(r["potions"]))
 	if r.has("scrap"):
 		parts.append("scrap")
-	if r.has("mats"):
-		parts.append("%d materials" % int(r["mats"]))
+	if r.has("dust"):
+		parts.append("%d dust" % int(r["dust"]))
 	return ", ".join(parts)
 
 ## Stage 4: titles, name colors and frames for gold (looks only, never power).

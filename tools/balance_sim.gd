@@ -253,8 +253,8 @@ func _town_routine(g: GameState) -> void:
 			g.sell(int(it["id"]))
 	while g.potions < POTION_TARGET and g.gold >= g.potion_cost():
 		g.buy_potion()
-	# Gear from the shop when it is a real upgrade and not most of the purse; restocking
-	# is cheap, so with gold to spare the shop is re-rolled a few times
+	# Gear from the shop when it is a real upgrade and not most of the purse; with lots
+	# of gold to spare (restocking costs more the deeper you are) the shop is re-rolled
 	for round in SHOP_ROLLS:
 		for i in range(g.shop.size() - 1, -1, -1):
 			if i < g.shop.size() and not g.bag_full() and g.is_upgrade(g.shop[i]) and g.shop_cost(g.shop[i]) <= g.gold * 0.5:
@@ -286,9 +286,24 @@ func _town_routine(g: GameState) -> void:
 			if c < best_cost:
 				best_cost = c
 				pick = it
-		if pick.is_empty() or g.scrap < best_cost:
+		if pick.is_empty() or Economy.upgrade_short(g, pick) != "":
 			break
 		g.upgrade(int(pick["id"]))
+	# 2.1: dust into skills (rank up the equipped ones, cheapest first)
+	for _i in 20:
+		var sk := ""
+		var sk_cost := 1 << 60
+		for id in g.active_slots + g.passive_slots:
+			var sid := String(id)
+			if sid == "" or g.skill_rank(sid) >= SkillData.MAX_RANK:
+				continue
+			var c := SkillData.craft_cost(sid, g.skill_rank(sid))
+			if c < sk_cost:
+				sk_cost = c
+				sk = sid
+		if sk == "" or g.dust < sk_cost:
+			break
+		g.craft_skill(sk)
 	if g.hero_hp < g.get_max_hp():
 		Town.rest(g)
 	g.messages.clear()

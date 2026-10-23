@@ -1,7 +1,7 @@
 class_name CraftTab
 extends ScrollContainer
 ## Town > Craft. Laid out so it's always clear what you have and what you need:
-## 1) your materials, 2) basics (potion, bag), 3) set recipes, 4) mystery gear.
+## 1) your scrap and dust, 2) basics (potion, bag), 3) set recipes, 4) mystery gear.
 
 var main
 var state: GameState
@@ -57,7 +57,7 @@ func setup(m) -> void:
 	wares_box = UI.vbox(10)
 
 	# ---- 1. What you have ----
-	v.add_child(UI.heading("Your materials  -  scrap comes from salvaging, the rest from bosses"))
+	v.add_child(UI.heading("Your scrap and dust  -  scrap comes from salvaging, dust from bosses, rare monsters and maxed skills"))
 	mats_row = HFlowContainer.new()
 	mats_row.add_theme_constant_override("h_separation", 6)
 	mats_row.add_theme_constant_override("v_separation", 6)
@@ -231,9 +231,7 @@ func refresh() -> void:
 	for c in mats_row.get_children():
 		c.queue_free()
 	_chip("Scrap [color=#e8b14a][b]%d[/b][/color]" % state.scrap, UI.GOLD)
-	for i in GameData.MATERIALS.size():
-		var n := int(state.materials[i])
-		_chip("%s [color=%s][b]%d[/b][/color]" % [GameData.MATERIALS[i], UI.hex(UI.TEAL if n > 0 else UI.DIM), n], UI.TEAL if n > 0 else UI.EMPTY)
+	_chip("Dust [color=#c4b5fd][b]%d[/b][/color]" % state.dust, Color("#c4b5fd"))
 
 	potion_cost.text = "Costs: %s scrap" % UI.have_need(state.scrap, GameData.POTION_SCRAP)
 	potion_button.disabled = state.scrap < GameData.POTION_SCRAP
@@ -243,23 +241,22 @@ func refresh() -> void:
 		bag_cost.text = ""
 		bag_button.disabled = true
 	else:
-		bag_info.text = "[color=%s]%d -> [/color][color=#4ade80]%d slots[/color][color=%s]. Uses any boss materials.[/color]" % [
+		bag_info.text = "[color=%s]%d -> [/color][color=#4ade80]%d slots[/color][color=%s]. Sewn from scrap.[/color]" % [
 			UI.hex(UI.DIM), state.bag_capacity(), state.bag_capacity() + GameData.BAG_STEP, UI.hex(UI.DIM)]
-		bag_cost.text = "Costs: %s materials, %s scrap" % [
-			UI.have_need(state.material_total(), GameData.bag_craft_materials(state.bag_level)),
-			UI.have_need(state.scrap, GameData.bag_craft_scrap(state.bag_level))]
+		bag_cost.text = "Costs: %s scrap" % UI.have_need(state.scrap, GameData.bag_craft_scrap(state.bag_level))
 		bag_button.disabled = state.bag_craft_block_reason() != ""
 
 	var counts := state.set_counts()
 	for set_name in GameData.SET_ORDER:
 		var info: Dictionary = GameData.SETS[set_name]
-		var mat: int = info["material"]
 		var labels: Array = set_info[set_name]
 		(labels[2] as Label).text = "Wearing %d / 3" % int(counts.get(set_name, 0))
 		var full := state.bag_full()
-		(labels[1] as RichTextLabel).text = "Each piece costs: %s %s, %s scrap%s" % [
-			UI.have_need(int(state.materials[mat]), GameData.SET_PIECE_MATERIALS), GameData.MATERIALS[mat],
-			UI.have_need(state.scrap, GameData.SET_PIECE_SCRAP), "   [color=#f87171]Bag is full[/color]" if full else ""]
+		var reached := Economy.set_zone_reached(state, set_name)
+		(labels[1] as RichTextLabel).text = ("Each piece costs: %s dust, %s scrap%s" % [
+			UI.have_need(state.dust, Economy.set_piece_dust(set_name)),
+			UI.have_need(state.scrap, GameData.SET_PIECE_SCRAP), "   [color=#f87171]Bag is full[/color]" if full else ""]) if reached \
+			else "[color=%s]Reach this set's zone to learn the recipe.[/color]" % UI.hex(UI.DIM)
 		var ok := state.set_block_reason(set_name) == ""
 		for entry in set_buttons[set_name]:
 			var b: Button = entry[0]

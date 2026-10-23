@@ -24,7 +24,7 @@ func _initialize() -> void:
 	s.stats = {"STR": 8, "VIT": 30, "AGI": 0, "INT": 19}
 	s.last_spec = s.title()
 	s.skills = {"might1": 3, "guard1": 5, "guard2": 2, "a2": 1, "cun1": 1}
-	s.materials = [7, 2, 0, 0, 0, 0, 0, 0, 0, 0]
+	s.dust = 90
 	s.scrap = 300
 	s.best_floor = 22
 	main.battle.last_floor = s.floor_num

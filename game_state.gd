@@ -54,7 +54,7 @@ var respec_tomes := 0   # Tomes of Forgetting: a free respec each
 var builds: Array = [{}, {}, {}]  # saved builds: stats, skills and gear
 # ---------- Skills (ability stones) ----------
 var skill_book := {}    # skill id -> rank (1-5): every skill you own
-var dust := 0           # from stones of maxed skills; crafts any skill
+var dust := 0           # 2.1: one of the three currencies (economy.gd): crafts skills, sets, top upgrades
 var active_slots: Array = ["", "", ""]          # equipped active skills
 var passive_slots: Array = ["", "", "", "", ""] # equipped passive skills
 var skill_cds := {}     # skill id -> turns until ready
@@ -115,7 +115,6 @@ var leader_down := false     # you fell but a companion still stands: they fight
 var enemy_stun := 0     # Earthshatter
 var enemy_weaken := 1.0 # Frost Nova
 var enemy_weaken_turns := 0
-var materials := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # boss materials, one per zone and realm
 var appearance := {"body": "masc", "skin": 1, "hair": "Short", "hair_color": 1, "eyes": 0, "race": "Human"}
 var wardrobe := {}      # every look you've found: key -> look (for transmog)
 var transmog := {}      # slot -> look to show instead of the real item ("hide" = show nothing)
@@ -1788,15 +1787,6 @@ func _drop_slot(monster: String) -> String:
 		return fav.pick_random()
 	return GameData.SLOT_ORDER.pick_random()
 
-func _give_materials(count: int, zone_i := -1) -> void:
-	if count <= 0:
-		return
-	var m := GameData.zone_index(floor_num) if zone_i < 0 else zone_i
-	materials[m] = int(materials[m]) + count
-	ClassTree.count(self, "materials", count)
-	say("[color=#2dd4bf]+%d %s[/color]" % [count, GameData.MATERIALS[m]])
-	tip("materials", "Materials! Use them in the Craft tab to make Set items and bigger bags.")
-
 func _enemy_defeated() -> void:
 	if enemy_calamity > 0:
 		Calamity.on_slain(self, profile_ref)
@@ -1874,7 +1864,7 @@ func _enemy_defeated() -> void:
 
 	if was_boss:
 		say("[color=#fbbf24]You defeated %s![/color] +%d gold" % [enemy_name, gold_gain])
-		_give_materials(randi_range(GameData.BOSS_MATERIAL_DROP[0], GameData.BOSS_MATERIAL_DROP[1]))
+		Economy.give_dust(self, randi_range(Economy.BOSS_DUST[0], Economy.BOSS_DUST[1]))
 		for _i in GameData.BOSS_LOOT_DROPS:
 			var slot: String = GameData.SLOT_ORDER.pick_random()
 			_give_item(GameData.make_item(slot, _rarity(GameData.BOSS_RARITY_BONUS + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS), floor_num, _new_id()))
@@ -1899,7 +1889,7 @@ func _enemy_defeated() -> void:
 		for _i in GameData.GOBLIN_ITEMS:
 			var r := maxi(2, _rarity(GameData.GOBLIN_RARITY + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS))
 			_give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, floor_num, _new_id()))
-		_give_materials(randi_range(1, 2))
+		Economy.give_scrap(self, Economy.chest_scrap())
 		codex.add("goblins")
 		codex.bounty_progress("event")
 		events.append({"type": "treasure"})
@@ -1917,9 +1907,9 @@ func _enemy_defeated() -> void:
 			for _m in party.size():
 				if randf() < Party.LOOT_PER_MEMBER:
 					_give_item(GameData.make_item(_drop_slot(species), _rarity(int(t["loot"]) + _loot_bonus(), leg), floor_num, _new_id()))
-		var mats: Array = t["mats"]
-		if int(mats[1]) > 0:
-			_give_materials(randi_range(int(mats[0]), int(mats[1])))
+		var td: Array = t["dust"]
+		if int(td[1]) > 0:
+			Economy.give_dust(self, randi_range(int(td[0]), int(td[1])))
 		if Monsters.has_signature(species) and randf() * Monsters.SIGNATURE_CHANCE < 1.0 + luck_odds() / 100.0:
 			_give_signature(species)
 
@@ -2024,7 +2014,7 @@ func _finish_horde() -> void:
 	say("[color=#fbbf24]The horde is beaten! You find their chest.[/color] +%d gold" % g)
 	var r := maxi(2, _rarity(GameData.HORDE_RARITY + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS))
 	_give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, floor_num, _new_id()))
-	_give_materials(randi_range(1, 2))
+	Economy.give_scrap(self, Economy.chest_scrap())
 	codex.add("hordes")
 	codex.bounty_progress("event")
 	events.append({"type": "treasure"})
@@ -2064,7 +2054,7 @@ func _next_floor() -> void:
 		say("[color=#e8b14a]You reach %s.[/color]" % GameData.sub_name(floor_num))
 	if GameData.is_boss_floor(floor_num):
 		say("[color=#f87171]A powerful presence waits on floor %d...[/color]" % floor_num)
-		tip("boss", "Boss fight! Bosses hit hard but drop 3 items, materials, and sometimes a rare unique.")
+		tip("boss", "Boss fight! Bosses hit hard but drop 3 items, dust, and sometimes a rare unique.")
 	if best_floor >= GameData.SHOP_UNLOCK_FLOOR:
 		tip("shop", "The Shop is open! Spend gold on potions, gear and a bigger bag.")
 		_page("shop")
@@ -2479,10 +2469,10 @@ func give_reward(r: Dictionary) -> String:
 		var sc := int(float(r["scrap"]) * (1.0 + best_floor / 50.0))
 		scrap += sc
 		parts.append("+%d scrap" % sc)
-	if r.has("mats"):
-		var m := GameData.zone_index(best_floor)
-		materials[m] = int(materials[m]) + int(r["mats"])
-		parts.append("+%d %s" % [int(r["mats"]), GameData.MATERIALS[m]])
+	if r.has("dust") or r.has("mats"):  # "mats": a 2.0 letter still in the mailbox pays dust
+		var du := int(r.get("dust", 0)) + int(r.get("mats", 0))
+		dust += du
+		parts.append("+%d dust" % du)
 	if r.has("scroll"):
 		parts.append(use_scroll(str(r["scroll"])))
 	if r.has("egg"):
@@ -2598,7 +2588,7 @@ func salvage(id: int) -> void:
 	bag.remove_at(int(found["index"]))
 	bag_version += 1
 	say("Salvaged %s for %d scrap." % [_tag(item), value])
-	_salvage_materials(item)
+	_salvage_dust(item)
 	save_game()
 
 func upgrade(id: int) -> void:
@@ -2611,11 +2601,11 @@ func upgrade(id: int) -> void:
 	if int(item["level"]) >= GameData.MAX_UPGRADE:
 		say("%s is already max level." % _tag(item))
 		return
-	var cost := GameData.upgrade_cost(item)
-	if scrap < cost:
-		say("Not enough scrap (need %d)." % cost)
+	if Economy.upgrade_short(self, item) != "":
+		say(Economy.upgrade_short(self, item))
 		return
-	scrap -= cost
+	scrap -= GameData.upgrade_cost(item)
+	dust -= Economy.upgrade_dust(item)
 	ClassTree.grow(self, "craft")
 	item["level"] = int(item["level"]) + 1
 	codex.at_least("max_upgrade", int(item["level"]))
@@ -2633,11 +2623,11 @@ func reroll(id: int) -> void:
 	if not GameData.can_reroll(item):
 		say("%s can't be rerolled." % _tag(item))
 		return
-	var cost := GameData.reroll_cost(item)
-	if scrap < cost:
-		say("Not enough scrap (need %d)." % cost)
+	if Economy.reroll_short(self, item) != "":
+		say(Economy.reroll_short(self, item))
 		return
-	scrap -= cost
+	scrap -= GameData.reroll_cost(item)
+	dust -= Economy.reroll_dust(item)
 	if randi_range(1, 100) <= GameData.reroll_chance(item):
 		var new_rarity := int(item["rarity"]) + 1
 		item["rarity"] = new_rarity
@@ -2653,11 +2643,9 @@ func reroll(id: int) -> void:
 	bag_version += 1
 	save_game()
 
-## Epic and Legendary gear gives back some of its zone's material when salvaged.
-func _salvage_materials(item: Dictionary) -> void:
-	var r := int(item["rarity"])
-	if GameData.SALVAGE_MATERIALS.has(r):
-		_give_materials(int(GameData.SALVAGE_MATERIALS[r]), GameData.zone_index(int(item["floor"])))
+## Epic and Legendary gear gives back a little dust when salvaged.
+func _salvage_dust(item: Dictionary) -> void:
+	Economy.give_dust(self, int(Economy.SALVAGE_DUST.get(int(item["rarity"]), 0)))
 
 func cycle_auto_salvage() -> void:
 	auto_salvage += 1
@@ -2702,11 +2690,7 @@ func salvage_all(rarity: int) -> void:
 	ClassTree.count(self, "scrapped", count)
 	bag_version += 1
 	say("Salvaged %d %s items for %d scrap." % [count, GameData.RARITY_NAMES[rarity], total])
-	if GameData.SALVAGE_MATERIALS.has(rarity):
-		var m := GameData.zone_index(best_floor)
-		var n := count * int(GameData.SALVAGE_MATERIALS[rarity])
-		materials[m] = int(materials[m]) + n
-		say("[color=#2dd4bf]+%d %s[/color]" % [n, GameData.MATERIALS[m]])
+	Economy.give_dust(self, count * int(Economy.SALVAGE_DUST.get(rarity, 0)))
 	save_game()
 
 # =====================================================================
@@ -2720,7 +2704,7 @@ func greater_potion_cost() -> int:
 	return price(GameData.GREATER_POTION_GOLD)
 
 func restock_cost() -> int:
-	return price(GameData.SHOP_RESTOCK_GOLD)
+	return price(Economy.restock_gold(best_floor))
 
 func elixir_cost(id: String) -> int:
 	return price(int(GameData.ELIXIRS[id]["gold"]))
@@ -2960,9 +2944,8 @@ func dev_grant(kind: String) -> void:
 			gold += 10000
 		"scrap":
 			scrap += 1000
-		"materials":
-			for i in materials.size():
-				materials[i] = int(materials[i]) + 10
+		"dust":
+			dust += 1000
 		"floor_up":
 			floor_num += 10
 			horde_left = 0
@@ -3105,17 +3088,13 @@ func dev_grant(kind: String) -> void:
 	_check_codex()
 	save_game()
 
-func material_total() -> int:
-	var t := 0
-	for m in materials:
-		t += int(m)
-	return t
-
 ## Why a set piece can't be crafted right now, or "".
 func set_block_reason(set_name: String) -> String:
-	var mat: int = GameData.SETS[set_name]["material"]
-	if int(materials[mat]) < GameData.SET_PIECE_MATERIALS:
-		return "Need %d %s" % [GameData.SET_PIECE_MATERIALS, GameData.MATERIALS[mat]]
+	if not Economy.set_zone_reached(self, set_name):
+		return "Reach its zone first"
+	var need := Economy.set_piece_dust(set_name)
+	if dust < need:
+		return "Need %d dust" % need
 	if scrap < GameData.SET_PIECE_SCRAP:
 		return "Need %d scrap" % GameData.SET_PIECE_SCRAP
 	if bag_full():
@@ -3126,8 +3105,7 @@ func craft_set_piece(set_name: String, slot: String) -> void:
 	if set_block_reason(set_name) != "":
 		say("Can't craft that yet: %s." % set_block_reason(set_name))
 		return
-	var mat: int = GameData.SETS[set_name]["material"]
-	materials[mat] = int(materials[mat]) - GameData.SET_PIECE_MATERIALS
+	dust -= Economy.set_piece_dust(set_name)
 	scrap -= GameData.SET_PIECE_SCRAP
 	var item := GameData.make_set_item(set_name, slot, best_floor, _new_id())
 	codex.add("sets_crafted")
@@ -3144,26 +3122,16 @@ func craft_set_piece(set_name: String, slot: String) -> void:
 func bag_craft_block_reason() -> String:
 	if bag_level >= GameData.BAG_MAX_LEVEL:
 		return "Bag is fully upgraded"
-	if material_total() < GameData.bag_craft_materials(bag_level):
-		return "Need %d boss materials" % GameData.bag_craft_materials(bag_level)
 	if scrap < GameData.bag_craft_scrap(bag_level):
 		return "Need %d scrap" % GameData.bag_craft_scrap(bag_level)
 	return ""
 
-## Sews a bigger bag from any boss materials (uses your biggest stacks first).
+## Sews a bigger bag from scrap.
 func craft_bag() -> void:
 	if bag_craft_block_reason() != "":
 		say("Can't craft a bag yet: %s." % bag_craft_block_reason())
 		return
-	var need := GameData.bag_craft_materials(bag_level)
 	scrap -= GameData.bag_craft_scrap(bag_level)
-	while need > 0:
-		var biggest := 0
-		for i in materials.size():
-			if int(materials[i]) > int(materials[biggest]):
-				biggest = i
-		materials[biggest] = int(materials[biggest]) - 1
-		need -= 1
 	bag_level += 1
 	say("Crafted a bigger bag: %d slots!" % bag_capacity())
 	save_game()
@@ -3262,7 +3230,6 @@ func save_game() -> void:
 		"class_tree": ClassTree.to_save(self),
 		"kill_streak": kill_streak,
 		"party_slots": party_slots,
-		"materials": materials,
 		"discovered": discovered,
 		"featured": featured,
 		"elixirs": elixirs,
@@ -3570,9 +3537,6 @@ func load_game() -> bool:
 	volume = float(data.get("volume", 0.8))
 	music_volume = float(data.get("music_volume", 0.5))
 	fullscreen = bool(data.get("fullscreen", false))
-	var saved_mats: Array = data.get("materials", [])
-	for i in mini(saved_mats.size(), materials.size()):
-		materials[i] = int(saved_mats[i])
 	for n in ClassTree.path_nodes(self):
 		discovered[n["id"]] = true
 	bag.assign(data.get("bag", []))
@@ -3781,13 +3745,12 @@ func raid_reward() -> String:
 	var g := (50 + best_floor * 25) * 6
 	gold += g
 	var zones := mini(GameData.ZONES.size(), GameData.zone_index(mini(best_floor, GameData.ZONE_FLOORS * GameData.ZONES.size())) + 1)
-	for i in zones:
-		materials[i] = int(materials[i]) + 2
+	dust += zones * Economy.RAID_DUST_PER_ZONE
 	var rarity := GameData.LEGENDARY if randf() < 0.15 else 3
 	var item := GameData.make_item(GameData.SLOT_ORDER.pick_random(), rarity, best_floor, _new_id())
 	_give_item(item)
 	save_game()
-	return "+%d gold, +2 of each boss material you've reached, and %s." % [g, _tag(item)]
+	return "+%d gold, +%d dust, and %s." % [g, zones * Economy.RAID_DUST_PER_ZONE, _tag(item)]
 
 # =====================================================================
 # Path rooms: sometimes you choose what the next room is
@@ -4066,7 +4029,7 @@ const SCROLLS := {
 	"luck": {"name": "Scroll of Luck", "text": "Better loot for %d turns"},
 	"hunt": {"name": "Hunter's Scroll", "text": "The next %d monsters are 3x as likely to be rare"},
 	"key": {"name": "Boss Key", "text": "Every boss is ready to fight again right now"},
-	"box": {"name": "Mystery Box", "text": "Epic or Legendary gear, gold or materials"},
+	"box": {"name": "Mystery Box", "text": "Epic or Legendary gear, gold or dust"},
 	"tome": {"name": "Tome of Forgetting", "text": "Your next stat respec is free"},
 	"return": {"name": "Return Scroll", "text": "Read it any time, even mid-fight, to escape home with everything you carry"},
 	"egg": {"name": "Strange Egg", "text": "Something is moving inside. It hatches after a few floors"},
@@ -4215,9 +4178,8 @@ func _open_box() -> String:
 		var g := _gold_scale() * 12
 		_add_gold(g)
 		return "Mystery Box: +%d gold!" % g
-	var m := GameData.zone_index(best_floor)
-	materials[m] = int(materials[m]) + 4
-	return "Mystery Box: +4 %s!" % GameData.MATERIALS[m]
+	dust += Economy.BOX_DUST
+	return "Mystery Box: +%d dust!" % Economy.BOX_DUST
 
 # =====================================================================
 # Stash, loadouts and loot filter
@@ -4361,7 +4323,7 @@ func claim_bounty(weekly: bool, i: int) -> String:
 	b["claimed"] = true
 	codex.add("bounties")
 	_faith(Classes.FAITH["bounty"])
-	var r := {"gold": 1500, "mats": 6, "scroll": "box"} if weekly else {"gold": 300, "mats": 2}
+	var r := {"gold": 1500, "dust": 6, "scroll": "box"} if weekly else {"gold": 300, "dust": 2}
 	var got := give_reward(r)
 	say("[color=#fbbf24]Bounty done![/color] %s" % got)
 	_check_codex()

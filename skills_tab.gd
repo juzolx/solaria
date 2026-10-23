@@ -282,7 +282,7 @@ func _toggle_equip() -> void:
 ## Pick any skill in the game to craft with dust.
 func _craft_popup() -> void:
 	var o := Overlay.new().open(main, "Craft a skill with dust", 640.0, Color("#c4b5fd"))
-	o.content.add_child(UI.label("You have %d dust. Dust comes from stones of skills you've already maxed." % state.dust, 13, UI.DIM))
+	o.content.add_child(UI.label("You have %d dust. Dust comes from bosses, rare monsters, vaults and stones of skills you have already maxed." % state.dust, 13, UI.DIM))
 	var l := ItemList.new()
 	l.custom_minimum_size = Vector2(0, 340)
 	l.add_theme_font_size_override("font_size", UI.MIN_FONT)

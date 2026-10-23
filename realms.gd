@@ -7,7 +7,7 @@ extends RefCounted
 ## to the realms you haven't entered yet. Your path (race, faith, Wanderer
 ## road) adds or locks some portals. Each realm has 5 sub-areas, a mid boss
 ## at its floor 25, a ruler at its floor 50, its own mechanic, its own event,
-## a camp with that race's merchant, a set, uniques and a material.
+## a camp with that race's merchant, a set and uniques.
 ##
 ## Monsters marked "people" are the realm race's own people: killing them
 ## costs reputation with that race, sparing them earns it.
@@ -146,8 +146,6 @@ const ZONES := [
 		{"id": "throne_iron_greaves", "name": "Throne-Iron Greaves", "flavor": "Cut from the legs of his throne. He had spares.", "slot": "Legs", "effect": "thorns", "value": 25},
 	]}},
 ]
-
-const MATERIALS := ["Ghostwood Sap", "Fae Dust", "Runesteel Ingot", "Seraph Feather", "Abyssal Ember"]
 
 ## 100% of a realm earns a title (an achievement) and one of these looks for the Wardrobe.
 const COSMETICS := {

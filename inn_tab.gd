@@ -7,7 +7,7 @@ const RUMORS := [
 	"\"Finish a contract down there and the Board mails your pay. Check your Mailbox.\"",
 	"\"WANTED posters pay in steel. A boss's weapon is worth the walk back up.\"",
 	"\"Every deed you finish earns a reward from the Guild. It comes by mail.\"",
-	"\"The Blacksmith can turn materials into whole sets. Ask about bigger bags too.\"",
+	"\"The Blacksmith turns dust and scrap into whole sets. Ask about bigger bags too.\"",
 	"\"Feeling lucky? The Tavern's wheel will bet on any of your spare gear.\"",
 	"\"Nothing down below can reach you in town. Rest up before a boss.\"",
 	"\"Keep your Vault stocked: every one of your heroes can open it.\"",

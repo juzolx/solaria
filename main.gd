@@ -74,6 +74,7 @@ var boss_label: Label
 var best_label: Label
 var gold_label: Label
 var scrap_label: Label
+var dust_label: Label
 var potion_label: Label
 
 # Fight panel
@@ -773,6 +774,7 @@ func _fit_layout() -> void:
 	best_label.visible = not tall
 	event_pill.visible = not tall
 	scrap_label.get_parent().visible = not tall
+	dust_label.get_parent().visible = not tall
 	potion_label.get_parent().visible = not tall
 	xp_bar.custom_minimum_size.x = 100 if tall else 150
 	if log_label:
@@ -865,14 +867,17 @@ func _build_top_bar(parent: Control) -> void:
 	# Right: resources + menu
 	var g := UI.pill(UI.GOLD)
 	var s := UI.pill(Color("#9fb0cc"))
+	var d := UI.pill(Color("#c4b5fd"))
 	var p2 := UI.pill(UI.PINK)
 	gold_label = g[1]
 	scrap_label = s[1]
+	dust_label = d[1]
 	potion_label = p2[1]
 	(g[0] as Control).tooltip_text = "Gold: from enemies and selling. Spend it in Town > Shop."
-	(s[0] as Control).tooltip_text = "Scrap: from salvaging. Use it to upgrade, reroll and craft."
+	(s[0] as Control).tooltip_text = "Scrap: from salvaging and chests. Use it to upgrade, reroll and craft."
+	(d[0] as Control).tooltip_text = "Dust: from bosses, rare monsters and maxed skills. Crafts skills and Set items, and pays for the best upgrades."
 	(p2[0] as Control).tooltip_text = "Potions heal 40% HP."
-	for pill in [g[0], s[0], p2[0]]:
+	for pill in [g[0], s[0], d[0], p2[0]]:
 		(pill as Control).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(pill)
 	var menu := UI.button("Menu", func(): SettingsMenu.new().show_for(self))
@@ -1617,6 +1622,7 @@ func _refresh_top() -> void:
 	gold_label.add_theme_color_override("font_color", Color("#fca5a5") if two and (state.gold > 0 or finds > 0) else UI.GOLD)
 	gold_label.get_parent().tooltip_text = ("At risk if you fall: %d gold you carry and %d piece%s of gear found this dive (plus what you wear).\nBank: %d (always safe). Head home from the Town tab to keep it all." % [state.gold, finds, "" if finds == 1 else "s", state.bank]) if two else "Gold: from enemies and selling. Spend it in Town."
 	scrap_label.text = "Scrap  %d" % state.scrap
+	dust_label.text = "Dust  %d" % state.dust
 	potion_label.text = "Potions  %d" % state.potions
 
 func _refresh_fight() -> void:

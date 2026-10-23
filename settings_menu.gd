@@ -161,7 +161,7 @@ func show_for(m) -> void:
 	dev_box = UI.vbox(6)
 	content.add_child(dev_box)
 	var sections := [
-		["Resources", [["+5 levels", "level"], ["+10,000 gold", "gold"], ["+1,000 scrap", "scrap"], ["+10 each material", "materials"],
+		["Resources", [["+5 levels", "level"], ["+10,000 gold", "gold"], ["+1,000 scrap", "scrap"], ["+1,000 dust", "dust"],
 			["Heal + 10 potions", "heal"], ["Fill the bag", "fill_bag"]]],
 		["Floors and bosses", [["Floor +10", "floor_up"], ["Floor -10", "floor_down"], ["Next area", "next_area"], ["Go to mid boss", "mid_boss"],
 			["Go to zone boss", "zone_boss"], ["Reset boss rests", "cooldowns"]]],
