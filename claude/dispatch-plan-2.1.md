@@ -53,6 +53,9 @@ D1 b: replace share-alike art. Claude is the artist: new 2x heroes + a NEW town
    New art must be animated (Juzo): heroes/monsters idle+attack+hit+death,
    town alive (torches, smoke, water, banners, walkers). Method: AI still ->
    cut into parts -> frames baked offline with pixel snap; code tweens for juice.
+   Art order: 2x heroes -> new town -> DUNGEON look (Juzo: important) -> weak
+   monsters -> rest. Dungeon = per-zone room backgrounds/walls/floors, props,
+   doors, lighting/torches, ambient motion (dust, drips, embers), room types.
 D2 a: Legendary Wheel unlocks at floor 250. D3 a: materials -> scrap + dust.
 D4 a: heroes 2x. D5 a: levels 1-3 for all + Church + cabin. D6 b: titles + cosmetics.
 D7 a: split game_state.gd after release. D8 a: story before Nov 3; ship the new town.
