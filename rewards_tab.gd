@@ -34,6 +34,8 @@ func refresh() -> void:
 		for t in tracks:
 			if Collections.group_of(t) != String(g[0]):
 				continue
+			if t in ["secret", "god"] and Collections.count(codex, t) == 0:
+				continue  # a surprise: these rewards show up once you find your first one
 			var ms := Collections.on_track(t)
 			if ms.size() == 1:
 				box.add_child(_row(ms[0], true))  # one reward: a single line with its own progress
