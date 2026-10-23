@@ -2,7 +2,14 @@
 
 Done Oct 23: class rules (15/35/75, God classes in god_classes.gd, cuts, save
 wipe), pets from region nests, Credits & Licenses screen + licenses audit, art
-audit tool + sheets, research (claude/research-2.1.md). Balance simulator in progress.
+audit tool + sheets, research (claude/research-2.1.md), balance simulator
+(tools/balance_sim.gd, report claude/balance-report.md).
+
+Balance sim findings (feed R5 + D10): floor 100 median 5.7 h (3.5-7.9 h); nobody
+past ~111 in 10 h. Cliff at floors 51-100 (monster HP outgrows hero attack;
+~7 deaths/hour, 76-100 takes 224 min). Casters thinnest. Death = naked restart
+snowball. Dust has no sink, gold piles up, shop reroll (30 g) nearly free.
+Boss cooldown uses real clock time.
 
 Rule: game_state.gd is touched by everything; helpers add new files and only
 small hooks there; the lead merges worktrees one at a time.
