@@ -170,7 +170,7 @@ const TREES := {
 			["shadowdancer", "Shadowdancer", "N", "dodge:.6 double_strike:.4", "Shadow Trick", "Never where you look", [
 				["shade_dancer", "Shade Dancer", "N", "dodge:.5 crit:.5", "Shadow Trick", "Never where the blow lands", {}],
 				["mirage", "Mirage", "N", "dodge:.7 thorns:.3", "Trick", "Was never there", {}]]]]],
-		["gambler", "Gambler", "N", "crit:.5 gold_find:.5", "Trick", "Lives on luck", [
+		["gambler", "Daredevil", "N", "crit:.5 gold_find:.5", "Trick", "Lives on luck", [
 			["illusionist", "Illusionist", "N", "dodge:.6 skill:.4", "Trick", "Tricks of the light", [
 				["grand_illusionist", "Grand Illusionist", "N", "dodge:.5 skill:.5", "Trick", "The greatest show", {}],
 				["dreamweaver", "Dreamweaver", "G", "regen:.5 dodge:.5", "Trick Song", "Weaves good dreams", {}]]],
@@ -396,9 +396,10 @@ static func util_scale(n: Dictionary) -> float:
 	return float(RANKS.get(r, 1.0)) if r != "" else 1.0
 
 ## The class's passive bonus dict (multipliers for atk/hp/def/skill, flat for the rest).
-static func passive(n: Dictionary) -> Dictionary:
+## scale: the fighting scale to use instead of the class's rank (God classes).
+static func passive(n: Dictionary, scale := -1.0) -> Dictionary:
 	var out := {}
-	var cs := combat_scale(n)
+	var cs := combat_scale(n) if scale < 0.0 else scale
 	var us := util_scale(n)
 	var f: Dictionary = n.get("focus", {})
 	for k in f:
@@ -595,6 +596,10 @@ static func auto_pick(g: GameState) -> void:
 static func bonus_sources(g: GameState) -> Array:
 	var out: Array = []
 	for n in path_nodes(g):
+		# The God node's own rank passive never counts: GodClasses.bonus_sources
+		# gives a God class its power instead (replaces it, never stacks).
+		if bool(n.get("god", false)):
+			continue
 		out.append(passive(n))
 	var u := unique_class(g)
 	if not u.is_empty():
@@ -693,6 +698,7 @@ static func grow(g: GameState, action: String, amount := 1.0) -> void:
 static func on_fight_start(g: GameState) -> void:
 	g.cfight = {"turns": 0, "min_hp": 1.0, "potion": false, "taken": 0, "enemy_acted": false, "hits": 0, "tags": {}, "song": false,
 		"burned": false, "froze": false, "first": true}
+	PetAbilities._fight_start(g)  # a pet shield never carries into the next fight, even if the pet stayed home
 
 static func on_turn(g: GameState) -> void:
 	g.cfight["turns"] = int(g.cfight.get("turns", 0)) + 1

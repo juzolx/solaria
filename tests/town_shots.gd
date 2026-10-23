@@ -64,8 +64,8 @@ func _initialize() -> void:
 	st.codex.stats["guide_skip"] = 1
 	st.codex.deeds = ["f25", "lv25", "k100"]
 	# Pets: a hatched pet, a caught one and an egg (the Clinic and its pen appear)
-	Menagerie.make_pet(st, "Barghest", Sprites.enemy_key("Barghest", false), 2, "egg")
-	var hurt := Menagerie.make_pet(st, "Will-o'-Wisp", Sprites.enemy_key("Will-o'-Wisp", false), 1, "caught")
+	Menagerie.make_pet(st, "barghest", "barghest", 2, "egg")
+	var hurt := Menagerie.make_pet(st, "will_o_wisp", "will_o_wisp", 1, "caught")
 	hurt["hurt"] = 6
 	st.eggs.append({"id": st._new_id(), "floors": 4, "from": "reward"})
 	main.go_to_town(true)

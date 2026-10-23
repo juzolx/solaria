@@ -36,6 +36,7 @@ static func buy(g: GameState, i: int) -> bool:
 	g.gold -= int(e["price"])
 	e["sold"] = true
 	var item: Dictionary = e["item"]
+	item["bought"] = true  # salvages for scrap only (Economy.salvage_dust)
 	g.add_to_wardrobe(item)
 	g.codex.found_item(item)
 	g.bag.append(item)

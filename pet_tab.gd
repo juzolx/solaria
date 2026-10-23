@@ -1,6 +1,6 @@
 class_name PetTab
 extends ScrollContainer
-## Hero > Pets (visible to everyone, so players know pets exist): your class
+## Character > Pets (visible to everyone, so players know pets exist): your class
 ## companion if your class has one, your owned pets (pick who comes along),
 ## your eggs, and empty slots that hint at what's out there.
 
@@ -139,13 +139,15 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 		row.add_child(rel)
 	return c[0]
 
-## 2.1: what the pet knows (by its rank), and what a higher-ranked one of its kind would add.
+## 2.1: what the pet knows (by its rank), and what a higher-ranked one of its kind
+## would know. A pet's rank never changes, so this pet won't learn those itself.
 func _ability_lines(v: VBoxContainer, p: Dictionary) -> void:
+	var fam := String((PetAbilities.FAMILIES.get(PetAbilities.family(String(p.get("species", ""))), {}) as Dictionary).get("name", "pet"))
 	for a in PetAbilities.lines(p):
 		if a["on"]:
 			v.add_child(UI.wrap("+ " + String(a["text"]), 11, UI.TEXT))
 		else:
-			v.add_child(UI.wrap("Locked (%s and up): %s" % [Menagerie.TIER_NAMES[int(a["rank"])], a["text"]], 11, UI.DIM))
+			v.add_child(UI.wrap("A higher-ranked %s pet (%s and up) would know: %s" % [fam, Menagerie.TIER_NAMES[int(a["rank"])], a["text"]], 11, UI.DIM))
 
 ## Your class companion: what it is, what it does, and what it becomes.
 func _pet_card() -> void:

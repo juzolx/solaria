@@ -6,7 +6,8 @@ extends RefCounted
 ##
 ## Normal table: put an item on the Wheel; win and it comes back one rarity
 ## higher (GameData.GAMBLE_CHANCES, read by GameState.gamble_chance).
-## Legendary table: opens at floor 250 (deepest floor ever). Pay game gold
+## Legendary table: opens at floor 250, account-wide (once any hero gets there,
+## the codex flag UNLOCK_KEY keeps it open for every hero). Pay game gold
 ## for one spin, win one prize from LEGENDARY_PRIZES. Its top prizes almost
 ## never hit; Luck and goblin builds raise them, up to a hard cap.
 ## Spins are only ever paid for with gold earned in the dungeon: never sold
@@ -17,17 +18,17 @@ const UNLOCK_KEY := "wheel_legendary"     # codex flag: the table stays open onc
 const SPINS_KEY := "wheel_legendary_spins"
 const SPIN_COST := 2500                   # gold, x (1 + deepest floor / 25): 27,500 at floor 250
 
-# Prize ids are permanent (stable ids). "tier": common / rare / top.
+# Prize ids are permanent (stable ids; "nest_egg" was removed in 2.1: pets come
+# only from nests). "tier": common / rare / top.
 # Weights are out of 1,000,000 before Fortune. "reward" goes through
 # GameState.give_reward (gold and scrap scale with depth there);
 # "legendary" is a count of Legendary items made for your depth.
 const LEGENDARY_PRIZES := [
-	{"id": "gold_purse", "name": "Purse of gold", "tier": "common", "weight": 400000, "reward": {"gold": 600}},
+	{"id": "gold_purse", "name": "Purse of gold", "tier": "common", "weight": 425000, "reward": {"gold": 600}},
 	{"id": "scrap_heap", "name": "Heap of scrap", "tier": "common", "weight": 250000, "reward": {"scrap": 600}},
 	{"id": "potion_crate", "name": "Crate of potions", "tier": "common", "weight": 150000, "reward": {"potions": 8}},
-	{"id": "luck_scroll", "name": "Scroll of Luck", "tier": "common", "weight": 100000, "reward": {"scroll": "luck"}},
+	{"id": "luck_scroll", "name": "Scroll of Luck", "tier": "common", "weight": 100000, "reward": {"keep_scroll": "luck"}},
 	{"id": "gold_hoard", "name": "Hoard of gold", "tier": "common", "weight": 60000, "reward": {"gold": 5000}},
-	{"id": "nest_egg", "name": "A pet egg", "tier": "common", "weight": 25000, "reward": {"egg": 1}},
 	{"id": "legendary_item", "name": "A Legendary item", "tier": "rare", "weight": 14850, "legendary": 1},
 	{"id": "kings_ransom", "name": "King's Ransom (a mountain of gold)", "tier": "top", "weight": 100, "reward": {"gold": 150000}},
 	{"id": "legend_cache", "name": "Cache of Legends (3 Legendary items)", "tier": "top", "weight": 50, "legendary": 3},
@@ -69,7 +70,7 @@ static func on_floor(g: GameState) -> void:
 	if g.codex.stat(UNLOCK_KEY) > 0 or deepest_floor(g) < LEGENDARY_UNLOCK_FLOOR:
 		return
 	g.codex.at_least(UNLOCK_KEY, 1)
-	g.say("[color=#e8b14a]The Legendary table on Fortune's Wheel is open![/color] Find it in Town > Wheel.")
+	g.say("[color=#e8b14a]The Legendary table on Fortune's Wheel is open![/color] Find it in Town > Tavern.")
 	g.events.append({"type": "toast", "text": "Floor %d: the Wheel's Legendary table is open." % LEGENDARY_UNLOCK_FLOOR})
 
 static func lock_text(g: GameState) -> String:
@@ -182,6 +183,9 @@ static func spin_legendary(g: GameState, rng: RandomNumberGenerator = null) -> D
 	if not legendary_unlocked(g):
 		g.say(lock_text(g))
 		return {"ok": false}
+	if g.bag_capacity() - g.bag.size() < bag_room_needed():  # like the item Wheel: prizes need bag room
+		g.say("Make room in your bag first: the Legendary table needs %d free slots (its best prize is %d items)." % [bag_room_needed(), bag_room_needed()])
+		return {"ok": false}
 	var cost := spin_cost(g)
 	if g.gold < cost:
 		g.say("Not enough gold (a Legendary spin costs %d)." % cost)
@@ -200,6 +204,31 @@ static func spin_legendary(g: GameState, rng: RandomNumberGenerator = null) -> D
 		g.say("[color=#e8b14a]The Legendary table gives:[/color] %s: %s" % [prize["name"], text])
 	g.save_game()
 	return {"ok": true, "index": idx, "prize": prize, "text": text, "cost": cost}
+
+## Free bag slots a spin needs: the most Legendary items any prize gives.
+static func bag_room_needed() -> int:
+	var n := 1
+	for p in LEGENDARY_PRIZES:
+		n = maxi(n, int(p.get("legendary", 0)))
+	return n
+
+## What a prize pays at this hero's depth, exactly as deliver() will hand it
+## over (gold and scrap scale with depth in GameState.give_reward).
+static func prize_amount(g: GameState, prize: Dictionary) -> String:
+	var parts: Array = []
+	var r: Dictionary = prize.get("reward", {})
+	if r.has("gold"):
+		parts.append("%s gold" % _commas(g.reward_gold(int(r["gold"]))))
+	if r.has("scrap"):
+		parts.append("%s scrap" % _commas(g.reward_scrap(int(r["scrap"]))))
+	if r.has("potions"):
+		parts.append("%d potions" % int(r["potions"]))
+	if r.has("keep_scroll"):
+		parts.append("1 Scroll of Luck, kept for later")
+	var n := int(prize.get("legendary", 0))
+	if n > 0:
+		parts.append("%d Legendary item%s for floor %d" % [n, "" if n == 1 else "s", g.best_floor])
+	return ", ".join(parts)
 
 ## Hands a prize over through the usual reward code. Returns what you got.
 static func deliver(g: GameState, prize: Dictionary) -> String:

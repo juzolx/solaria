@@ -815,20 +815,23 @@ static func on_floor(g: GameState) -> void:
 		secret(g, id, "hidden_path")
 
 ## Exalted heroes sometimes meet the realm's spirit: a Mythic of its people.
-static func maybe_spirit(g: GameState) -> void:
+## Returns the realm id if this monster is its spirit ("" if not); spawn_enemy
+## marks the fight with cfight["spirit"] so the kill is recognised by flag, not name.
+static func maybe_spirit(g: GameState) -> String:
 	var id := GameData.realm_of(g.floor_num)
 	if id == "" or g.enemy_is_boss or g.enemy_goblin or g.horde_left > 0:
-		return
+		return ""
 	if Races.rep_index(Lineage.rep(g, info(id)["race"])) < 5 or randf() > 0.02:
-		return
+		return ""
 	g._apply_tier(Monsters.MYTHIC)
 	g.enemy_name = "Spirit of " + realm_name(id).trim_prefix("The ")
 	g.feats["spirit_" + id] = 1
 	g.say("[color=#e8b14a]Because they trust you, the realm shows you its spirit. It wants to test you.[/color]")
+	return id
 
 static func on_spirit_kill(g: GameState) -> void:
-	var id := GameData.realm_of(g.floor_num)
-	if id != "" and g.feats.get("spirit_" + id, 0) and g.enemy_name.begins_with("Spirit of"):
+	var id := String(g.cfight.get("spirit", ""))
+	if id != "" and g.feats.get("spirit_" + id, 0):
 		ClassTree.count(g, "spirits")
 		secret(g, id, "exalted")
 

@@ -252,5 +252,15 @@ func _initialize() -> void:
 	ClassTree.from_save(c3, {"path": ["berserker", "No Such Class", "Berserker"], "god": "Nope"})
 	check(c3.class_path.size() == 1 and c3.class_path[0] == "berserker" and c3.god_class == "", "unknown class ids are dropped on load")
 
+	# Auto signature names never repeat the class's own word ("Fortune's Fortune")
+	check(Signatures.auto_name("Fortune", "fortune") == "Fortune's Windfall", "a noun equal to the class name is swapped (%s)" % Signatures.auto_name("Fortune", "fortune"))
+	check(Signatures.auto_name("Grim Edge", "crit") == "Grim Edge's Cut", "a noun inside the class name is swapped")
+	check(Signatures.auto_name("Duelist", "crit") == "Duelist's Edge", "other names keep the usual noun")
+	for nid in ClassTree.all_nodes():
+		var sid := Signatures.id_of(String(nid))
+		if Signatures.is_signature(sid):
+			var nm := String(Signatures.info(sid).get("name", ""))
+			var parts := nm.split("'s ", false)
+			check(parts.size() < 2 or parts[0].to_lower() != parts[1].to_lower(), "no doubled signature name (%s)" % nm)
 	print("STAGE6 ID TESTS DONE, failures: %d" % fails)
 	quit()

@@ -45,6 +45,22 @@ func show_for(main_node) -> void:
 			m.refresh(), UI.GOLD)
 		rb.disabled = st.in_town
 		h2.add_child(rb)
+	if st.supply_carried("luck") > 0:
+		any = true
+		var h3 := UI.hbox(8)
+		content.add_child(h3)
+		var l3 := UI.rich(13)
+		l3.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l3.text = "[b]Scroll of Luck[/b] x%d\n[color=%s]Better loot for %d turns.%s[/color]" % [st.supply_carried("luck"), UI.hex(UI.DIM), GameData.LUCK_TURNS,
+			("  (active: %d turns left)" % st.luck_turns) if st.luck_turns > 0 else ""]
+		h3.add_child(l3)
+		var lb := UI.primary("Read", func():
+			if st.read_luck_scroll():
+				m.sfx.play("buff")
+			close()
+			m.refresh(), UI.PURPLE)
+		lb.disabled = st.in_town
+		h3.add_child(lb)
 	content.add_child(UI.wrap("Potions: %d (use the Potion button)." % st.potions, 12, UI.DIM))
 	if not any:
 		content.add_child(UI.wrap("You carried no elixirs or scrolls this time. Pick what to bring in town, under Into the dungeon.", 12, UI.DIM))

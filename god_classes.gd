@@ -8,7 +8,24 @@ extends RefCounted
 ## class; a few also answer a hero who took a unique (hidden) class.
 ## Their class nodes join the class tree (ClassTree._build) with rank "God".
 
-const POWER := 2.4   # Attack, HP and Defense, on top of the class's own focus (a hidden class tops out at about x2.1)
+## Juzo (Oct 23): a God class is about ONE rank step above SS, not ~3x.
+## POWER is the fighting scale a God hero's top class ends at, in ClassTree.RANKS
+## units (S 2.0, SS 2.5: one step up is 3.0). The God's bonus REPLACES the God
+## node's own rank passive (ClassTree.bonus_sources skips it) and tops your level
+## 75 final up to POWER: bonus scale = POWER - the final's scale (at least one
+## half step, 0.5), in the God class's own focus. So a God who grew from an S final
+## adds 1.0, from an SS final 0.5; with no final yet, the full 3.0. Utility God
+## classes end two steps lower (2.0), like utility finals.
+## In "units" of fighting bonus at tier 3 (scale x ClassTree.POWER 1.4):
+##   S final 2.8, SS final 3.5, God 4.2 (one step above SS).
+## Example, Warrior Champion > Weaponmaster > Colossus (S) at level 75, route only:
+##   Colossus: Attack x1.17, HP x1.34  ->  Titan: Attack x1.27, HP x1.48 (before: about x3)
+## A top hidden class at 75 (Hidden.STAGE_POWER 1.18 x 1.28 x 1.40 = x2.1 to Attack,
+## HP and Defense) is still stronger than this: flagged to Juzo as an open question.
+## Before (2.1 first pass): the God passive at 3.0 stacked with x2.4 Attack/HP/Defense.
+const POWER := 3.0
+const MIN_STEP := 0.5
+const UTILITY_STEPS_DOWN := 1.0  # two rank steps of 0.5
 
 ## id (permanent, also its class node id) -> the class (name, base class, the level-35
 ## class node id it grows from, side, focus,
@@ -108,14 +125,29 @@ static func check(g: GameState) -> void:
 static func take(g: GameState, id: String) -> bool:
 	if g.god_class != "" or not id in g.god_offers:
 		return false
+	if not earned(g, id):
+		return false  # e.g. a main-route God offered before the hero took a hidden class
 	g.god_class = id
 	g.god_offers.clear()
 	g.hidden_class = ""  # the God class is your class now
-	g.codex.add("gods")
 	ClassTree._on_new_class(g, ClassTree.node(id))
 	return true
 
 static func bonus_sources(g: GameState) -> Array:
 	if g.god_class == "":
 		return []
-	return [{"atk": POWER, "hp": POWER, "def": POWER}]
+	var n := ClassTree.node(g.god_class)
+	if n.is_empty():
+		return []
+	return [ClassTree.passive(n, scale(g, n))]
+
+## The scale of a God class's bonus: what tops this hero's level 75 final up to
+## POWER (two steps lower for a utility God), never less than MIN_STEP.
+static func scale(g: GameState, n: Dictionary) -> float:
+	var target := POWER if String(n.get("role", "combat")) == "combat" else POWER - UTILITY_STEPS_DOWN
+	var final_scale := 0.0
+	for id in g.class_path:
+		var f := ClassTree.node(String(id))
+		if not f.is_empty() and int(f["tier"]) >= 3:
+			final_scale = ClassTree.combat_scale(f)
+	return maxf(MIN_STEP, target - final_scale)

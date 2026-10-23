@@ -388,6 +388,7 @@ static func _hero_lpc(app: Dictionary, looks: Dictionary) -> Dictionary:
 
 static func _px_spec(sp: Dictionary) -> Dictionary:
 	if HERO_PIXEL > 1:
+		sp = sp.duplicate()  # never change the caller's spec (it may be a shared constant or cached)
 		sp["px"] = HERO_PIXEL
 	return sp
 
@@ -504,24 +505,8 @@ static func portrait(app: Dictionary, looks := {}) -> ImageTexture:
 # Monsters (final colors, no recoloring)
 # =====================================================================
 
-static func enemy_key(enemy_name: String, boss: bool) -> String:
-	var n := enemy_name
-	for p in GameData.RANK_PREFIXES:
-		if p != "" and n.begins_with(p):
-			n = n.substr(p.length())
-	if boss:
-		return "boss_" + n.split(" ")[0].split(",")[0].to_lower()
-	var out := ""
-	for ch in n.to_lower():
-		out += ch if (ch >= "a" and ch <= "z") else "_"
-	while out.contains("__"):
-		out = out.replace("__", "_")
-	return out.trim_suffix("_")
-
-## Returns {"tex", "white", "size": Vector2, "foot": float} or {} if there's no art.
-static func enemy(enemy_name: String, boss: bool) -> Dictionary:
-	return enemy_by_key(enemy_key(enemy_name, boss))
-
+## Monster art goes by its art key (ids: "kobold", "boss_grendel"), never by the
+## shown name. Returns {"tex", "white", "size": Vector2, "foot": float} or {} if there's no art.
 static func enemy_by_key(key: String) -> Dictionary:
 	if _cache.has("e_" + key):
 		return _cache["e_" + key]

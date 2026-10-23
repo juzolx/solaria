@@ -330,61 +330,150 @@ func cloud_code() -> String:
 		profile.save()
 	return code
 
-## Packs the files on this device into one Variant.
+## Packs the files on this device into one Variant: every town (its heroes and
+## its record: name, mode, stash, skill book...), the Codex and the Hardcore
+## records. "epoch" stops a backup from before a fresh start bringing back
+## heroes that were wiped (Profile.SAVE_EPOCH).
 static func pack_local(p: Profile) -> Dictionary:
-	var heroes := {}
-	for n in range(1, GameData.MAX_HEROES + 1):
-		if GameState.has_slot(n):
-			var h = SaveIO.read(GameState.slot_paths(n)[0], "hero")  # with backup fallback (save_io.gd)
-			if h != null:
-				heroes[n] = h
+	p._store_town()  # the town you're in, as it is right now
+	var towns := {}
+	for t in range(1, GameData.MAX_TOWNS + 1):
+		var heroes := {}
+		for n in range(1, GameData.MAX_HEROES + 1):
+			var path: String = GameState.town_slot_paths(t, n)[0]
+			if SaveIO.exists(path):
+				var h = SaveIO.read(path, "hero")  # with backup fallback (save_io.gd)
+				if h != null:
+					heroes[n] = h
+		if not heroes.is_empty() or p.towns.has(str(t)):
+			towns[t] = {"heroes": heroes, "record": (p.towns.get(str(t), {}) as Dictionary).duplicate(true)}
 	var codex = SaveIO.read(Codex.PATH, "codex")
-	return {"version": 1, "heroes": heroes, "codex": codex, "stash": p.stash, "stash_level": p.stash_level, "max_floor": p.max_floor,
-		"hc_best": p.hc_best, "hc_runs": p.hc_runs, "active_slot": p.active_slot}
+	return {"version": BUNDLE_VERSION, "epoch": Profile.SAVE_EPOCH, "towns": towns, "codex": codex,
+		"hc_best": p.hc_best, "hc_runs": p.hc_runs, "town": p.town}
 
-## True if a cloud bundle is whole: at least one hero, every hero a real hero save
-## in a valid slot, and the other parts the right types.
-static func bundle_ok(bundle: Dictionary) -> bool:
-	if typeof(bundle.get("heroes")) != TYPE_DICTIONARY or (bundle["heroes"] as Dictionary).is_empty():
-		return false
-	var heroes: Dictionary = bundle["heroes"]
-	for n in heroes:
-		if not (typeof(n) == TYPE_INT or (typeof(n) == TYPE_STRING and String(n).is_valid_int())) or int(n) < 1 or int(n) > GameData.MAX_HEROES:
-			return false
-		if typeof(heroes[n]) != TYPE_DICTIONARY or not (heroes[n] as Dictionary).has("floor"):
-			return false
+const BUNDLE_VERSION := 2
+const OLD_BACKUP := "That backup is from before Solaria 2.1 and can't be restored."
+const NEWER_BACKUP := "That backup was made by a newer version of Solaria. Update the game to restore it."
+const BAD_BACKUP := "That backup is incomplete, so nothing was changed."
+const STAGING := "user://restore_staging"
+
+static func _key_ok(k, most: int) -> bool:
+	return (typeof(k) == TYPE_INT or (typeof(k) == TYPE_STRING and String(k).is_valid_int())) and int(k) >= 1 and int(k) <= most
+
+## Why a cloud bundle can't be restored ("" = it can): it must be from this
+## save epoch, hold at least one hero, every hero a real hero save in a valid
+## town and slot, and the other parts the right types.
+static func bundle_error(bundle: Dictionary) -> String:
+	var epoch := int(bundle.get("epoch", 0)) if typeof(bundle.get("epoch", 0)) in [TYPE_INT, TYPE_FLOAT] else 0
+	if epoch < Profile.SAVE_EPOCH:
+		return OLD_BACKUP
+	if epoch > Profile.SAVE_EPOCH:
+		return NEWER_BACKUP
+	if typeof(bundle.get("towns")) != TYPE_DICTIONARY:
+		return BAD_BACKUP
+	var any := false
+	var towns: Dictionary = bundle["towns"]
+	for t in towns:
+		if not _key_ok(t, GameData.MAX_TOWNS) or typeof(towns[t]) != TYPE_DICTIONARY:
+			return BAD_BACKUP
+		var tw: Dictionary = towns[t]
+		if typeof(tw.get("heroes")) != TYPE_DICTIONARY or typeof(tw.get("record", {})) != TYPE_DICTIONARY:
+			return BAD_BACKUP
+		var heroes: Dictionary = tw["heroes"]
+		for n in heroes:
+			if not _key_ok(n, GameData.MAX_HEROES) or typeof(heroes[n]) != TYPE_DICTIONARY or not (heroes[n] as Dictionary).has("floor"):
+				return BAD_BACKUP
+			any = true
+		var rec: Dictionary = tw.get("record", {})
+		for k in ["stash", "presets"]:
+			if rec.has(k) and typeof(rec[k]) != TYPE_ARRAY:
+				return BAD_BACKUP
+		for k in ["skill_book", "calamities"]:
+			if rec.has(k) and typeof(rec[k]) != TYPE_DICTIONARY:
+				return BAD_BACKUP
+	if not any:
+		return BAD_BACKUP
 	if bundle.get("codex") != null and typeof(bundle["codex"]) != TYPE_DICTIONARY:
-		return false
-	for k in ["stash", "hc_runs"]:
-		if bundle.has(k) and typeof(bundle[k]) != TYPE_ARRAY:
-			return false
-	return true
+		return BAD_BACKUP
+	if bundle.has("hc_runs") and typeof(bundle["hc_runs"]) != TYPE_ARRAY:
+		return BAD_BACKUP
+	return ""
 
-## Writes a packed backup over the files on this device. A bad bundle changes
-## nothing: every bundle hero is written first, and only then are the local
-## heroes the bundle doesn't have removed. Returns false if nothing was restored.
-static func unpack_local(p: Profile, bundle: Dictionary) -> bool:
-	if not bundle_ok(bundle):
-		return false
-	var heroes: Dictionary = bundle["heroes"]
-	var written := {}
-	for n in heroes:
-		if not SaveIO.write(GameState.slot_paths(int(n))[0], (heroes[n] as Dictionary).duplicate(true), "hero"):
-			return false
-		written[int(n)] = true
-	for n in range(1, GameData.MAX_HEROES + 1):
-		if not written.has(n):
-			GameState.delete_slot(n)
+static func bundle_ok(bundle: Dictionary) -> bool:
+	return bundle_error(bundle) == ""
+
+## Writes a packed backup into the same towns it came from. Towns that aren't
+## in the backup are never touched. Every hero is first written to a staging
+## folder and read back; if any fails, nothing on this device is changed. Only
+## when every hero has been written for real are the town's other heroes
+## removed. Returns {"ok", "error"}; a failure part-way says exactly who was restored.
+static func unpack_local(p: Profile, bundle: Dictionary) -> Dictionary:
+	var why := bundle_error(bundle)
+	if why != "":
+		return {"ok": false, "error": why}
+	var towns: Dictionary = bundle["towns"]
+	var plan: Array = []  # [{"t", "n", "data"}]
+	for t in towns:
+		var heroes: Dictionary = (towns[t] as Dictionary)["heroes"]
+		for n in heroes:
+			plan.append({"t": int(t), "n": int(n), "data": heroes[n]})
+	# 1. Staging: prove every hero can be written and read back on this device
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(STAGING))
+	var staged_ok := true
+	for e in plan:
+		var sp := STAGING.path_join("town%d_hero_%d.dat" % [e["t"], e["n"]])
+		if not SaveIO.write(sp, e["data"], "hero") or SaveIO.read(sp, "hero") == null:
+			staged_ok = false
+			break
+	_clear_staging(plan)
+	if not staged_ok:
+		return {"ok": false, "error": "The backup couldn't be written on this device (is the storage full?), so nothing was changed."}
+	# 2. The real files
+	var done: Array = []
+	for e in plan:
+		if not SaveIO.write(GameState.town_slot_paths(e["t"], e["n"])[0], e["data"], "hero"):
+			var names := done.map(func(d): return _hero_label(p, d))
+			var msg := "Only part of the backup could be restored (is the storage full?). "
+			msg += ("Restored: %s. " % ", ".join(names)) if not names.is_empty() else "No hero was restored. "
+			msg += "Every other hero on this device is unchanged."
+			return {"ok": false, "error": msg, "partial": done.size()}
+		done.append(e)
+	# 3. Every hero is in place: the restored towns lose heroes the backup doesn't have
+	p._store_town()
+	for t in towns:
+		var ti := int(t)
+		var keep: Dictionary = (towns[t] as Dictionary)["heroes"]
+		var kept := {}
+		for n in keep:
+			kept[int(n)] = true
+		for n in range(1, GameData.MAX_HEROES + 1):
+			if not kept.has(n):
+				SaveIO.delete_all(GameState.town_slot_paths(ti, n)[0])
+		var rec: Dictionary = ((towns[t] as Dictionary).get("record", {}) as Dictionary).duplicate(true)
+		var local: Dictionary = p.towns.get(str(ti), {})
+		rec["max_floor"] = maxi(int(local.get("max_floor", 0)), int(rec.get("max_floor", 0)))
+		p.towns[str(ti)] = rec
 	if typeof(bundle.get("codex")) == TYPE_DICTIONARY:
 		SaveIO.write(Codex.PATH, (bundle["codex"] as Dictionary).duplicate(true), "codex")
-	p.stash = bundle.get("stash", [])
-	p.stash_level = int(bundle.get("stash_level", 0))
-	p.max_floor = maxi(p.max_floor, int(bundle.get("max_floor", 0)))
 	p.hc_best = maxi(p.hc_best, int(bundle.get("hc_best", 0)))
 	p.hc_runs = bundle.get("hc_runs", p.hc_runs)
-	p.active_slot = int(bundle.get("active_slot", 1))
+	var home := int(bundle.get("town", p.town)) if typeof(bundle.get("town")) == TYPE_INT else p.town
+	if not towns.has(home) and not towns.has(str(home)):
+		home = p.town
+	p.town = clampi(home, 1, GameData.MAX_TOWNS)
+	p._load_town(p.town)
+	GameState.town = p.town
 	p.save()
-	return true
+	return {"ok": true, "error": ""}
+
+static func _hero_label(p: Profile, e: Dictionary) -> String:
+	var nm := str((e["data"] as Dictionary).get("hero_name", ""))
+	return "%s (%s)" % [nm if nm != "" else "a hero", p.town_name(int(e["t"]))]
+
+static func _clear_staging(plan: Array) -> void:
+	for e in plan:
+		SaveIO.delete_all(STAGING.path_join("town%d_hero_%d.dat" % [e["t"], e["n"]]))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(STAGING))
 
 func cloud_backup() -> Dictionary:
 	var blob := Marshalls.variant_to_base64(pack_local(profile))
@@ -406,8 +495,9 @@ func cloud_restore(code := "") -> Dictionary:
 	var bundle = Marshalls.base64_to_variant(str(r["data"]))
 	if typeof(bundle) != TYPE_DICTIONARY:
 		return {"ok": false, "error": "That backup couldn't be read."}
-	if not unpack_local(profile, bundle):
-		return {"ok": false, "error": "That backup is incomplete, so nothing was changed."}
+	var res := unpack_local(profile, bundle)
+	if not res["ok"]:
+		return res
 	profile.online["cloud_code"] = code.strip_edges().to_upper()
 	profile.save()
 	return {"ok": true}

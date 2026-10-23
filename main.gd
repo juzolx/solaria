@@ -157,6 +157,7 @@ func _ready() -> void:
 		play_slot(int(action["play"]))
 		if action.has("party") and not state.hardcore:
 			state.set_party(action["party"])  # a team preset with another leader
+			_show_save_notices.call_deferred()  # a companion's save may have been restored
 	else:
 		show_title()
 	_show_save_notices.call_deferred()
@@ -166,6 +167,12 @@ var fresh_start_notice := false
 ## A new save epoch (0.12): every hero is wiped once. Settings and the online login stay.
 func _fresh_start_check() -> void:
 	if not profile.fresh_start_due():
+		return
+	if not SaveIO.exists(Profile.PATH) and _has_current_heroes():
+		# The settings file is gone but the heroes were saved by this version
+		# (2.1 SaveIO files carry "save_kind"): never wipe them, just mark the epoch.
+		profile.save_epoch = Profile.SAVE_EPOCH
+		profile.save()
 		return
 	var had_saves := FileAccess.file_exists(Profile.PATH) or FileAccess.file_exists(GameState.SAVE_PATH) \
 		or FileAccess.file_exists(GameState.HC_SAVE_PATH) or FileAccess.file_exists(Codex.PATH)
@@ -180,6 +187,14 @@ func _fresh_start_check() -> void:
 		fresh_start_notice = true
 	profile.save_epoch = Profile.SAVE_EPOCH
 	profile.save()
+
+## True if any hero file in any town was written by 2.1 or later (SaveIO).
+func _has_current_heroes() -> bool:
+	for t in range(1, GameData.MAX_TOWNS + 1):
+		for n in range(1, GameData.MAX_HEROES + 1):
+			if SaveIO.made_by_save_io(GameState.town_slot_paths(t, n)[0], "hero"):
+				return true
+	return false
 
 func _show_fresh_start() -> void:
 	fresh_start_notice = false
@@ -351,6 +366,7 @@ func _start(is_new: bool) -> void:
 	_share_skill_book()
 	if not state.hardcore and not state.party_slots.is_empty():
 		state.set_party(state.party_slots)
+		_show_save_notices.call_deferred()  # a companion's save may have been restored
 	Bench.refresh(state)  # next update: who is at home finding things
 	for pet in state.pets:  # next update: pets owned before the Codex kept a pet book
 		if not codex.pet_book.has(str(pet["species"])) or int(codex.pet_book[str(pet["species"])]) < int(pet["tier"]):
@@ -621,6 +637,8 @@ func _on_hardcore_death() -> void:
 		row.add_child(b)
 
 func _on_tick() -> void:
+	if not SaveIO.notices.is_empty():
+		_show_save_notices()  # e.g. a companion added at the Party tab had a damaged save
 	Store.poll(profile, codex)  # App Store purchases (does nothing while the store is off)
 	# Manual play: nothing happens until you act (see _manual_turn)
 	if battle.busy():

@@ -27,6 +27,12 @@ extends RefCounted
 ## the title. Tests leave `coalesce` off, so every save writes at once.
 ## Nothing here looks at the wall clock: there is still no offline progress.
 
+## SaveIO's own file-format version per kind. Not the same thing as
+## GameData.SAVE_VERSION: that is the hero's game-data layout inside the file
+## ("version", converted by GameState._convert_old_save in load_game). If a
+## hero format change can be expressed as a MIGRATIONS["hero"] step, bump
+## VERSIONS["hero"] here; if it needs GameState logic, bump GameData.SAVE_VERSION
+## and extend _convert_old_save. Never bump both for the same change.
 const VERSIONS := {"hero": 1, "profile": 1, "codex": 1}
 const BACKUPS := 3
 const MIN_INTERVAL_MS := 3000
@@ -78,6 +84,31 @@ static func delete_all(path: String) -> void:
 		if FileAccess.file_exists(p):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(p))
 
+## True if a save exists under any name it can be read back from (main, the
+## verified .tmp, the backups or the daily copy). A .corrupt copy alone isn't a save.
+static func exists(path: String) -> bool:
+	for p in fallback_paths(path):
+		if FileAccess.file_exists(p):
+			return true
+	return false
+
+## Main file first, then the fallbacks in the order load_file tries them.
+static func fallback_paths(path: String) -> Array:
+	var out := [path, tmp_path(path)]
+	for i in range(1, BACKUPS + 1):
+		out.append(backup_path(path, i))
+	out.append(day_path(path))
+	return out
+
+## True if a readable copy of this save was written by SaveIO (it carries
+## "save_kind"): i.e. by Solaria 2.1 or later. Reads only, never repairs.
+static func made_by_save_io(path: String, kind: String) -> bool:
+	for p in fallback_paths(path):
+		var d = _parse(p, kind)
+		if d != null:
+			return (d as Dictionary).has("save_kind")
+	return false
+
 static func backup_count(path: String) -> int:
 	var n := 0
 	for i in range(1, BACKUPS + 1):
@@ -92,6 +123,7 @@ static func backup_count(path: String) -> int:
 ## Atomically writes data (a Dictionary) to path. Returns false (and leaves the
 ## old files untouched) if the new file could not be written and read back.
 static func write(path: String, data: Dictionary, kind: String) -> bool:
+	data = data.duplicate()  # the caller's dictionary is never changed
 	data["save_version"] = int(VERSIONS.get(kind, 1))
 	data["save_kind"] = kind
 	var tmp := tmp_path(path)
@@ -123,11 +155,13 @@ static func write(path: String, data: Dictionary, kind: String) -> bool:
 	_move(tmp, path)
 	return true
 
-## Seconds since a file was last written (huge if it doesn't exist).
+## Seconds since a file was last written (huge if it doesn't exist, or if
+## the clock was moved back so it looks written in the future: rotate then).
 static func _age(p: String) -> int:
 	if not FileAccess.file_exists(p):
 		return 1 << 40
-	return now_unix() - int(FileAccess.get_modified_time(p))
+	var age := now_unix() - int(FileAccess.get_modified_time(p))
+	return 1 << 40 if age < 0 else age
 
 static func _move(from: String, to: String) -> void:
 	var a := ProjectSettings.globalize_path(from)
@@ -166,10 +200,7 @@ static func load_file(path: String, kind: String) -> Dictionary:
 	if main_exists:
 		DirAccess.copy_absolute(ProjectSettings.globalize_path(path), ProjectSettings.globalize_path(corrupt_path(path)))
 	var tried_backup := false
-	var order := [tmp_path(path)]
-	for i in range(1, BACKUPS + 1):
-		order.append(backup_path(path, i))
-	order.append(day_path(path))
+	var order := fallback_paths(path).slice(1)
 	for p in order:
 		if p != order[0] and FileAccess.file_exists(p):
 			tried_backup = true

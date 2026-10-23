@@ -39,7 +39,7 @@ static func on_death(g: GameState) -> void:
 		"boss": bool(old["boss"]) if by_guard else g.enemy_is_boss,
 		"art": String(old["art"]) if by_guard else g.enemy_art, "shape": String(old["shape"]) if by_guard else g.enemy_shape,
 		"color": String(old["color"]) if by_guard else g.enemy_color, "items": items, "gold": gold}
-	g.events.append({"type": "toast", "text": "Your things lie on floor %d. The %s guards them." % [g.floor_num, Monsters.name_of(killer)]})
+	g.events.append({"type": "toast", "text": "Your things lie on floor %d. The %s guards them." % [g.floor_num, String(g.grave["name"])]})
 	g.tip("grave", "When you fall, what you carried drops where you fell and your killer guards it. Come back to that floor and beat it to get it all back. Fall somewhere else first and the old grave is lost.")
 
 ## The grave's guardian is due on this floor's first fight (no pack rolls then).
@@ -71,7 +71,7 @@ static func make_guard(g: GameState) -> void:
 	g.enemy_hp = g.enemy_max_hp
 	g.enemy_attack = int(g.enemy_attack * GUARD_ATK)
 	g.events.append({"type": "mini_event", "kind": "grave", "title": "YOUR KILLER", "sub": "It guards what you lost (%d items)" % (g.grave["items"] as Array).size()})
-	g.say("[color=#f59e0b]The %s that killed you is here, wearing your gear. Beat it to take it all back.[/color]" % Monsters.name_of(String(g.grave["killer"])))
+	g.say("[color=#f59e0b]The %s that killed you is here, wearing your gear. Beat it to take it all back.[/color]" % String(g.grave.get("name", Monsters.name_of(String(g.grave["killer"])))))
 
 ## Beat the guardian: everything comes back (to the bag, or the Mailbox if it's full).
 static func recover(g: GameState) -> void:

@@ -96,7 +96,7 @@ var phylactery_used := false  # Lich: the once-per-floor save
 var rep := {}               # race -> standing, -100..100
 var feats := {}             # counters for hidden-class unlocks
 var realm_order: Array = [] # the realms in the order you chose them
-var hidden := {}            # hidden classes earned (a surprise until 15, 35 or 60): id -> true
+var hidden := {}            # hidden classes earned (a surprise until 15, 35 or 75): id -> true
 var hidden_class := ""      # your hidden class, for good ("" = none): it replaces the main route (hidden.gd)
 var hidden_stage := {}      # id -> step reached (1..3, levels 15, 35, 75)
 var hidden_offer: Array = []  # hidden classes you can take right now (shown at 15, 35, 75; open until your next level-up)
@@ -1206,6 +1206,7 @@ func toggle_skill_auto(id: String) -> void:
 	save_game()
 
 func gain_xp(amount: int) -> void:
+	var level_before := level  # Hidden.on_level: offers made during this call survive it
 	xp += int(amount * float(race_info().get("xp", 1.0)) * (1.0 + _flat("xp") / 100.0) * TownEvents.xp_mult(self) * Synergies.reward_mult(self) * (1.5 if song_xp_turns > 0 else 1.0))
 	while xp >= GameData.xp_to_next(level):
 		xp -= GameData.xp_to_next(level)
@@ -1233,7 +1234,7 @@ func gain_xp(amount: int) -> void:
 		if level == Classes.SPEC_LEVEL - 5:
 			tip("spec_soon", "At level %d you choose your first class branch. Check the Class tab to see the tree." % Classes.SPEC_LEVEL)
 		_check_spec()
-		Hidden.on_level(self)  # 15, 35, 75: what you've earned comes out of hiding
+		Hidden.on_level(self, level_before)  # 15, 35, 75: what you've earned comes out of hiding
 
 ## New slots get filled with skills you own but aren't using.
 func _fill_empty_slots() -> void:
@@ -1389,7 +1390,7 @@ func spawn_enemy() -> void:
 	if World.champion_here(self) and not enemy_is_boss:
 		World.make_champion(self)
 	enemy_illusion = Realms.roll_illusion(self)
-	Realms.maybe_spirit(self)
+	var spirit := Realms.maybe_spirit(self)
 	var realm_here := GameData.realm_of(floor_num)
 	if enemy_is_boss and realm_here != "" and not codex.seen(enemy_species):
 		events.append({"type": "boss_intro", "name": enemy_name, "lore": Monsters.info(enemy_species).get("lore", ""), "color": enemy_color,
@@ -1409,6 +1410,8 @@ func spawn_enemy() -> void:
 	Variants.maybe(self)  # now and then the same beast with a new face
 	Peoples.on_spawn(self)  # a race that likes you may let you pass
 	ClassTree.on_fight_start(self)
+	if spirit != "":
+		cfight["spirit"] = spirit  # Realms.on_spirit_kill goes by this flag, not the name
 	_setup_fight()
 	if pierce_carry > 0:
 		var carried := mini(pierce_carry, enemy_hp - 1)
@@ -2308,9 +2311,12 @@ func _death_losses() -> String:
 		return_scrolls = 0
 	var packed := 0
 	for k in elixir_pack:
-		packed += int(elixir_pack[k])
+		if k != "luck":
+			packed += int(elixir_pack[k])
 	if packed > 0:
 		parts.append("%d elixir%s" % [packed, "" if packed == 1 else "s"])
+	if int(elixir_pack.get("luck", 0)) > 0:
+		parts.append("%d Scroll%s of Luck" % [int(elixir_pack["luck"]), "" if int(elixir_pack["luck"]) == 1 else "s"])
 	elixir_pack.clear()  # carried elixirs are lost too; the ones at home are safe
 	elixirs.clear()
 	luck_turns = 0
@@ -2461,17 +2467,25 @@ func _check_codex() -> void:
 		codex.save()
 
 ## Gives a reward like {"gold": 500} or {"scroll": "luck"}. Returns a short description.
+## Gold and scrap rewards grow with your depth: what give_reward really pays
+## (the Wheel's odds screen shows these same amounts).
+func reward_gold(base: int) -> int:
+	return int(float(base) * (1.0 + best_floor / 25.0))
+
+func reward_scrap(base: int) -> int:
+	return int(float(base) * (1.0 + best_floor / 50.0))
+
 func give_reward(r: Dictionary) -> String:
 	var parts: Array = []
 	if r.has("gold"):
-		var g := int(float(r["gold"]) * (1.0 + best_floor / 25.0))
+		var g := reward_gold(int(r["gold"]))
 		_add_gold(g)
 		parts.append("+%d gold" % g)
 	if r.has("potions"):
 		potions += int(r["potions"])
 		parts.append("+%d potions" % int(r["potions"]))
 	if r.has("scrap"):
-		var sc := int(float(r["scrap"]) * (1.0 + best_floor / 50.0))
+		var sc := reward_scrap(int(r["scrap"]))
 		scrap += sc
 		parts.append("+%d scrap" % sc)
 	if r.has("dust") or r.has("mats"):  # "mats": a 2.0 letter still in the mailbox pays dust
@@ -2480,10 +2494,8 @@ func give_reward(r: Dictionary) -> String:
 		parts.append("+%d dust" % du)
 	if r.has("scroll"):
 		parts.append(use_scroll(str(r["scroll"])))
-	if r.has("egg"):
-		for _e in int(r["egg"]):
-			Menagerie.give_egg(self, "reward")
-		parts.append("an egg")
+	if r.has("keep_scroll"):  # kept for later (only Luck so far: a Wheel prize)
+		parts.append(store_luck_scroll())
 	if r.has("look"):
 		var cd: Dictionary = Realms.COSMETICS.get(r["look"], {})
 		if not cd.is_empty():
@@ -2648,9 +2660,11 @@ func reroll(id: int) -> void:
 	bag_version += 1
 	save_game()
 
-## Epic and Legendary gear gives back a little dust when salvaged.
+## Epic and Legendary gear gives back a little dust when salvaged. Bought gear
+## ("bought": shop, featured deal, Blacksmith, Snik) gives scrap only, so gold
+## can't be turned into dust.
 func _salvage_dust(item: Dictionary) -> void:
-	Economy.give_dust(self, int(Economy.SALVAGE_DUST.get(int(item["rarity"]), 0)))
+	Economy.give_dust(self, Economy.salvage_dust(item))
 
 func cycle_auto_salvage() -> void:
 	auto_salvage += 1
@@ -2684,9 +2698,11 @@ func salvage_all_count(rarity: int) -> int:
 func salvage_all(rarity: int) -> void:
 	var count := 0
 	var total := 0
+	var dust := 0
 	for item in bag.duplicate():
 		if int(item["rarity"]) == rarity and not item.get("locked", false) and not is_bound(item) and not is_upgrade(item):
 			total += GameData.scrap_value(item)
+			dust += Economy.salvage_dust(item)
 			bag.erase(item)
 			count += 1
 	if count == 0:
@@ -2695,7 +2711,7 @@ func salvage_all(rarity: int) -> void:
 	ClassTree.count(self, "scrapped", count)
 	bag_version += 1
 	say("Salvaged %d %s items for %d scrap." % [count, GameData.RARITY_NAMES[rarity], total])
-	Economy.give_dust(self, count * int(Economy.SALVAGE_DUST.get(rarity, 0)))
+	Economy.give_dust(self, dust)
 	save_game()
 
 # =====================================================================
@@ -2773,6 +2789,7 @@ func buy_featured() -> bool:
 	gold -= price
 	var item := featured
 	featured = {}
+	item["bought"] = true  # salvages for scrap only (Economy.salvage_dust)
 	add_to_wardrobe(item)
 	bag.append(item)
 	bag_version += 1
@@ -2816,7 +2833,7 @@ func buy_elixir(id: String) -> void:
 # =====================================================================
 
 static func supply_keys() -> Array:
-	return ["potion", "scroll"] + GameData.ELIXIR_ORDER
+	return ["potion", "scroll", "luck"] + GameData.ELIXIR_ORDER
 
 static func supply_name(key: String) -> String:
 	match key:
@@ -2824,6 +2841,8 @@ static func supply_name(key: String) -> String:
 			return "Potions"
 		"scroll":
 			return "Return Scrolls"
+		"luck":
+			return "Scrolls of Luck"
 	return String(GameData.ELIXIRS.get(key, {}).get("name", key))
 
 func supply_carried(key: String) -> int:
@@ -2851,6 +2870,24 @@ func move_supply(key: String, n: int) -> bool:
 			return_scrolls += n
 		_:
 			elixir_pack[key] = supply_carried(key) + n
+	save_game()
+	return true
+
+## A Scroll of Luck kept for later (a Wheel prize): at home in town, else in
+## your pack (carried like an elixir, under "luck"; lost if you fall).
+func store_luck_scroll() -> String:
+	if in_town:
+		supplies_home["luck"] = supply_home("luck") + 1
+		return "[color=#c4b5fd]Scroll of Luck[/color] stored at home. Take it down from Into the dungeon and read it from Supplies."
+	elixir_pack["luck"] = supply_carried("luck") + 1
+	return "[color=#c4b5fd]Scroll of Luck[/color] in your pack. Read it from Supplies."
+
+## Read a carried Scroll of Luck: better loot for a while.
+func read_luck_scroll() -> bool:
+	if supply_carried("luck") <= 0:
+		return false
+	elixir_pack["luck"] = supply_carried("luck") - 1
+	say(use_scroll("luck"))
 	save_game()
 	return true
 
@@ -2915,6 +2952,7 @@ func buy_shop(index: int) -> bool:
 	gold -= price
 	shop.remove_at(index)
 	shop_version += 1
+	item["bought"] = true  # salvages for scrap only (Economy.salvage_dust)
 	add_to_wardrobe(item)
 	bag.append(item)
 	bag_version += 1
@@ -3320,8 +3358,7 @@ static func town_slot_paths(t: int, n: int) -> Array:
 static func town_heroes(t: int) -> int:
 	var c := 0
 	for n in range(1, GameData.MAX_HEROES + 1):
-		var p := town_slot_paths(t, n)
-		if FileAccess.file_exists(p[0]) or FileAccess.file_exists(p[1]):
+		if SaveIO.exists(town_slot_paths(t, n)[0]):  # main, .tmp, any backup or .day
 			c += 1
 	return c
 
@@ -3367,8 +3404,7 @@ static func delete_slot(n: int) -> void:
 	SaveIO.delete_all(slot_paths(n)[0])
 
 static func has_slot(n: int) -> bool:
-	var paths := slot_paths(n)
-	return FileAccess.file_exists(paths[0]) or FileAccess.file_exists(paths[1])
+	return SaveIO.exists(slot_paths(n)[0])  # main, .tmp, any backup or .day (load_file reads them all)
 
 ## The title-screen summary of the hero in a slot ({} if empty).
 static func slot_meta(n: int) -> Dictionary:
@@ -4030,7 +4066,6 @@ const SCROLLS := {
 	"box": {"name": "Mystery Box", "text": "Epic or Legendary gear, gold or dust"},
 	"tome": {"name": "Tome of Forgetting", "text": "Your next stat respec is free"},
 	"return": {"name": "Return Scroll", "text": "Read it any time, even mid-fight, to escape home with everything you carry"},
-	"egg": {"name": "Strange Egg", "text": "Something is moving inside. It hatches after a few floors"},
 }
 
 func scroll_text(id: String) -> String:
@@ -4114,6 +4149,7 @@ func buy_merchant(i: int) -> bool:
 	codex.add("merchant_buys")
 	if m["kind"] == "item":
 		var item: Dictionary = m["item"]
+		item["bought"] = true  # salvages for scrap only (Economy.salvage_dust)
 		add_to_wardrobe(item)
 		_note_find(item)
 		bag.append(item)
@@ -4132,9 +4168,6 @@ func buy_merchant(i: int) -> bool:
 ## Uses a scroll (or opens a box) right away. Returns what happened.
 func use_scroll(id: String) -> String:
 	match id:
-		"egg":
-			Menagerie.give_egg(self, "snik")
-			return "[color=#fde68a]A Strange Egg![/color] It hatches after %d floors." % Menagerie.EGG_FLOORS
 		"return":
 			return_scrolls += 1
 			tip("return", "A Return Scroll! Tap Town any time, even mid-fight, to read it and escape home with everything you carry.")

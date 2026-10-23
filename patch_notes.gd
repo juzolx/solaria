@@ -3,9 +3,21 @@ extends RefCounted
 ## What changed in each version. Shown on the title screen.
 ## Add the newest version at the top of NOTES.
 
-const VERSION := "0.13"
+const VERSION := "2.1"
 
 const NOTES := [
+	{"version": "2.1", "name": "Gods and Nests", "lines": [
+		"A fresh start: every town and hero begins again under the new rules. Your settings are kept.",
+		"New class rules: your class evolves at levels 15, 35 and 75, and you pick one of two paths each time. Level 75 classes have a rank from C to SS.",
+		"God classes: above every rank stand the God classes. Nobody knows how to reach one; some say a God answers those who have done exactly the right things.",
+		"Hidden classes are earned by how you play and appear at level 15, 35 or 75.",
+		"Pets come from nests: rare finds deep in the dungeon. Each region's nest holds that region's egg, and you see its rank the moment you find it. Epic and Mythic eggs are a little less rare than before.",
+		"Pet abilities: every pet family has its own passive, Epic and better pets learn a trick, and a Mythic pet carries its home region's signature.",
+		"Three currencies: gold, scrap and dust. The ten zone materials are gone; dust crafts skills and Set items and pays for the last upgrades. Gear bought with gold salvages for scrap only.",
+		"Fortune's Wheel has a Legendary table from floor 250 (open for your whole account once any hero gets there). Tap Odds to see every prize, its real amount and your chances. Spins use game gold only.",
+		"Safer saves: every save is checked before it replaces the old one, with rolling backups and a daily copy. A damaged save is repaired from the newest backup, and you are told gently. Cloud backups now bring back every town.",
+		"Art cleanup across heroes, monsters and the dungeon, and a new Credits screen (Menu > Credits and licenses) thanking every artist.",
+	]},
 	{"version": "0.13", "name": "The Halls Below", "lines": [
 		"Every monster, boss and companion has new dark fantasy art (Dungeon Crawl Stone Soup, CC0).",
 		"Fights are now back to front: your team from behind at the bottom, the monsters facing you at the top. Room for three heroes, pets and summons.",

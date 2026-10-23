@@ -72,7 +72,7 @@ func _show(gid: int, d: Dictionary) -> void:
 	pic.custom_minimum_size = Vector2(144, 144)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	var art := Sprites.enemy(str(boss["art"]), true)
+	var art := Sprites.enemy_by_key("boss_" + str(boss["art"]).to_lower())
 	if not art.is_empty():
 		pic.texture = art["tex"]
 	if d["dead"]:

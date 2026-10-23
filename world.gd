@@ -149,7 +149,7 @@ static func champion_reward(g: GameState) -> void:
 const EVENT_PATHS := {
 	"altar": {"name": "Blood altar", "text": "Give 20% of your max HP: +30% Attack for 40 turns.", "color": "#e43b44"},
 	"chest_open": {"name": "Open the chest", "text": "Epic or better gear... but it might be cursed (-20% Defense for 40 turns). Luck helps.", "color": "#c084fc"},
-	"bet": {"name": "Take the bet", "text": "Bet a stack of gold on a coin toss. Luck and Charisma tilt the coin.", "color": "#fbbf24"},
+	"bet": {"name": "Flip the coin", "text": "Flip a coin for a stack of gold. Luck and Charisma tilt the coin.", "color": "#fbbf24"},
 	"well": {"name": "Drink from the well", "text": "Something old lives in this well. It might bless you, or not.", "color": "#2dd4bf"},
 	# 0.13+ (Juzo): people in the dark, each with a choice
 	"give_potion": {"name": "Give a potion", "text": "Spend one potion. The pilgrim's blessing brings luck (better loot for 40 turns).", "color": "#f472b6"},
@@ -174,8 +174,8 @@ static func start_event(g: GameState) -> void:
 			g.say("[color=#c084fc]A chest covered in warding runes.[/color]")
 		"gambler":
 			g.path_offer = ["bet", "leave"]
-			g.events.append({"type": "mini_event", "kind": "gambler", "title": "THE GAMBLER", "sub": "Double or nothing?"})
-			g.say("[color=#fbbf24]A grinning gambler flips a coin. \"Double or nothing, friend?\"[/color]")
+			g.events.append({"type": "mini_event", "kind": "gambler", "title": "A COIN TOSS", "sub": "Heads or tails?"})
+			g.say("[color=#fbbf24]A grinning stranger flips a coin. \"Heads or tails, friend?\"[/color]")
 		"well":
 			g.path_offer = ["well", "leave"]
 			g.events.append({"type": "mini_event", "kind": "well", "title": "AN OLD WELL", "sub": "Drink?"})
@@ -297,12 +297,12 @@ static func choose(g: GameState, kind: String) -> void:
 			var odds := 0.45 + 0.15 * luck + 0.1 * g.dim("CHA", GameData.CHA_DISCOUNT) / 35.0
 			if randf() < odds:
 				g._add_gold(amt)
-				g.say("[color=#4ade80]Heads! The gambler pays up.[/color] +%d gold" % amt)
+				g.say("[color=#4ade80]Heads! The stranger pays up.[/color] +%d gold" % amt)
 				g.events.append({"type": "treasure"})
 				g.codex.add("gambler_wins")
 			else:
 				g.gold -= amt
-				g.say("[color=#f87171]Tails.[/color] The gambler pockets %d gold and tips his hat." % amt)
+				g.say("[color=#f87171]Tails.[/color] The stranger pockets %d gold and tips his hat." % amt)
 		"well":
 			var roll := randf() + luck * 0.3
 			if roll > 0.75:

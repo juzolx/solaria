@@ -1,4 +1,5 @@
 extends SceneTree
+const TestHero := preload("res://tests/test_hero.gd")
 ## 2.1 F2 currency merge (Juzo, D3 a): only gold, scrap and dust exist. Every old
 ## material source pays dust or scrap, every old material cost is paid with them,
 ## and the new sinks (dust upgrades/rerolls, floor-scaled restock) work.
@@ -17,6 +18,9 @@ func _hero() -> GameState:
 	return g
 
 func _initialize() -> void:
+	if not TestHero.safe():  # this file writes a hero save: only ever in the test folder
+		quit(1)
+		return
 	# ---- Only three currencies exist
 	var g := _hero()
 	check(not ("materials" in g), "the hero has no materials any more")
@@ -173,6 +177,44 @@ func _initialize() -> void:
 	ld.slot = 7
 	check(ld.load_game() and ld.dust == 12, "a save with old material keys still loads")
 	GameState.delete_slot(7)
+
+	# ---- Realm sets count only once this hero chose that realm
+	var rs := _hero()
+	rs.best_floor = 260
+	var set_for := func(realm: String) -> String:
+		for sid in GameData.SETS:
+			if int(GameData.SETS[sid]["zone"]) == Realms.zone_for_id(realm):
+				return String(sid)
+		return ""
+	var dwarf_set: String = set_for.call("dwarf")
+	var elf_set: String = set_for.call("elf")
+	if dwarf_set != "" and elf_set != "":
+		rs.realm_order = []
+		check(not Economy.set_zone_reached(rs, dwarf_set) and not Economy.set_zone_reached(rs, elf_set), "no realm set before a realm is chosen")
+		rs.realm_order = ["dwarf"]
+		check(Economy.set_zone_reached(rs, dwarf_set) and not Economy.set_zone_reached(rs, elf_set), "only the chosen realm's set opens")
+	else:
+		check(false, "realm sets exist for the dwarf and elf realms")
+
+	# ---- Bought gear salvages for scrap only (no gold -> dust)
+	var by := _hero()
+	by.gold = 10000000
+	var found_epic := GameData.make_item("Feet", 3, 40, by._new_id())
+	by.bag.clear()
+	by.bag.append(found_epic.duplicate(true))
+	var bought := found_epic.duplicate(true)
+	bought["id"] = by._new_id()
+	bought["bought"] = true
+	by.bag.append(bought)
+	check(Economy.salvage_dust(found_epic) == Economy.SALVAGE_DUST[3] and Economy.salvage_dust(bought) == 0, "a found Epic gives dust, a bought one doesn't")
+	by.dust = 0
+	by.salvage(int(bought["id"]))
+	check(by.dust == 0, "salvaging bought gear gives no dust")
+	by.salvage(int(by.bag[0]["id"]))
+	check(by.dust == Economy.SALVAGE_DUST[3], "salvaging found Epic gear still gives dust")
+	by.shop.clear()
+	by.shop.append(GameData.make_item("Feet", 3, 40, by._new_id()))
+	check(by.buy_shop(0) and bool(by.bag[-1].get("bought", false)), "shop purchases are marked bought")
 
 	print("STAGE6 CURRENCY TESTS DONE, failures: ", fails)
 	quit()

@@ -1,10 +1,10 @@
 class_name ClassTab
 extends ScrollContainer
 ## Character > Class: your Evolution Tree. Shows the shape of the tree
-## (1 > 2 > 4 > 8) but only names the classes you've reached and the ones you
-## can choose right now; the rest stay "???" until you get there. Also your
-## signature skills, the branch-offs of your current class, the Wanderer's
-## items, the god trials and the hidden classes.
+## (1 > 2 > 4 > 8: you pick one of two at levels 15, 35 and 75) but only names
+## the classes you've reached and the ones you can choose right now; the rest
+## stay "???" until you get there. Also your faith, your signature skills, the
+## hidden classes offered or taken (15, 35, 75) and a God class that answered.
 
 var main
 var state: GameState
@@ -133,7 +133,9 @@ static func class_card(m, n: Dictionary, with_button: bool, on_pick: Callable) -
 	var sc := Color(ClassTree.ALIGN_COLORS[side])
 	var r := ClassTree.rank_of(n)
 	var border := Color(ClassTree.RANK_COLORS[r]) if r != "" else sc.darkened(0.25)
-	var why := ClassTree.lock_reason(g, n, not with_button)
+	# A God class that answered is a swap, not a tree pick: faith and side never lock it
+	var is_god := bool(n.get("god", false)) or r == "God"
+	var why := "" if is_god else ClassTree.lock_reason(g, n, not with_button)
 	var p := UI.panel(UI.INSET, border if why == "" else UI.BORDER, 8, 10, 2 if why == "" else 1)
 	var v := UI.vbox(4)
 	p.add_child(v)
@@ -156,7 +158,7 @@ static func class_card(m, n: Dictionary, with_button: bool, on_pick: Callable) -
 		wl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(wl)
 	if with_button and why == "":
-		var b := UI.primary("Swap" if n.get("god", false) else "Choose", on_pick, border)
+		var b := UI.primary("Swap" if is_god else "Choose", on_pick, border)
 		v.add_child(b)
 	return p
 
@@ -166,7 +168,7 @@ static func class_card(m, n: Dictionary, with_button: bool, on_pick: Callable) -
 
 func _tree() -> void:
 	if state.hidden_class != "":
-		UI.section(box, "Your path", "Your main route ended when you took a hidden class. It grows on its own now, at levels 15, 35 and 60.")
+		UI.section(box, "Your path", "Your main route ended when you took a hidden class. It grows on its own now, at levels 15, 35 and 75.")
 		return
 	UI.section(box, "Your path", "Your class evolves at levels 15, 35 and 75. What it becomes stays a mystery until you get there and choose.")
 	var row := UI.hbox(6)

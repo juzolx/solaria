@@ -282,7 +282,7 @@ func refresh() -> void:
 		bag_button.disabled = true
 	else:
 		var cost := state.next_bag_cost()
-		bag_text.text = "[b]Bigger Bag[/b]  [color=%s]level %d / %d[/color]\n%d -> [color=#4ade80]%d slots[/color]  [color=%s](or craft one with scrap at the Smith)[/color]" % [
+		bag_text.text = "[b]Bigger Bag[/b]  [color=%s]level %d / %d[/color]\n%d -> [color=#4ade80]%d slots[/color]  [color=%s](or craft one with scrap at the Blacksmith)[/color]" % [
 			UI.hex(UI.DIM), state.bag_level, GameData.BAG_MAX_LEVEL, state.bag_capacity(), state.bag_capacity() + GameData.BAG_STEP, UI.hex(UI.DIM)]
 		bag_button.text = "%d gold" % cost
 		bag_button.disabled = state.gold < cost

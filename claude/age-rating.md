@@ -46,13 +46,21 @@ What keeps it infrequent:
   you can ignore for a whole playthrough.
 - Game gold only. Spins are never sold for real money (owner rule, 2.1).
 - The Legendary table opens only at floor 250 and costs a lot of gold per spin
-  (27,500 at floor 250), so it is a rare treat, not a loop.
+  (27,500 at floor 250), so it is a rare treat, not a loop. The unlock is
+  account-wide: once any hero reaches floor 250 a Codex flag keeps it open for
+  every hero on the account. A spin needs 3 free bag slots (the best prize is 3
+  items), so it never overfills the bag.
 - Odds are always on screen (the Odds button), read from the same table the code
-  rolls (wheel_tables.gd). Apple only requires this for paid random items (3.1.1),
+  rolls (wheel_tables.gd), with each prize's real amount at the player's depth
+  (WheelTables.prize_amount uses the same GameState.reward_gold / reward_scrap
+  that pays it). Apple only requires this for paid random items (3.1.1),
   but it is free insurance and the feature most likely to draw review questions
   (research, "Surprising / urgent").
-- UI text avoids casino words: no "casino", "jackpot", "bet"; the Wheel says
-  "spin", "prize", "fortune". Keep "gambling" and "casino" out of the store title,
+- UI text avoids casino words: no "casino", "jackpot", "bet", "gamble",
+  "stakes"; the Wheel says "spin", "prize", "fortune". Checked across all player
+  text in the 2.1 fix pass: the coin-toss event is "Flip the coin" / "A COIN TOSS",
+  the Trickster "loves long odds", the reroll deed is "Lucky Hands" and the old
+  "Gambler" class is shown as "Daredevil" (its id is unchanged). Keep "gambling" and "casino" out of the store title,
   keywords and screenshot captions (research, Section 5; update-2.1-ideas.md).
 
 What could make a reviewer call it frequent:
@@ -66,9 +74,25 @@ What could make a reviewer call it frequent:
 - Any future daily spin, streak reward or notification that pulls players to the
   Wheel.
 
-Not yet cleaned: one dungeon event still says "Bet %d gold on a coin toss"
-(game_state.gd, event text). It is a game-gold coin toss, rare, and fine for the
-rating, but reword it to match the no-casino-words rule when game_state.gd is free.
+## Legendary table prizes (base odds, out of 1,000,000)
+
+Amounts are what the player gets at best floor F: gold x (1 + F/25), scrap
+x (1 + F/50) (GameState.reward_gold / reward_scrap). Examples are at F = 250.
+
+| Prize | Base weight | Base chance | Pays | At floor 250 |
+|---|---|---|---|---|
+| Purse of gold | 425,000 | 42.5% | 600 gold x depth | 6,600 gold |
+| Heap of scrap | 250,000 | 25% | 600 scrap x depth | 3,600 scrap |
+| Crate of potions | 150,000 | 15% | 8 potions | 8 potions |
+| Scroll of Luck | 100,000 | 10% | 1 scroll, kept in Supplies for later | 1 scroll |
+| Hoard of gold | 60,000 | 6% | 5,000 gold x depth | 55,000 gold |
+| A Legendary item | 14,850 | 1.485% | 1 Legendary item for your depth | 1 item |
+| King's Ransom | 100 | 0.01% | 150,000 gold x depth | 1,650,000 gold |
+| Cache of Legends | 50 | 0.005% | 3 Legendary items | 3 items |
+
+2.1 fix pass: the "A pet egg" prize was removed (pets come only from nests); its
+25,000 weight went to the Purse of gold, so the table still totals 1,000,000.
+Fortune raises only the Legendary item (x3 cap) and the two top prizes (x10 cap).
 
 ## Regional notes
 

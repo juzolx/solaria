@@ -5,7 +5,8 @@ extends RefCounted
 ## requirements (rumors only). What you have earned stays a surprise until you
 ## reach level 15, 35 or 75: then every hidden class you have earned is offered
 ## beside your normal evolution choices, and you can take one until your next
-## level-up. Past 75 only God classes remain (god_classes.gd).
+## level-up. Past 75 nothing new is offered here; only a God class can still
+## answer (god_classes.gd), and most of those only a hero on the main route.
 ##
 ## Taking a hidden class is for good: it becomes your class instead of the main
 ## route (no more evolutions; you keep what you already have). Each one is strong
@@ -343,7 +344,7 @@ static func check(g: GameState) -> void:
 		if not g.hidden.has(id) and block_reason(g, id) == "":
 			unlock(g, id)
 
-## Earned, but it stays a surprise: you only see it at level 15, 35 or 60.
+## Earned, but it stays a surprise: you only see it at level 15, 35 or 75.
 static func unlock(g: GameState, id: String) -> void:
 	var c := info(id)
 	g.hidden[id] = true
@@ -357,7 +358,7 @@ static func unlock(g: GameState, id: String) -> void:
 # ---------- The reveal, the choice and the steps ----------
 
 const STAGE_LEVELS := [15, 35, 75]
-const STAGE_POWER := [1.18, 1.28, 1.40]   # Attack, HP and Defense, each step (about x2.1 by 60; the main route gives about x1.9 to its own stats)
+const STAGE_POWER := [1.18, 1.28, 1.40]   # Attack, HP and Defense, each step (about x2.1 by 75; the main route gives about x1.9 to its own stats)
 
 ## How far your hidden class has grown (1..3) at your level.
 static func stage(g: GameState) -> int:
@@ -367,8 +368,12 @@ static func stage(g: GameState) -> int:
 			s = STAGE_LEVELS.find(lv) + 1
 	return s
 
-## Called on every level-up (GameState.gain_xp).
-static func on_level(g: GameState) -> void:
+## Called on every level-up (GameState.gain_xp). start_level: your level before
+## this batch of level-ups (one fight can give two levels, 14 -> 16): an offer
+## made during the batch stays open; one from before it has passed.
+static func on_level(g: GameState, start_level := -1) -> void:
+	if start_level < 0:
+		start_level = g.level - 1
 	GodClasses.check(g)
 	if g.hidden_class != "":
 		if g.level in STAGE_LEVELS and g.level > int(STAGE_LEVELS[0]):
@@ -379,7 +384,7 @@ static func on_level(g: GameState) -> void:
 				"lore": "Your %s grows stronger: you are now %s." % [c["name"], nm]})
 			g.say("[color=%s]Your hidden class grows: %s![/color]" % [c["color"], nm])
 		return
-	if not g.hidden_offer.is_empty() and g.level > g.hidden_offer_level:
+	if not g.hidden_offer.is_empty() and g.level > g.hidden_offer_level and g.hidden_offer_level <= start_level:
 		g.hidden_offer = []
 		g.say("[color=#a89d84]The hidden path you passed by fades... for now.[/color]")
 	if not g.level in STAGE_LEVELS or g.god_class != "":  # offered only at 15, 35 and 75; past 75 only God classes answer
@@ -412,6 +417,12 @@ static func _take(g: GameState, id: String) -> void:
 	var c := info(id)
 	g.hidden_class = id
 	g.hidden_offer = []
+	# A God class that only answers the main route can't be taken any more
+	var keep: Array = []
+	for o in g.god_offers:
+		if not bool(GodClasses.info(String(o)).get("main_route", false)):
+			keep.append(o)
+	g.god_offers = keep
 	g.hidden_stage[id] = stage(g)
 	var nm := title(g)
 	g.discovered[id] = true

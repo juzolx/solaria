@@ -36,7 +36,7 @@ func _initialize() -> void:
 	check(WheelTables.legendary_unlocked(g), "opens at floor 250")
 	check(g.codex.stat(WheelTables.UNLOCK_KEY) == 1, "the unlock is saved in the codex")
 	g.best_floor = 10  # e.g. a fresh hero in the same account
-	check(WheelTables.legendary_unlocked(g), "stays open once earned (deepest floor ever)")
+	check(WheelTables.legendary_unlocked(g) and g.codex.stat(WheelTables.UNLOCK_KEY) == 1, "stays open once earned (the account-wide codex flag)")
 	var g2 := _fresh()
 	g2.codex.at_least("best_floor", 300)
 	check(WheelTables.legendary_unlocked(g2), "the account's deepest floor counts")
@@ -60,6 +60,53 @@ func _initialize() -> void:
 	check(g.bag.size() == b1 + 3, "the Cache of Legends gives 3 items")
 	check(int(g.bag[g.bag.size() - 1]["rarity"]) == GameData.LEGENDARY, "and they are Legendary")
 	check(bag0 <= g.bag.size(), "bag only grows from prizes")
+
+	# ---- The real wiring: walking from floor 249 to 250 opens it (account-wide codex flag)
+	var walk := _fresh()
+	walk.floor_num = 249
+	walk.best_floor = 249
+	check(walk.codex.stat(WheelTables.UNLOCK_KEY) == 0, "setup: not open at 249")
+	walk._next_floor()
+	check(walk.floor_num == 250 and walk.codex.stat(WheelTables.UNLOCK_KEY) == 1, "stepping onto floor 250 sets the codex flag")
+	# The codex flag alone keeps it open, for any hero on the account
+	var g3 := _fresh()
+	g3.best_floor = 10
+	check(not WheelTables.legendary_unlocked(g3) and g3.codex.stat("best_floor") < WheelTables.LEGENDARY_UNLOCK_FLOOR, "setup: a shallow hero without the flag is locked")
+	g3.codex.at_least(WheelTables.UNLOCK_KEY, 1)
+	check(WheelTables.legendary_unlocked(g3), "the codex flag by itself keeps the table open")
+
+	# ---- A full bag refuses the spin (like the item Wheel) and costs nothing
+	var full := _fresh()
+	full.codex.at_least(WheelTables.UNLOCK_KEY, 1)
+	full.best_floor = 250
+	full.gold = 100000000
+	while full.bag_capacity() - full.bag.size() >= WheelTables.bag_room_needed():
+		full.bag.append(GameData.make_item("Feet", 0, 5, full._new_id()))
+	var fg := full.gold
+	var fs0 := full.bag.size()
+	check(not WheelTables.spin_legendary(full).get("ok", false) and full.gold == fg and full.bag.size() == fs0, "no Legendary spin without bag room for the biggest prize")
+
+	# ---- The odds screen shows what is really paid at your depth
+	var amt := _fresh()
+	amt.best_floor = 300
+	var purse: Dictionary = WheelTables.LEGENDARY_PRIZES.filter(func(p): return p["id"] == "gold_purse")[0]
+	var gold0 := amt.gold
+	WheelTables.deliver(amt, purse)
+	var paid := amt.gold - gold0
+	check(paid == amt.reward_gold(int(purse["reward"]["gold"])) and paid > int(purse["reward"]["gold"]), "gold prizes scale with depth (%d)" % paid)
+	check(WheelTables.prize_amount(amt, purse).replace(",", "").contains(str(paid)), "the odds screen shows the delivered amount (%s)" % WheelTables.prize_amount(amt, purse))
+	# The Scroll of Luck prize is kept for later, not read on the spot
+	var ls: Dictionary = WheelTables.LEGENDARY_PRIZES.filter(func(p): return p["id"] == "luck_scroll")[0]
+	amt.in_town = true
+	amt.luck_turns = 0
+	WheelTables.deliver(amt, ls)
+	check(amt.luck_turns == 0 and amt.supply_home("luck") == 1, "a Scroll of Luck prize waits at home")
+	check(amt.move_supply("luck", 1) and amt.supply_carried("luck") == 1, "and can be taken down")
+	amt.in_town = false
+	check(amt.read_luck_scroll() and amt.luck_turns > 0 and amt.supply_carried("luck") == 0, "reading it starts the luck")
+	# Pets come only from nests: no egg prize
+	for pz in WheelTables.LEGENDARY_PRIZES:
+		check(pz["id"] != "nest_egg" and not (pz.get("reward", {}) as Dictionary).has("egg"), "no egg on the Wheel (%s)" % pz["id"])
 
 	# ---- Displayed odds equal the roll table ----
 	for fort in [0.0, 12.5, 40.0, 500.0]:
