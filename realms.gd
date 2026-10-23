@@ -519,8 +519,6 @@ static func path_title(g: GameState) -> String:
 		return g.encounter.get("title", "Someone on the road")
 	if k == "revent_yes":
 		return info(GameData.realm_of(g.floor_num)).get("event", {}).get("name", "Something strange")
-	if k == "cenc_yes":
-		return String(ClassTree.ITEMS.get(g.class_encounter, {}).get("title", "Someone on the road"))
 	return ""
 
 ## A meeting on the road (realms only): someone of the realm's race.

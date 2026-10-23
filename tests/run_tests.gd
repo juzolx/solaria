@@ -641,8 +641,6 @@ func _initialize() -> void:
 			for r2 in ClassTree.children(r1):
 				check(ClassTree.children(r2).size() == 2, "two finals under " + String(r2))
 				finals += ClassTree.children(r2).size()
-				check(ClassTree.branches(r2).size() >= 2 and ClassTree.branches(r2).size() <= 3, "2-3 branch-offs: " + String(r2))
-			check(ClassTree.branches(r1).size() >= 2 and ClassTree.branches(r1).size() <= 3, "2-3 branch-offs: " + String(r1))
 		check(finals == 8, "8 finals: " + cname)
 	for sid in SkillData.SKILLS:
 		var sk := SkillData.info(sid)
@@ -651,21 +649,15 @@ func _initialize() -> void:
 		if sk["kind"] == "active":
 			check(sk.has("cd") and (sk.has("power") or sk.has("buff") or sk.has("shield") or sk.has("summon") or sk.has("song") or sk.has("wild")), "active skill does something: " + sid)
 	print("Skills: %d active, %d passive" % [SkillData.all_of("active").size(), SkillData.all_of("passive").size()])
-	check(ClassTree.all_nodes().size() == 13 * 14 + ClassTree.BRANCHES.size(), "every class name is unique (%d nodes)" % ClassTree.all_nodes().size())
-	check(ClassTree.BRANCHES.size() == 173, "173 branch-offs (got %d)" % ClassTree.BRANCHES.size())
-	for itk in ClassTree.ITEMS:
-		check(not ClassTree.node(ClassTree.ITEMS[itk]["node"]).is_empty() and not ClassTree.node(ClassTree.ITEMS[itk]["at"]).is_empty(), "item nodes exist: " + itk)
+	check(ClassTree.all_nodes().size() == 13 * 14 + GodClasses.LIST.size(), "every class name is unique (%d nodes)" % ClassTree.all_nodes().size())
 	var gods := 0
 	for id in ClassTree.all_nodes():
 		var nd := ClassTree.node(id)
 		if ClassTree.rank_of(nd) == "God":
 			gods += 1
-			check(not (nd["trial"] as Dictionary).is_empty(), "God class has a trial: " + id)
-			check(ResourceLoader.exists("res://art/enemies/%s.png" % nd["trial"]["art"]), "god trial art: " + id)
-	check(gods == 10, "10 God rank classes (got %d)" % gods)
-	for itk in ClassTree.ITEMS:
-		if ClassTree.ITEMS[itk].has("fight"):
-			check(ResourceLoader.exists("res://art/enemies/%s.png" % ClassTree.ITEMS[itk]["fight"]["art"]), "item fight art: " + itk)
+			check(nd.get("god", false) and GodClasses.LIST.has(id), "God classes live outside the trees: " + id)
+			check(ResourceLoader.exists("res://art/enemies/%s.png" % GodClasses.info(id)["art"]), "God class art: " + id)
+	check(gods == 10, "10 God classes (got %d)" % gods)
 	var t := GameState.new()
 	t.autosave = false
 	t.codex.path = ""
@@ -679,15 +671,6 @@ func _initialize() -> void:
 	check(ClassTree.pick(t, "berserker") and t.title() == "Berserker", "picked Berserker (got %s)" % t.title())
 	check(t.get_attack() > atk_t, "Berserker adds Attack")
 	check(ClassTree.pick_tier(t) == -1 and not ClassTree.pick(t, "warlord"), "next pick waits for level 35")
-	# Branch-offs
-	var pit := ClassTree.node("pit_fighter")
-	check(not ClassTree.branch_ready(t, pit) and not ClassTree.take_branch(t, "pit_fighter"), "branch-off locked at first")
-	t.ctrack["kill_unarmed"] = 300.0
-	check(ClassTree.branch_ready(t, pit) and ClassTree.take_branch(t, "pit_fighter") and t.title() == "Pit Fighter", "took the Pit Fighter branch-off")
-	t.level = 40
-	check(ClassTree.pick_tier(t) == -1 and ClassTree.stat_name(t) == "Grit" and ClassTree.rank_of(ClassTree.current(t)) == "B", "a branch-off ends the tree, B rank, special stat Grit")
-	t.unique["Grit"] = 100.0
-	check(not ClassTree.stat_bonus(t).is_empty(), "special stat gives a bonus")
 	# Good and evil
 	var al := GameState.new()
 	al.autosave = false
@@ -797,7 +780,7 @@ func _initialize() -> void:
 		stones += sd.codex.stat("stones") - before
 	print("Stones from 3000 kills: %d" % stones)
 	check(stones > 4 and stones < 40, "stone drops about 0.5%% (0.13+: rarer) (got %d)" % stones)
-	# The Wanderer: items and god trials
+	# The Wanderer: always Neutral, no items needed any more (2.1)
 	var wd := GameState.new()
 	wd.autosave = false
 	wd.codex.path = ""
@@ -807,35 +790,14 @@ func _initialize() -> void:
 	check(ClassTree.alignment(wd) == "N", "the Wanderer is always Neutral")
 	check(ClassTree.pick(wd, "swordsman") and wd.title() == "Swordsman", "Swordsman")
 	wd.level = 40
-	check(ClassTree.lock_reason(wd, ClassTree.node("sword_saint")).begins_with("Needs"), "Sword Saint needs an item")
-	wd.floor_num = 60
-	wd.best_floor = 60
-	wd.spawn_enemy()
-	wd.ctrack["item_wait"] = 100
-	ClassTree.on_floor(wd)
-	check(wd.class_encounter == "masters_blade" and "cenc_yes" in wd.path_offer, "the Old Swordmaster appears (got %s)" % wd.class_encounter)
-	wd.choose_path("cenc_yes")
-	check(wd.trial_active and wd.trial_kind == "class_item", "his duel starts")
-	wd.enemy_hp = 0
-	wd._enemy_defeated()
-	check("masters_blade" in wd.class_items and ClassTree.pick(wd, "sword_saint"), "won the Broken Master's Blade, became a Sword Saint")
-	wd.level = 60
-	wd.class_items.append("heavens_edge")
-	check(ClassTree.pick(wd, "sword_god") and wd.trial_active and wd.title() == "Sword Saint", "Sword God starts its god trial first")
-	wd.enemy_hp = 0
-	wd._enemy_defeated()
-	check(wd.title() == "Sword God" and ClassTree.rank_of(ClassTree.current(wd)) == "God" and ClassTree.stat_name(wd) == "Sword Intent", "Sword God, God rank (got %s)" % wd.title())
-	var wd2 := GameState.new()
-	wd2.autosave = false
-	wd2.codex.path = ""
-	wd2.choose_class("Wanderer")
-	wd2.level = 60
-	ClassTree.pick(wd2, "demonic_disciple")
-	ClassTree.pick(wd2, "demon_saint")
-	check(ClassTree.lock_reason(wd2, ClassTree.node("asura")) == "" and ClassTree.pick(wd2, "asura") and wd2.title() == "Asura", "Asura needs no item")
-	check(ClassTree.options(wd2).is_empty(), "an Asura can never become the Heavenly Demon")
+	check(ClassTree.pick(wd, "sword_saint") and wd.title() == "Sword Saint", "Sword Saint needs no item")
+	wd.level = 74
+	check(ClassTree.pick_tier(wd) == -1, "the last upgrade waits for level 75")
+	wd.level = 75
+	check(ClassTree.pick(wd, "blade_sovereign") and wd.title() == "Blade Sovereign", "level 75: Blade Sovereign")
+	check(ClassTree.options(wd).is_empty(), "the main route ends at 75 (the Sword God is a God class now)")
 	# Utility classes fight two ranks lower
-	check(ClassTree.combat_scale(ClassTree.node("hawkeye")) < ClassTree.combat_scale(ClassTree.node("titan")) and ClassTree.util_scale(ClassTree.node("hawkeye")) == 3.0, "a God scout fights below a God fighter")
+	check(ClassTree.combat_scale(ClassTree.node("god_hawkeye")) < ClassTree.combat_scale(ClassTree.node("god_titan")) and ClassTree.util_scale(ClassTree.node("god_hawkeye")) == 3.0, "a God scout fights below a God fighter")
 	# ---------- Phase 10: party ----------
 	for pair in [[2, "Cleric"], [3, "Knight"]]:
 		var ph := GameState.new()
@@ -949,7 +911,6 @@ func _initialize() -> void:
 	wr.choose_class("Warrior")
 	wr.level = 20
 	check(World.pet_stage(wr) == -1, "warriors have no class pet")
-	check(ClassTree.node("beast_whisperer").get("parent", "") == "troubadour", "Bard's Beast Whisperer branch")
 	check(Races.ESCAPE_MAX >= 100.0, "a sure escape is possible")
 	var bt := GameState.new()
 	bt.codex.path = ""

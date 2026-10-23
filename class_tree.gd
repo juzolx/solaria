@@ -1,22 +1,18 @@
 class_name ClassTree
 extends RefCounted
-## The Evolution Tree (v0.10, renamed in v0.11).
-##
-## Every starting class splits in two at level 15, each of those in two at
-## level 35 and each of those in two at level 60: 1 > 2 > 4 > 8.
-##  * You pick freely, but your deeds limit you: every class is Good, Neutral
-##    or Evil (from the faith meter). A Good hero can't take an Evil class, an
-##    Evil hero can't take a Good one, and a Neutral hero can take either.
-##  * The level 60 finals are UNIQUE CLASSES: each has a rank (C to God) and a
-##    special stat. God rank classes need a god trial.
-##  * Every level 15 and level 35 class has 2-3 hidden BRANCH-OFFS: unique
-##    classes you unlock by doing something specific. Taking one ends your tree.
-##  * The Wanderer is always Neutral. Sword Saint and every Wanderer final but
-##    Asura need a special item, won in a unique fight or conversation.
+## The Evolution Tree, simplified with Juzo (Oct 20). Two kinds of class only:
+##  * The main route: a starting class, upgraded at levels 15, 35 and 75 (pick 1
+##    of 2 each time): 1 > 2 > 4 > 8. Your deeds limit you: every class is Good,
+##    Neutral or Evil (faith). A Good hero can't take an Evil class, an Evil hero
+##    can't take a Good one, a Neutral hero can take either. The level 75 finals
+##    have a rank (C to SS) and a special stat; each class grants a signature skill.
+##  * Unique classes, off the main route: the hidden classes (hidden.gd), offered
+##    at 15, 35 or 75 once earned, and the God classes (god_classes.gd), the rank
+##    above SS, which answer the moment their secret deeds are done.
 ##  * Rank sets fighting strength. Utility classes (crafting, wealth, scouting,
 ##    hypnosis) get their full rank on their perks but fight two ranks lower.
 
-const PICK_LEVELS := [15, 35, 60]
+const PICK_LEVELS := [15, 35, 75]   # Juzo (Oct 20): the main route upgrades at 15, 35 and 75
 const GOOD_AT := 25.0
 const EVIL_AT := -25.0
 
@@ -82,8 +78,7 @@ const TREES := {
 				["Templar Lord", "G", "def:.5 thorns:.5", "Holy", "An unbreakable oath", {}]]],
 			["Weaponmaster", "N", "crit:.5 double_strike:.5", "Blade", "Every weapon, mastered", [
 				["Blademaster", "N", "crit:.5 double_strike:.5", "Blade", "The perfect cut", {}],
-				["Titan", "N", "atk:.5 hp:.5", "", "Raw strength and endless health", {"rank": "God",
-					"trial": {"name": "The Elder Titan", "art": "boss_typhon", "lore": "The first giant. Lift what he lifts, and the title is yours."}}]]]]],
+				["Colossus", "N", "atk:.5 hp:.5", "", "A mountain that walks", {}]]]]],
 	],
 	"Knight": [
 		["Guardian", "G", "def:.6 thorns:.4", "", "Living fortress", [
@@ -95,8 +90,7 @@ const TREES := {
 				["Warden of Ruin", "E", "thorns:.5 atk:.5", "Shadow", "Guards the end of things", {}]]]]],
 		["Lancer", "N", "double_strike:.5 atk:.5", "", "First to strike", [
 			["Dragoon", "N", "atk:.5 crit:.5", "", "Diving lancer", [
-				["Sky Dragoon", "N", "atk:.5 crit:.5", "", "Diving strikes that ignore defense", {"rank": "God",
-					"trial": {"name": "Fafnir Reborn", "art": "boss_fafnir", "lore": "The dragon came back for its hoard. Meet it in the sky."}}],
+				["Stormdiver", "N", "atk:.5 crit:.5", "", "Falls on the enemy like lightning", {}],
 				["Wyrmlancer", "N", "atk:.5 double_strike:.5", "", "Dragon-slaying lance", {}]]],
 			["Death Knight", "E", "lifesteal:.5 def:.5", "Shadow Frost", "Cursed armor", [
 				["Dread Lord", "E", "atk:.5 lifesteal:.5", "Shadow", "Rules through fear", {}],
@@ -105,20 +99,18 @@ const TREES := {
 	"Wanderer": [
 		["Swordsman", "N", "crit:.5 double_strike:.5", "Blade", "Fast, precise cuts", [
 			["Sword Saint", "N", "crit:.5 double_strike:.5", "Blade", "Every cut lands twice", [
-				["Sword God", "N", "atk:.4 crit:.3 double_strike:.3", "Blade", "The peak of the blade", {"rank": "God", "item": "heavens_edge",
-					"trial": {"name": "The Sword Spirit", "art": "boss_sword_spirit", "lore": "The first sword ever forged, still looking for a worthy hand."}}],
-				["Sword Immortal", "N", "crit:.5 hp:.5", "Blade", "A blade that outlives its wielders", {"rank": "SS", "item": "undying_scabbard"}]]],
+				["Blade Sovereign", "N", "atk:.4 crit:.3 double_strike:.3", "Blade", "Rules the field with one sword", {}],
+				["Sword Immortal", "N", "crit:.5 hp:.5", "Blade", "A blade that outlives its wielders", {"rank": "SS"}]]],
 			["Blade Phantom", "N", "dodge:.5 crit:.5", "Blade", "Cuts from nowhere", [
-				["Ghost Blade", "N", "dodge:.5 crit:.5", "Blade Shadow", "Half here, half gone", {"rank": "SS", "item": "phantom_tassel"}],
-				["Thousand Edges", "N", "double_strike:.7 atk:.3", "Blade", "A storm of swords", {"rank": "SS", "item": "thousand_swords"}]]]]],
+				["Ghost Blade", "N", "dodge:.5 crit:.5", "Blade Shadow", "Half here, half gone", {"rank": "SS"}],
+				["Thousand Edges", "N", "double_strike:.7 atk:.3", "Blade", "A storm of swords", {"rank": "SS"}]]]]],
 		["Demonic Disciple", "N", "lifesteal:.5 atk:.5", "Fist Blood", "Brutal, draining fists", [
 			["Demon Saint", "N", "atk:.5 lifesteal:.5", "Fist Blood", "The demon path's master", [
-				["Heavenly Demon", "N", "atk:.4 lifesteal:.3 hp:.3", "Fist Blood Shadow", "Ruler of the demonic path", {"rank": "God", "item": "demon_seal",
-					"trial": {"name": "The Demon Cult's Ancestor", "art": "boss_demon_ancestor", "lore": "The old master of the demon cult. Take his throne, or take his place in the grave."}}],
+				["Abyssal Master", "N", "atk:.4 lifesteal:.3 hp:.3", "Fist Blood Shadow", "Master of the demonic arts", {}],
 				["Asura", "N", "atk:.4 rage:.6", "Fist Blood", "Rage of many arms", {"rank": "SS"}]]],
 			["Blood Fiend", "N", "lifesteal:.6 hp:.4", "Blood", "Lives on blood", [
-				["Blood Demon King", "N", "lifesteal:.5 atk:.5", "Blood", "Crowned in red", {"rank": "SS", "item": "crimson_crown"}],
-				["Poison Sovereign", "N", "execute:.5 atk:.5", "Blood Shadow", "Every wound festers", {"rank": "SS", "item": "viper_heart"}]]]]],
+				["Blood Demon King", "N", "lifesteal:.5 atk:.5", "Blood", "Crowned in red", {"rank": "SS"}],
+				["Poison Sovereign", "N", "execute:.5 atk:.5", "Blood Shadow", "Every wound festers", {"rank": "SS"}]]]]],
 	],
 	"Cleric": [
 		["Priest", "G", "regen:.6 hp:.4", "Holy", "The temple's healer", [
@@ -130,9 +122,7 @@ const TREES := {
 				["Purifier", "G", "skill:.5 execute:.5", "Holy", "Cleanses with fire and light", {}]]]]],
 		["Druid", "N", "hp:.5 regen:.5", "Nature", "The wild's balance", [
 			["Grove Keeper", "N", "hp:.5 thorns:.5", "Nature", "Tends the old groves", [
-				["Archdruid", "N", "regen:.5 skill:.5", "Nature", "Potions and gear no one else can make", {"rank": "God", "role": "crafting",
-					"util": "potion:.4 scrap:.3 stone_find:.3",
-					"trial": {"name": "The Withered Queen", "art": "boss_withered_queen", "lore": "The forest's sick heart. Heal it, or it will bury you."}}],
+				["Elder Druid", "N", "regen:.5 skill:.5", "Nature", "Brews and grows what others cannot", {"role": "crafting", "util": "potion:.4 scrap:.3 stone_find:.3"}],
 				["Lifebinder", "G", "regen:.6 hp:.4", "Nature Holy", "Binds wounds with roots", {}]]],
 			["Storm Druid", "N", "double_strike:.5 skill:.5", "Storm Nature", "Calls the storm", [
 				["Thunder Shaman", "N", "skill:.5 double_strike:.5", "Storm", "Speaks with thunder", {}],
@@ -142,8 +132,7 @@ const TREES := {
 		["Dawn Disciple", "G", "regen:.5 def:.5", "Holy", "A priest of the dawn", [
 			["Templar", "G", "def:.5 thorns:.5", "Holy", "Shield of light", [
 				["Sun Templar", "G", "atk:.5 def:.5", "Holy", "Burns like noon", {}],
-				["Saint Militant", "G", "atk:.4 regen:.3 def:.3", "Holy", "Holy damage and healing in battle", {"rank": "God",
-					"trial": {"name": "Seraphiel's Test", "art": "boss_seraphiel", "lore": "The highest angel asks one question, with a sword."}}]]],
+				["Battle Saint", "G", "atk:.4 regen:.3 def:.3", "Holy", "Prays with a sword", {}]]],
 			["Seer", "N", "crit:.5 dodge:.5", "Arcane", "Guided strikes", [
 				["Prophet", "N", "crit:.5 skill:.5", "Arcane", "Knows how it ends", {}],
 				["Star Seer", "N", "skill:.5 crit:.5", "Arcane Holy", "Reads the stars", {}]]]]],
@@ -166,8 +155,7 @@ const TREES := {
 		["Arcanist", "N", "skill:.7 crit:.3", "Arcane", "Pure magic", [
 			["Lightbinder", "G", "regen:.4 skill:.6", "Holy Arcane", "Weaves light", [
 				["Archmage of Dawn", "G", "skill:.6 regen:.4", "Holy Arcane", "The dawn's own mage", {}],
-				["Chronomancer", "N", "skill:.5 double_strike:.5", "Arcane", "Extra turns and slowed enemies", {"rank": "God", "extra": {"cdr": 1},
-					"trial": {"name": "Archon Valeth, Keeper of Hours", "art": "boss_archon_valeth", "lore": "He has watched every second since the first. He will not give you one."}}]]],
+				["Timeweaver", "N", "skill:.5 double_strike:.5", "Arcane", "Bends the moment", {"extra": {"cdr": 1}}]]],
 			["Necromancer", "E", "lifesteal:.5 skill:.5", "Shadow", "Raises the dead", [
 				["Necrolord", "E", "hp:.5 regen:.5", "Blood Shadow", "Undying", {"extra": {"summon_turns": 2}}],
 				["Bone Sovereign", "E", "skill:.5 lifesteal:.5", "Shadow", "Commands the bones", {"extra": {"summon_turns": 2}}]]]]],
@@ -178,8 +166,7 @@ const TREES := {
 				["Nightblade", "E", "crit:.6 dodge:.4", "Shadow", "Death at night", {}],
 				["Kingslayer", "E", "boss:.5 crit:.5", "Shadow", "Bosses fall first", {}]]],
 			["Shadowdancer", "N", "dodge:.6 double_strike:.4", "Shadow Trick", "Never where you look", [
-				["Phantom", "N", "dodge:.5 crit:.5", "Shadow Trick", "Can't be pinned down; strikes from the shadows", {"rank": "God",
-					"trial": {"name": "The Weeping Warden", "art": "boss_weeping_warden", "lore": "It sees everything. Make it lose sight of you."}}],
+				["Shade Dancer", "N", "dodge:.5 crit:.5", "Shadow Trick", "Never where the blow lands", {}],
 				["Mirage", "N", "dodge:.7 thorns:.3", "Trick", "Was never there", {}]]]]],
 		["Gambler", "N", "crit:.5 gold_find:.5", "Trick", "Lives on luck", [
 			["Illusionist", "N", "dodge:.6 skill:.4", "Trick", "Tricks of the light", [
@@ -195,9 +182,7 @@ const TREES := {
 				["Pack Lord", "N", "double_strike:.5 atk:.5", "Nature", "Leads the pack", {"extra": {"summon_turns": 2}}],
 				["Wild King", "N", "hp:.5 atk:.5", "Nature", "King of the wilds", {}]]],
 			["Deadeye", "N", "crit:.6 atk:.4", "Storm", "Never misses", [
-				["Hawkeye", "N", "crit:.5 atk:.5", "Storm", "Sees floors and bosses ahead, finds every secret, almost always escapes", {"rank": "God", "role": "scouting",
-					"util": "escape:.4 scout:.4 stone_find:.2",
-					"trial": {"name": "Dullahan, the Headless Rider", "art": "boss_dullahan", "lore": "He holds his eyes in his hand and still sees further than you."}}],
+				["Eagle Eye", "N", "crit:.5 atk:.5", "Storm", "Sees what is ahead and finds every secret", {"role": "scouting", "util": "escape:.4 scout:.4 stone_find:.2"}],
 				["Death's Arrow", "E", "crit:.5 execute:.5", "Shadow", "The last arrow", {}]]]]],
 		["Warden", "G", "hp:.5 thorns:.5", "Nature", "Forest guard", [
 			["Grove Ranger", "G", "regen:.5 dodge:.5", "Nature", "Keeps the grove", [
@@ -210,9 +195,7 @@ const TREES := {
 	"Bard": [
 		["Minstrel", "G", "regen:.5 hp:.5", "Song", "Healing songs", [
 			["Troubadour", "G", "regen:.5 skill:.5", "Song", "Songs of the road", [
-				["Songweaver", "G", "regen:.5 skill:.5", "Song", "Charms enemies to skip fights or turn on each other", {"rank": "God", "role": "hypnosis",
-					"util": "charm:.6 escape:.4",
-					"trial": {"name": "The Fairy Queen's Song", "art": "boss_fairy_queen", "lore": "She has never lost a song. She has never heard yours."}}],
+				["Grand Bard", "G", "regen:.5 skill:.5", "Song", "Charms the room, then the battle", {"role": "hypnosis", "util": "charm:.6 escape:.4"}],
 				["Choir Saint", "G", "regen:.6 hp:.4", "Song Holy", "Sings with the angels", {}]]],
 			["Siren", "E", "skill:.6 dodge:.4", "Song", "Charms monsters", [
 				["Dirge Singer", "E", "skill:.5 execute:.5", "Song Shadow", "Sings the dead to sleep", {"extra": {"confuse": 1}}],
@@ -297,244 +280,11 @@ const MID_EXTRA := {"Skald": {"buff_turns": 2}, "Siren": {"confuse": 1}, "Beastm
 	"Necromancer": {"summon_turns": 2}, "Gambler": {"gamble": 5}, "Binder": {"summon_turns": 2}}
 
 # =====================================================================
-# Branch-offs: [from, name, special stat, focus, requirements, how-to text, easy]
-# A requirement is [counter, need]; "live:" counters are checked from the hero.
-# =====================================================================
-const BRANCHES := [
-	# ----- Warrior -----
-	["Berserker", "Raging Bull", "Fury", "atk:.5 rage:.5", [["win_low20_nopot", 50]], "Win 50 fights below 20% HP without drinking a potion", false],
-	["Berserker", "Pit Fighter", "Grit", "atk:.5 double_strike:.5", [["kill_unarmed", 300]], "Kill 300 enemies with no weapon equipped", false],
-	["Champion", "Oathkeeper", "Honor", "def:.5 regen:.5", [["spares", 50], ["clean_floors", 20]], "Spare 50 enemies and kill none of a Friendly race for 20 floors", false],
-	["Champion", "Banner Knight", "Valor", "hp:.5 atk:.5", [["boss_holy50", 10]], "Beat 10 bosses while your faith is +50 or higher", false],
-	["Bloodreaver", "Gorehound", "Bloodlust", "lifesteal:.6 atk:.4", [["lifesteal_hp", 100000]], "Heal 100,000 HP from lifesteal", false],
-	["Bloodreaver", "Butcher of Hosts", "Carnage", "atk:.6 execute:.4", [["kill_people", 500]], "Kill 500 people of other races", false],
-	["Bloodreaver", "Red Mist", "Frenzy", "rage:.6 atk:.4", [["boss_low10", 10]], "Kill 10 bosses while below 10% HP", false],
-	["Warlord", "Warbringer", "Conquest", "atk:.5 crit:.5", [["live:hated", 3]], "Be Hated by 3 races at once", false],
-	["Warlord", "Siege Lord", "Ruin", "atk:.5 boss:.5", [["shield_break", 200]], "Break 200 enemy shields", false],
-	["Crusader", "Flagbearer of Dawn", "Zeal", "def:.5 hp:.5", [["realm_friendly_clear", 1]], "Clear a realm with its people Friendly or better", false],
-	["Crusader", "Martyr", "Sacrifice", "hp:.6 regen:.4", [["death_saves", 5]], "Be saved from death 5 times", false],
-	["Weaponmaster", "Hundred Arms", "Arsenal", "double_strike:.5 crit:.5", [["live:weapon_types", 5]], "Get 500 kills with each of 5 weapon types", false],
-	["Weaponmaster", "Duelist", "Poise", "crit:.5 boss:.5", [["boss_nopot", 20]], "Kill 20 bosses without drinking a potion", false],
-	["Weaponmaster", "Ironbreaker", "Temper", "scrap:.6 def:.4", [["scrapped", 1000]], "Scrap 1,000 items", true],
-	# ----- Knight -----
-	["Guardian", "Shieldbearer", "Bulwark", "def:.6 thorns:.4", [["blocks", 2000]], "Block 2,000 hits with a shield", true],
-	["Guardian", "Vigil Keeper", "Vigil", "def:.5 hp:.5", [["live:exalted", 1]], "Reach Exalted with any race", false],
-	["Lancer", "Charger", "Momentum", "atk:.5 double_strike:.5", [["first_hit_kill", 100]], "Win 100 fights with your first hit", false],
-	["Lancer", "Outrider", "Ride", "atk:.5 dodge:.5", [["realm_nocamp_streak", 100]], "Clear 100 realm floors in a row without resting at a camp", false],
-	["Paladin", "Lightbearer", "Radiance", "regen:.5 skill:.5", [["use_tag:Holy", 5000]], "Use Holy skills 5,000 times", false],
-	["Paladin", "Exorcist", "Sanctity", "atk:.5 execute:.5", [["kill_unholy", 300]], "Kill 300 Undead or Demons", false],
-	["Paladin", "Shepherd", "Mercy", "regen:.5 charm:.5", [["spares", 100]], "Spare 100 enemies", false],
-	["Juggernaut", "Unbroken", "Fortitude", "hp:.6 def:.4", [["dmg_taken", 1000000]], "Take 1,000,000 damage in total", false],
-	["Juggernaut", "Rampart", "Stone", "def:.6 thorns:.4", [["boss_above50", 20]], "Win 20 boss fights without dropping below 50% HP", false],
-	["Dragoon", "Dragon Rider", "Wyrmbond", "atk:.5 crit:.5", [["live:rep_honored:Dragonkin", 1]], "Reach Honored with the Dragonkin", false],
-	["Dragoon", "Skybreaker", "Ascent", "atk:.6 boss:.4", [["realm_flawless", 1]], "Beat every boss in one realm without dying there", false],
-	["Death Knight", "Oathbreaker", "Betrayal", "atk:.5 lifesteal:.5", [["oathbreak", 1]], "Fall from faith +50 to -50", false],
-	["Death Knight", "Bone Rider", "Requiem", "lifesteal:.5 def:.5", [["kill_faith_m75", 500]], "Kill 500 enemies while your faith is -75 or lower", false],
-	# ----- 0.13+ branches earned through the deeper dungeon (Stage 3 systems) -----
-	["Juggernaut", "Stormbreaker", "Defiance", "def:.5 atk:.5", [["staggers", 100]], "Break 100 telegraphed blows before they land", false],
-	["Berserker", "Grave-Walker", "Vengeance", "atk:.6 lifesteal:.4", [["graves_recovered", 5]], "Take your gear back from your killer 5 times", false],
-	["Champion", "Team Captain", "Unity", "atk:.5 hp:.5", [["team_strikes", 100]], "Land 100 Team Strikes", false],
-	# ----- Wanderer -----
-	["Swordsman", "Iaido Master", "Draw", "crit:.6 atk:.4", [["first_hit_kill", 1000]], "Kill 1,000 enemies with your first hit", false],
-	["Swordsman", "Wandering Blade", "Path", "double_strike:.5 dodge:.5", [["live:realms_half", 5]], "Clear 25 floors in each of 5 realms", false],
-	["Demonic Disciple", "Qi Devourer", "Hunger", "lifesteal:.5 atk:.5", [["kill_rare", 200]], "Kill 200 rare monsters", false],
-	["Demonic Disciple", "Heart Demon", "Madness", "rage:.6 lifesteal:.4", [["win_low5", 50]], "Win 50 fights after dropping below 5% HP", false],
-	["Sword Saint", "Sword Hermit", "Stillness", "crit:.5 atk:.5", [["same_sword_floors", 250]], "Keep the same sword for 250 floors", false],
-	["Sword Saint", "Heaven Splitter", "Edge", "atk:.5 boss:.5", [["boss_half_hit", 1]], "Deal 50% of a boss's HP in one hit", false],
-	["Blade Phantom", "Shadow Blade", "Phase", "dodge:.6 crit:.4", [["dodges", 3000]], "Dodge 3,000 attacks", false],
-	["Rogue", "Vault Breaker", "Greed", "gold_find:.6 crit:.4", [["rifts", 3]], "Clear 3 hidden portal vaults", false],
-	["Deadeye", "Legend Hunter", "Quarry", "crit:.5 boss:.5", [["wanderers", 3]], "Beat 3 wanderers before they walk away", false],
-	["Minstrel", "Silver Tongue", "Charm", "charm:.6 gold_find:.4", [["haggles_won", 20]], "Talk Snik down 20 times", false],
-	["Druid", "Weatherwise", "Weather", "regen:.5 def:.5", [["hazard_bursts", 100]], "Fight through 100 room hazard bursts", false],
-	["Priest", "Friend of Peoples", "Kinship", "regen:.5 charm:.5", [["peaceful", 30]], "Be let pass by friendly peoples 30 times", false],
-	["Blade Phantom", "Mist Walker", "Drift", "dodge:.5 escape:.5", [["escapes", 100]], "Escape 100 fights", false],
-	["Demon Saint", "Fallen Sage", "Corruption", "skill:.5 lifesteal:.5", [["cursed_shrines", 50]], "Pray at 50 cursed shrines", false],
-	["Demon Saint", "Thousand Hands", "Many Arms", "double_strike:.7 atk:.3", [["double_strikes", 1000]], "Land 1,000 double strikes", false],
-	["Blood Fiend", "Blood River", "Crimson", "lifesteal:.6 hp:.4", [["lifesteal_hp", 250000]], "Heal 250,000 HP from lifesteal", false],
-	["Blood Fiend", "Venom Saint", "Toxin", "execute:.5 skill:.5", [["burns", 2000]], "Poison or burn 2,000 enemies", false],
-	# ----- Cleric -----
-	["Priest", "Healer of Hosts", "Grace", "regen:.6 hp:.4", [["healed", 500000]], "Heal 500,000 HP", false],
-	["Priest", "Pilgrim", "Devotion", "regen:.5 xp:.5", [["live:camp_realms", 5]], "Rest at a camp in all 5 realms", true],
-	["Druid", "Moonwalker", "Lunar", "atk:.5 regen:.5", [["full_moons", 20]], "Fight through 20 full moons", false],
-	["Druid", "Thornwarden", "Bramble", "thorns:.6 hp:.4", [["live:rep_honored:Elf", 1], ["live:rep_honored:Fairy", 1]], "Reach Honored with the Elves and the Fairies", false],
-	["High Priest", "Hierophant", "Sanctum", "skill:.5 regen:.5", [["live:faith_100", 1]], "Reach faith +100", false],
-	["High Priest", "Miracle Worker", "Miracle", "regen:.6 hp:.4", [["cures", 1]], "Finish a Vampire or Werewolf cure", false],
-	["Inquisitor", "Witch Hunter", "Verdict", "boss:.5 crit:.5", [["boss_unholy", 50]], "Kill 50 Demon or Undead bosses", false],
-	["Inquisitor", "Confessor", "Penance", "def:.5 charm:.5", [["spare_hated", 50]], "Spare 50 enemies of a race that Hates you", false],
-	["Grove Keeper", "Treant Speaker", "Rootbond", "hp:.5 thorns:.5", [["realm_peace:elf", 1]], "Clear the Elf realm without killing an Elf", false],
-	["Grove Keeper", "Herb Sage", "Bloom", "potion:.6 regen:.4", [["materials", 500]], "Gather 500 materials", true],
-	["Storm Druid", "Thunderborn", "Static", "double_strike:.5 skill:.5", [["hit_tag:Storm", 1000]], "Land 1,000 Storm skill hits", false],
-	["Storm Druid", "Eye of the Storm", "Calm", "dodge:.5 skill:.5", [["no_retreat_streak", 50]], "Clear 50 floors in a row without retreating", false],
-	# ----- Acolyte -----
-	["Dawn Disciple", "Sunwalker", "Daybreak", "atk:.5 regen:.5", [["boss_kill_tag:Holy", 25]], "Finish 25 bosses with a Holy skill", false],
-	["Dawn Disciple", "Lantern Bearer", "Hope", "hp:.5 def:.5", [["live:floor100_nodeath", 1]], "Reach floor 100 without dying", false],
-	["Cultist", "Doomsayer", "Omen", "atk:.6 skill:.4", [["cursed_shrines", 30]], "Take 30 dark bargains at cursed shrines", false],
-	["Cultist", "Heretic", "Blasphemy", "atk:.5 crit:.5", [["kill_race:Angel", 100]], "Kill 100 Angels", false],
-	["Templar", "Covenant Knight", "Covenant", "def:.5 hp:.5", [["live:rep_honored:Angel", 1], ["live:rep_honored:Dwarf", 1]], "Reach Honored with the Angels and the Dwarves", false],
-	["Templar", "Relic Guard", "Relic", "def:.6 regen:.4", [["live:race_keys", 3]], "Carry 3 race keys at once", false],
-	["Seer", "Fate Reader", "Foresight", "crit:.5 scout:.5", [["secrets", 10]], "Find 10 realm secrets", false],
-	["Seer", "Dream Oracle", "Visions", "dodge:.5 xp:.5", [["camps", 100]], "Rest at 100 camps", true],
-	["Warlock", "Pact Lord", "Pact", "skill:.6 lifesteal:.4", [["form_floors", 100]], "Keep a transformation for 100 floors", false],
-	["Warlock", "Soul Binder", "Soul", "skill:.5 lifesteal:.5", [["spirits", 100]], "Kill 100 realm spirits", false],
-	["Blood Knight", "Sanguine Lord", "Thirst", "lifesteal:.6 atk:.4", [["live:vampire80", 1]], "Reach level 80 as a Vampire", false],
-	["Blood Knight", "Crimson Oath", "Sacrament", "atk:.5 lifesteal:.5", [["hp_paid", 50000]], "Spend 50,000 HP on Blood skills", false],
-	# ----- Mage -----
-	["Elementalist", "Prism Mage", "Prism", "skill:.7 crit:.3", [["prism_fights", 500]], "Use Fire, Frost and Storm skills in one fight, 500 times", false],
-	["Elementalist", "Geomancer", "Bedrock", "def:.5 skill:.5", [["kill_stone", 300]], "Kill 300 Golems or stone monsters", false],
-	["Elementalist", "Aeromancer", "Zephyr", "dodge:.6 skill:.4", [["dodge_storm", 1000]], "Dodge 1,000 attacks in fights where you used a Storm skill", false],
-	["Arcanist", "Spellblade", "Weave", "atk:.5 skill:.5", [["kill_w:sword", 1000]], "Kill 1,000 enemies with a sword equipped", false],
-	["Arcanist", "Rune Scribe", "Rune", "skill:.6 crit:.4", [["live:mage_skills", 1]], "Learn every Fire, Frost, Storm and Arcane skill", false],
-	["Arcanist", "Archivist", "Lore", "xp:.6 stone_find:.4", [["live:achievements", 60]], "Unlock 60 achievements", true],
-	["Pyromancer", "Ash Prophet", "Cinder", "atk:.6 skill:.4", [["kill_tag:Fire", 5000]], "Kill 5,000 enemies with Fire skills", false],
-	["Pyromancer", "Phoenix Heir", "Rebirth", "regen:.5 hp:.5", [["realm_saves", 3]], "Be saved from death 3 times in one realm", false],
-	["Pyromancer", "Magmancer", "Magma", "skill:.5 def:.5", [["burn_freeze", 500]], "Burn and freeze the same enemy 500 times", false],
-	["Cryomancer", "Winter Hermit", "Rime", "def:.5 skill:.5", [["freezes", 2000]], "Freeze 2,000 enemies", false],
-	["Cryomancer", "Glass Mage", "Clarity", "skill:.6 crit:.4", [["flawless_fights", 200]], "Win 200 fights without taking damage", false],
-	["Cryomancer", "Tidecaller", "Tide", "def:.5 regen:.5", [["hits_shielded", 300]], "Take 300 hits while a shield or Frozen Armor is up", false],
-	["Lightbinder", "Starcaller", "Starlight", "skill:.5 regen:.5", [["live:rep_exalted:Angel", 1]], "Reach Exalted with the Angels", false],
-	["Lightbinder", "Lumen Sage", "Lumen", "skill:.6 regen:.4", [["boss_holyarcane", 20]], "Beat 20 bosses using only Holy and Arcane skills", false],
-	["Necromancer", "Gravecaller", "Grave", "skill:.5 lifesteal:.5", [["kill_dark", 2000]], "Kill 2,000 enemies with Shadow or Blood skills", false],
-	["Necromancer", "Soul Harvester", "Harvest", "lifesteal:.5 execute:.5", [["kill_zone:4", 1000]], "Kill 1,000 enemies in Hel's domain, the Shadow Deep", false],
-	# ----- Trickster -----
-	["Rogue", "Cutpurse", "Greed", "gold_find:.7 crit:.3", [["gold_earned", 1000000]], "Earn 1,000,000 gold", true],
-	["Rogue", "Pathfinder", "Stealth", "scout:.5 dodge:.5", [["hidden_paths", 20]], "Find 20 hidden paths in realms", false],
-	["Gambler", "High Roller", "Stakes", "crit:.5 gold_find:.5", [["wheel_max_wins", 20]], "Win the wheel at max bet 20 times", false],
-	["Gambler", "Cardsharp", "Bargain", "gold_find:.5 stone_find:.5", [["bought", 500]], "Buy 500 items from merchants", false],
-	["Assassin", "Silent Knife", "Silence", "crit:.6 execute:.4", [["big_crit_kill", 500]], "Kill 500 enemies with crits of 3x or more", false],
-	["Assassin", "Poisoner", "Venom", "execute:.5 crit:.5", [["dot_kill", 1000]], "Kill 1,000 enemies with poison or burns", false],
-	["Shadowdancer", "Night Dancer", "Twilight", "dodge:.6 double_strike:.4", [["dodge_streak", 10]], "Dodge 10 attacks in a row", false],
-	["Shadowdancer", "Shade", "Umbra", "dodge:.5 crit:.5", [["use_tag:Shadow", 3000]], "Use Shadow skills 3,000 times", false],
-	["Illusionist", "Mirror Mage", "Reflection", "dodge:.5 skill:.5", [["illusions", 100]], "See through 100 fae illusions", false],
-	["Illusionist", "Puppeteer", "Strings", "charm:.6 skill:.4", [["talks", 100]], "Talk your way past 100 realm encounters", false],
-	["Pirate", "Smuggler King", "Contraband", "gold_find:.6 atk:.4", [["sold", 2000]], "Sell 2,000 items", false],
-	["Pirate", "Plunderer", "Plunder", "atk:.5 gold_find:.5", [["attacks", 100]], "Attack 100 travelers you could have talked to", false],
-	# ----- Ranger -----
-	["Hunter", "Trapper", "Snare", "atk:.5 execute:.5", [["kill_beast", 500]], "Kill 500 beasts", false],
-	["Hunter", "Bounty Hunter", "Bounty", "gold_find:.5 atk:.5", [["quests", 50]], "Finish 50 realm quests", false],
-	["Hunter", "Wayfinder", "Paths", "scout:.6 dodge:.4", [["doors_read", 150]], "Read 150 dungeon doors", false],
-	["Warden", "Forest Ward", "Ward", "hp:.5 thorns:.5", [["live:rep_honored:Beastkin", 1], ["live:rep_honored:Elf", 1]], "Reach Honored with the Beastkin and the Elves", false],
-	["Warden", "Elfsworn", "Leafsong", "regen:.5 crit:.5", [["live:world_tree", 1]], "Receive the World Tree's Blessing", false],
-	["Beastmaster", "Packmind", "Instinct", "double_strike:.6 hp:.4", [["kill_rare_beast", 100]], "Kill 100 elite beasts", false],
-	["Beastmaster", "Wild Heart", "Wild", "atk:.5 hp:.5", [["live:beastkin_awake", 1]], "Fully awaken as a Beastkin", false],
-	["Deadeye", "Sniper", "Aim", "crit:.7 atk:.3", [["crits", 2000]], "Land 2,000 crits", true],
-	["Deadeye", "One-Shot", "Mark", "crit:.5 boss:.5", [["first_hit_kill_bow", 300]], "Kill 300 enemies with a single arrow", false],
-	["Grove Ranger", "Glade Keeper", "Glade", "regen:.5 dodge:.5", [["realm_friendly_clear:fairy", 1]], "Clear the Fairy realm with the Fairies Friendly or better", false],
-	["Grove Ranger", "Root Warden", "Root", "hp:.5 regen:.5", [["peaceful", 150]], "Pass peacefully through 150 realm encounters", false],
-	["Stormcaller", "Windrunner", "Gale", "double_strike:.5 dodge:.5", [["quick_win", 300]], "Win 300 fights before the enemy acts", false],
-	["Stormcaller", "Thunderbow", "Thunder", "skill:.5 crit:.5", [["boss_kill_tag:Storm", 50]], "Kill 50 bosses with Storm skills", false],
-	# ----- Bard -----
-	["Minstrel", "Lullaby Singer", "Lull", "charm:.6 regen:.4", [["talk_hostile", 150]], "Calm 150 hostile encounters by talking", false],
-	["Minstrel", "Wandering Poet", "Verse", "xp:.6 regen:.4", [["live:codex_entries", 150]], "Discover 150 Codex entries", true],
-	["Skald", "Saga Keeper", "Saga", "atk:.5 boss:.5", [["boss_kills", 100]], "Beat 100 bosses", false],
-	["Skald", "Drummer", "Rhythm", "atk:.5 double_strike:.5", [["songs", 5000]], "Use buff songs 5,000 times", false],
-	["Troubadour", "Heartstring", "Charm", "charm:.5 regen:.5", [["live:friendly_races", 8]], "Be Friendly or better with 8 races at once", false],
-	["Troubadour", "Beast Whisperer", "Calm", "charm:.6 regen:.4", [["spare_beasts", 150]], "Calm 150 wild monsters by sparing them", false],
-	["Troubadour", "Ballad Knight", "Ballad", "atk:.5 def:.5", [["boss_song", 50]], "Win 50 boss fights with a song active", false],
-	["Siren", "Tide Witch", "Lure", "charm:.5 skill:.5", [["kill_friendly_people", 300]], "Kill 300 people of races that were Friendly to you", false],
-	["Siren", "Banshee", "Wail", "skill:.6 execute:.4", [["kill_debuffed", 1000]], "Kill 1,000 enemies while they're weakened, stunned or charmed", false],
-	["War Chanter", "Warcry", "Roar", "atk:.6 double_strike:.4", [["short_fights", 1000]], "Win 1,000 fights in 3 turns or less", false],
-	["War Chanter", "Battle Hymnist", "Anthem", "atk:.5 boss:.5", [["boss_first_try", 20]], "Beat 20 bosses on your first try", false],
-	["Spellsinger", "Chorus Mage", "Harmony", "skill:.6 regen:.4", [["use_tag:Arcane", 3000]], "Use Arcane skills 3,000 times", false],
-	["Spellsinger", "Resonant", "Resonance", "skill:.5 double_strike:.5", [["skill_repeat10", 100]], "Use the same skill 10 times in a row, 100 times", false],
-	# ----- Sentinel -----
-	["Oathguard", "Shield Saint", "Faith", "def:.5 regen:.5", [["blocks", 3000]], "Block 3,000 hits with a shield", false],
-	["Oathguard", "Bannerguard", "Vow", "def:.5 hp:.5", [["boss_above50", 30]], "Win 30 boss fights without dropping below 50% HP", false],
-	["Ironclad", "Plate Titan", "Weight", "def:.6 hp:.4", [["dmg_taken", 2000000]], "Take 2,000,000 damage in total", false],
-	["Ironclad", "Frozen Bastion", "Chill", "def:.5 regen:.5", [["use_tag:Frost", 2000]], "Use Frost skills 2,000 times", false],
-	["Aegis Bearer", "Sunshield", "Dawn", "def:.5 regen:.5", [["use_tag:Holy", 3000]], "Use Holy skills 3,000 times", false],
-	["Aegis Bearer", "Lightwall", "Beacon", "def:.6 thorns:.4", [["hits_shielded", 800]], "Take 800 hits while a shield is up", false],
-	["Vowkeeper", "Sentry of Dawn", "Watch", "hp:.5 def:.5", [["flawless_fights", 300]], "Win 300 fights without taking damage", false],
-	["Vowkeeper", "Penitent", "Penance", "hp:.6 regen:.4", [["healed", 300000]], "Heal 300,000 HP", false],
-	["Frostwall", "Rime Guard", "Rime", "def:.6 hp:.4", [["hits_shielded", 500]], "Take 500 hits while a shield or Frozen Armor is up", false],
-	["Frostwall", "Winter Bulwark", "Hoarfrost", "def:.5 thorns:.5", [["kill_tag:Frost", 3000]], "Kill 3,000 enemies with Frost skills", false],
-	["Barrow Warden", "Crypt Guard", "Crypt", "def:.5 lifesteal:.5", [["kill_dark", 1500]], "Kill 1,500 enemies with Shadow or Blood skills", false],
-	["Barrow Warden", "Marrow Knight", "Marrow", "hp:.5 thorns:.5", [["kill_unholy", 400]], "Kill 400 Undead or Demons", false],
-	# ----- Ironbark -----
-	["Thornback", "Briar Witch", "Briar", "thorns:.6 regen:.4", [["dmg_taken", 800000]], "Take 800,000 damage in total", false],
-	["Thornback", "Spine Beast", "Quills", "thorns:.5 atk:.5", [["blocks", 1500]], "Block 1,500 hits with a shield", false],
-	["Stonefist", "Cairn Fist", "Cairn", "atk:.5 def:.5", [["kill_stone", 200]], "Kill 200 Golems or stone monsters", false],
-	["Stonefist", "Boulder Monk", "Stillness", "def:.6 double_strike:.4", [["double_strikes", 800]], "Land 800 double strikes", false],
-	["Briarheart", "Thorn Mother", "Thorns", "thorns:.6 hp:.4", [["hit_tag:Nature", 1500]], "Land 1,500 Nature skill hits", false],
-	["Briarheart", "Bramble Knight", "Bramble", "thorns:.5 def:.5", [["staggers", 60]], "Break 60 telegraphed blows before they land", false],
-	["Mossback", "Mosswalker", "Moss", "hp:.5 regen:.5", [["healed", 250000]], "Heal 250,000 HP", false],
-	["Mossback", "Seed Keeper", "Seeds", "regen:.5 potion:.5", [["materials", 300]], "Gather 300 materials", true],
-	["Rockbreaker", "Quarry Brute", "Quarry", "atk:.5 hp:.5", [["kill_stone", 500]], "Kill 500 Golems or stone monsters", false],
-	["Rockbreaker", "Shatterhand", "Shatter", "atk:.6 double_strike:.4", [["use_tag:Fist", 3000]], "Use Fist skills 3,000 times", false],
-	["Cragborn", "Mountain Heart", "Peak", "hp:.6 def:.4", [["dmg_taken", 1200000]], "Take 1,200,000 damage in total", false],
-	["Cragborn", "Cliff Walker", "Cliff", "hp:.5 atk:.5", [["boss_kills", 60]], "Beat 60 bosses", false],
-	# ----- Nightstalker -----
-	["Stalker", "Gloom Hunter", "Gloom", "crit:.5 dodge:.5", [["use_tag:Shadow", 2500]], "Use Shadow skills 2,500 times", false],
-	["Stalker", "Night Runner", "Pace", "dodge:.6 escape:.4", [["dodges", 2500]], "Dodge 2,500 attacks", false],
-	["Skirmisher", "Raider", "Raid", "atk:.5 crit:.5", [["first_hit_kill", 500]], "Kill 500 enemies with your first hit", false],
-	["Skirmisher", "Reaver Scout", "Scouting", "double_strike:.5 scout:.5", [["short_fights", 600]], "Win 600 fights in 3 turns or less", false],
-	["Cutthroat", "Alley King", "Alley", "crit:.6 execute:.4", [["big_crit_kill", 300]], "Kill 300 enemies with crits of 3x or more", false],
-	["Cutthroat", "Garrote", "Wire", "execute:.5 crit:.5", [["dot_kill", 600]], "Kill 600 enemies with poison or burns", false],
-	["Duskrunner", "Haze Walker", "Haze", "dodge:.6 crit:.4", [["dodge_streak", 8]], "Dodge 8 attacks in a row", false],
-	["Duskrunner", "Eclipse Runner", "Eclipse", "dodge:.5 escape:.5", [["escapes", 80]], "Escape 80 fights", false],
-	["Knife Dancer", "Razor Dancer", "Razor", "crit:.5 double_strike:.5", [["crits", 1500]], "Land 1,500 crits", false],
-	["Knife Dancer", "Edge Weaver", "Weave", "double_strike:.6 atk:.4", [["use_tag:Blade", 3000]], "Use Blade skills 3,000 times", false],
-	["Ambusher", "Trap Master", "Snare", "atk:.5 execute:.5", [["quick_win", 200]], "Win 200 fights before the enemy acts", false],
-	["Ambusher", "Sunder Fang", "Fang", "atk:.5 boss:.5", [["boss_first_try", 15]], "Beat 15 bosses on your first try", false],
-	# ----- Conjurer -----
-	["Binder", "Pact Weaver", "Pact", "skill:.6 atk:.4", [["use_tag:Arcane", 2500]], "Use Arcane skills 2,500 times", false],
-	["Binder", "Spirit Tamer", "Spirit", "skill:.5 lifesteal:.5", [["kill_tag:Shadow", 2500]], "Kill 2,500 enemies with Shadow skills", false],
-	["Demonologist", "Brimstone Binder", "Brimstone", "skill:.6 execute:.4", [["kill_debuffed", 800]], "Kill 800 enemies while they're weakened, stunned or charmed", false],
-	["Demonologist", "Fiend Lord", "Fiend", "skill:.5 atk:.5", [["kill_unholy", 400]], "Kill 400 Undead or Demons", false],
-	["Spiritcaller", "Ghost Shepherd", "Shepherd", "regen:.6 skill:.4", [["healed", 200000]], "Heal 200,000 HP", false],
-	["Spiritcaller", "Medium", "Seance", "regen:.5 charm:.5", [["spares", 80]], "Spare 80 enemies", false],
-	["Golemwright", "Rune Smith", "Rune", "skill:.5 def:.5", [["kill_stone", 300]], "Kill 300 Golems or stone monsters", false],
-	["Golemwright", "Clay Sage", "Clay", "def:.5 hp:.5", [["hits_shielded", 400]], "Take 400 hits while a shield is up", false],
-	["Imp Master", "Imp Prince", "Mischief", "skill:.5 atk:.5", [["kill_rare", 150]], "Kill 150 rare monsters", false],
-	["Imp Master", "Pit Warden", "Pit", "atk:.5 boss:.5", [["boss_kills", 40]], "Beat 40 bosses", false],
-	["Voidbinder", "Void Tamer", "Void", "skill:.6 crit:.4", [["use_tag:Shadow", 4000]], "Use Shadow skills 4,000 times", false],
-	["Voidbinder", "Star Eater", "Hunger", "skill:.5 boss:.5", [["boss_nopot", 15]], "Kill 15 bosses without drinking a potion", false],
-]
-
-# =====================================================================
-# The Wanderer's items: one unique encounter each (a fight or a conversation)
-# =====================================================================
-# node: the class it opens; at: the class you must be to meet it; fight: a
-# trial (else the item is given by talking); where: "elf"/"demon"/"dwarf" realm
-# or "moon" (a full-moon floor) or "" (anywhere from floor 30).
-const ITEMS := {
-	"masters_blade": {"name": "Broken Master's Blade", "node": "sword_saint", "at": "swordsman", "level": 35, "where": "",
-		"title": "The Old Swordmaster", "talk": "An old man sits by the road with a broken sword across his knees. \"Show me your cut,\" he says, \"and I'll show you mine.\"",
-		"yes": "Accept his duel", "fight": {"name": "The Old Swordmaster", "art": "obsidian_knight", "lore": "He was the best once. He still might be.", "hp": 4.0, "atk": 1.3}},
-	"heavens_edge": {"name": "Heaven's Edge", "node": "sword_god", "at": "sword_saint", "level": 55, "where": "",
-		"title": "The Blade Hermit", "talk": "A hermit blocks the mountain path. \"I fight only the whole. Come at full strength, and drink nothing.\"",
-		"yes": "Face the hermit", "full_hp": true, "no_potions": true,
-		"fight": {"name": "The Blade Hermit", "art": "hollow_sentinel", "lore": "He hasn't spoken a word in forty years. His sword says enough.", "hp": 6.0, "atk": 1.5}},
-	"undying_scabbard": {"name": "Undying Scabbard", "node": "sword_immortal", "at": "sword_saint", "level": 55, "where": "",
-		"title": "A ghost swordsman", "talk": "A swordsman made of mist challenges you. He can't die, so he can't lose. Beat him, and let him go.",
-		"yes": "Fight, then spare him", "spare": true,
-		"fight": {"name": "The Ghost Swordsman", "art": "barrow_wight", "lore": "He has been waiting for someone to beat him for three hundred years.", "hp": 5.0, "atk": 1.4}},
-	"phantom_tassel": {"name": "Phantom Tassel", "node": "ghost_blade", "at": "blade_phantom", "level": 55, "where": "elf",
-		"title": "Something in the mist", "talk": "In the Hushwood's mist a phantom walks without footprints. It turns toward you.",
-		"yes": "Follow the phantom", "fight": {"name": "The Mist Phantom", "art": "owlwraith", "lore": "It walks only in the mist, and only for those who walk like it.", "hp": 5.0, "atk": 1.4}},
-	"thousand_swords": {"name": "Shard of a Thousand Swords", "node": "thousand_edges", "at": "blade_phantom", "level": 55, "where": "dwarf", "rep": "Dwarf",
-		"title": "The Dwarf master smith", "talk": "The master smith of the Ironroot looks you over. \"Friend of the hold. I have something for a blade like you: a shard of every sword I ever broke.\"",
-		"yes": "Take the shard"},
-	"demon_seal": {"name": "Heavenly Demon Seal", "node": "heavenly_demon", "at": "demon_saint", "level": 55, "where": "demon",
-		"title": "A Demon prince", "talk": "A demon prince steps out of the fire. \"They say you walk the demon path. Prove it, and take my seal.\"",
-		"yes": "Accept his challenge", "fight": {"name": "The Demon Prince", "art": "hellborn_duke", "lore": "Heir to a throne of ash. He doesn't intend to share it.", "hp": 6.0, "atk": 1.5}},
-	"crimson_crown": {"name": "Crimson Crown", "node": "blood_demon_king", "at": "blood_fiend", "level": 55, "where": "moon",
-		"title": "The Blood Moon champion", "talk": "Under the full moon a champion in red waits on a pile of bones. \"The crown goes to whoever is left.\"",
-		"yes": "Fight for the crown", "fight": {"name": "The Blood Moon Champion", "art": "strigoi", "lore": "Crowned every full moon. Never for long.", "hp": 6.0, "atk": 1.5}},
-	"viper_heart": {"name": "Viper Heart", "node": "poison_sovereign", "at": "blood_fiend", "level": 55, "where": "",
-		"title": "A Goblin poison seller", "talk": "A goblin with a tray of vials grins. \"The Viper Heart? Not for sale. But my bodyguard is, if you can beat him.\"",
-		"yes": "Pay and fight the bodyguard", "cost": 40,
-		"fight": {"name": "The Goblin's Bodyguard", "art": "brimstone_brute", "lore": "Paid in poison. Very well paid.", "hp": 5.0, "atk": 1.5}},
-}
-const ITEM_CHANCE := 4.0     # % per new floor when you can meet one
-const ITEM_PITY := 40        # guaranteed after this many floors of eligibility
-
-# =====================================================================
 # Building the node table
 # =====================================================================
 
 static var _nodes := {}
 static var _roots := {}
-static var _branches := {}   # parent id -> [branch nodes]
 
 static func slug(s: String) -> String:
 	var out := ""
@@ -559,35 +309,20 @@ static func _build() -> void:
 		for n in TREES[cls]:
 			roots.append(_add(cls, n, 1, ""))
 		_roots[cls] = roots
-	for b in BRANCHES:
-		var parent := slug(String(b[0]))
-		var p: Dictionary = _nodes[parent]
-		var easy: bool = b[6]
-		var rank := ("C" if easy else "B") if int(p["tier"]) == 1 else ("B" if easy else "A")
-		var focus := _focus(String(b[3]))
-		var util := {}
-		var combat := {}
-		for k in focus:
-			if k in UTILITY_KEYS:
-				util[k] = focus[k]
-			else:
-				combat[k] = focus[k]
-		var id := slug(String(b[1]))
-		var node := {"id": id, "name": b[1], "cls": p["cls"], "tier": int(p["tier"]) + 1, "parent": parent, "side": p["side"],
-			"focus": combat, "util": util, "tags": p["tags"], "role_text": String(b[5]), "children": [], "branch": true,
-			"rank": rank, "role": "utility" if combat.is_empty() else "combat", "stat": String(b[2]), "reqs": b[4], "how": String(b[5]), "easy": easy,
-			"extra": {}, "item": "", "trial": {}}
-		_nodes[id] = node
-		if not _branches.has(parent):
-			_branches[parent] = []
-		_branches[parent].append(node)
+	# God classes (god_classes.gd): unique classes outside the trees, rank God
+	for id in GodClasses.LIST:
+		var c: Dictionary = GodClasses.LIST[id]
+		_nodes[id] = {"id": id, "name": c["name"], "cls": c["cls"], "tier": 3, "parent": "", "side": c["side"],
+			"focus": _focus(String(c["focus"])), "tags": Array(String(c["tags"]).split(" ", false)), "role_text": c["role_text"],
+			"children": [], "god": true, "rank": "God", "role": String(c.get("role", "combat")), "util": _focus(String(c.get("util", ""))),
+			"extra": c.get("extra", {}), "stat": _final_stat(String(c["name"]))}
 
 static func _add(cls: String, n: Array, tier: int, parent: String) -> String:
 	var id := slug(String(n[0]))
 	var tags: Array = Array(String(n[3]).split(" ", false))
 	var node := {"id": id, "name": n[0], "cls": cls, "tier": tier, "parent": parent, "side": n[1], "focus": _focus(String(n[2])),
-		"tags": tags, "role_text": n[4], "children": [], "branch": false, "rank": "", "role": "combat", "util": {}, "stat": "",
-		"extra": MID_EXTRA.get(n[0], {}), "item": "", "trial": {}}
+		"tags": tags, "role_text": n[4], "children": [], "rank": "", "role": "combat", "util": {}, "stat": "",
+		"extra": MID_EXTRA.get(n[0], {})}
 	_nodes[id] = node
 	if n[5] is Array:
 		for c in n[5]:
@@ -597,16 +332,11 @@ static func _add(cls: String, n: Array, tier: int, parent: String) -> String:
 		node["rank"] = String(ex.get("rank", "S"))
 		node["role"] = String(ex.get("role", "combat"))
 		node["util"] = _focus(String(ex.get("util", "")))
-		node["trial"] = ex.get("trial", {})
-		node["item"] = String(ex.get("item", ""))
 		node["extra"] = ex.get("extra", {})
 		node["stat"] = _final_stat(String(n[0]))
-	# Sword Saint needs an item too (it's a level 35 class)
-	if id == "sword_saint":
-		node["item"] = "masters_blade"
 	return id
 
-## The special stat a level 60 final grows (named after the class).
+## The special stat a level 75 final grows (named after the class).
 const FINAL_STATS := {"Sword God": "Sword Intent", "Heavenly Demon": "Demonic Qi", "Asura": "Wrath", "Titan": "Might",
 	"Sky Dragoon": "Sky", "Archdruid": "Verdance", "Saint Militant": "Sanctity", "Chronomancer": "Hours", "Phantom": "Shade",
 	"Hawkeye": "Sight", "Songweaver": "Melody", "Fortune's Fool": "Luck"}
@@ -631,10 +361,6 @@ static func roots(cls: String) -> Array:
 
 static func children(id: String) -> Array:
 	return node(id).get("children", [])
-
-static func branches(id: String) -> Array:
-	_build()
-	return _branches.get(id, [])
 
 static func by_name(n: String) -> Dictionary:
 	return node(slug(n))
@@ -736,22 +462,22 @@ static func side_ok(g: GameState, side: String) -> bool:
 	var a := alignment(g)
 	return side == "N" or a == "N" or side == a
 
-## The classes on your path, in order (plus a branch-off at the end).
+## The classes on your path, in order (plus a God class at the end, once you swap into one).
 static func path_nodes(g: GameState) -> Array:
 	var out: Array = []
 	for id in g.class_path:
 		var n := node(String(id))
 		if not n.is_empty():
 			out.append(n)
-	if g.class_branch != "":
-		var b := node(g.class_branch)
-		if not b.is_empty():
-			out.append(b)
+	if g.god_class != "":
+		var gn := node(g.god_class)
+		if not gn.is_empty():
+			out.append(gn)
 	return out
 
 static func current(g: GameState) -> Dictionary:
-	if g.class_branch != "":
-		return node(g.class_branch)
+	if g.god_class != "":
+		return node(g.god_class)
 	if g.class_path.is_empty():
 		return {}
 	return node(String(g.class_path[g.class_path.size() - 1]))
@@ -760,7 +486,7 @@ static func title(g: GameState) -> String:
 	var c := current(g)
 	return String(c["name"]) if not c.is_empty() else g.hero_class
 
-## The unique class you are (a level 60 final or a branch-off), or {}.
+## The unique class you are (a level 75 final or a God class), or {}.
 static func unique_class(g: GameState) -> Dictionary:
 	var c := current(g)
 	if c.is_empty() or rank_of(c) == "":
@@ -771,9 +497,9 @@ static func stat_name(g: GameState) -> String:
 	var u := unique_class(g)
 	return String(u.get("stat", "")) if not u.is_empty() else ""
 
-## Which tier you can pick next (0, 1, 2), or -1.
+## Which tier you can pick next (0, 1, 2), or -1. A hidden or God class ends the main route.
 static func pick_tier(g: GameState) -> int:
-	if g.hero_class == "" or g.class_branch != "" or g.hidden_class != "":  # a hidden class ends the main route
+	if g.hero_class == "" or g.hidden_class != "" or g.god_class != "":
 		return -1
 	var t := g.class_path.size()
 	if t >= PICK_LEVELS.size() or g.level < int(PICK_LEVELS[t]):
@@ -782,7 +508,7 @@ static func pick_tier(g: GameState) -> int:
 
 ## The classes you can choose between now (or next).
 static func options(g: GameState) -> Array:
-	if g.hero_class == "" or g.class_branch != "" or g.hidden_class != "":
+	if g.hero_class == "" or g.hidden_class != "" or g.god_class != "":
 		return []
 	if g.class_path.is_empty():
 		return roots(g.hero_class).map(func(id): return node(String(id)))
@@ -797,23 +523,17 @@ static func lock_reason(g: GameState, n: Dictionary, ignore_level := false) -> S
 		return "Reach level %d" % int(PICK_LEVELS[clampi(t, 0, 2)])
 	if not side_ok(g, String(n["side"])):
 		return "Your deeds are too %s for a %s class" % ["good" if alignment(g) == "G" else "evil", String(ALIGN_NAMES[n["side"]]).to_lower()]
-	var it := String(n.get("item", ""))
-	if it != "" and not it in g.class_items:
-		return "Needs the %s" % ITEMS[it]["name"]
 	return ""
 
-## Choose a class. God classes start their trial first (you get the class if you win).
+## Choose the next class on the main route.
 static func pick(g: GameState, id: String) -> bool:
 	var n := node(id)
 	if n.is_empty() or pick_tier(g) < 0:
 		return false
-	var opts := options(g)
-	if not opts.any(func(o): return String(o["id"]) == id):
+	if not options(g).any(func(o): return String(o["id"]) == id):
 		return false
 	if lock_reason(g, n) != "":
 		return false
-	if not (n.get("trial", {}) as Dictionary).is_empty() and not g.ctrack.get("trial_" + id, 0):
-		return g.start_special_trial(n["trial"], "class_god", {"node": id})
 	_take(g, n)
 	return true
 
@@ -843,19 +563,6 @@ static func _on_new_class(g: GameState, n: Dictionary) -> void:
 	Lineage.update_look(g)
 	g.save_game()
 
-## Won a god trial: the class is yours.
-static func trial_won(g: GameState, data: Dictionary) -> void:
-	var id := String(data.get("node", ""))
-	if data.has("item"):
-		_give_item(g, String(data["item"]))
-		return
-	g.ctrack["trial_" + id] = 1
-	var n := node(id)
-	if n.is_empty():
-		return
-	if pick_tier(g) >= 0 and options(g).any(func(o): return String(o["id"]) == id) and lock_reason(g, n) == "":
-		_take(g, n)
-
 ## Picks the first class you can take (for auto mode and simulations).
 static func auto_pick(g: GameState) -> void:
 	var guard := 0
@@ -865,141 +572,12 @@ static func auto_pick(g: GameState) -> void:
 		var opts := options(g)
 		opts.shuffle()
 		for o in opts:
-			if lock_reason(g, o) == "" and (o.get("trial", {}) as Dictionary).is_empty():
+			if lock_reason(g, o) == "":
 				_take(g, o)
 				picked = true
 				break
 		if not picked:
 			return
-
-# =====================================================================
-# Branch-offs
-# =====================================================================
-
-## The branch-offs you could take right now (you must be their parent class).
-static func open_branches(g: GameState) -> Array:
-	if g.class_branch != "" or g.hidden_class != "" or g.class_path.is_empty() or g.class_path.size() >= 3:
-		return []
-	return branches(String(g.class_path[g.class_path.size() - 1]))
-
-static func req_value(g: GameState, key: String) -> float:
-	if not key.begins_with("live:"):
-		return float(g.ctrack.get(key, 0))
-	var k := key.substr(5)
-	var parts := k.split(":")
-	match parts[0]:
-		"hated":
-			var n := 0
-			for r in Races.ORDER:
-				if Races.rep_index(Lineage.rep(g, r)) == 0:
-					n += 1
-			return n
-		"exalted":
-			for r in Races.ORDER:
-				if Races.rep_index(Lineage.rep(g, r)) >= 5:
-					return 1
-			return 0
-		"rep_honored":
-			return 1 if Races.rep_index(Lineage.rep(g, parts[1])) >= 4 else 0
-		"rep_exalted":
-			return 1 if Races.rep_index(Lineage.rep(g, parts[1])) >= 5 else 0
-		"friendly_races":
-			var n := 0
-			for r in Races.ORDER:
-				if Races.rep_index(Lineage.rep(g, r)) >= 3:
-					n += 1
-			return n
-		"weapon_types":
-			var n := 0
-			for t in ["sword", "dagger", "axe", "mace", "spear", "bow", "staff"]:
-				if int(g.ctrack.get("kill_w:" + t, 0)) >= 500:
-					n += 1
-			return n
-		"realms_half":
-			var n := 0
-			for id in Realms.IDS:
-				if Realms.completion(g, id) >= 50:
-					n += 1
-			return n
-		"camp_realms":
-			var n := 0
-			for id in Realms.IDS:
-				if g.ctrack.get("camp_" + id, 0):
-					n += 1
-			return n
-		"faith_100":
-			return 1 if g.faith >= 99.9 else 0
-		"floor100_nodeath":
-			return 1 if g.best_floor >= 100 and int(g.ctrack.get("deaths", 0)) == 0 else 0
-		"race_keys":
-			return g.race_keys.size()
-		"vampire80":
-			return 1 if g.form == "Vampire" and g.level >= 80 else 0
-		"mage_skills":
-			for id in SkillData.SKILLS:
-				var s: Dictionary = SkillData.SKILLS[id]
-				var tags: Array = s.get("tags", [])
-				if tags.any(func(t): return t in ["Fire", "Frost", "Storm", "Arcane"]) and not g.skill_book.has(id):
-					return 0
-			return 1
-		"achievements":
-			return g.codex.achievements.size()
-		"codex_entries":
-			return g.codex.bestiary.size() + g.codex.collection.size()
-		"world_tree":
-			return 1 if "World Tree's Blessing" in g.race_keys or g.feats.get("world_tree", 0) else 0
-		"beastkin_awake":
-			return 1 if g.race() == "Beastkin" and Lineage.next_rank(g).is_empty() else 0
-	return 0
-
-static func progress(g: GameState, b: Dictionary) -> float:
-	var reqs: Array = b.get("reqs", [])
-	if reqs.is_empty():
-		return 1.0
-	var p := 0.0
-	for r in reqs:
-		p += clampf(req_value(g, String(r[0])) / maxf(1.0, float(r[1])), 0.0, 1.0)
-	return p / reqs.size()
-
-static func progress_text(g: GameState, b: Dictionary) -> String:
-	var parts: Array = []
-	for r in b.get("reqs", []):
-		var need := float(r[1])
-		var have := minf(req_value(g, String(r[0])), need)
-		if need <= 1.0:
-			parts.append("done" if have >= need else "not yet")
-		else:
-			parts.append("%s / %s" % [_short(have), _short(need)])
-	return ", ".join(parts)
-
-static func _short(v: float) -> String:
-	if v >= 1000000.0:
-		return "%.1fM" % (v / 1000000.0)
-	if v >= 10000.0:
-		return "%dk" % int(v / 1000.0)
-	return str(int(v))
-
-static func branch_ready(g: GameState, b: Dictionary) -> bool:
-	return progress(g, b) >= 1.0
-
-static func take_branch(g: GameState, id: String) -> bool:
-	var b := node(id)
-	if b.is_empty() or not open_branches(g).any(func(o): return String(o["id"]) == id) or not branch_ready(g, b):
-		return false
-	g.class_branch = id
-	g.discovered[b["name"]] = true
-	g.codex.add("branch_offs")
-	_on_new_class(g, b)
-	return true
-
-## A branch-off became ready: tell the player once.
-static func _check_branches(g: GameState) -> void:
-	for b in open_branches(g):
-		var k := "told_" + String(b["id"])
-		if not g.ctrack.get(k, 0) and branch_ready(g, b):
-			g.ctrack[k] = 1
-			g.events.append({"type": "branch_ready", "name": b["name"], "rank": b["rank"]})
-			g.say("[color=%s]A hidden class opens up: %s (%s rank). Take it in the Class tab, or keep climbing your tree.[/color]" % [RANK_COLORS[b["rank"]], b["name"], b["rank"]])
 
 # =====================================================================
 # Bonuses from the path and the special stat
@@ -1009,10 +587,6 @@ static func bonus_sources(g: GameState) -> Array:
 	var out: Array = []
 	for n in path_nodes(g):
 		out.append(passive(n))
-	var dv := divinity(g)
-	if dv > 0:
-		var b := 1.0 + dv * DIVINITY_BONUS
-		out.append({"atk": b, "hp": b, "def": b})
 	var u := unique_class(g)
 	if not u.is_empty():
 		var sb := stat_bonus(g)
@@ -1292,7 +866,6 @@ static func on_kill(g: GameState, boss: bool, tier: int, goblin: bool) -> void:
 		var realm := GameData.realm_of(g.floor_num)
 		if realm != "" and g.enemy_boss_kind == "zone":
 			_realm_cleared(g, realm)
-	_check_branches(g)
 
 static func on_big_hit(g: GameState, dealt: int, crit: bool) -> void:
 	if dealt >= g.get_attack() * 3:
@@ -1358,8 +931,6 @@ static func on_floor(g: GameState) -> void:
 	if GameData.realm_of(g.floor_num) != "":
 		count(g, "realm_nocamp_run")
 		at_least(g, "realm_nocamp_streak", float(g.ctrack["realm_nocamp_run"]))
-	_maybe_item_encounter(g)
-	_check_branches(g)
 
 static func on_death(g: GameState) -> void:
 	count(g, "deaths")
@@ -1415,174 +986,23 @@ static func scout_bonus(g: GameState) -> float:
 	return g._flat("scout")
 
 # =====================================================================
-# The Wanderer's item encounters
-# =====================================================================
-
-static func _maybe_item_encounter(g: GameState) -> void:
-	if g.hero_class != "Wanderer" or not g.path_offer.is_empty() or g.trial_active or g.enemy_is_boss:
-		return
-	var it := _eligible_item(g)
-	if it == "":
-		return
-	count(g, "item_wait")
-	var chance := ITEM_CHANCE * (1.0 + scout_bonus(g) / 100.0)
-	if randf() * 100.0 >= chance and float(g.ctrack.get("item_wait", 0)) < ITEM_PITY:
-		return
-	g.ctrack["item_wait"] = 0
-	var d: Dictionary = ITEMS[it]
-	g.class_encounter = it
-	g.path_offer.assign(["cenc_yes", "cenc_no"])
-	g.path_wait = 0
-	g.say("[color=#e8b14a]%s.[/color] %s" % [d["title"], d["talk"]])
-	g.events.append({"type": "mini_event", "kind": "class_item", "title": String(d["title"]).to_upper(), "sub": "A meeting on the road"})
-
-static func _eligible_item(g: GameState) -> String:
-	if g.class_path.is_empty():
-		return ""
-	var here := String(g.class_path[g.class_path.size() - 1])
-	for it in ITEMS:
-		var d: Dictionary = ITEMS[it]
-		if it in g.class_items or String(d["at"]) != here or g.level < int(d["level"]):
-			continue
-		match String(d["where"]):
-			"elf", "dwarf", "demon":
-				if GameData.realm_of(g.floor_num) != String(d["where"]):
-					continue
-			"moon":
-				if not Lineage.full_moon(g.floor_num):
-					continue
-			_:
-				if g.floor_num < 30:
-					continue
-		if d.has("rep") and Races.rep_index(Lineage.rep(g, String(d["rep"]))) < 4:
-			continue
-		return it
-	return ""
-
-static func path_info(kind: String, g: GameState) -> Dictionary:
-	var d: Dictionary = ITEMS.get(g.class_encounter, {})
-	if kind == "cenc_yes":
-		var t := "Win the %s." % d["name"] if d.has("fight") else "Receive the %s." % d.get("name", "item")
-		if d.has("cost"):
-			t += " Costs %d gold." % item_cost(g, d)
-		if d.get("full_hp", false):
-			t += " You start at full HP and can't drink potions."
-		return {"name": d.get("yes", "Go"), "text": t, "color": "#e8b14a"}
-	return {"name": "Walk on", "text": "It may come your way again.", "color": "#cbd5e1"}
-
-static func item_cost(g: GameState, d: Dictionary) -> int:
-	return int(d.get("cost", 0)) * (5 + g.floor_num * 4)
-
-static func encounter_choice(g: GameState, yes: bool) -> void:
-	var it := g.class_encounter
-	g.class_encounter = ""
-	if not ITEMS.has(it):
-		return
-	var d: Dictionary = ITEMS[it]
-	if not yes:
-		g.say("You leave %s behind. Maybe you'll meet again." % String(d["title"]).to_lower())
-		g.ctrack["item_wait"] = ITEM_PITY / 2
-		return
-	if d.has("cost"):
-		var c := item_cost(g, d)
-		if g.gold < c:
-			g.say("[color=#f87171]You can't pay (%d gold).[/color]" % c)
-			return
-		g.gold -= c
-	if not d.has("fight"):
-		_give_item(g, it)
-		return
-	if d.get("full_hp", false):
-		g.hero_hp = g.get_max_hp()
-	g.start_special_trial(d["fight"], "class_item", {"item": it, "no_potions": d.get("no_potions", false)})
-
-static func _give_item(g: GameState, it: String) -> void:
-	if it in g.class_items:
-		return
-	g.class_items.append(it)
-	var d: Dictionary = ITEMS[it]
-	var n := node(String(d["node"]))
-	var line := "spare him, and he gives you" if d.get("spare", false) else "receive"
-	g.say("[color=#fbbf24]You %s the %s![/color] It opens the way to %s." % [line, d["name"], n.get("name", "?")])
-	g.events.append({"type": "class_item", "name": d["name"], "opens": n.get("name", "")})
-	g.save_game()
-
-# =====================================================================
 # Saving
 # =====================================================================
 
 static func to_save(g: GameState) -> Dictionary:
-	return {"path": g.class_path, "branch": g.class_branch, "track": g.ctrack, "items": g.class_items, "auto": g.class_auto}
+	return {"path": g.class_path, "track": g.ctrack, "auto": g.class_auto, "god": g.god_class, "god_offers": g.god_offers}
 
 static func from_save(g: GameState, d: Dictionary) -> void:
 	g.class_path.assign(d.get("path", []))
-	g.class_branch = String(d.get("branch", ""))
 	g.ctrack = d.get("track", {})
-	g.class_items.assign(d.get("items", []))
 	g.class_auto = bool(d.get("auto", false))
+	g.god_class = String(d.get("god", ""))
+	g.god_offers = d.get("god_offers", [])
 	# Drop anything that no longer exists
 	var keep: Array[String] = []
 	for id in g.class_path:
-		if not node(String(id)).is_empty() and node(String(id))["cls"] == g.hero_class:
+		if not node(String(id)).is_empty() and node(String(id))["cls"] == g.hero_class and not node(String(id)).get("god", false):
 			keep.append(String(id))
 	g.class_path = keep
-	if g.class_branch != "" and node(g.class_branch).is_empty():
-		g.class_branch = ""
-
-# =====================================================================
-# God trials: once you're a God rank class, three very hard trials a week
-# =====================================================================
-
-const GOD_TRIALS := {
-	"titan_chain": {"name": "The Chained Titan", "art": "boss_surtr", "lore": "Bound beneath the world since before the first dawn. Break its chains, or be broken.", "hp": 14.0, "atk": 2.2},
-	"drowned_god": {"name": "The Drowned God", "art": "boss_charybdis", "lore": "Every sea remembers it. It does not forgive.", "hp": 12.0, "atk": 2.4, "no_potions": true},
-	"first_flame": {"name": "The First Flame", "art": "boss_fafnir", "lore": "The fire that lit the first forge, still burning, still hungry.", "hp": 13.0, "atk": 2.5},
-	"hollow_crown": {"name": "The Hollow Crown", "art": "boss_dullahan", "lore": "A king who outlived his kingdom, his name, and his head.", "hp": 16.0, "atk": 2.0},
-	"mother_of_monsters": {"name": "Echidna Unbound", "art": "boss_echidna", "lore": "Every monster you've ever killed was one of her children.", "hp": 15.0, "atk": 2.3},
-	"queen_below": {"name": "The Queen Below", "art": "boss_hel", "lore": "Half of her face is living. Neither half is kind.", "hp": 13.0, "atk": 2.6, "no_potions": true},
-	"sword_saint": {"name": "The Last Sword Saint", "art": "boss_sword_spirit", "lore": "He has not lost a duel in a thousand years. He would like to.", "hp": 11.0, "atk": 3.0},
-	"father_of_storms": {"name": "Typhon Ascendant", "art": "boss_typhon", "lore": "A hundred heads, and every one of them has learned your name.", "hp": 18.0, "atk": 2.2},
-	"seraph_judge": {"name": "The Seraph Judge", "art": "boss_seraphiel", "lore": "It does not hate you. It has simply weighed you, and found you wanting.", "hp": 14.0, "atk": 2.4},
-}
-const GOD_TRIAL_ORDER := ["titan_chain", "drowned_god", "first_flame", "hollow_crown", "mother_of_monsters", "queen_below", "sword_saint", "father_of_storms", "seraph_judge"]
-const DIVINITY_MAX := 30
-const DIVINITY_BONUS := 0.01   # +1% Attack, HP and Defense per point of Divinity
-
-static func god_week() -> int:
-	var days := floori(Time.get_unix_time_from_system() / 86400.0)
-	return floori((days + 3) / 7.0)
-
-## This week's three god trials.
-static func god_trials_now() -> Array:
-	var w := god_week()
-	var out: Array = []
-	for i in 3:
-		out.append(GOD_TRIAL_ORDER[posmod(w * 3 + i, GOD_TRIAL_ORDER.size())])
-	return out
-
-static func god_trials_open(g: GameState) -> bool:
-	var u := unique_class(g)
-	return not u.is_empty() and rank_of(u) == "God"
-
-static func god_trial_done(g: GameState, id: String) -> bool:
-	return int(g.ctrack.get("godtrial_%d_%s" % [god_week(), id], 0)) > 0
-
-static func divinity(g: GameState) -> int:
-	return int(g.ctrack.get("divinity", 0))
-
-static func start_god_trial(g: GameState, id: String) -> bool:
-	if not god_trials_open(g) or god_trial_done(g, id) or not id in god_trials_now():
-		return false
-	var info: Dictionary = GOD_TRIALS[id]
-	return g.start_special_trial(info, "god_rotation", {"trial": id, "week": god_week(), "no_potions": info.get("no_potions", false)})
-
-static func god_trial_won(g: GameState, data: Dictionary) -> void:
-	var id := String(data.get("trial", ""))
-	g.ctrack["godtrial_%d_%s" % [int(data.get("week", god_week())), id]] = 1
-	count(g, "god_trials")
-	var d := mini(DIVINITY_MAX, divinity(g) + 1)
-	g.ctrack["divinity"] = d
-	var m := GameData.zone_index(g.best_floor)
-	g.materials[m] = int(g.materials[m]) + 10
-	g.say("[color=#fde047]*** %s falls! ***[/color] Divinity %d (+%d%% Attack, HP and Defense), +10 %s." % [GOD_TRIALS[id]["name"], d, int(d * DIVINITY_BONUS * 100), GameData.MATERIALS[m]])
-	g.events.append({"type": "achievement", "name": "God trial won", "text": GOD_TRIALS[id]["name"], "title": ""})
+	if g.god_class != "" and node(g.god_class).is_empty():
+		g.god_class = ""

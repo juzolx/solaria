@@ -62,7 +62,6 @@ func _initialize() -> void:
 	var before := int(r.ctrack.get("doors_read", 0))
 	r._room_cleared()
 	check(int(r.ctrack.get("doors_read", 0)) > before, "reading doors trains the reader")
-	check(ClassTree.node("wayfinder").get("parent", "") == "hunter", "the Wayfinder branch")
 	# A companion reads for the team
 	var team := hero("Warrior")
 	var rg := hero("Ranger")

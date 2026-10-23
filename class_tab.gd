@@ -23,10 +23,10 @@ func setup(m) -> void:
 
 func refresh() -> void:
 	var sn := ClassTree.stat_name(state)
-	var key := "%s|%s|%d|%d|%s|%s|%s|%s|%s|%s|%s|%d|%s|%d" % [state.hero_class, str(state.class_path), state.level, int(state.faith), state.class_branch,
-		str(state.class_items), selected, state.dev_mode, str(state.hidden), state.hidden_class, str(state.hidden_stage),
+	var key := "%s|%s|%d|%d|%s|%s|%s|%s|%s|%s|%s|%d|%s|%d" % [state.hero_class, str(state.class_path), state.level, int(state.faith), state.god_class,
+		str(state.god_offers), selected, state.dev_mode, str(state.hidden), state.hidden_class, str(state.hidden_stage),
 		int(state.ctrack.get("kills", 0)) / 25, sn, int(state.unique_value(sn)) if sn != "" else 0]
-	key += "|%s|%d|%s|%s|%s" % [state.sig_slot, ClassTree.divinity(state), state.trial_active, state.enemy_is_boss, str(state.hidden_offer)]
+	key += "|%s|%d|%s|%s|%s" % [state.sig_slot, 0, state.trial_active, state.enemy_is_boss, str(state.hidden_offer)]
 	if key == shown:
 		return
 	shown = key
@@ -36,14 +36,11 @@ func refresh() -> void:
 		return
 	_header()
 	_pick_panel()
+	_god_classes()  # a God class that answered, or yours
 	_hidden_classes()  # a hidden path on offer, or yours, right under the choice
 	_tree()
 	_detail()
 	_signatures()
-	_god_trials()
-	_branches()
-	if state.hero_class == "Wanderer":
-		_items()
 
 # =====================================================================
 # Header: who you are now
@@ -154,23 +151,12 @@ static func class_card(m, n: Dictionary, with_button: bool, on_pick: Callable) -
 	var t := UI.rich(12)
 	t.text = "%s.\n[color=%s]%s[/color]" % [n["role_text"], UI.hex(UI.DIM), ClassTree.bonus_text(n)]
 	v.add_child(t)
-	var trial: bool = not (n.get("trial", {}) as Dictionary).is_empty() and not g.ctrack.get("trial_" + String(n["id"]), 0)
-	if trial:
-		var tr := UI.rich(11)
-		tr.text = "[color=#fde047]God trial:[/color] %s" % n["trial"]["name"]
-		v.add_child(tr)
-	if String(n.get("item", "")) != "":
-		var it: Dictionary = ClassTree.ITEMS[n["item"]]
-		var ir := UI.rich(11)
-		ir.text = "[color=#e8b14a]Needs:[/color] %s%s" % [it["name"], "  (you have it)" if n["item"] in g.class_items else ""]
-		v.add_child(ir)
-	if why != "" and not why.begins_with("Needs") and (with_button or why.begins_with("Your deeds")):
+	if why != "" and (with_button or why.begins_with("Your deeds")):
 		var wl := UI.label(why, 11, Color("#f87171"))
 		wl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(wl)
 	if with_button and why == "":
-		var b := UI.primary("Face the trial" if trial else "Choose", on_pick, border)
-		b.disabled = trial and (g.enemy_is_boss or g.trial_active)
+		var b := UI.primary("Swap" if n.get("god", false) else "Choose", on_pick, border)
 		v.add_child(b)
 	return p
 
@@ -182,7 +168,7 @@ func _tree() -> void:
 	if state.hidden_class != "":
 		UI.section(box, "Your path", "Your main route ended when you took a hidden class. It grows on its own now, at levels 15, 35 and 60.")
 		return
-	UI.section(box, "Your path", "Your class evolves at levels 15, 35 and 60. What it becomes stays a mystery until you get there and choose.")
+	UI.section(box, "Your path", "Your class evolves at levels 15, 35 and 75. What it becomes stays a mystery until you get there and choose.")
 	var row := UI.hbox(6)
 	box.add_child(row)
 	var steps: Array = [{"level": 1, "id": "", "name": state.hero_class}]
@@ -211,11 +197,6 @@ func _tree() -> void:
 		var nl := UI.label(name_text, 13, UI.GOLD if reached else (UI.GREEN if ready else UI.DIM))
 		nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(nl)
-	if state.class_branch != "":
-		var b := ClassTree.node(state.class_branch)
-		var t := UI.label("You stepped off the path to become a %s. Your special stat keeps growing." % b["name"], 12, UI.DIM)
-		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		box.add_child(t)
 	# Dev Mode still shows the whole branching tree
 	if state.dev_mode:
 		var tv := TreeView.new()
@@ -279,123 +260,33 @@ func _signatures() -> void:
 		c[1].add_child(t)
 
 # =====================================================================
-# God trials (God rank classes only)
+# God classes (rules in god_classes.gd)
 # =====================================================================
 
-func _god_trials() -> void:
-	if not ClassTree.god_trials_open(state):
+## A God class that answered (swap now, or later from here), or the one you are.
+func _god_classes() -> void:
+	if state.god_class == "" and state.god_offers.is_empty():
 		return
-	UI.section(box, "God trials", "Three new trials every week, only for God rank classes. Each win is worth a point of Divinity (+1%% Attack, HP and Defense, up to %d)." % ClassTree.DIVINITY_MAX)
-	box.add_child(UI.label("Divinity: %d / %d" % [ClassTree.divinity(state), ClassTree.DIVINITY_MAX], 14, Color(ClassTree.RANK_COLORS["God"])))
-	for id in ClassTree.god_trials_now():
-		var info: Dictionary = ClassTree.GOD_TRIALS[id]
-		var done := ClassTree.god_trial_done(state, id)
-		var c := UI.card(UI.GREEN if done else Color(ClassTree.RANK_COLORS["God"]), UI.INSET, 4)
-		box.add_child(c[0])
-		var h := UI.hbox(8)
-		c[1].add_child(h)
-		var nl := UI.label(String(info["name"]), 15, UI.TEXT)
-		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		h.add_child(nl)
-		if info.get("no_potions", false):
-			h.add_child(UI.chip("NO POTIONS", UI.RED))
-		c[1].add_child(UI.wrap(String(info["lore"]), 12, UI.DIM))
-		if done:
-			c[1].add_child(UI.label("Beaten this week.", 12, UI.GREEN))
-		else:
-			var tid: String = id
-			var b := UI.primary("Face the trial", func():
-				if ClassTree.start_god_trial(state, tid):
-					main.sfx.play("boss_intro")
-				main.refresh(), Color(ClassTree.RANK_COLORS["God"]))
-			b.disabled = state.enemy_is_boss or state.trial_active
-			b.custom_minimum_size = Vector2(0, UI.TAP)
-			c[1].add_child(b)
-
-# =====================================================================
-# Branch-offs of your current class
-# =====================================================================
-
-func _branches() -> void:
-	if state.class_branch != "":
-		var b := ClassTree.node(state.class_branch)
-		var t := UI.label("You took a branch-off: %s. Your tree ends here, and your special stat keeps growing." % b["name"], 12, UI.DIM)
-		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		box.add_child(t)
+	box.add_child(UI.heading("God class"))
+	if state.god_class != "":
+		var me := ClassTree.node(state.god_class)
+		box.add_child(class_card(main, me, false, Callable()))
 		return
-	if state.class_path.is_empty() or state.class_path.size() >= 3:
-		return
-	var cur_id: String = state.class_path[state.class_path.size() - 1]
-	# Branch-offs stay secret: one only shows up once you've earned it (or found it before)
-	var open: Array = ClassTree.branches(cur_id).filter(func(b): return ClassTree.branch_ready(state, b) or state.discovered.has(b["name"]) or state.dev_mode)
-	if open.is_empty():
-		return
-	box.add_child(UI.heading("A hidden path has opened"))
-	var intro := UI.label("Something about how you fight has opened a way off your path. Taking it ends your evolutions, but its special stat keeps growing. It closes when you pick your next class.", 11, UI.DIM)
-	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(intro)
-	for b in open:
-		var prog := ClassTree.progress(state, b)
-		var known := true
-		var ready := ClassTree.branch_ready(state, b)
-		var rc := Color(ClassTree.RANK_COLORS[b["rank"]])
-		var p := UI.panel(UI.INSET, rc if ready else UI.BORDER, 8, 8, 2 if ready else 1)
-		box.add_child(p)
-		var v := UI.vbox(4)
-		p.add_child(v)
-		var head := UI.hbox(6)
-		v.add_child(head)
-		var nl := UI.label(String(b["name"]) if known else "???", 14, rc if known else UI.TEXT)
-		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		head.add_child(nl)
-		head.add_child(_badge(ClassTree.rank_text(b) if known else "%s rank" % b["rank"], rc))
-		var t := UI.rich(11)
-		t.text = "[color=%s]How:[/color] %s  [color=%s](%s)[/color]%s" % [UI.hex(UI.DIM), b["how"], UI.hex(UI.DIM), ClassTree.progress_text(state, b),
-			("\n[color=%s]Special stat: %s. %s[/color]" % [UI.hex(UI.DIM), b["stat"], ClassTree.bonus_text(b)]) if known else ""]
-		v.add_child(t)
-		var bar := UI.bar(rc, 8)
-		bar.max_value = 1.0
-		bar.value = prog
-		v.add_child(bar)
-		if ready:
-			var bid: String = b["id"]
-			var bname: String = b["name"]
-			var brank: String = b["rank"]
-			v.add_child(UI.primary("Become a %s (ends your tree)" % bname, func():
-				main.confirm("Take %s?" % bname, "Your Evolution Tree ends here: you won't pick classes at later levels. You keep everything you have and gain a %s rank unique class." % brank, "Take it", func():
-					ClassTree.take_branch(state, bid)
-					main.refresh()), rc))
-
-# =====================================================================
-# The Wanderer's items
-# =====================================================================
-
-func _items() -> void:
-	if state.class_items.is_empty() and not state.dev_mode:
-		return
-	box.add_child(UI.heading("The Wanderer's items"))
-	var t := UI.label("Some roads only open for a Wanderer carrying the right thing. You'll know it when you find it.", 11, UI.DIM)
-	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(t)
-	for it in ClassTree.ITEMS:
-		var d: Dictionary = ClassTree.ITEMS[it]
-		var have: bool = it in state.class_items
-		if not have and not state.dev_mode:
-			continue
-		var n := ClassTree.node(String(d["node"]))
-		var at := ClassTree.node(String(d["at"]))
-		var r := UI.rich(12)
-		var where: String = {"elf": "in the Elf realm", "dwarf": "in the Dwarf realm, Honored", "demon": "in the Demon realm", "moon": "on a full moon"}.get(String(d["where"]), "on the road")
-		r.text = "[color=%s]%s %s[/color] opens [b]%s[/b]  [color=%s](%s, as a %s, level %d+, %s)[/color]" % [
-			"#4ade80" if have else UI.hex(UI.TEXT), "+" if have else "-", d["name"], n.get("name", "?"), UI.hex(UI.DIM), d["title"], at.get("name", "?"), int(d["level"]), where]
-		box.add_child(r)
+	box.add_child(UI.wrap("Your deeds were seen. A God class answers you: you can swap into it now, or later from here. It's for good.", 12, Color(ClassTree.RANK_COLORS["God"])))
+	for id in state.god_offers:
+		box.add_child(class_card(main, ClassTree.node(id), true, func():
+			main.confirm("Become %s?" % ClassTree.node(id)["name"], "A God class is the rank above every other. It replaces your class for good.", "Swap", func():
+				if GodClasses.take(state, id):
+					main.sfx.play("hidden")
+				shown = ""
+				main.refresh())))
 
 # =====================================================================
 # Hidden classes (rules in hidden.gd)
 # =====================================================================
 
 func _hidden_classes() -> void:
-	# Juzo: a surprise. Nothing shows until you hit 15, 35 or 60 with one earned.
+	# Juzo: a surprise. Nothing shows until you hit 15, 35 or 75 with one earned.
 	if state.hidden_class != "":
 		var id := state.hidden_class
 		var c := Hidden.info(id)
@@ -523,7 +414,7 @@ class TreeView extends Control:
 		_layout()
 		var font := get_theme_default_font()
 		var dim := Color("#64748b")
-		var heads := ["Start", "Level 15", "Level 35", "Level 60"]
+		var heads := ["Start", "Level 15", "Level 35", "Level 75"]
 		for i in 4:
 			draw_string(font, Vector2(float(COLS[i]) * size.x, 14), heads[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, dim)
 		var on_path: Array = state.class_path
@@ -563,8 +454,6 @@ class TreeView extends Control:
 	func _reachable(n: Dictionary) -> bool:
 		var path: Array = state.class_path
 		var t := int(n["tier"])
-		if state.class_branch != "" and not String(n["id"]) in path:
-			return false
 		if path.size() >= t:
 			return path[t - 1] == n["id"]
 		if path.size() > 0:

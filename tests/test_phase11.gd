@@ -272,16 +272,16 @@ func _initialize() -> void:
 	Hidden.on_wheel(h, false)
 	check(h.feats["wheel_streak"] == 0, "a loss breaks the streak")
 	var gl := hero("Human")
-	gl.level = 60
+	gl.level = 75
 	gl.feats["clean_best"] = 1000
 	Hidden.check(gl)
 	check(gl.hidden.has("gladiator") and gl.hidden_class == "", "Gladiator earned (the arena trial comes when you take it)")
 	Hidden.on_level(gl)
-	check("gladiator" in gl.hidden_offer, "level 60: it's on offer")
+	check("gladiator" in gl.hidden_offer, "level 75: it's on offer")
 	check(Hidden.take(gl, "gladiator") and gl.trial_kind == "hidden" and gl.hidden_class == "", "taking it starts the arena trial")
 	gl.enemy_hp = 0
 	gl._enemy_defeated()
-	check(gl.hidden_class == "gladiator" and Hidden.title(gl) == "The Undefeated", "won: The Undefeated at level 60 (%s)" % Hidden.title(gl))
+	check(gl.hidden_class == "gladiator" and Hidden.title(gl) == "The Undefeated", "won: The Undefeated at level 75 (%s)" % Hidden.title(gl))
 	var cp := hero("Human")
 	check(Hidden.closeness(cp, "fool") == 0.0, "no progress yet")
 	cp.feats["deaths"] = 125

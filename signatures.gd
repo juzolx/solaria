@@ -1,6 +1,6 @@
 class_name Signatures
 extends RefCounted
-## Signature skills: every class on the Evolution Tree (levels 15, 35, 60 and
+## Signature skills: every class on the Evolution Tree (levels 15, 35, 75 and
 ## the branch-offs) teaches one skill of its own. They don't drop as stones;
 ## you get them by becoming the class. One goes in the Signature slot (the
 ## 4th skill button), and a new evolution puts its skill there by itself.
@@ -9,7 +9,7 @@ extends RefCounted
 ## tier and rank, and carries the class's element.
 
 const PREFIX := "sig_"
-const TIER_POWER := [1.0, 1.35, 1.75]   # level 15, 35, 60 classes
+const TIER_POWER := [1.0, 1.35, 1.75]   # level 15, 35, 75 classes
 const RANK_POWER := {"C": 1.0, "B": 1.05, "A": 1.1, "S": 1.15, "SS": 1.25, "God": 1.4}
 const COLOR := "#fde047"
 

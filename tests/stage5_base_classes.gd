@@ -38,12 +38,10 @@ func _initialize() -> void:
 			counts[tier - 1] += 1
 			stack.append_array(ClassTree.children(id))
 		check(counts == [2, 4, 8], "%s tree is 2/4/8 (%s)" % [cls, str(counts)])
-		for r in ClassTree.roots(cls):
-			check(ClassTree.branches(r).size() >= 2, "%s: branch-offs under %s" % [cls, r])
 		# auto_pick walks the whole tree
-		g.level = 60
+		g.level = 75
 		ClassTree.auto_pick(g)
-		check(g.class_path.size() == 3, "%s: auto_pick reaches level 60 (%d picks)" % [cls, g.class_path.size()])
+		check(g.class_path.size() == 3, "%s: auto_pick reaches level 75 (%d picks)" % [cls, g.class_path.size()])
 	for cls in tanks:
 		check(cls in Party.TANK_CLASSES, cls + " is in Party.TANK_CLASSES")
 		check(cls in Synergies.FRONT, cls + " counts as a front-liner")

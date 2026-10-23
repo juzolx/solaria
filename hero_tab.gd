@@ -327,7 +327,7 @@ func refresh() -> void:
 	var t := ClassTree.pick_tier(state)
 	if t >= 0:
 		text = "[color=#e8b14a]You can choose your next class now[/color] in Character > Class."
-	elif state.class_branch != "" or state.class_path.size() >= 3:
+	elif state.god_class != "" or state.hidden_class != "" or state.class_path.size() >= 3:
 		text = "Your evolution tree is complete. Your special stat keeps growing."
 	else:
 		text = "At [color=#e8b14a]level %d[/color] your class evolves again (Character > Class)." % int(ClassTree.PICK_LEVELS[state.class_path.size()])

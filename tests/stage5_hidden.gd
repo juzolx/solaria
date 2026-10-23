@@ -46,9 +46,9 @@ func _initialize() -> void:
 	check(Hidden.take(g, "jester") and g.hidden_class == "jester", "take it")
 	check(g.title() == "Grand Jester", "at 35 it's already the second step (%s)" % g.title())
 	check(ClassTree.pick_tier(g) < 0 and ClassTree.options(g).is_empty(), "the main route is over")
-	level_to(g, 60)
-	check(g.class_path.size() == before, "no evolution at 60")
-	check(g.title() == "The Laughing Fate" and g.events.any(func(e): return e.get("type", "") == "hidden_class"), "level 60: the last step, with its moment")
+	level_to(g, 75)
+	check(g.class_path.size() == before, "no evolution at 75")
+	check(g.title() == "The Laughing Fate" and g.events.any(func(e): return e.get("type", "") == "hidden_class"), "level 75: the last step, with its moment")
 	check(not Hidden.take(g, "fool"), "can't switch: it's for good")
 	# Power steps
 	var p1: float = Hidden.stage_bonuses("jester", 1)[0]["atk"]
@@ -61,16 +61,16 @@ func _initialize() -> void:
 	var atk0 := a.get_attack()
 	a.hidden_class = "gladiator"
 	check(a.get_attack() > atk0 * 1.4, "a hidden class hits much harder (%d vs %d)" % [a.get_attack(), atk0])
-	# After 60: a newly earned class turns up at the next level-up, once
+	# Past 75 a newly earned hidden class never shows up: only God classes answer then
 	var late := hero(80)
 	late.class_auto = false
 	late.feats["deaths"] = 250
 	Hidden.check(late)
 	check(late.hidden.has("fool") and late.hidden_offer.is_empty(), "earned at 80, still hidden")
 	level_to(late, 81)
-	check("fool" in late.hidden_offer, "offered at the next level-up")
+	check(late.hidden_offer.is_empty(), "not offered after 75")
 	level_to(late, 82)
-	check(late.hidden_offer.is_empty(), "and not again (until you take it or never)")
+	check(late.hidden_offer.is_empty(), "still not offered")
 	# Old saves: a hidden class used to sit on top of your class
 	var old := hero(20)
 	var d := Lineage.to_save(old)

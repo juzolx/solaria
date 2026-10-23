@@ -70,11 +70,10 @@ var song_regen := 0.0
 var confuse_turns := 0  # the monster hits itself
 # ---------- Paths (the Evolution Tree: rules in class_tree.gd) ----------
 var faith := 0.0        # -100 evil .. +100 good: decides which classes you may take
-var class_path: Array[String] = []  # the classes you picked at levels 15, 35 and 60 (node ids)
-var class_branch := ""  # a branch-off unique class you took (ends the tree)
-var class_items: Array[String] = []  # the Wanderer's special items
+var class_path: Array[String] = []  # the classes you picked at levels 15, 35 and 75 (node ids)
+var god_class := ""     # a God class you swapped into (god_classes.gd), "" = none
+var god_offers: Array = []  # God classes whose secret deeds are done, waiting for you to swap
 var class_auto := false # pick classes automatically (simulations)
-var class_encounter := ""  # a Wanderer item encounter waiting for your answer
 var class_told := -1    # the last pick tier we told you about
 var ctrack := {}        # what you've done, for branch-offs (counters)
 var cfight := {}        # notes about the current fight
@@ -99,8 +98,8 @@ var feats := {}             # counters for hidden-class unlocks
 var realm_order: Array = [] # the realms in the order you chose them
 var hidden := {}            # hidden classes earned (a surprise until 15, 35 or 60): id -> true
 var hidden_class := ""      # your hidden class, for good ("" = none): it replaces the main route (hidden.gd)
-var hidden_stage := {}      # id -> step reached (1..3, levels 15, 35, 60)
-var hidden_offer: Array = []  # hidden classes you can take right now (shown at 15, 35, 60; open until your next level-up)
+var hidden_stage := {}      # id -> step reached (1..3, levels 15, 35, 75)
+var hidden_offer: Array = []  # hidden classes you can take right now (shown at 15, 35, 75; open until your next level-up)
 var hidden_offer_level := 0   # the level the offer opened at
 var hidden_seen := {}        # hidden classes already shown to you once
 var trial_kind := "god"     # what the current trial is for: god, race, cure, hidden
@@ -483,6 +482,7 @@ func _bonus_sources() -> Array:
 		out.append(race_info()["passive"])
 	out.append_array(Lineage.bonus_sources(self))
 	out.append_array(Hidden.bonus_sources(self))
+	out.append_array(GodClasses.bonus_sources(self))  # a God class: the rank above SS
 	out.append_array(ClassTree.bonus_sources(self))
 	out.append_array(set_bonuses())
 	out.append_array(_passive_sources())
@@ -762,7 +762,7 @@ func respec() -> void:
 	_check_spec()
 	save_game()
 
-## A new class pick is open (levels 15, 35, 60): pick it automatically
+## A new class pick is open (levels 15, 35, 75): pick it automatically
 ## (simulations) or tell the player once.
 func _check_spec() -> void:
 	var t := ClassTree.pick_tier(self)
@@ -1230,7 +1230,7 @@ func gain_xp(amount: int) -> void:
 		if level == Classes.SPEC_LEVEL - 5:
 			tip("spec_soon", "At level %d you choose your first class branch. Check the Class tab to see the tree." % Classes.SPEC_LEVEL)
 		_check_spec()
-		Hidden.on_level(self)  # 15, 35, 60: what you've earned comes out of hiding
+		Hidden.on_level(self)  # 15, 35, 75: what you've earned comes out of hiding
 
 ## New slots get filled with skills you own but aren't using.
 func _fill_empty_slots() -> void:
@@ -2143,7 +2143,6 @@ func _hero_died() -> void:
 		trial_active = false
 		trial_kind = "god"
 		trial_data = {}
-		class_encounter = ""
 		say("[color=#f87171]%s was too strong. Train harder and try the trial again.[/color]" % enemy_name)
 		hero_hp = get_max_hp()
 		floor_num = trial_return
@@ -3468,7 +3467,6 @@ func load_game() -> bool:
 	# Choices waiting on screen belong to whoever was playing before
 	path_offer = []
 	path_wait = 0
-	class_encounter = ""
 	if int(data.get("version", 1)) < GameData.SAVE_VERSION:
 		_convert_old_save(data)
 		return true
@@ -3967,7 +3965,7 @@ func _through_door(i: int) -> void:
 func auto_path() -> String:
 	if door_pending():
 		return auto_door()
-	for k in ["cenc_yes", "leave", "fight", "pass", "revent_no"]:
+	for k in ["leave", "fight", "pass", "revent_no"]:
 		if k in path_offer:
 			return k
 	return path_offer[0] if not path_offer.is_empty() else "fight"
@@ -3978,8 +3976,6 @@ func path_info(kind: String) -> Dictionary:
 		var rd := Halls.read_door(self, DOOR_KEYS.find(kind))
 		return {"name": DOOR_NAMES[DOOR_KEYS.find(kind)] + ((": " + String(rd["label"])) if String(rd["label"]) not in ["", "?"] else ""),
 			"text": rd["text"], "color": rd["color"] if String(rd["color"]) != "" else "#94a3b8"}
-	if kind.begins_with("cenc_"):
-		return ClassTree.path_info(kind, self)
 	if World.EVENT_PATHS.has(kind):
 		var d: Dictionary = World.EVENT_PATHS[kind].duplicate()
 		if kind == "bet":
@@ -4009,8 +4005,6 @@ func _apply_path(kind: String) -> void:
 			Realms.encounter_choice(self, kind)
 		"revent_yes", "revent_no":
 			Realms.realm_event(self, kind == "revent_yes")
-		"cenc_yes", "cenc_no":
-			ClassTree.encounter_choice(self, kind == "cenc_yes")
 		"camp":
 			Realms.camp(self)
 		"altar", "chest_open", "bet", "well", "give_potion", "free_prisoner", "buy_bundle", "hear_song", "follow_scout":
@@ -4494,11 +4488,6 @@ func _finish_trial() -> void:
 			Lineage.cured(self)
 		"hidden":
 			Hidden.trial_won(self, trial_data)
-		"class_god", "class_item":
-			say("[color=#fbbf24]You won the trial![/color] +%d gold" % g)
-			ClassTree.trial_won(self, trial_data)
-		"god_rotation":
-			ClassTree.god_trial_won(self, trial_data)
 	trial_kind = "god"
 	trial_data = {}
 	_check_spec()

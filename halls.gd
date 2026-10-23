@@ -85,9 +85,7 @@ static func trigger(g: GameState, kind: String) -> void:
 static func door_sense(g: GameState) -> int:
 	var lvl := 0
 	var u := ClassTree.unique_class(g)
-	if g.class_branch == "wayfinder":
-		lvl = 3
-	elif not u.is_empty() and (u.get("util", {}) as Dictionary).has("scout"):
+	if not u.is_empty() and (u.get("util", {}) as Dictionary).has("scout"):
 		lvl = 2
 	if g.hero_class == "Ranger":
 		lvl = maxi(lvl, 1)

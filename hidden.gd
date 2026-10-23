@@ -3,13 +3,13 @@ extends RefCounted
 ## Hidden classes (reworked with Juzo, Oct 20): secret classes you earn by doing
 ## hard, unusual things in the game, often by accident. You are never told the
 ## requirements (rumors only). What you have earned stays a surprise until you
-## reach level 15, 35 or 60: then every hidden class you have earned is offered
+## reach level 15, 35 or 75: then every hidden class you have earned is offered
 ## beside your normal evolution choices, and you can take one until your next
-## level-up. After 60, a newly earned one is offered at your next level-up.
+## level-up. Past 75 only God classes remain (god_classes.gd).
 ##
 ## Taking a hidden class is for good: it becomes your class instead of the main
 ## route (no more evolutions; you keep what you already have). Each one is strong
-## and grows in three clear steps, at levels 15, 35 and 60 (STAGE_LEVELS), each
+## and grows in three clear steps, at levels 15, 35 and 75 (STAGE_LEVELS), each
 ## adding raw power (STAGE_POWER) plus that class's own specialty.
 ##
 ##  * Discoveries, Masteries and Legends differ in how hard they are to earn.
@@ -22,7 +22,7 @@ const TIER_COLORS := ["", "#4ade80", "#38bdf8", "#e8b14a"]
 const STAT_SCALE := [0.0, 1.0, 1.4, 2.0]  # how far a tier's special stat scales
 
 # need: [label, feat key or special, amount]. Special keys are worked out in _have().
-# stages: the three names (levels 15, 35, 60); stage_bonus: that class's specialty added at each step.
+# stages: the three names (levels 15, 35, 75); stage_bonus: that class's specialty added at each step.
 # grow: action -> special stat per action (only while this is your hidden class).
 # per_point: bonus per point of its special stat.
 const CLASSES := {
@@ -335,7 +335,8 @@ static func block_reason(g: GameState, id: String) -> String:
 
 ## Checks every hidden class and quietly banks any you've earned.
 static func check(g: GameState) -> void:
-	if g.hidden_class != "":
+	GodClasses.check(g)  # a God class answers the moment its deeds are done
+	if g.hidden_class != "" or g.god_class != "":
 		return  # you already walk a hidden path
 	for id in ORDER:
 		if not g.hidden.has(id) and block_reason(g, id) == "":
@@ -354,7 +355,7 @@ static func unlock(g: GameState, id: String) -> void:
 
 # ---------- The reveal, the choice and the steps ----------
 
-const STAGE_LEVELS := [15, 35, 60]
+const STAGE_LEVELS := [15, 35, 75]
 const STAGE_POWER := [1.18, 1.28, 1.40]   # Attack, HP and Defense, each step (about x2.1 by 60; the main route gives about x1.9 to its own stats)
 
 ## How far your hidden class has grown (1..3) at your level.
@@ -367,6 +368,7 @@ static func stage(g: GameState) -> int:
 
 ## Called on every level-up (GameState.gain_xp).
 static func on_level(g: GameState) -> void:
+	GodClasses.check(g)
 	if g.hidden_class != "":
 		if g.level in STAGE_LEVELS and g.level > int(STAGE_LEVELS[0]):
 			var c := info(g.hidden_class)
@@ -380,11 +382,11 @@ static func on_level(g: GameState) -> void:
 	if not g.hidden_offer.is_empty() and g.level > g.hidden_offer_level:
 		g.hidden_offer = []
 		g.say("[color=#a89d84]The hidden path you passed by fades... for now.[/color]")
-	if g.level < int(STAGE_LEVELS[0]):
+	if not g.level in STAGE_LEVELS or g.god_class != "":  # offered only at 15, 35 and 75; past 75 only God classes answer
 		return
 	var ids: Array = []
 	for id in ORDER:
-		if g.hidden.has(id) and block_reason(g, id) == "" and (g.level in STAGE_LEVELS or not g.hidden_seen.has(id)):
+		if g.hidden.has(id) and block_reason(g, id) == "":
 			ids.append(id)
 	if ids.is_empty():
 		return

@@ -35,7 +35,7 @@ static func is_tamer(g: GameState) -> bool:
 	return g.hidden_class == "beast_tamer"
 
 static func is_whisperer(g: GameState) -> bool:
-	return g.class_branch == "beast_whisperer"
+	return g.hidden_class == "beast_tamer" and Hidden.stage(g) >= 2  # Beast Lord and up (the old branch-off was cut, Oct 20)
 
 ## A Beast Whisperer is you, or fights beside you.
 static func whisperer_near(g: GameState) -> bool:

@@ -12,11 +12,11 @@ func _initialize() -> void:
 	g.autosave = false
 	g.new_game()
 	g.choose_class("Ranger")
-	g.class_branch = "wayfinder"
+	g.class_path.assign(["hunter", "deadeye", "eagle_eye"])  # a scouting final
 	g.level = 30
 	g.floor_num = 20
 	g.in_town = false
-	check(Halls.team_sense(g) == 3, "a Wayfinder reads every door")
+	check(Halls.team_sense(g) == 3, "an Eagle Eye ranger reads every door")
 	g.doors = ["elite", "rest", "fight"]
 	g.door_traps = [false, false, false]
 	var picks := {}

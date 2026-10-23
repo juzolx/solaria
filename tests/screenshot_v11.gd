@@ -39,8 +39,7 @@ func _initialize() -> void:
 	g.level = 72
 	g.best_floor = 40
 	g.floor_num = 40
-	g.class_path.assign(["champion", "weaponmaster", "titan"])
-	g.ctrack["trial_titan"] = 1
+	g.class_path.assign(["champion", "weaponmaster", "colossus"])
 	g.stat_points = 5 * 71
 	g.auto_spend()
 	for s in ["Weapon", "Chest", "Legs", "Feet", "Helmet", "Off Hand"]:

@@ -381,7 +381,7 @@ static func pet_info(g: GameState) -> Dictionary:
 static func pet_stage(g: GameState) -> int:
 	if g.hero_class == "" or g.level < PET_LEVEL or not PETS.has(g.hero_class):
 		return -1
-	return clampi(g.class_path.size() + (1 if g.class_branch != "" else 0), 0, 3)
+	return clampi(g.class_path.size() + (1 if g.god_class != "" else 0), 0, 3)
 
 static func pet_name(g: GameState) -> String:
 	var st := pet_stage(g)
@@ -406,7 +406,7 @@ static func check_pet(g: GameState) -> void:
 		if was < 0:
 			g.say("[color=%s]A %s starts following you![/color] It fights beside you and evolves when you do. %s" % [pet_info(g)["color"], pet_species(g), pet_info(g)["text"]])
 			g.events.append({"type": "mini_event", "kind": "pet", "title": "A COMPANION!", "sub": "%s joins you" % pet_species(g)})
-			g.tip("pet", "Your companion fights every turn and evolves at levels 15, 35 and 60 with you. Charisma makes it stronger. See it in Character > Party.")
+			g.tip("pet", "Your companion fights every turn and evolves at levels 15, 35 and 75 with you. Charisma makes it stronger. See it in Character > Party.")
 		else:
 			g.say("[color=%s]Your companion evolves into a %s![/color]" % [pet_info(g)["color"], pet_species(g)])
 			g.events.append({"type": "mini_event", "kind": "pet", "title": "%s EVOLVES!" % pet_species(g).to_upper(), "sub": String(pet_info(g)["text"])})
@@ -488,9 +488,8 @@ static func next_goal(g: GameState) -> Dictionary:
 		return {"text": "Choose your class", "pct": -1.0, "color": UI.GOLD}
 	if ClassTree.pick_tier(g) >= 0:
 		return {"text": "Your class can evolve! Choose in Character > Class", "pct": 1.0, "color": UI.GOLD}
-	for b in ClassTree.open_branches(g):
-		if ClassTree.branch_ready(g, b):
-			return {"text": "Something has changed in you... see Character > Class", "pct": 1.0, "color": Color(ClassTree.RANK_COLORS[b["rank"]])}
+	if not g.god_offers.is_empty():
+		return {"text": "A God class answers you... see Character > Class", "pct": 1.0, "color": Color(ClassTree.RANK_COLORS["God"])}
 	if g.stat_points >= GameData.STAT_POINTS_PER_LEVEL and not g.auto_stats:
 		return {"text": "%d stat points to spend (Character > Hero)" % g.stat_points, "pct": -1.0, "color": UI.GOLD}
 	if g.upgrade_count() > 0:
@@ -506,7 +505,7 @@ static func next_goal(g: GameState) -> Dictionary:
 	var goals: Array = []
 	# The next evolution
 	var t := g.class_path.size()
-	if g.class_branch == "" and t < ClassTree.PICK_LEVELS.size():
+	if g.god_class == "" and g.hidden_class == "" and t < ClassTree.PICK_LEVELS.size():
 		var need := int(ClassTree.PICK_LEVELS[t])
 		var prev := 1 if t == 0 else int(ClassTree.PICK_LEVELS[t - 1])
 		var frac := (float(g.level - prev) + float(g.xp) / maxf(1.0, GameData.xp_to_next(g.level))) / maxf(1.0, need - prev)

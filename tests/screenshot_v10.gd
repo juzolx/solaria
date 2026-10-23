@@ -48,8 +48,7 @@ func _initialize() -> void:
 	prof.max_floor = 300
 	prof.save()
 	var g := make_hero("Warrior", {"body": "masc", "skin": 2, "hair": "Spiky", "hair_color": 6, "eyes": 0, "race": "Human"}, 72, 40)
-	g.class_path.assign(["champion", "weaponmaster", "titan"])
-	g.ctrack["trial_titan"] = 1
+	g.class_path.assign(["champion", "weaponmaster", "colossus"])
 	g.unique["Might"] = 40.0
 	g.save_game()
 	main = load("res://main.tscn").instantiate()

@@ -174,7 +174,7 @@ func _fresh_start_check() -> void:
 func _show_fresh_start() -> void:
 	fresh_start_notice = false
 	var o := Overlay.new().open(self, "A fresh start", 440.0, UI.GOLD)
-	o.content.add_child(UI.wrap("Solaria %s rebuilds the dungeon: 1,000 floors, the Bank, a roster of 9 heroes, pets and much more. Every hero has been reset so everyone starts fresh. Your settings are kept." % PatchNotes.VERSION, 14, UI.TEXT))
+	o.content.add_child(UI.wrap("Solaria %s brings new class rules, towns that grow and much more. Every town and hero has been reset so everyone starts fresh. Your settings are kept." % PatchNotes.VERSION, 14, UI.TEXT))
 	var b := UI.primary("Begin", o.close, UI.GOLD)
 	b.custom_minimum_size = Vector2(0, 44)
 	o.content.add_child(b)
@@ -1315,7 +1315,23 @@ func _give_class_outfit() -> void:
 		state.add_to_wardrobe(item)
 	state.save_game()
 
-## Levels 15, 35 and 60: choose where your Evolution Tree goes.
+## A God class answered (its secret deeds are done): swap now, or later from Character > Class.
+func _show_god_offer(id: String) -> void:
+	if _popup_open() or not id in state.god_offers:
+		return
+	timer.stop()
+	var n := ClassTree.node(id)
+	var o := Overlay.new().open(self, "A God class answers you", 760.0, Color(ClassTree.RANK_COLORS["God"]), true)
+	o.tree_exited.connect(func(): timer.start())
+	o.content.add_child(UI.wrap(String(GodClasses.info(id).get("lore", "")), 14, UI.TEXT))
+	o.content.add_child(ClassTab.class_card(self, n, true, func():
+		if GodClasses.take(state, id):
+			sfx.play("hidden")
+		o.close()
+		refresh()))
+	o.content.add_child(UI.wrap("It's for good: the God class replaces your class. Not now? It waits in Character > Class.", 12, UI.DIM))
+
+## Levels 15, 35 and 75: choose where your Evolution Tree goes.
 func _show_tree_picker() -> void:
 	var t := ClassTree.pick_tier(state)
 	var hidden_open := not state.hidden_offer.is_empty() and state.hidden_class == ""
@@ -1464,6 +1480,8 @@ func _handle_events() -> void:
 				_show_calamity.call_deferred(e)
 			"blackout":
 				_blackout.call_deferred(String(e["name"]))
+			"god_offer":  # a God class answered: offer the swap right away
+				_show_god_offer.call_deferred(String(e["id"]))
 			"class_pick", "hidden_offer":
 				_show_tree_picker.call_deferred()
 			"class_up":

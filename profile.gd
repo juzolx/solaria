@@ -8,7 +8,7 @@ const PATH := "user://profile.dat"
 const MAX_RUNS := 20
 ## Bump this to wipe every hero for a fresh start (settings and the online login stay).
 ## 12 = Solaria 0.12: the dungeon revamp (Juzo said all saves can be reset).
-const SAVE_EPOCH := 12
+const SAVE_EPOCH := 13  # 13 = Solaria 2.1: new class rules, a fresh start (Juzo, Oct 20)
 
 var last_mode := ""          # "regular", "hardcore" or "" before you've picked
 var sound_on := true
