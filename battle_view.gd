@@ -623,7 +623,7 @@ func _draw_chest() -> void:
 		draw_circle(base + Vector2(0, -sz.y * 0.6), sz.x * (0.6 + 0.4 * (1.0 - glow)), Color(1.0, 0.85, 0.4, 0.25 * glow * a))
 	draw_texture_rect(_chest_tex[1 if open else 0], Rect2(_snap(pos), sz), false, Color(1, 1, 1, a))
 
-## Plays a sprite effect from art/fx (see tools/fx_extract.py) centered on pos.
+## Plays a sprite effect from art/fx (drawn by tools/make_fx.gd) centered on pos.
 func _fx(fx_name: String, pos: Vector2, scale_mult := 1.0, flip := false) -> void:
 	if not _fx_tex.has(fx_name):
 		if _fx_frames.is_empty():

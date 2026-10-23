@@ -1,5 +1,5 @@
 """Builds credits.gd (the in-game Credits page) from art/lpc/CREDITS.md (the part-by-part LPC list; all other sources live in credits_data.gd).
-Run after tools/lpc_extract.py and tools/fx_extract.py."""
+Run after tools/lpc_extract.py."""
 import os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 parts = []
