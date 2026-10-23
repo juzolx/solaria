@@ -175,7 +175,7 @@ static func on_kill(g: GameState) -> void:
 static func on_wipe(g: GameState) -> String:
 	var hurt: Array = []
 	for p in out(g):
-		p["hurt"] = HEAL_FLOORS
+		p["hurt"] = int(Buildings.pick("clinic", Economy.CLINIC_HEAL_FLOORS))  # 2.1: a bigger Clinic: faster rest
 		hurt.append(String(p["name"]))
 	return "" if hurt.is_empty() else "%s came home hurt" % ", ".join(hurt)
 
@@ -252,7 +252,7 @@ static func hatch(g: GameState, egg := {}) -> Dictionary:
 # =====================================================================
 
 static func heal_cost(p: Dictionary) -> int:
-	return int(p["hurt"]) * HEAL_COST * maxi(1, int(p["level"]))
+	return int(round(int(p["hurt"]) * HEAL_COST * maxi(1, int(p["level"])) * Buildings.mult("clinic", Economy.CLINIC_HEAL_MULT)))  # 2.1: the Clinic building
 
 static func heal(g: GameState, id: int) -> bool:
 	var p := find(g, id)

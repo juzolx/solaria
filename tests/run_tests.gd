@@ -9,6 +9,7 @@ func check(cond: bool, msg: String) -> void:
 
 func _initialize() -> void:
 	seed(12345)
+	GameState.test_clock = 1000000.0  # a fixed clock (boss cooldowns): the seeded run repeats exactly
 	GameState.delete_saves()
 	Codex.delete()
 
@@ -45,6 +46,7 @@ func _initialize() -> void:
 	var deaths := 0
 	var max_floor := 1
 	for turn in 20000:
+		GameState.test_clock += 0.5  # half a second a turn, like the real game's tick
 		var boss_before := g.enemy_is_boss
 		var floor_before := g.floor_num
 		g.take_turn()
@@ -121,10 +123,27 @@ func _initialize() -> void:
 	g.save_game()
 	var h := GameState.new()
 	check(h.load_game(), "save loads")
-	check(h.floor_num == g.floor_num and h.gold == g.gold and h.bag.size() == g.bag.size() and h.equipped.size() == g.equipped.size(), "save round trip matches")
+	var diff: Array = []
+	for k in ["floor_num", "gold", "level", "hero_class"]:
+		if str(h.get(k)) != str(g.get(k)):
+			diff.append("%s %s vs %s" % [k, str(h.get(k)), str(g.get(k))])
+	if h.bag.size() != g.bag.size():
+		diff.append("bag %d vs %d" % [h.bag.size(), g.bag.size()])
+	if h.equipped.size() != g.equipped.size() or str(h.equipped.keys()) != str(g.equipped.keys()):
+		diff.append("equipped %s vs %s" % [str(h.equipped.keys()), str(g.equipped.keys())])
+	check(diff.is_empty(), "save round trip matches (%s)" % ", ".join(diff))
 	h.codex = g.codex  # achievement power comes from the Codex, which this test keeps in memory only
 	h.buffs = g.buffs.duplicate(true)  # fight buffs are not saved on purpose
-	check(h.get_attack() == g.get_attack(), "stats match after load (%d vs %d)" % [h.get_attack(), g.get_attack()])
+	if h.get_attack() != g.get_attack():
+		var why: Array = []
+		for es in g.equipped:
+			if not h.equipped.has(es) or GameData.item_power(h.equipped[es]) != GameData.item_power(g.equipped[es]):
+				why.append("equipped %s" % es)
+		if str(h._bonus_sources()) != str(g._bonus_sources()):
+			why.append("bonus sources %s vs %s" % [str(h._bonus_sources()), str(g._bonus_sources())])
+		if str(h.stats) != str(g.stats):
+			why.append("stats %s vs %s" % [str(h.stats), str(g.stats)])
+		check(false, "stats match after load (%d vs %d): %s" % [h.get_attack(), g.get_attack(), "; ".join(why)])
 
 	# Forced unique
 	var u := GameData.make_unique(GameData.ZONES[0]["boss"]["uniques"][0], 10, 999)

@@ -16,6 +16,11 @@ const OLD_SLOT_BACKUP := "user://hero_%d.bak"
 const SLOT_TEMP := "user://town%d_hero_%d.tmp"
 const OLD_SLOT_TEMP := "user://hero_%d.tmp"
 static var town := 1   # the town whose heroes slot numbers point at (Profile.town)
+static var test_clock := -1.0  # tests set a fixed clock (boss cooldowns) so seeded runs repeat exactly
+
+## Wall-clock seconds for boss cooldowns (tests can fix it with test_clock).
+static func now_unix() -> float:
+	return test_clock if test_clock >= 0.0 else Time.get_unix_time_from_system()
 const BASE_ATTACK := 10
 const BASE_HP := 100
 const UNIQUE_CAP := 300.0   # special stats from actions: they slow down near this
@@ -489,6 +494,7 @@ func _bonus_sources() -> Array:
 	out.append_array(set_bonuses())
 	out.append_array(_passive_sources())
 	out.append_array(PetAbilities.bonus_sources(self))  # 2.1: pets' passives, by rank
+	out.append_array(Church.bonus_sources(self))  # 2.1: cursed, cleansed and blessed gear
 	var mb := Mastery.bonus(self)
 	if not mb.is_empty():
 		out.append(mb)
@@ -1792,6 +1798,7 @@ func _drop_slot(monster: String) -> String:
 	return GameData.SLOT_ORDER.pick_random()
 
 func _enemy_defeated() -> void:
+	var was_calamity := enemy_calamity > 0  # 2.1: its trophy is the Calamity one, not a boss one
 	if enemy_calamity > 0:
 		Calamity.on_slain(self, profile_ref)
 	var was_boss := enemy_is_boss
@@ -1868,10 +1875,12 @@ func _enemy_defeated() -> void:
 
 	if was_boss:
 		say("[color=#fbbf24]You defeated %s![/color] +%d gold" % [enemy_name, gold_gain])
+		if not was_calamity:  # a Calamity has its own trophy
+			Trophies.on_boss(self, species)  # 2.1: the Trophy Cabin
 		Economy.give_dust(self, randi_range(Economy.BOSS_DUST[0], Economy.BOSS_DUST[1]))
 		for _i in GameData.BOSS_LOOT_DROPS:
 			var slot: String = GameData.SLOT_ORDER.pick_random()
-			_give_item(GameData.make_item(slot, _rarity(GameData.BOSS_RARITY_BONUS + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS), floor_num, _new_id()))
+			_give_item(Church.maybe_curse(self, GameData.make_item(slot, _rarity(GameData.BOSS_RARITY_BONUS + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS), floor_num, _new_id())))
 		if randf() * 100.0 < unique_chance():
 			var uniques: Array = GameData.boss_for_floor(floor_num)["uniques"]
 			var def: Dictionary = uniques.pick_random()
@@ -1882,7 +1891,7 @@ func _enemy_defeated() -> void:
 			bosses_since_unique += 1
 			say("No unique this time. Next boss: %d%% unique chance." % int(unique_chance()))
 		checkpoint = maxi(checkpoint, floor_num)
-		boss_ready_at[str(floor_num)] = Time.get_unix_time_from_system() + float(GameData.BOSS_COOLDOWN[enemy_boss_kind])
+		boss_ready_at[str(floor_num)] = now_unix() + float(GameData.BOSS_COOLDOWN[enemy_boss_kind])
 		restock_shop()
 		merchant = []
 		say("The shop has new stock.")
@@ -1906,11 +1915,11 @@ func _enemy_defeated() -> void:
 			var r := _rarity(int(t["loot"]) + _loot_bonus(), leg)
 			if i > 0:
 				r = maxi(r, 1)
-			_give_item(GameData.make_item(_drop_slot(species), r, floor_num, _new_id()))
+			_give_item(Church.maybe_curse(self, GameData.make_item(_drop_slot(species), r, floor_num, _new_id())))
 		if party != null:
 			for _m in party.size():
 				if randf() < Party.LOOT_PER_MEMBER:
-					_give_item(GameData.make_item(_drop_slot(species), _rarity(int(t["loot"]) + _loot_bonus(), leg), floor_num, _new_id()))
+					_give_item(Church.maybe_curse(self, GameData.make_item(_drop_slot(species), _rarity(int(t["loot"]) + _loot_bonus(), leg), floor_num, _new_id())))
 		var td: Array = t["dust"]
 		if int(td[1]) > 0:
 			Economy.give_dust(self, randi_range(int(td[0]), int(td[1])))
@@ -2082,6 +2091,7 @@ func _next_floor() -> void:
 	if best_floor >= GameData.GAMBLE_UNLOCK_FLOOR:
 		_page("wheel")
 	WheelTables.on_floor(self)  # 2.1: the Legendary table opens at floor 250
+	Trophies.on_floor(self)  # 2.1: depth trophies for the cabin
 	if best_floor >= 10:  # Heroes and Party pages (all 9 hero slots are open for now)
 		_page("heroes")
 		_page("party")
@@ -2157,7 +2167,7 @@ func _hero_died() -> void:
 	horde_left = 0
 	enemy_goblin = false
 	if enemy_is_boss:
-		boss_ready_at[str(floor_num)] = Time.get_unix_time_from_system() + float(GameData.BOSS_COOLDOWN[enemy_boss_kind])
+		boss_ready_at[str(floor_num)] = now_unix() + float(GameData.BOSS_COOLDOWN[enemy_boss_kind])
 	# The death penalty (0.12): you lose what you carried in and fall back to the
 	# start of this 25-floor stretch. Soulbound and Account-bound items are never lost.
 	RunLog.add(self, "fell", 0, 0, enemy_name)
@@ -2321,7 +2331,7 @@ func _death_losses() -> String:
 ## Seconds until you can travel to fight this boss floor again (0 = ready).
 func boss_cooldown(f: int) -> int:
 	var at := float(boss_ready_at.get(str(f), 0.0))
-	return maxi(0, ceili(at - Time.get_unix_time_from_system()))
+	return maxi(0, ceili(at - now_unix()))
 
 ## Travel to any floor you've already reached (boss floors too, to farm uniques).
 ## Returns false if you can't go (a boss is still resting).
@@ -2386,17 +2396,20 @@ func use_potion() -> void:
 
 ## True if the loot filter wants this new drop gone (2.1: the rules live in loot_rules.gd).
 func filter_salvages(item: Dictionary) -> bool:
+	if Church.keep_from_filter(item):
+		return false  # 2.1: Cursed drops always reach the bag, so you see them
 	return LootRules.decide(self, item) != "keep"
 
 func _give_item(item: Dictionary) -> void:
 	Milestones.on_item(self, item)
+	Trophies.on_find(self, item)  # 2.1: rare finds for the cabin
 	add_to_wardrobe(item)
 	_note_find(item)
 	var r := int(item["rarity"])
 	codex.bounty_progress("item", {"rarity": r})
 	events.append({"type": "loot", "name": GameData.display_name(item), "rarity": r, "up": compare_pct(item), "item": item})
 	_page("gear")
-	var keep := r in [GameData.UNIQUE, GameData.SIGNATURE]
+	var keep := r in [GameData.UNIQUE, GameData.SIGNATURE] or Church.keep_from_filter(item)  # 2.1: Cursed drops too
 	var verdict := "keep" if keep else LootRules.decide(self, item)
 	if verdict != "keep":
 		say(LootRules.carry_out(self, item, verdict))
@@ -2406,7 +2419,7 @@ func _give_item(item: Dictionary) -> void:
 		say("Bag overflowing! Salvaged %s (+%d scrap)" % [_tag(item), s])
 		tip("bag_full", "Your bag is past its limit, so new drops turn into scrap. Sell or salvage items in the Bag tab to make room.")
 	else:
-		if keep:
+		if keep and not Church.is_cursed(item):
 			item["locked"] = true  # never lose a unique by accident
 		bag.append(item)
 		bag_version += 1
@@ -2625,6 +2638,7 @@ func reroll(id: int) -> void:
 		item["rarity"] = new_rarity
 		item["name"] = GameData.item_name(item)
 		item["bonus"] = maxi(1, int(GameData.base_bonus(item["slot"], int(item["floor"])) * float(GameData.RARITY_MULTS[new_rarity])))
+		Church.reapply_power(item)  # 2.1: a (once) Cursed item stays 20% stronger
 		if new_rarity == GameData.LEGENDARY:
 			GameData.add_legendary_effect(item)
 		say("[color=#4ade80]Reroll success![/color] It's now %s." % _tag(item))
@@ -2699,7 +2713,7 @@ func elixir_cost(id: String) -> int:
 	return price(int(GameData.ELIXIRS[id]["gold"]))
 
 func shop_cost(item: Dictionary) -> int:
-	return price(GameData.shop_price(item))
+	return price(int(round(GameData.shop_price(item) * Buildings.mult("shop", Economy.SHOP_PRICE_MULT))))  # 2.1: the Shop building
 
 func buy_potion() -> void:
 	if gold < potion_cost():
@@ -4280,6 +4294,7 @@ func gamble(id: int) -> Dictionary:
 		# 0.13+: a win is made for where you are now, and never weaker than your average gear
 		item["floor"] = maxi(int(item["floor"]), best_floor)
 		item["bonus"] = maxi(1, int(GameData.base_bonus(item["slot"], int(item["floor"])) * float(GameData.RARITY_MULTS[new_rarity])))
+		Church.reapply_power(item)  # 2.1: a (once) Cursed item stays 20% stronger
 		var avg := average_gear_score()
 		var gs := GameData.gear_score(item)
 		if avg > 0 and gs < avg:

@@ -103,3 +103,39 @@ static func reroll_short(g: GameState, item: Dictionary) -> String:
 	if g.dust < reroll_dust(item):
 		return "Not enough dust (need %d)." % reroll_dust(item)
 	return ""
+
+# ---- Town buildings (2.1 G1-G3): levels 1-3, per town (buildings.gd) ----
+const BUILDING_MAX := 3
+## What it costs to reach a level (index = the level you're buying). Level 1 is free, except for
+## buildings that start as an empty lot (Church, Trophy Cabin): building them costs what a level 2 does.
+const BUILDING_COST := [{}, {"gold": 1500, "scrap": 60, "dust": 0}, {"gold": 1500, "scrap": 60, "dust": 0}, {"gold": 8000, "scrap": 200, "dust": 40}]
+const BUILDING_L3_FLOOR := 100          # level 3 needs a hero of this town to have reached this floor
+const INN_RECRUIT_CAP := 5              # only a town's first 5 recruits get the Inn's send-off
+# What each level gives (index = level; index 0 unused). Small, steady steps.
+const INN_REST_MULT := [1.0, 1.0, 0.5, 0.0]          # rest price
+const INN_RECRUIT := [{}, {}, {}, {"potions": 3, "gold": 300}]  # what new recruits bring
+const SMITH_UPGRADE_MULT := [1.0, 1.0, 0.95, 0.9]    # scrap for gear upgrades
+const SHOP_PRICE_MULT := [1.0, 1.0, 0.95, 0.9]       # gear on the shop shelf
+const TAVERN_FEE_MULT := [1.0, 1.0, 0.9, 0.8]        # the wheel's gold fee
+const VAULT_EXTRA := [0, 0, 5, 10]                   # extra Vault spaces
+const BOUNTY_TAKEN := [3, 3, 4, 5]                   # contracts you can carry
+const GUILD_GOLD_MULT := [1.0, 1.0, 1.1, 1.2]        # gold in deed rewards
+const CLINIC_HEAL_MULT := [1.0, 1.0, 0.75, 0.5]      # gold to patch up a pet
+const CLINIC_HEAL_FLOORS := [10, 10, 8, 6]           # floors a hurt pet rests
+# ---- The Church (G2): cursed loot ----
+const CURSE_CHANCE := 2.0               # % a Rare, Epic or Legendary monster drop comes Cursed
+const CURSE_MIN_RARITY := 2             # Rare and up (never Uniques, Sets, Signatures, Mythics)
+const CURSE_MAX_RARITY := 4
+const CURSE_POWER := 1.2                # a Cursed item's stat is 20% higher
+const CLEANSE_CHANCE := [0, 70, 80, 90]  # % a cleanse works, by Church level
+const CLEANSE_TRY_STEP := 15            # each failed try adds this much to that item's next try
+const CLEANSE_GOLD_BASE := 60           # gold: (60 + 6 x item floor) x the Church's price step
+const CLEANSE_GOLD_PER_FLOOR := 6
+const CLEANSE_DUST := 3                 # and a little dust
+const CHURCH_PRICE_MULT := [1.0, 1.0, 0.85, 0.7]
+const BLESS_DUST := [0, 15, 12, 10]     # a blessing: dust...
+const BLESS_GOLD_BASE := 100            # ...plus (100 + 10 x item floor) gold
+const BLESS_GOLD_PER_FLOOR := 10
+const BLESS_POWER := 1.03               # a blessed item you wear: +3% to its stat
+# ---- The Trophy Cabin (G3): cosmetic only ----
+const CABIN_SLOTS := [0, 6, 12, 20]     # trophies on display, by level

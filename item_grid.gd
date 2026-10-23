@@ -40,6 +40,9 @@ static func cell(item: Dictionary, on_press: Callable, selected := false, px := 
 	if not item.is_empty():
 		var rc := Color(GameData.color_of(int(item["rarity"])))
 		edge = UI.GOLD if selected else rc
+		if Church.is_cursed(item) and not selected:  # 2.1: cursed gear stands out
+			edge = Color(Church.COLOR)
+			badge = "CURSED" if badge == "" else badge
 		bg = rc.darkened(0.82)
 		b.icon = Sprites.item_icon(item)
 		b.tooltip_text = ItemText.plain(item)
@@ -53,7 +56,7 @@ static func cell(item: Dictionary, on_press: Callable, selected := false, px := 
 		var sb := UI.style(bg.lightened(0.08) if st == "hover" else bg, edge, 6, 5, 3 if selected else (2 if not item.is_empty() else 1))
 		b.add_theme_stylebox_override(st, sb)
 	if badge != "":
-		var l := UI.label(badge, 11, UI.GREEN)
+		var l := UI.label(badge, 10 if badge == "CURSED" else 11, Color(Church.COLOR).lightened(0.25) if badge == "CURSED" else UI.GREEN)
 		l.add_theme_constant_override("outline_size", 4)
 		l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
 		l.position = Vector2(4, px - 20)

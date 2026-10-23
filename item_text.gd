@@ -45,6 +45,7 @@ static func describe(state: GameState, item: Dictionary) -> String:
 		text += "\n[color=%s]History: %s[/color]" % [dim, "; ".join(lines)]
 	if item["effect"] != "":
 		text += "\n[color=#fbbf24]Special: %s[/color]" % GameData.effect_text(item["effect"], int(item["effect_value"]))
+	text += Church.describe(item)  # 2.1: curses and blessings
 	if String(item.get("effect2", "")) != "":
 		text += "\n[color=#fde047]Awakened: %s[/color]" % GameData.effect_text(item["effect2"], int(item["effect2_value"]))
 	if GameData.is_living(item):
@@ -86,6 +87,8 @@ static func plain(item: Dictionary) -> String:
 	var text := "%s (%s %s)\n+%d %s" % [GameData.display_name(item), GameData.RARITY_NAMES[r], item["slot"], GameData.item_power(item), item["stat"]]
 	if item["effect"] != "":
 		text += "\nSpecial: " + GameData.effect_text(item["effect"], int(item["effect_value"]))
+	if Church.is_cursed(item):
+		text += "\nCURSED: the Church in town can lift it"
 	if item.get("set", "") != "":
 		text += "\nSet: %s - %s" % [GameData.set_name_of(item["set"]), GameData.set_info(item["set"]).get("text", "")]
 	if item.get("flavor", "") != "":

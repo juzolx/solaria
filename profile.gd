@@ -44,7 +44,9 @@ var high_contrast := false   # brighter secondary text
 var save_epoch := 0          # the SAVE_EPOCH these saves were made under
 # Next update (Juzo): a save is a town holding a roster of heroes. The fields in
 # TOWN_KEYS fields belong to the town you're in; every town keeps its own copy here.
-const TOWN_KEYS := ["active_slot", "max_floor", "stash", "stash_level", "skill_book", "calamities", "presets"]
+const TOWN_KEYS := ["active_slot", "max_floor", "stash", "stash_level", "skill_book", "calamities", "presets", "buildings", "trophies"]
+var buildings := {}          # 2.1: building id -> level in this town (buildings.gd)
+var trophies := {}           # 2.1: trophy id -> {kind, name, hero, date} in this town (trophies.gd)
 const TOWN_NAMES := ["Emberfall", "Greyhollow", "Duskmere"]
 const TOWN_NAME_MAX := 16
 var town := 1                # the town you're in (1..GameData.MAX_TOWNS)
@@ -125,6 +127,17 @@ func _load_town(n: int) -> void:
 	skill_book = t.get("skill_book", {})
 	calamities = t.get("calamities", {})
 	presets = t.get("presets", [{}, {}, {}])
+	buildings = t.get("buildings", {})
+	trophies = t.get("trophies", {})
+	_bind()
+
+## The static helpers (Buildings, Trophies) read the town you're in.
+func _bind() -> void:
+	Buildings.levels = buildings
+	Trophies.data = trophies
+
+func _init() -> void:
+	_bind()
 
 ## Moves to another town: its heroes, stash, skill book and slots. Settings stay.
 func switch_town(n: int) -> void:
@@ -187,6 +200,9 @@ func reset_progress() -> void:
 	skill_book = {}
 	mail_seen = []
 	calamities = {}
+	buildings = {}
+	trophies = {}
+	_bind()
 	last_mode = ""
 	notes_seen = ""
 	save_epoch = SAVE_EPOCH
@@ -218,7 +234,7 @@ func slot_lock_note(n: int) -> String:
 	return ("Slot %d: Menu > Supporter store." if Store.ENABLED else "Slot %d can be bought later.") % n
 
 func stash_capacity() -> int:
-	return GameData.STASH_START + stash_level * GameData.STASH_STEP
+	return GameData.STASH_START + stash_level * GameData.STASH_STEP + int(Buildings.pick("stash", Economy.VAULT_EXTRA))  # 2.1: a bigger Vault building
 
 ## Older versions kept settings in the save file; copy them over once.
 func take_settings_from(state: GameState) -> void:
