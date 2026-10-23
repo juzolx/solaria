@@ -5,3 +5,5 @@
 - backpack: drawn for Solaria.
 
 - egg.png: drawn for Solaria (CC0).
+
+2.1: tools/bake_art.gd mapped these files to the Solaria palette (art_style.gd, art/palette.gpl), made every pixel solid and gave them one dark outline. The originals are in git history.

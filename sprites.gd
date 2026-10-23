@@ -21,6 +21,10 @@ const OUTLINE_ALPHA := 201     # layer outlines: drawn on empty space, only dark
 const BODIES := ["masc", "fem"]
 const BODY_NAMES := ["Build A", "Build B"]
 const USE_LPC := true  # heroes from the LPC parts (lpc.gd); false = the older drawn heroes
+## Hero pixel size (decision D4, open). 1 = LPC heroes keep their fine 1x pixels (today).
+## 2 = heroes are snapped to the monsters' 2x art grid (every hero pixel a 2x2 block) and the
+## battle draws them at the monsters' unit, so one screen has one pixel size.
+const HERO_PIXEL := 1
 const PORTRAIT_CROP := Rect2i(16, 24, 64, 64)  # the part of the canvas menus show: the hero's own frame
 const PORTRAIT := 64  # its size: show portraits at 64, 128 or 192 to keep pixels crisp
 const HAIR_STYLES := Lpc.HAIR_ORDER  # 37 styles; the 13 older names are kept so saves look the same
@@ -367,7 +371,7 @@ static func hero(app: Dictionary, looks: Dictionary) -> Dictionary:
 ## The LPC hero: animation frames plus a still picture laid out like the old
 ## hero canvas (the 64x64 character at BODY_OFFSET), so menus and portraits work.
 static func _hero_lpc(app: Dictionary, looks: Dictionary) -> Dictionary:
-	var built := Lpc.build(Lpc.spec(app, looks))
+	var built := Lpc.build(_px_spec(Lpc.spec(app, looks)))
 	var canvas := Image.create(CANVAS, CANVAS, false, Image.FORMAT_RGBA8)
 	var still: Image = built["still"]
 	var s := still.get_width()
@@ -382,6 +386,39 @@ static func _hero_lpc(app: Dictionary, looks: Dictionary) -> Dictionary:
 		"weapon": null, "weapon_white": null, "weapon_type": wt, "pivot": Vector2.ZERO, "glow": glow,
 		"hand": Vector2(BODY_OFFSET) + Vector2(44, 38), "lpc": built["anims"]}
 
+static func _px_spec(sp: Dictionary) -> Dictionary:
+	if HERO_PIXEL > 1:
+		sp["px"] = HERO_PIXEL
+	return sp
+
+## The picture snapped to a px-sized pixel grid (same size, every px x px block one color:
+## the most common solid color in it, or clear when most of it is clear). For HERO_PIXEL.
+static func chunky(src: Image, px: int) -> Image:
+	if px <= 1:
+		return src
+	var out := Image.create(src.get_width(), src.get_height(), false, Image.FORMAT_RGBA8)
+	for by in range(0, src.get_height(), px):
+		for bx in range(0, src.get_width(), px):
+			var counts := {}
+			var solid := 0
+			for y in range(by, mini(by + px, src.get_height())):
+				for x in range(bx, mini(bx + px, src.get_width())):
+					var c := src.get_pixel(x, y)
+					if c.a8 >= 128:
+						solid += 1
+						var k := c.to_rgba32()
+						counts[k] = int(counts.get(k, 0)) + 1
+			if solid * 2 < px * px:
+				continue
+			var best := 0
+			var bk := 0
+			for k in counts:
+				if int(counts[k]) > best:
+					best = counts[k]
+					bk = k
+			out.fill_rect(Rect2i(bx, by, px, px), Color.hex(bk))
+	return out
+
 ## The hero seen from behind (0.13 back-to-front fights): same dictionary as hero().
 static func hero_back(app: Dictionary, looks: Dictionary) -> Dictionary:
 	var key := "back" + str(app) + str(looks)
@@ -391,7 +428,7 @@ static func hero_back(app: Dictionary, looks: Dictionary) -> Dictionary:
 		return hero(app, looks)
 	var sp := Lpc.spec(app, looks)
 	sp["dir"] = "up"
-	var built := Lpc.build(sp)
+	var built := Lpc.build(_px_spec(sp))
 	var canvas := Image.create(CANVAS, CANVAS, false, Image.FORMAT_RGBA8)
 	var still: Image = built["still"]
 	var s := still.get_width()
@@ -435,7 +472,9 @@ static func item_icon(item: Dictionary) -> ImageTexture:
 		_stack(img, src, Vector2i.ZERO)
 		var used := img.get_used_rect()
 		if used.size.x > 0:
-			var side := maxi(used.size.x, used.size.y) + 2
+			# One frame for every icon (ArtStyle.ICON_FRAME), centered, at the art's own pixel
+			# size: a dagger looks smaller than a spear, but every pixel is the same size
+			var side := maxi(ArtStyle.ICON_FRAME, maxi(used.size.x, used.size.y) + 2)
 			var sq := Image.create(side, side, false, Image.FORMAT_RGBA8)
 			sq.blit_rect(img, used, Vector2i((side - used.size.x) / 2, (side - used.size.y) / 2))
 			out = ImageTexture.create_from_image(sq)
@@ -499,9 +538,11 @@ static func enemy_by_key(key: String) -> Dictionary:
 	var img := _img("enemies/%s.png" % key)
 	var out := {}
 	if img:
-		var info: Dictionary = ArtInfo.DATA["enemies"].get(key, {})
+		# The feet are the lowest solid row of the picture itself (art_info.gd lists the same
+		# numbers for tools; measuring here means new art can never get a stale value)
+		var used := img.get_used_rect()
 		out = {"tex": ImageTexture.create_from_image(DarkGrade.image(img)), "white": ImageTexture.create_from_image(_silhouette(img)),
-			"size": Vector2(img.get_size()), "foot": float(info.get("foot", img.get_height() - 1))}
+			"size": Vector2(img.get_size()), "foot": float(used.end.y - 1 if used.size.y > 0 else img.get_height() - 1)}
 	_cache["e_" + key] = out
 	return out
 

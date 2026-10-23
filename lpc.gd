@@ -149,6 +149,15 @@ static func build(spec: Dictionary) -> Dictionary:
 			out["anims"][anim] = a
 	if not out["anims"].has("combat_idle"):
 		out["anims"]["combat_idle"] = _compose(layers, "walk", flip, dir)
+	var px := int(spec.get("px", 1))  # Sprites.HERO_PIXEL: snap the frames to a coarser pixel grid
+	if px > 1:
+		for anim in out["anims"]:
+			var a: Dictionary = out["anims"][anim]
+			for i in (a["img"] as Array).size():
+				var im := Sprites.chunky(a["img"][i], px)
+				a["img"][i] = im
+				a["tex"][i] = ImageTexture.create_from_image(im)
+				a["white"][i] = ImageTexture.create_from_image(_silhouette(im))
 	var idle: Dictionary = out["anims"]["combat_idle"]
 	out["still"] = (idle["img"][0] as Image)
 	_built[key] = out
