@@ -78,52 +78,12 @@ func refresh() -> void:
 	_bench_rows()
 	_synergy_rows()
 
-## Next update: three saved line-ups for this town. One tap puts the team together
-## (a different leader means switching heroes, so that one waits until you're in town).
+## 2.1: one Presets screen (presets.gd) holds team line-ups with gear, skills and supplies.
 func _preset_rows() -> void:
-	box.add_child(UI.heading("Team presets"))
-	var p: Profile = main.profile
-	for i in 3:
-		var pr: Dictionary = p.presets[i] if i < p.presets.size() else {}
-		var slots: Array = pr.get("slots", []).filter(func(n): return GameState.has_slot(int(n)))
-		var names: Array = []
-		for n in slots:
-			names.append(str(GameState.slot_meta(int(n)).get("name", "Hero")))
-		var row := UI.hbox(6)
-		box.add_child(row)
-		var use := UI.button("%d: %s" % [i + 1, " + ".join(names) if not names.is_empty() else "empty"], _apply_preset.bind(i))
-		use.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		use.clip_text = true
-		var other_leader := not slots.is_empty() and int(slots[0]) != state.slot
-		use.disabled = slots.is_empty() or (other_leader and not state.in_town)
-		use.tooltip_text = "Leads with %s: switch heroes in town." % names[0] if other_leader else "Put this team together"
-		row.add_child(use)
-		var save := UI.button("Save", func():
-			while p.presets.size() < 3:
-				p.presets.append({})
-			p.presets[i] = {"slots": [state.slot] + state.party_slots}
-			p.save()
-			main.sfx.play("click")
-			shown = ""
-			main.refresh())
-		save.tooltip_text = "Save your current team here"
-		row.add_child(save)
-
-func _apply_preset(i: int) -> void:
-	var slots: Array = main.profile.presets[i].get("slots", []).filter(func(n): return GameState.has_slot(int(n)))
-	if slots.is_empty():
-		return
-	var comps: Array = slots.slice(1)
-	main.sfx.play("equip")
-	if int(slots[0]) == state.slot:
-		if state.party != null:
-			state.party.save_all()
-		state.set_party(comps)
-		shown = ""
-		main.refresh()
-		return
-	TitleScreen.pending = {"play": int(slots[0]), "party": comps}
-	main.back_to_title()
+	# 2.1: team line-ups are part of the one Presets screen (with gear, skills and supplies)
+	var pb := UI.button("Presets: save or swap your team, gear and skills", func(): PresetsScreen.new().show_for(main))
+	pb.custom_minimum_size = Vector2(0, UI.TAP)
+	box.add_child(pb)
 
 ## Next update: heroes at home bring in gold, scrap and now and then an item while you dive.
 func _bench_rows() -> void:

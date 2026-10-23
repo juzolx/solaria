@@ -14,6 +14,7 @@ func _initialize() -> void:
 	g.choose_class("Warrior")
 	g.floor_num = 60
 	g.auto_salvage = -1
+	LootRules.test_ignore_upgrades = true  # 2.1: upgrades are always kept; test the Gear Score rule alone
 	for s in ["Weapon", "Chest", "Helmet"]:
 		g.equipped[s] = GameData.make_item(s, 3, 60, g._new_id())
 	var avg := g.average_gear_score()

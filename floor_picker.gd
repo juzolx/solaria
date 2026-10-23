@@ -17,6 +17,8 @@ var carry_note: Label
 var risk_note: Label
 var team_box: VBoxContainer
 var supply_box: VBoxContainer
+var preset_box: GridContainer
+var preset_note: Label
 
 ## From town: the same picker, plus quick picks, and choosing a floor takes you down.
 func show_from_town(main_node) -> void:
@@ -55,6 +57,17 @@ func show_for(main_node) -> void:
 		carry_note = UI.label("", 11, UI.DIM)
 		carry_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		content.add_child(carry_note)
+		# 2.1: quick swap to a saved preset (gear, skills, team, supplies) right before the dive
+		content.add_child(UI.label("PRESET", 13, UI.DIM))
+		preset_box = GridContainer.new()
+		preset_box.columns = 2
+		preset_box.add_theme_constant_override("h_separation", 8)
+		preset_box.add_theme_constant_override("v_separation", 8)
+		content.add_child(preset_box)
+		preset_note = UI.wrap("", 13, UI.GOLD)
+		preset_note.visible = false
+		content.add_child(preset_note)
+		_fill_presets()
 		# Next update (Juzo): pick your team and where they stand, and what to bring
 		content.add_child(UI.wrap("YOUR TEAM: the front row draws the attacks, the back row is hit less", 11, UI.DIM))
 		team_box = UI.vbox(6)
@@ -260,6 +273,42 @@ static func _fill_curses(mm, o: Overlay, st: GameState) -> void:
 # =====================================================================
 # Next update (Juzo): the team and the supplies, picked right before a dive
 # =====================================================================
+
+## 2.1: one button per saved preset, plus the Presets screen.
+func _fill_presets() -> void:
+	Presets.migrate(state)
+	OnlineUI.clear(preset_box)
+	for i in Presets.SLOTS:
+		if not Presets.is_saved(state, i):
+			continue
+		var idx := i
+		var b := UI.button(Presets.name_of(state, i), func(): _use_preset(idx))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size = Vector2(0, UI.TAP)
+		b.clip_text = true
+		b.tooltip_text = Presets.summary(state, i)
+		preset_box.add_child(b)
+	var edit := UI.button("Presets...", func(): PresetsScreen.new().show_for(m, _after_presets))
+	edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	edit.custom_minimum_size = Vector2(0, UI.TAP)
+	edit.add_theme_color_override("font_color", UI.TEAL)
+	preset_box.add_child(edit)
+
+func _use_preset(i: int) -> void:
+	var notes := Presets.apply(state, i, m.profile.stash)
+	m.sfx.play("equip")
+	preset_note.visible = true
+	preset_note.text = "Now using %s." % Presets.name_of(state, i) + ("" if notes.is_empty() else "\n" + "\n".join(notes))
+	_after_presets()
+
+func _after_presets() -> void:
+	if not is_inside_tree():
+		return
+	_fill_presets()
+	_fill_team()
+	_fill_supplies()
+	_show_carry()
+	m.refresh()
 
 func _fill_team() -> void:
 	OnlineUI.clear(team_box)

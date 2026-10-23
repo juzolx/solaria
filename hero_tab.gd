@@ -23,7 +23,6 @@ var rows := {}      # stat -> {"value", "gives", "p1", "p5", "chip"}
 var stat_grid: GridContainer
 var special_box: VBoxContainer
 var special_rows := {}  # name -> [value label, text rich, bar, panel]
-var build_rows: Array = []  # [name label, use button, save button]
 var numbers := {}
 var path_label: RichTextLabel
 var respec_button: Button
@@ -112,29 +111,11 @@ func setup(m) -> void:
 	v.add_child(special_box)
 	UI.section(special_box, "Special stat", "Unique classes have a stat of their own. It can't take points: it grows from doing what your class does best.")
 
-	# ---- Builds ----
-	UI.section(v, "Builds", "Save your stats, skills and gear together, then switch between them for free (say, a boss build and a farming build).")
-	var bl := UI.vbox(6)
-	v.add_child(bl)
-	for i in 3:
-		var row := UI.hbox(8)
-		bl.add_child(row)
-		var nl := UI.label("", 14, UI.TEXT)
-		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		nl.clip_text = true
-		row.add_child(nl)
-		var idx := i
-		var use := UI.primary("Use", func(): state.apply_build(idx); main.sfx.play("buff"); main.refresh(), UI.TEAL)
-		var save := UI.button("Save current", func():
-			if state.build_saved(idx):
-				main.confirm("Replace %s?" % state.build_name(idx), "This saves what you're using right now over it.", "Save", func(): state.save_build(idx); main.refresh())
-			else:
-				state.save_build(idx)
-				main.refresh())
-		for b in [use, save]:
-			b.custom_minimum_size = Vector2(0, UI.TAP)
-			row.add_child(b)
-		build_rows.append([nl, use, save])
+	# ---- Presets (2.1: builds, gear loadouts and team presets in one screen) ----
+	UI.section(v, "Presets", "Save your stats, skills, gear, team and supplies together, then switch between them for free (say, a boss build and a farming build).")
+	var pb := UI.primary("Presets", func(): PresetsScreen.new().show_for(main), UI.TEAL)
+	pb.custom_minimum_size = Vector2(0, UI.TAP)
+	v.add_child(pb)
 
 	# ---- Your numbers ----
 	UI.section(v, "Your numbers")
@@ -314,13 +295,6 @@ func refresh() -> void:
 		(row[1] as RichTextLabel).text = "[color=%s]%s[/color]" % [UI.hex(UI.DIM), txt]
 		(row[2] as ProgressBar).max_value = GameState.UNIQUE_CAP
 		(row[2] as ProgressBar).value = v
-
-	for i in build_rows.size():
-		var br: Array = build_rows[i]
-		var saved := state.build_saved(i)
-		(br[0] as Label).text = state.build_name(i) if saved else "Empty slot %d" % (i + 1)
-		(br[0] as Label).add_theme_color_override("font_color", UI.TEXT if saved else UI.DIM)
-		(br[1] as Button).disabled = not saved
 
 	# Where you're headed
 	var text := ""

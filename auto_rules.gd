@@ -2,6 +2,7 @@ class_name AutoRules
 extends RefCounted
 ## 0.13+ (Stage 3): Auto rules you set. Autoplay pauses (and tells you why) when one
 ## of your rules fires, so you can step in at the moments that matter.
+## 2.1: shown in the one Auto-dive panel (auto_dive_panel.gd) with AutoDive.
 
 const RULES := {
 	"stop_boss": "Before a boss fight",
@@ -18,8 +19,12 @@ static func toggle(g: GameState, id: String) -> void:
 
 ## Why Auto should pause right now ("" = keep going). Each reason fires once per thing.
 static func check(g: GameState) -> String:
+	AutoDive.tick(g)  # 2.1: auto-dive settings (head home, elixirs before bosses; re-arms in town)
 	if not g.autoplay or g.in_town:
 		return ""
+	var floor_stop := AutoDive.pause_reason(g)
+	if floor_stop != "":
+		return floor_stop
 	var why := ""
 	var key := ""
 	if on(g, "stop_boss") and g.enemy_is_boss and g.enemy_hp > 0:

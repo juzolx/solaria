@@ -16,7 +16,6 @@ var doll_key := ""
 var slot := "Weapon"
 var shown := ""
 var equip_best_button: Button
-var loadout_buttons: Array[Button] = []
 
 func setup(m) -> void:
 	main = m
@@ -95,24 +94,10 @@ func setup(m) -> void:
 	sv.add_child(empty_note)
 	resized.connect(_on_resized)
 
-	# Loadouts: save your gear to swap builds in one tap
-	var lrow := UI.hbox(6)
-	add_child(lrow)
-	lrow.add_child(UI.label("Loadouts:", 12, UI.DIM))
-	for i in 3:
-		var b := UI.button("", _loadout.bind(i))
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		lrow.add_child(b)
-		loadout_buttons.append(b)
-	var save_lo := UI.button("Save to...", func():
-		var o := Overlay.new().open(main, "Save your gear as a loadout", 420.0)
-		var r := UI.hbox(6)
-		o.content.add_child(r)
-		for i in 3:
-			var sb := UI.primary("Loadout %d" % (i + 1), func(): state.save_loadout(i); o.close(); main.refresh(), UI.GOLD)
-			sb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			r.add_child(sb))
-	lrow.add_child(save_lo)
+	# 2.1: gear loadouts are part of the one Presets screen (gear, skills, team, supplies)
+	var pb := UI.button("Presets: save or swap gear, skills and team", func(): PresetsScreen.new().show_for(main))
+	pb.custom_minimum_size = Vector2(0, UI.TAP)
+	add_child(pb)
 
 func _on_resized() -> void:
 	ItemGrid.fit([item_grid], size.x)
@@ -138,14 +123,6 @@ func _show(id: int) -> void:
 		acts.append(["Unequip", func(): state.unequip(id); main.refresh(), UI.RED])
 	ItemPopup.show_item(main, found["item"], acts)
 
-func _loadout(i: int) -> void:
-	if Input.is_key_pressed(KEY_SHIFT) or state.loadouts[i].is_empty():
-		state.save_loadout(i)
-	else:
-		state.wear_loadout(i)
-		main.sfx.play("equip")
-	main.refresh()
-
 var _ghosts := {}
 ## A plain item picture for an empty slot (same look every time).
 func _ghost(s: String) -> Texture2D:
@@ -165,10 +142,6 @@ func _count(s: String) -> int:
 	return n
 
 func refresh() -> void:
-	for i in loadout_buttons.size():
-		var empty: bool = state.loadouts[i].is_empty()
-		loadout_buttons[i].text = "%d: %s" % [i + 1, "empty" if empty else "Wear"]
-		loadout_buttons[i].tooltip_text = "Empty: tap to save what you're wearing now." if empty else "Put on loadout %d (shift-click to overwrite it)." % (i + 1)
 	var ups := 0
 	var dk := str(state.appearance) + str(state.hero_looks())
 	if dk != doll_key:

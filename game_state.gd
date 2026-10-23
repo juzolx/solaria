@@ -51,7 +51,7 @@ var stats := {"STR": 0, "VIT": 0, "AGI": 0, "DEX": 0, "INT": 0, "WIS": 0, "LUK":
 var stat_points := 0    # unspent points
 var auto_stats := false # spend new points on your class's recommended build by itself
 var respec_tomes := 0   # Tomes of Forgetting: a free respec each
-var builds: Array = [{}, {}, {}]  # saved builds: stats, skills and gear
+var builds: Array = [{}, {}, {}, {}]  # 2.1: the presets (presets.gd): stats, skills, gear, team, supplies
 # ---------- Skills (ability stones) ----------
 var skill_book := {}    # skill id -> rank (1-5): every skill you own
 var dust := 0           # 2.1: one of the three currencies (economy.gd): crafts skills, sets, top upgrades
@@ -257,7 +257,7 @@ var bench_haul := {}        # next update: what your heroes at home found this d
 var bench_roster: Array = []  # heroes at home right now (Bench.refresh; not saved)
 var smith_stock: Array = []   # 0.13+: the dwarf smith's forged wares (smith.gd)
 var loadouts: Array = [{}, {}, {}]  # saved gear sets: slot -> item id
-var loot_filter := {"slots": {}, "weaker": false}  # extra auto-salvage rules (Common-Rare only)
+var loot_filter := LootRules.defaults()  # 2.1: the one loot filter (loot_rules.gd)
 var codex := Codex.new()    # account-wide bestiary, stats, achievements (main swaps in the saved one)
 var stash_ok := false       # Regular heroes can use the shared stash
 var dev_always_win := false # Dev Mode: the wheel always wins
@@ -2384,21 +2384,9 @@ func use_potion() -> void:
 # Loot and bag
 # =====================================================================
 
-## True if the loot filter wants this new drop turned into scrap.
+## True if the loot filter wants this new drop gone (2.1: the rules live in loot_rules.gd).
 func filter_salvages(item: Dictionary) -> bool:
-	var r := int(item["rarity"])
-	if r > 3 or item.get("locked", false):
-		return false  # Legendary and better are always kept
-	if r <= auto_salvage:
-		return true
-	if bool(loot_filter.get("below_gs", false)) and not equipped.is_empty() and GameData.gear_score(item) < average_gear_score():
-		return true  # next update: anything below your average Gear Score (Epic and below)
-	if r <= 2:
-		if bool(loot_filter.get("slots", {}).get(item["slot"], false)):
-			return true
-		if bool(loot_filter.get("weaker", false)) and equipped.has(item["slot"]) and GameData.item_power(item) <= GameData.item_power(equipped[item["slot"]]) and not is_upgrade(item):
-			return true
-	return false
+	return LootRules.decide(self, item) != "keep"
 
 func _give_item(item: Dictionary) -> void:
 	Milestones.on_item(self, item)
@@ -2409,10 +2397,9 @@ func _give_item(item: Dictionary) -> void:
 	events.append({"type": "loot", "name": GameData.display_name(item), "rarity": r, "up": compare_pct(item), "item": item})
 	_page("gear")
 	var keep := r in [GameData.UNIQUE, GameData.SIGNATURE]
-	if not keep and filter_salvages(item):
-		var s := GameData.scrap_value(item)
-		scrap += s
-		say("Auto-salvaged %s (+%d scrap)" % [_tag(item), s])
+	var verdict := "keep" if keep else LootRules.decide(self, item)
+	if verdict != "keep":
+		say(LootRules.carry_out(self, item, verdict))
 	elif bag.size() >= bag_capacity() + OVERFLOW_MAX and not keep:
 		var s := GameData.scrap_value(item)
 		scrap += s
@@ -2653,10 +2640,7 @@ func _salvage_dust(item: Dictionary) -> void:
 	Economy.give_dust(self, int(Economy.SALVAGE_DUST.get(int(item["rarity"]), 0)))
 
 func cycle_auto_salvage() -> void:
-	auto_salvage += 1
-	if auto_salvage > 3:
-		auto_salvage = -1
-	save_game()
+	LootRules.cycle_rarity(self)
 
 ## True if this bag item is stronger than what's worn in its slot.
 func is_upgrade(item: Dictionary) -> bool:
@@ -4224,83 +4208,7 @@ func from_stash(index: int, stash: Array) -> bool:
 	save_game()
 	return true
 
-func save_loadout(i: int) -> void:
-	var set_ids := {}
-	for s in equipped:
-		set_ids[s] = int(equipped[s]["id"])
-	loadouts[i] = set_ids
-	say("Saved your gear as loadout %d." % (i + 1))
-	save_game()
-
-## Puts on a saved loadout. Items you've sold since are skipped.
-func wear_loadout(i: int) -> int:
-	var lo: Dictionary = loadouts[i]
-	var n := 0
-	for s in lo:
-		var found := find_item(int(lo[s]))
-		if not found.is_empty() and found["where"] == "bag":
-			equip(int(lo[s]))
-			n += 1
-	say("Loadout %d: %d items swapped." % [i + 1, n] if n > 0 else "Loadout %d is already on (or its items are gone)." % (i + 1))
-	return n
-
-# ---------- Builds: stats, skills and gear together ----------
-
-## Saves what you're running now (stat spread, equipped skills, worn gear) as build i.
-func save_build(i: int, build_name := "") -> void:
-	var gear := {}
-	for s in equipped:
-		gear[s] = int(equipped[s]["id"])
-	var old: Dictionary = builds[i]
-	builds[i] = {"name": build_name if build_name != "" else String(old.get("name", "Build %d" % (i + 1))),
-		"stats": stats.duplicate(), "active": active_slots.duplicate(), "passive": passive_slots.duplicate(), "gear": gear}
-	say("Saved build %d: %s." % [i + 1, builds[i]["name"]])
-	save_game()
-
-func build_name(i: int) -> String:
-	return String((builds[i] as Dictionary).get("name", "Build %d" % (i + 1)))
-
-func build_saved(i: int) -> bool:
-	return (builds[i] as Dictionary).has("stats")
-
-## Switches to build i: your points move to its spread (free), its skills go in
-## their slots and its gear goes on. Things you no longer own are skipped.
-func apply_build(i: int) -> void:
-	var b: Dictionary = builds[i]
-	if not b.has("stats"):
-		return
-	var pool := stat_points
-	for st in GameData.STAT_ORDER:
-		pool += int(stats.get(st, 0))
-	var want: Dictionary = b["stats"]
-	var want_total := 0
-	for st in GameData.STAT_ORDER:
-		want_total += int(want.get(st, 0))
-	var f := 1.0 if want_total <= pool else float(pool) / maxf(1.0, want_total)
-	var used := 0
-	for st in GameData.STAT_ORDER:
-		stats[st] = int(floor(int(want.get(st, 0)) * f))
-		used += int(stats[st])
-	stat_points = pool - used
-	var acts: Array = b.get("active", [])
-	var pas: Array = b.get("passive", [])
-	for k in active_slots.size():
-		var id: String = String(acts[k]) if k < acts.size() else ""
-		active_slots[k] = id if id == "" or skill_book.has(id) else active_slots[k]
-	for k in passive_slots.size():
-		var id: String = String(pas[k]) if k < pas.size() else ""
-		passive_slots[k] = id if id == "" or skill_book.has(id) else passive_slots[k]
-	var gear: Dictionary = b.get("gear", {})
-	var n := 0
-	for s in gear:
-		var found := find_item(int(gear[s]))
-		if not found.is_empty() and found["where"] == "bag":
-			equip(int(gear[s]))
-			n += 1
-	hero_hp = mini(hero_hp, get_max_hp())
-	_check_spec()
-	say("Switched to %s." % build_name(i))
-	save_game()
+# 2.1: loadouts and builds are presets now (presets.gd); loadouts/builds stay as save fields.
 
 ## The most pieces of one set you're wearing.
 func best_set_count() -> int:

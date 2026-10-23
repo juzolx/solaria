@@ -124,11 +124,12 @@ func setup(m) -> void:
 		salvage_all_buttons[r] = b
 	var frow := UI.hbox(6)
 	add_child(frow)
-	auto_salvage_button = UI.button("", func(): state.cycle_auto_salvage(); main.refresh())
-	auto_salvage_button.tooltip_text = "Automatically turn new drops of these rarities into scrap"
+	# 2.1: one loot filter screen for every rule (rarity, slots, smart rules, sell or salvage)
+	auto_salvage_button = UI.button("", func(): LootFilter.new().show_for(main))
+	auto_salvage_button.tooltip_text = "Choose which new drops are salvaged or sold the moment they drop"
 	auto_salvage_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auto_salvage_button.custom_minimum_size.y = UI.TAP
 	frow.add_child(auto_salvage_button)
-	frow.add_child(UI.button("Loot filter...", func(): LootFilter.new().show_for(main)))
 
 func _on_resized() -> void:
 	ItemGrid.fit([grid], size.x)
@@ -290,10 +291,7 @@ func refresh() -> void:
 	if state.return_scrolls > 0:
 		title.text += "   ·  %d Return Scroll%s" % [state.return_scrolls, "" if state.return_scrolls == 1 else "s"]
 	title.add_theme_color_override("font_color", UI.RED if state.bag_full() else UI.TEXT)
-	var salvage_names := ["Off", "Commons", "Uncommon and below", "Rare and below", "Epic and below"]
-	auto_salvage_button.text = "Auto-salvage new drops: %s" % salvage_names[state.auto_salvage + 1]
-	if state.loot_filter.get("below_gs", false):
-		auto_salvage_button.text += " + below GS %d" % state.average_gear_score()
+	auto_salvage_button.text = "Loot filter: %s" % LootRules.summary(state)
 	select_button.text = "Done" if picking else "Select"
 	pick_row.visible = picking
 	if picking:
