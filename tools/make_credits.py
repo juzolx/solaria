@@ -1,9 +1,9 @@
-"""Builds credits.gd (the in-game Credits page) from art/lpc/CREDITS.md and art/fx/CREDITS.md.
+"""Builds credits.gd (the in-game Credits page) from art/lpc/CREDITS.md (the part-by-part LPC list; all other sources live in credits_data.gd).
 Run after tools/lpc_extract.py and tools/fx_extract.py."""
 import os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 parts = []
-for p in ["art/lpc/CREDITS.md", "art/town/CREDITS.md", "art/fx/CREDITS.md"]:
+for p in ["art/lpc/CREDITS.md"]:
     t = open(os.path.join(ROOT, p)).read()
     lines = []
     for l in t.splitlines():
