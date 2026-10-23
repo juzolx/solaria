@@ -47,7 +47,18 @@ Cut order if behind: A7, G9, A2, A6, G7. Keep F1, F2, R1-R5.
 - Age rating: infrequent simulated gambling = 13+ (Australia R18+); avoid casino words.
 - Verify Godot's default font license (Open Sans OFL) against COPYRIGHT.txt.
 
-## Decisions for Juzo
+## Decisions (answered by Juzo, Oct 23)
+D1 b: replace share-alike art. Claude is the artist: new 2x heroes + a NEW town
+   (local ComfyUI + code cleanup), so LPC parts and town packs go.
+D2 a: Legendary Wheel unlocks at floor 250. D3 a: materials -> scrap + dust.
+D4 a: heroes 2x. D5 a: levels 1-3 for all + Church + cabin. D6 b: titles + cosmetics.
+D7 a: split game_state.gd after release. D8 a: story before Nov 3; ship the new town.
+D9: Apple account about Nov 6 (after payday). Risk: account approval can take
+   1-2 days and first App Review 1-3 days; Codemagic pipeline must be ready and
+   tested before then so the first build goes out the same day.
+D10: floor 100 in 4-6 hours (sim now 5.7 h median; smooth the 51-100 wall).
+
+## Decisions (original options)
 D1 LPC share-alike art: publish modified art under CC-BY-SA / replace 42 parts / replace all incl. town.
 D2 Wheel Legendary table: unlock at a floor (e.g. 250) / one-off gold fee / extra row; spins never for money.
 D3 Materials in the currency merge: convert to scrap+dust / display label only / drop rare costs.
