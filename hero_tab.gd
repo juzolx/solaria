@@ -27,6 +27,8 @@ var numbers := {}
 var path_label: RichTextLabel
 var respec_button: Button
 var _look_key := ""
+var title_pick: OptionButton  # 2.1 G4: the title you show (shared with the Guild Hall picker)
+var _title_key := ""
 
 func setup(m) -> void:
 	main = m
@@ -70,6 +72,26 @@ func setup(m) -> void:
 	cv.add_child(xp_bar)
 	xp_label = UI.label("", 11, UI.DIM)
 	cv.add_child(xp_label)
+
+	# ---- 2.1 G4 + G8: your title, and a picture of your hero to share ----
+	var trow := UI.hbox(8)
+	v.add_child(trow)
+	trow.add_child(UI.label("Title:", 12, UI.DIM))
+	title_pick = OptionButton.new()
+	title_pick.fit_to_longest_item = false  # long titles would push the screen wider than a phone
+	title_pick.clip_text = true
+	title_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_pick.custom_minimum_size = Vector2(0, UI.TAP)
+	title_pick.item_selected.connect(func(i: int):
+		main.codex.title = "" if i == 0 else title_pick.get_item_text(i)
+		main.codex.save()
+		main.refresh())
+	UI.tip(title_pick, "Titles come from deeds (Guild Hall) and from filling the Codex (Codex > Rewards). Looks only.")
+	trow.add_child(title_pick)
+	var share := UI.primary("Share", func(): ShareCard.share(main), UI.TEAL)
+	UI.tip(share, "Makes a picture of your hero to share.")
+	share.custom_minimum_size = Vector2(96, UI.TAP)
+	trow.add_child(share)
 
 	# ---- Points banner ----
 	points_panel = UI.panel(Color("#2a2010"), UI.GOLD, 8, 10, 1)
@@ -226,6 +248,7 @@ func refresh() -> void:
 	var cur := ClassTree.current(state)
 	role_label.text = String(cur["role_text"]) if not cur.is_empty() else String(state.class_info().get("blurb", ""))
 	level_label.text = "Lv %d" % state.level
+	_fill_titles()
 	for c in chips.get_children():
 		c.queue_free()
 	chips.add_child(UI.chip(state.race().to_upper(), Color(state.race_info().get("color", "#e8b14a"))))
@@ -339,3 +362,18 @@ func _build_special_rows(names: Array) -> void:
 		var txt := UI.rich(12)
 		c[1].add_child(txt)
 		special_rows[n] = [val, txt, bar, c[0]]
+
+## 2.1 G4: the title picker (rebuilt only when your titles or your pick change).
+func _fill_titles() -> void:
+	var c: Codex = main.codex
+	var list := c.titles()
+	var key := c.title + "|" + str(list.size())
+	if key == _title_key:
+		return
+	_title_key = key
+	title_pick.clear()
+	title_pick.add_item("(none)")
+	for t in list:
+		title_pick.add_item(t)
+		if t == c.title:
+			title_pick.select(title_pick.item_count - 1)

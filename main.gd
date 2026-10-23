@@ -47,6 +47,7 @@ var codex_tabs: TabContainer
 var bestiary_tab: BestiaryTab
 var collection_tab: CollectionTab
 var pet_book_tab: PetBookTab
+var rewards_tab: RewardsTab  # 2.1 G4: Codex collection rewards
 var stats_tab: StatsTab
 var achievements_tab: AchievementsTab
 var bounty_tab: BountyTab
@@ -775,6 +776,7 @@ func _build_ui() -> void:
 	bestiary_tab = BestiaryTab.new()
 	collection_tab = CollectionTab.new()
 	pet_book_tab = PetBookTab.new()
+	rewards_tab = RewardsTab.new()
 	stats_tab = StatsTab.new()
 	achievements_tab = AchievementsTab.new()
 	bounty_tab = BountyTab.new()
@@ -789,7 +791,7 @@ func _build_ui() -> void:
 			[town_tabs, shop_tab], [town_tabs, craft_tab], [town_tabs, wheel_tab], [town_tabs, inn_tab], [town_tabs, stash_tab],
 			[town_tabs, bounty_tab], [town_tabs, achievements_tab], [town_tabs, mail_tab], [town_tabs, clinic_tab], [town_tabs, church_tab], [town_tabs, cabin_tab],
 			[codex_tabs, bestiary_tab], [codex_tabs, collection_tab],
-			[codex_tabs, stats_tab], [codex_tabs, guide_tab], [codex_tabs, lore_tab], [codex_tabs, pet_book_tab],
+			[codex_tabs, stats_tab], [codex_tabs, guide_tab], [codex_tabs, lore_tab], [codex_tabs, pet_book_tab], [codex_tabs, rewards_tab],
 			[online_tabs, leaderboard_tab], [online_tabs, guild_tab], [online_tabs, raid_tab]]:
 		pair[1].setup(self)
 		(pair[0] as TabContainer).add_child(pair[1])

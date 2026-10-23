@@ -57,10 +57,16 @@ const SHOP_TITLES := [
 ]
 
 static func colors() -> Array:
-	return COLORS + SHOP_COLORS
+	return COLORS + SHOP_COLORS + Collections.colors()  # 2.1 G4: looks earned by filling the Codex
+
+## Every plate frame: deed and shop frames plus the Codex collection ones.
+static func frames() -> Array:
+	return FRAMES + Collections.frames()
 
 static func has(codex: Codex, entry: Dictionary) -> bool:
 	var need := String(entry["need"])
+	if need.begins_with("coll:"):
+		return Collections.has(codex, need.substr(5))  # 2.1 G4: a Codex collection reward
 	if need == "shop" or need == "store":
 		return codex.bought.has(key(entry))
 	return need == "" or codex.achievements.has(need)
@@ -111,6 +117,10 @@ static func _find(list: Array, id: String) -> Dictionary:
 
 ## The deed that unlocks an entry, for "Earn: ..." hints.
 static func need_name(entry: Dictionary) -> String:
+	var need := String(entry["need"])
+	if need.begins_with("coll:"):
+		var m := Collections.milestone(need.substr(5))
+		return ("%s %s" % [Collections.track_name(String(m["track"])), Collections.need_text(m)]) if not m.is_empty() else ""
 	for a in Codex.ACHIEVEMENTS:
 		if a["id"] == entry["need"]:
 			return String(a["name"])
@@ -126,7 +136,7 @@ static func name_color(codex: Codex) -> Color:
 static func frame(codex: Codex) -> Dictionary:
 	if codex == null:
 		return FRAMES[0]
-	var e := _find(FRAMES, codex.frame)
+	var e := _find(frames(), codex.frame)
 	return e if has(codex, e) else FRAMES[0]
 
 ## Draws your frame around a plate (the HP bar box) on any canvas item.

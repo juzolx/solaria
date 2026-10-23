@@ -150,6 +150,8 @@ var lore: Array = []     # Stage 3: lore pages found, in order (lore.gd)
 var bounties := {"day": "", "daily": [], "week": "", "weekly": []}
 var extra_titles: Array = []  # titles from feats, not deeds (a slain Calamity)
 var bought: Array = []  # Stage 4: looks bought in the Guild Hall shop ("color:id", "frame:id", "title:id")
+var coll_earned := {}    # 2.1 G4: collection milestone id -> date earned (collections.gd; titles and looks only)
+var classes_found := {}  # 2.1 G4: secret (hidden) and God class ids found by any hero -> date
 var deeds: Array = []   # achievement ids whose rewards wait at the Guild Hall
 var login := {"last": "", "streak": 0}
 var guide := {}         # guide page id -> true (unlocked)
@@ -183,13 +185,16 @@ func _from(d: Dictionary) -> void:
 	deeds = d.get("deeds", [])
 	extra_titles = d.get("extra_titles", [])
 	bought = d.get("bought", [])
+	coll_earned = d.get("coll_earned", {})
+	classes_found = d.get("classes_found", {})
 
 func save() -> void:
 	dirty = false
 	if path == "":
 		return
 	SaveIO.write(path, {"bestiary": bestiary, "stats": stats, "collection": collection, "pet_book": pet_book, "achievements": achievements,
-		"title": title, "name_color": name_color, "frame": frame, "lore": lore, "bounties": bounties, "login": login, "guide": guide, "deeds": deeds, "extra_titles": extra_titles, "bought": bought}, "codex")
+		"title": title, "name_color": name_color, "frame": frame, "lore": lore, "bounties": bounties, "login": login, "guide": guide, "deeds": deeds, "extra_titles": extra_titles, "bought": bought,
+		"coll_earned": coll_earned, "classes_found": classes_found}, "codex")
 
 static func delete() -> void:
 	SaveIO.delete_all(PATH)  # with its backups
@@ -350,6 +355,9 @@ func titles() -> Array:
 	for a in ACHIEVEMENTS:
 		if achievements.has(a["id"]) and a.has("title"):
 			out.append(a["title"])
+	for t in Collections.titles(self):  # 2.1 G4: Codex collection rewards
+		if not t in out:
+			out.append(t)
 	for t in extra_titles:
 		if not t in out:
 			out.append(t)

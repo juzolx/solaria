@@ -6,7 +6,7 @@ extends ScrollContainer
 var main
 var codex: Codex
 var box: VBoxContainer
-var shown := -1
+var shown := ""
 
 func setup(m) -> void:
 	main = m
@@ -18,11 +18,13 @@ func setup(m) -> void:
 	add_child(box)
 
 func refresh() -> void:
-	if shown == codex.collection.size():
+	var key := "%d|%d|%d" % [codex.collection.size(), codex.coll_earned.size(), codex.value("signatures")]
+	if shown == key:
 		return
-	shown = codex.collection.size()
+	shown = key
 	OnlineUI.clear(box)
-	box.add_child(UI.label("Uniques  %d / 15     Signatures  %d / %d" % [codex.value("uniques"), codex.value("signatures"), Monsters.all_monsters().size()], 15, UI.GOLD))
+	box.add_child(UI.label("Uniques  %d / %d     Signatures  %d / %d" % [codex.value("uniques"), Collections.total("uniques"), codex.value("signatures"), Monsters.all_monsters().size()], 15, UI.GOLD))
+	box.add_child(Collections.cards(codex, ["uniques", "signatures", "sets", "slots"]))  # 2.1 G4: progress and the next reward
 	for zi in GameData.ZONES.size():
 		var z: Dictionary = GameData.ZONES[zi]
 		box.add_child(UI.heading(str(z["name"])))
@@ -69,5 +71,5 @@ func _trophy(item: Dictionary, have: bool, source: String) -> PanelContainer:
 	s.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(s)
 	if have:
-		card.tooltip_text = ItemText.plain(item) + "\nFound " + str(codex.collection.get(item["name"], ""))
+		card.tooltip_text = ItemText.plain(item) + "\nFound " + str(codex.collection.get(String(item.get("def", "")), ""))
 	return card

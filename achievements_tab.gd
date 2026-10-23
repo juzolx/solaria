@@ -64,7 +64,7 @@ func setup(m) -> void:
 	scroll.add_child(box)
 
 func refresh() -> void:
-	var key := hash(str(codex.deeds) + str(codex.achievements.size()) + str(codex.stat("kills")) + str(main.state.in_town) + str(codex.bought.size()) + str(shop_open) + (str(main.state.gold) if shop_open else ""))
+	var key := hash(str(codex.deeds) + str(codex.coll_earned.size()) + codex.title + str(codex.achievements.size()) + str(codex.stat("kills")) + str(main.state.in_town) + str(codex.bought.size()) + str(shop_open) + (str(main.state.gold) if shop_open else ""))
 	if key == shown:
 		return
 	shown = key
@@ -76,7 +76,7 @@ func refresh() -> void:
 		if t == codex.title:
 			title_pick.select(title_pick.item_count - 1)
 	_fill_looks(color_pick, Cosmetics.colors(), codex.name_color)
-	_fill_looks(frame_pick, Cosmetics.FRAMES, codex.frame)
+	_fill_looks(frame_pick, Cosmetics.frames(), codex.frame)
 	OnlineUI.clear(box)
 	_looks_shop()
 	# Rewards waiting to be claimed come first
@@ -236,6 +236,8 @@ func _fill_looks(pick: OptionButton, list: Array, current: String) -> void:
 		var got := Cosmetics.has(codex, e)
 		if not got and String(e["need"]) == "store":
 			continue  # supporter looks stay hidden until owned
+		if not got and String(e["need"]).begins_with("coll:"):
+			continue  # 2.1 G4: Codex rewards show once earned (Codex > Rewards lists what's coming)
 		pick.add_item(String(e["name"]) if got else ("%s (looks shop)" % e["name"] if String(e["need"]) == "shop" else "%s (deed: %s)" % [e["name"], Cosmetics.need_name(e)]))
 		var i := pick.item_count - 1
 		pick.set_item_metadata(pick.item_count - 1, String(e["id"]))

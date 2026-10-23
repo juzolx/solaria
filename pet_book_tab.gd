@@ -19,7 +19,7 @@ func setup(m) -> void:
 	add_child(box)
 
 func refresh() -> void:
-	var key := "%d|%d" % [codex.pet_book.size(), codex.bestiary.size()]
+	var key := "%d|%d|%d|%s" % [codex.pet_book.size(), codex.bestiary.size(), codex.coll_earned.size(), str(codex.pet_book.values())]
 	if key == shown:
 		return
 	shown = key
@@ -34,6 +34,7 @@ func refresh() -> void:
 		if codex.pet_book.has(n):
 			owned += 1
 	box.add_child(UI.label("Owned  %d / %d     Seen  %d / %d" % [owned, all.size(), seen, all.size()], 15, UI.GOLD))
+	box.add_child(Collections.cards(codex, ["pets", "pet_epic", "pet_myth"]))  # 2.1 G4: progress and the next reward
 	box.add_child(UI.wrap("Pets are a real find: hatch an egg, or tame a beast as a Beast Tamer. Tiers go from Common to Mythic.", 12, UI.DIM))
 	var legend := UI.hbox(8)
 	box.add_child(legend)
