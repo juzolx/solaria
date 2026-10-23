@@ -56,12 +56,13 @@ var owned_products: Array = []  # Stage 4: App Store products bought (store.gd; 
 
 static func load_profile() -> Profile:
 	var p := Profile.new()
-	if FileAccess.file_exists(PATH):
-		var f := FileAccess.open(PATH, FileAccess.READ)
-		if f:
-			var d = f.get_var()
-			if typeof(d) == TYPE_DICTIONARY:
-				p._from(d)
+	var res := SaveIO.load_file(PATH, "profile")  # falls back to the backups (save_io.gd)
+	if res["data"] != null:
+		p._from(res["data"])
+	elif res["lost"]:
+		# A broken settings file must never look like an old epoch and wipe every hero
+		p.save_epoch = SAVE_EPOCH
+		p.towns_v1 = true
 	return p
 
 func _from(d: Dictionary) -> void:
@@ -161,18 +162,15 @@ func town_founded(n: int) -> bool:
 	return GameState.town_heroes(n) > 0 or (towns.get(str(n), {}) as Dictionary).has("hardcore")  # founded: it has heroes, or was named and given a mode
 
 func save() -> void:
-	var f := FileAccess.open(PATH, FileAccess.WRITE)
-	if f == null:
-		return
 	_store_town()
-	f.store_var({
+	SaveIO.write(PATH, {
 		"town": town, "towns": towns, "towns_v1": towns_v1, "paid_slots": paid_slots, "owned_products": owned_products,
 		"last_mode": last_mode, "sound_on": sound_on, "volume": volume, "music_volume": music_volume,
 		"fullscreen": fullscreen, "dark_art": dark_art, "battery_saver": battery_saver, "low_graphics": low_graphics, "dev_mode": dev_mode, "hc_best": hc_best, "hc_runs": hc_runs,
 		"player_name": player_name, "online": online, "path_choice": path_choice,
 		"active_slot": active_slot, "max_floor": max_floor, "stash": stash, "stash_level": stash_level,
 		"shake": shake, "damage_numbers": damage_numbers, "dmgnum_v2": true, "flashes": flashes, "text_size": text_size, "notes_seen": notes_seen, "skill_book": skill_book, "show_recap": show_recap, "colorblind": colorblind, "reduce_motion": reduce_motion, "haptics": haptics, "high_contrast": high_contrast, "mail_seen": mail_seen, "calamities": calamities, "save_epoch": save_epoch,
-	})
+	}, "profile")
 
 ## True when saves from an older epoch exist and must be wiped.
 func fresh_start_due() -> bool:
@@ -243,7 +241,7 @@ func record_hc_run(state: GameState) -> bool:
 	return new_best
 
 static func delete() -> void:
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))
+	SaveIO.delete_all(PATH)  # with its backups
 
 ## Next update: turns the old shared profile into towns after GameState.migrate_to_towns
 ## moved the hero saves (main._migrate_towns). Every town gets a copy of the old

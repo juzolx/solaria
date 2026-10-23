@@ -125,6 +125,8 @@ var volume := 0.8       # sound effects volume, 0..1
 var music_volume := 0.5 # music volume, 0..1
 var fullscreen := false
 var restored_backup := false  # true if the main save was damaged and the backup was used
+var save_pending := false     # R4: a save is waiting for the throttle (save_io.gd)
+var _last_write_ms := -1000000
 var _upgrade_key := ""
 var _upgrade_cache := {}
 
@@ -3188,9 +3190,15 @@ func craft_gear(slot: String) -> void:
 # Saving
 # =====================================================================
 
-func save_game() -> void:
+## force = write now even inside the throttle window (pause, quit, back to title).
+func save_game(force := false) -> void:
 	if not autosave:
 		return
+	if not force and SaveIO.should_defer(_last_write_ms):
+		save_pending = true
+		return
+	save_pending = false
+	_last_write_ms = SaveIO.now_ms()
 	var data := {
 		"version": GameData.SAVE_VERSION,
 		"floor": floor_num,
@@ -3302,25 +3310,19 @@ func save_game() -> void:
 		"lineage": Lineage.to_save(self),
 		"meta": meta(),
 	}
-	# Write to a temp file first, keep the last good save as a backup, then swap.
-	# If the game crashes mid-save, the old save or the backup is still intact.
+	# Atomic write with rolling backups (save_io.gd)
 	if codex.dirty:
 		codex.save()
 	if run_over:
 		return
-	var paths := save_paths()
-	var file := FileAccess.open(paths[2], FileAccess.WRITE)
-	if file == null:
-		return
-	file.store_var(data)
-	file.close()
-	var main_path := ProjectSettings.globalize_path(paths[0])
-	if FileAccess.file_exists(paths[0]):
-		var backup_path := ProjectSettings.globalize_path(paths[1])
-		if FileAccess.file_exists(paths[1]):
-			DirAccess.remove_absolute(backup_path)
-		DirAccess.rename_absolute(main_path, backup_path)
-	DirAccess.rename_absolute(ProjectSettings.globalize_path(paths[2]), main_path)
+	SaveIO.write(save_paths()[0], data, "hero")
+
+## Writes a save the throttle held back (main calls this every second and on pause).
+func flush_save() -> void:
+	if save_pending:
+		save_game(true)
+	if party != null:
+		party.flush()
 
 ## A short summary of this hero for the title screen.
 func meta() -> Dictionary:
@@ -3383,11 +3385,11 @@ static func migrate_to_towns() -> Array:
 
 ## Deletes only this hero's save (a fallen Hardcore hero, or Delete hero).
 func delete_own_saves() -> void:
+	save_pending = false  # a held-back save must not bring the hero back
 	delete_slot(slot)
 
 static func delete_slot(n: int) -> void:
-	for path in slot_paths(n):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	SaveIO.delete_all(slot_paths(n)[0])
 
 static func has_slot(n: int) -> bool:
 	var paths := slot_paths(n)
@@ -3398,9 +3400,7 @@ static func slot_meta(n: int) -> Dictionary:
 	if not has_slot(n):
 		return {}
 	var paths := slot_paths(n)
-	var data = _read_save(paths[0])
-	if data == null:
-		data = _read_save(paths[1])
+	var data = _read_save(paths[0])  # falls back to the backups itself
 	if data == null:
 		return {}
 	var d: Dictionary = data
@@ -3430,16 +3430,9 @@ static func migrate_legacy() -> Array:
 		moved.append(n)
 	return moved
 
+## A hero save with its backups as fallback (save_io.gd), or null.
 static func _read_save(path: String) -> Variant:
-	if not FileAccess.file_exists(path):
-		return null
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		return null
-	var data = file.get_var()
-	if typeof(data) != TYPE_DICTIONARY or not (data as Dictionary).has("floor"):
-		return null
-	return data
+	return SaveIO.read(path, "hero")
 
 ## Deletes every save file (used by "Reset save").
 static func delete_saves() -> void:
@@ -3449,19 +3442,15 @@ static func delete_saves() -> void:
 		for path in [OLD_SLOT_PATH % n, OLD_SLOT_BACKUP % n, OLD_SLOT_TEMP % n]:
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 		for t in range(1, GameData.MAX_TOWNS + 1):
-			for path in town_slot_paths(t, n):
-				DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+			SaveIO.delete_all(town_slot_paths(t, n)[0])
+	for path in [SAVE_PATH, HC_SAVE_PATH]:
+		SaveIO.delete_all(path)
 
-## Returns true if a save was found and loaded. Falls back to the backup if the main save is damaged.
+## Returns true if a save was found and loaded. Falls back to the backups if the main save is damaged.
 func load_game() -> bool:
-	var paths := save_paths()
-	var data = _read_save(paths[0])
-	if data == null:
-		for fallback in [paths[1], paths[2]]:
-			data = _read_save(fallback)
-			if data != null:
-				restored_backup = FileAccess.file_exists(paths[0])
-				break
+	var res := SaveIO.load_file(save_paths()[0], "hero")
+	var data = res["data"]
+	restored_backup = bool(res["restored"])
 	if data == null:
 		return false
 	# Choices waiting on screen belong to whoever was playing before
@@ -4543,6 +4532,8 @@ func _convert_old_skills(data: Dictionary) -> void:
 
 ## Sets who fights with you (other Regular heroes' slots) and loads them.
 func set_party(slots: Array) -> void:
+	if party != null:
+		party.flush()  # companions leaving write any held-back save first
 	if hardcore:
 		party_slots = []
 		party = null

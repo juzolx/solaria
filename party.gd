@@ -73,9 +73,14 @@ func heal_all() -> void:
 	for m in members:
 		m.hp = m.max_hp()
 
-func save_all() -> void:
+func save_all(force := false) -> void:
 	for m in members:
-		m.hero.save_game()
+		m.hero.save_game(force)
+
+## Writes any companion save the throttle held back (save_io.gd).
+func flush() -> void:
+	for m in members:
+		m.hero.flush_save()
 
 func hp_mult() -> float:
 	return 1.0 + HP_PER_MEMBER * members.size()

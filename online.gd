@@ -334,15 +334,11 @@ func cloud_code() -> String:
 static func pack_local(p: Profile) -> Dictionary:
 	var heroes := {}
 	for n in range(1, GameData.MAX_HEROES + 1):
-		var paths := GameState.slot_paths(n)
-		for path in [paths[0], paths[1]]:
-			if FileAccess.file_exists(path):
-				var f := FileAccess.open(path, FileAccess.READ)
-				heroes[n] = f.get_var()
-				break
-	var codex = null
-	if FileAccess.file_exists(Codex.PATH):
-		codex = FileAccess.open(Codex.PATH, FileAccess.READ).get_var()
+		if GameState.has_slot(n):
+			var h = SaveIO.read(GameState.slot_paths(n)[0], "hero")  # with backup fallback (save_io.gd)
+			if h != null:
+				heroes[n] = h
+	var codex = SaveIO.read(Codex.PATH, "codex")
 	return {"version": 1, "heroes": heroes, "codex": codex, "stash": p.stash, "stash_level": p.stash_level, "max_floor": p.max_floor,
 		"hc_best": p.hc_best, "hc_runs": p.hc_runs, "active_slot": p.active_slot}
 
@@ -352,13 +348,10 @@ static func unpack_local(p: Profile, bundle: Dictionary) -> void:
 		GameState.delete_slot(n)
 	var heroes: Dictionary = bundle.get("heroes", {})
 	for n in heroes:
-		var f := FileAccess.open(GameState.slot_paths(int(n))[0], FileAccess.WRITE)
-		f.store_var(heroes[n])
-		f.close()
-	if bundle.get("codex") != null:
-		var cf := FileAccess.open(Codex.PATH, FileAccess.WRITE)
-		cf.store_var(bundle["codex"])
-		cf.close()
+		if typeof(heroes[n]) == TYPE_DICTIONARY:
+			SaveIO.write(GameState.slot_paths(int(n))[0], heroes[n], "hero")
+	if typeof(bundle.get("codex")) == TYPE_DICTIONARY:
+		SaveIO.write(Codex.PATH, bundle["codex"], "codex")
 	p.stash = bundle.get("stash", [])
 	p.stash_level = int(bundle.get("stash_level", 0))
 	p.max_floor = maxi(p.max_floor, int(bundle.get("max_floor", 0)))
