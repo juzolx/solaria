@@ -1,0 +1,4 @@
+[
+ {"name":"tree_pine","seeds":[61,62,63],"neg":"3d render, realistic, photo, blurry, text, watermark, signature, frame, border, landscape, gradient background, multiple trees, cropped","prompt":"pixel art, single tall dark green pine tree sprite for a top-down rpg map, dusk lighting, isolated on a plain white background, whole tree visible, crisp pixels, dark outline"},
+ {"name":"tree_oak","seeds":[61,62,63],"neg":"3d render, realistic, photo, blurry, text, watermark, signature, frame, border, landscape, gradient background, multiple trees, cropped","prompt":"pixel art, single round leafy oak tree sprite for a top-down rpg map, dark green foliage, dusk lighting, isolated on a plain white background, whole tree visible, crisp pixels, dark outline"}
+]
