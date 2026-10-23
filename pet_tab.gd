@@ -50,14 +50,20 @@ func _owned() -> void:
 		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		h.add_child(pic)
-		h.add_child(UI.wrap("An egg. Something inside is moving. It hatches in %d floor%s.\nQuest: %s" % [int(e["floors"]), "" if int(e["floors"]) == 1 else "s", EggQuests.text(e)], 13, UI.TEXT))
+		var ev := UI.vbox(2)
+		ev.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(ev)
+		var etier := clampi(int(e.get("tier", 0)), 0, 5)
+		ev.add_child(UI.label(Menagerie.egg_name(e), 14, Color(Menagerie.TIER_COLORS[etier])))
+		ev.add_child(UI.wrap("Something inside is moving. It hatches in %d floor%s.\nQuest: %s" % [int(e["floors"]), "" if int(e["floors"]) == 1 else "s", EggQuests.text(e)], 13, UI.TEXT))
 	# Empty slots hint at what's out there (never how)
 	var empty := maxi(0, 3 - state.pets.size() - state.eggs.size())
 	for i in empty:
 		var c := UI.card(UI.BORDER)
 		box.add_child(c[0])
-		var hints := ["An empty nest. Some quests end with an egg.", "Some say a goblin trader once sold an egg. Nobody asked where he got it.",
-			"Wild things remember kindness."]
+		var hints := ["Old hunters swear there are nests in the deep halls, for the lucky.",
+			"Every region keeps its own eggs, they say. Few ever see one.",
+			"A nest is a rarer thing than most heroes meet in a lifetime."]
 		c[1].add_child(UI.wrap("?  " + hints[(i + state.pets.size()) % hints.size()], 12, UI.DIM))
 
 func _pet_row(p: Dictionary) -> PanelContainer:

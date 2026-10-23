@@ -3902,7 +3902,7 @@ func _room_cleared(was_boss := false) -> void:
 
 ## What's behind each door: one thing per room. After a boss, one door always hides
 ## Snik; before a boss floor every door leads to the boss.
-const DOOR_WEIGHTS := {"fight": 52, "elite": 12, "treasure": 9, "rest": 7, "altar": 5, "nest": 4, "stranger": 4, "beast": 3, "traveler": Travelers.DOOR_WEIGHT}
+const DOOR_WEIGHTS := {"fight": 52, "elite": 12, "treasure": 9, "rest": 7, "altar": 5, "stranger": 4, "beast": 3, "traveler": Travelers.DOOR_WEIGHT}
 
 func roll_doors(was_boss := false) -> Array:
 	var out: Array = []
@@ -3922,8 +3922,10 @@ func roll_doors(was_boss := false) -> Array:
 				if r < 0:
 					kind = String(k)
 					break
-		if (floor_num < 3 and kind in ["elite", "nest"]) or (floor_num < Travelers.FROM_FLOOR and kind == "traveler"):
+		if (floor_num < 3 and kind == "elite") or (floor_num < Travelers.FROM_FLOOR and kind == "traveler"):
 			kind = "fight"
+		if floor_num >= 3 and randf() * 100.0 < Menagerie.NEST_DOOR_CHANCE:
+			kind = "nest"  # Juzo: a nest is the second-rarest find, after a Calamity
 		out.append(Rifts.maybe_door(self, kind))  # very rarely: a hidden portal
 	if was_boss and not "camp" in out:
 		out[randi() % 3] = "camp"  # 0.13+: a Descenders' Camp waits after every boss (camp.gd)
@@ -4111,9 +4113,6 @@ func _make_merchant() -> void:
 	scrolls.shuffle()
 	var id: String = scrolls[0]
 	merchant.append({"kind": "scroll", "id": id, "price": price(here * {"box": 5, "key": 2, "tome": 3}.get(id, 2)), "sold": false})
-	# Very rarely Snik has an egg (nobody asks where he got it)
-	if randf() * 100.0 < Menagerie.EGG_SNIK_CHANCE:
-		merchant.append({"kind": "scroll", "id": "egg", "price": price(here * 8), "sold": false})
 
 ## What Snik would pay for your junk: unlocked Common and Uncommon gear in the bag.
 func goblin_junk() -> Array:

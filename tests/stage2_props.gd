@@ -88,16 +88,13 @@ func _initialize() -> void:
 		var b := room("beast")
 		Halls.interact(b, 0)
 		eggs += b.eggs.size()
-	check(eggs > 4 and eggs < 30, "dying beasts sometimes leave eggs, about 1 in 4 (%d/60)" % eggs)
+	check(eggs == 0, "dying beasts leave no eggs (%d/60)" % eggs)
 	var nests := 0
-	var mothers := 0
-	for i in 60:
+	for i in 20:
 		var ns := room("nest")
 		Halls.interact(ns, 0)
 		nests += ns.eggs.size()
-		if ns.eggs.is_empty() and ns.enemy_tier >= Monsters.EPIC and not ns.door_pending():
-			mothers += 1
-	check(nests > 1 and nests < 22 and mothers > 30, "nests: eggs (%d) or an angry mother (%d)" % [nests, mothers])
+	check(nests == 20, "a nest always holds an egg (%d/20)" % nests)
 	var al := room("altar")
 	check(Halls.interact(al, 0) != "" and al.door_pending(), "the shrine does something")
 	# Auto handles the room by itself

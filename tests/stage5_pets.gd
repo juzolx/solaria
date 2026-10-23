@@ -42,6 +42,6 @@ func _initialize() -> void:
 	g.events.clear()
 	g._note_find(u.duplicate())
 	check(g.events.is_empty(), "the same Unique again: no fanfare")
-	check(Menagerie.EGG_SNIK_CHANCE <= 1.0 and Menagerie.EGG_SPARE_CHANCE <= 0.2, "eggs are rare")
+	check(Menagerie.NEST_DOOR_CHANCE <= 0.1, "nests are rare")
 	print("STAGE5 PET TESTS DONE, failures: ", fails)
 	quit()
