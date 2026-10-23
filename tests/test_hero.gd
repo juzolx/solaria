@@ -7,7 +7,7 @@ const TEST_DIR := "solaria_claude_test"
 const SHOTS := "res://shots"
 
 static func safe() -> bool:
-	if OS.get_user_data_dir().contains(TEST_DIR):
+	if OS.get_user_data_dir().contains(TEST_DIR) or OS.get_user_data_dir().contains("solaria_test_"):  # worktrees use solaria_test_<name>
 		return true
 	push_error("Refusing to run: user data is %s, not the test folder. Put override.cfg in place first." % OS.get_user_data_dir())
 	return false
