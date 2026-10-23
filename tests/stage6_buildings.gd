@@ -148,7 +148,9 @@ func _initialize() -> void:
 	check(src.count("Church.reapply_power(item)") == 2, "reroll and Wheel win both re-apply the curse power")
 	g.auto_salvage = 4
 	check(not g.filter_salvages(cr), "auto-salvage never takes a Cursed drop")
+	LootRules.test_ignore_upgrades = true  # with nothing worn every drop is an upgrade, and upgrades are always kept
 	check(g.filter_salvages(GameData.make_item("Legs", 2, 30, 0)), "...but still takes a plain one")
+	LootRules.test_ignore_upgrades = false
 	g.auto_salvage = -1
 	var bag0 := g.bag.size()
 	g._give_item(cr)
