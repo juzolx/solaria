@@ -68,7 +68,8 @@ D10: floor 100 in 4-6 hours (sim now 5.7 h median; smooth the 51-100 wall).
 Buildings (Juzo, Oct 23): Mailbox no levels; cleanse CAN fail (keep); Church and
 Cabin must be BUILT first (not there from the start); costs flat is fine.
 Loot: upgrades always kept; "stop at floor N" pauses Auto; team line-ups from any hero.
-God classes (Juzo): about one rank step above SS, not ~3x. Pet eggs: Epic and Mythic
+God classes (Juzo): about one rank step above SS, not ~3x. Top hidden classes at 75
+must stay a bit BELOW God classes (tone them down; Juzo, Oct 23). Pet eggs: Epic and Mythic
 a little more common (minimal bump); nests stay rare.
 Workflow: claude/experts.md (10-round Fable research loops -> expert agents -> Fable checker loop).
 
