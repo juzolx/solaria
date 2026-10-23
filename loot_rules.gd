@@ -38,8 +38,8 @@ static func rules(g: GameState) -> Dictionary:
 		lf["slots"] = old.get("slots", {})
 		lf["weaker"] = bool(old.get("weaker", false))
 		lf["below_gs"] = bool(old.get("below_gs", false))
-	if lf.size() < 7:  # a key missing (a save from a test build): fill it in
-		var d := defaults()
+	var d := defaults()
+	if lf.size() < d.size():  # a key missing (a save from a test build): fill it in
 		for k in d:
 			if not lf.has(k):
 				lf[k] = d[k]

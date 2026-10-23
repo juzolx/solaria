@@ -124,16 +124,19 @@ static func tick(g: GameState) -> void:
 	if not g.autoplay or g.run_over:
 		return
 	var s := settings(g)
-	if bool(s["elixir_boss"]) and g.enemy_is_boss and g.enemy_hp > 0:
+	if not g.enemy_is_boss:
+		fired.erase("boss_elixir")  # the next boss gets one again
+	elif bool(s["elixir_boss"]) and g.enemy_hp > 0 and not fired.has("boss_elixir"):
 		var id := elixir_to_drink(g)
 		if id != "" and g.drink_elixir(id):
+			fired["boss_elixir"] = true  # one elixir per boss
 			g.events.append({"type": "toast", "text": "Auto drank %s before the boss." % GameData.ELIXIRS[id]["name"]})
 	# re-arm rules whose condition has cleared
 	var holding := {}
 	for c in conditions(g):
 		holding[c[0]] = true
 	for k in fired.keys():
-		if k != "floor" and not holding.has(k):
+		if k != "floor" and k != "boss_elixir" and not holding.has(k):
 			fired.erase(k)
 	for k in said.keys():
 		if not holding.has(k):

@@ -2,7 +2,7 @@ class_name LootFilter
 extends Overlay
 ## 2.1: the one Loot filter screen. Every rule for new drops in one place (the rules
 ## themselves live in loot_rules.gd). Opened from the Bag tab, the Autoplay and
-## Auto-dive panels. Locked items, set pieces and Legendary-or-better are never touched.
+## Auto-dive panels. Locked items, set pieces, upgrades and Legendary-or-better are never touched.
 
 var m
 var state: GameState

@@ -221,6 +221,10 @@ func _auto_dive() -> void:
 	AutoDive.set_value(g, "elixir_boss", true)
 	AutoDive.tick(g)
 	check(int(g.elixirs.get("might", 0)) > 0 and g.supply_carried("might") == 0, "elixir rule: drinks one before the boss")
+	g.elixir_pack = {"iron": 1, "fortune": 1}
+	AutoDive.tick(g)
+	AutoDive.tick(g)
+	check(g.supply_carried("iron") == 1 and g.supply_carried("fortune") == 1, "only one elixir per boss, the rest stay in the pack")
 	# the pause rules still pause (before bosses)
 	AutoRules.toggle(g, "stop_boss")
 	check(AutoRules.check(g).begins_with("a boss"), "stop before bosses still pauses Auto")

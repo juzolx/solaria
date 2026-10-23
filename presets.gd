@@ -339,7 +339,7 @@ static func apply_pending_team(g: GameState, comps: Array) -> String:
 	if g.hardcore:
 		return "%s is Hardcore and fights alone." % who
 	if not g.in_town or g.run_over:
-		return "%s is in the dungeon: the team changes once they're back in town." % who
+		return "%s is in the dungeon. Use this line-up again once they're back in town." % who
 	var keep: Array = []
 	for n in comps:
 		if int(n) != g.slot and not keep.has(int(n)) and GameState.has_slot(int(n)):
