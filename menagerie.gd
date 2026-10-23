@@ -11,12 +11,12 @@ extends RefCounted
 ## Clinic) before they can fight again.
 ##
 ## A pet: {"id", "name" (shown; the species' name when it joined), "species" (monster id, Monsters.name_of), "art", "tier", "level", "kills", "hurt": floors left to rest (0 = fine), "from"}
-## An egg: {"id", "floors": floors left until it hatches, "from", "zone": region index, "tier": rank}
+## An egg: {"id", "floors": floors left until it hatches, "from", "zone": region id (GameData.ZONES[i]["id"]; older eggs: the index), "tier": rank}
 
 const TAMER_OUT := 3
 const OTHERS_OUT := 1
 const CATCH_AT := 80.0          # the monster's run-away chance must be over this
-const CATCH_BASE := 12.0        # % to catch right at the line, +3% per point above it (next update: rarer)
+const CATCH_BASE := 12.0        # % to catch right at the line, +3% per point above it
 const CATCH_PER_POINT := 3.0
 const WHISPER_CATCH := 20.0     # a Beast Whisperer on the team calms the beast first
 const WHISPER_POWER := 1.25     # and pets fight harder with their song
@@ -136,7 +136,7 @@ static func try_catch(g: GameState) -> bool:
 			"Your Beast Whisperer hums it calm. " if helper else "", p["name"], "" if int(p["id"]) in g.pets_out else " (waiting at home: your team is full)"])
 		g.events.append({"type": "mini_event", "kind": "pet", "title": "CAUGHT!", "sub": "%s joins you" % p["name"]})
 		g.feats["caught"] = int(g.feats.get("caught", 0)) + 1
-		g.tip("caught", "Pets fight beside you and grow with every kill. Pick who comes along in Hero > Pets. Pets are never lost: when they go down they come home hurt and rest.")
+		g.tip("caught", "Pets fight beside you and grow with every kill. Pick who comes along in Character > Pets. Pets are never lost: when they go down they come home hurt and rest.")
 		Lineage._move_on(g)
 		return true
 	g.say("[color=#f87171]The %s slips your grip and lashes out![/color]" % g.enemy_name)
@@ -201,25 +201,39 @@ static func on_floor(g: GameState) -> void:
 ## monsters), and each egg's rank shows the moment you find it.
 static func give_egg(g: GameState, from: String, zone := -1, tier := -1) -> void:
 	var zi := GameData.zone_index(g.floor_num) if zone < 0 else zone
-	var egg := {"id": g._new_id(), "floors": EGG_FLOORS, "from": from, "zone": zi, "tier": roll_tier() if tier < 0 else tier}
+	var egg := {"id": g._new_id(), "floors": EGG_FLOORS, "from": from, "zone": String(GameData.ZONES[zi]["id"]), "tier": roll_tier() if tier < 0 else tier}
 	EggQuests.assign(egg)  # a little care before it hatches
 	g.eggs.append(egg)
 	var col := String(TIER_COLORS[int(egg["tier"])])
 	g.say("[color=%s]A %s![/color] Something inside is moving. It hatches after %d floors." % [col, egg_name(egg), EGG_FLOORS])
 	g.events.append({"type": "mini_event", "kind": "pet", "title": "AN EGG!", "sub": egg_name(egg)})
-	g.tip("egg", "Eggs hatch after a few cleared floors into one of that region's monsters, at the egg's rank. Any hero in your town can keep the pet.")
+	g.tip("egg", "Eggs hatch after a few cleared floors into one of that region's monsters, at the egg's rank.")
 
-## "Rare Mossy Hollows Egg"
+## The region index an egg belongs to (-1 = none). New eggs keep the region id
+## (stable if the zone list ever changes); older eggs kept the index.
+static func egg_zone(egg: Dictionary) -> int:
+	var z = egg.get("zone", -1)
+	if typeof(z) == TYPE_STRING:
+		for i in GameData.ZONES.size():
+			if String(GameData.ZONES[i]["id"]) == String(z):
+				return i
+		return -1
+	var zi := int(z) if typeof(z) in [TYPE_INT, TYPE_FLOAT] else -1
+	return zi if zi >= 0 and zi < GameData.ZONES.size() else -1
+
+## "Rare Egg of Mossy Hollows", "Epic Egg of The Hushwood"
 static func egg_name(egg: Dictionary) -> String:
-	var zi := int(egg.get("zone", -1))
-	var where := String(GameData.ZONES[zi]["name"]) + " " if zi >= 0 and zi < GameData.ZONES.size() else ""
-	return "%s %sEgg" % [TIER_NAMES[int(egg.get("tier", 0))], where] if egg.has("tier") else "Strange Egg"
+	if not egg.has("tier"):
+		return "Strange Egg"
+	var zi := egg_zone(egg)
+	var rank := String(TIER_NAMES[int(egg.get("tier", 0))])
+	return "%s Egg of %s" % [rank, String(GameData.ZONES[zi]["name"])] if zi >= 0 else "%s Egg" % rank
 
 ## The pet inside: one of the egg's region's monsters, at the egg's rank.
 static func hatch(g: GameState, egg := {}) -> Dictionary:
 	var pool := Monsters.all_monsters()
-	var zi := int(egg.get("zone", -1))
-	if zi >= 0 and zi < GameData.ZONES.size():
+	var zi := egg_zone(egg)
+	if zi >= 0:
 		var z: Dictionary = GameData.ZONES[zi]
 		pool = []
 		for e in z["enemies"]:
@@ -286,7 +300,9 @@ static func texture(p: Dictionary) -> Texture2D:
 const TIER_NAMES := ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"]
 
 ## Next update: hatch odds. Pets are a real find, and a Mythic is a legend.
-const HATCH_ODDS := [50.0, 28.0, 14.0, 6.0, 1.7, 0.3]   # Common .. Mythic, in %
+## Juzo (Oct 23): Epic and Mythic a little more common (Epic 6 -> 8, Mythic 0.3 -> 0.5;
+## Common 50 -> 48, Uncommon 28 -> 27.8). Nests themselves stay as rare (NEST_DOOR_CHANCE).
+const HATCH_ODDS := [48.0, 27.8, 14.0, 8.0, 1.7, 0.5]   # Common .. Mythic, in % (sums to 100)
 
 static func roll_tier() -> int:
 	var roll := randf() * 100.0

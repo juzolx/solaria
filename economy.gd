@@ -38,7 +38,14 @@ static func give_dust(g: GameState, n: int) -> void:
 		return
 	g.dust += n
 	g.say("[color=#c4b5fd]+%d dust[/color]" % n)
-	g.tip("dust", "Dust! Use it to craft skills (Character > Skills), Set items (Town > Smith) and the last upgrades of your best gear.")
+	g.tip("dust", "Dust! Use it to craft skills (Character > Skills), Set items (Town > Blacksmith) and the last upgrades of your best gear.")
+
+## Dust from salvaging this item: Epic and Legendary finds only. Anything
+## bought with gold (marked "bought") salvages for scrap only.
+static func salvage_dust(item: Dictionary) -> int:
+	if bool(item.get("bought", false)):
+		return 0
+	return int(SALVAGE_DUST.get(int(item["rarity"]), 0))
 
 ## Gives scrap and says so (plain chests).
 static func give_scrap(g: GameState, n: int) -> void:
@@ -60,8 +67,13 @@ static func set_zone_reached(g: GameState, set_id: String) -> bool:
 	var want := int(GameData.SETS[set_id]["zone"])
 	var zones := mini(GameData.ZONES.size(), floori((maxi(1, g.best_floor) - 1) / float(GameData.ZONE_FLOORS)) + 1)
 	for k in zones:
-		if GameData.zone_index(k * GameData.ZONE_FLOORS + 1) == want:
-			return true
+		if k < Realms.BASE_ZONES:
+			if k == want:
+				return true
+		elif k - Realms.BASE_ZONES < g.realm_order.size():
+			# a realm counts only once this hero has chosen (and so entered) it
+			if Realms.zone_for_id(String(g.realm_order[k - Realms.BASE_ZONES])) == want:
+				return true
 	return false
 
 ## Scrap for the next crafted bag (the old materials part is folded in).

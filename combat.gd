@@ -58,7 +58,7 @@ static func profile(g: GameState) -> Dictionary:
 	if g.has_mod("Elemental"):
 		var all := ELEMENTS.filter(func(x): return not x in weak and not x in resist and x != "Physical")
 		if not all.is_empty():
-			resist.append(all[hash(g.enemy_name + str(g.floor_num)) % all.size()])
+			resist.append(all[hash(g.enemy_species + str(g.floor_num)) % all.size()])
 	# Bosses and trials are never weak to more than one thing
 	if g.enemy_is_boss and weak.size() > 1:
 		weak = weak.slice(0, 1)

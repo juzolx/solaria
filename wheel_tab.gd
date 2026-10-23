@@ -1,6 +1,6 @@
 class_name WheelTab
 extends BoxContainer
-## Town > Wheel: Fortune's Wheel. Put an item on it: win and it comes back one
+## Town > Tavern: Fortune's Wheel. Put an item on it: win and it comes back one
 ## rarity higher, lose and it's gone for good. Rarer items have worse odds.
 ## Legendary and better, and locked items, can't go on the wheel.
 
@@ -512,12 +512,15 @@ func show_odds() -> void:
 		int(round(WheelTables.RARE_PER_POINT * 100)), int(WheelTables.RARE_CAP)], 12, UI.DIM))
 	var lt := UI.rich(13)
 	lines = []
-	for row in WheelTables.legendary_rows(fort):
+	var rows := WheelTables.legendary_rows(fort)
+	for i in rows.size():
+		var row: Dictionary = rows[i]
 		var col: String = "#facc15" if row["tier"] == "top" else ("#fb923c" if row["tier"] == "rare" else UI.hex(UI.TEXT))
-		lines.append("[color=%s]%s[/color]\n   yours [b]%s[/b]   [color=%s]base %s[/color]" % [col, row["name"], WheelTables.pct_text(row["pct"]), UI.hex(UI.DIM), WheelTables.pct_text(row["base_pct"])])
+		var amount := WheelTables.prize_amount(state, WheelTables.LEGENDARY_PRIZES[i])
+		lines.append("[color=%s]%s[/color]  [color=%s]%s[/color]\n   yours [b]%s[/b]   [color=%s]base %s[/color]" % [col, row["name"], UI.hex(UI.DIM), amount, WheelTables.pct_text(row["pct"]), UI.hex(UI.DIM), WheelTables.pct_text(row["base_pct"])])
 	lt.text = "\n".join(lines)
 	o.content.add_child(lt)
-	o.content.add_child(UI.wrap("Spins are paid with gold found in the dungeon. They are never sold for real money.", 12, UI.DIM))
+	o.content.add_child(UI.wrap("Amounts are for your deepest floor (%d): gold and scrap prizes grow the deeper you go. A spin needs %d free bag slots. Spins are paid with gold found in the dungeon. They are never sold for real money." % [state.best_floor, WheelTables.bag_room_needed()], 12, UI.DIM))
 	var close := UI.primary("Close", o.close)
 	close.custom_minimum_size = Vector2(0, UI.TAP)
 	o.content.add_child(close)

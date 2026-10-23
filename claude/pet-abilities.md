@@ -2,7 +2,7 @@
 
 Code: `pet_abilities.gd` (all data tables + effects). Hooks: `Menagerie.turn` (after each
 pet's hit), `Menagerie.on_kill`, and one line in `GameState._bonus_sources` (passives count
-like gear/race bonuses). UI: Hero > Pets (each pet lists what it knows, plus locked lines),
+like gear/race bonuses). UI: Character > Pets (each pet lists what it knows, plus locked lines),
 Codex > Pets (rank table, each family's passive and trick, each region's Mythic signature,
 hold a pet for its own). Test: `tests/stage6_pet_abilities.gd`.
 
@@ -20,6 +20,22 @@ play uses it with no buttons.
 | Legendary | the trick more often and stronger |
 | Mythic | the home region's signature |
 
+## How often each rank hatches (Menagerie.HATCH_ODDS)
+
+Juzo (Oct 23): Epic and Mythic a little more common, nests themselves exactly as rare
+as before (Menagerie.NEST_DOOR_CHANCE unchanged).
+
+| Rank | Before | Now |
+|---|---|---|
+| Common | 50% | 48% |
+| Uncommon | 28% | 27.8% |
+| Rare | 14% | 14% |
+| Epic | 6% | 8% |
+| Legendary | 1.7% | 1.7% |
+| Mythic | 0.3% | 0.5% |
+
+A finished egg quest (EggQuests) still raises the hatch one rank (at least Rare).
+
 ## Families (the monster's shape)
 
 | Family | Passive (Common .. Mythic) | Trick (Epic / Legendary+) |
@@ -32,6 +48,10 @@ play uses it with no buttons.
 | Calamity (Calamity pets) | Dread: +6% Defense | Ruin: 20/25% a turn, extra hit 2x |
 
 ## Mythic signatures (by region id)
+
+"Opens" / "at fight start" below means the pet's first turn of each fight (the in-game
+texts say "On its first turn each fight"). Pet shields are cleared at the start of every
+fight (ClassTree.on_fight_start), even when the pet stayed home.
 
 | Region | Signature |
 |---|---|

@@ -19,7 +19,7 @@ func _old_hero(n: int, nm: String, best: int) -> void:
 	g.save_game()
 	var p := GameState.town_slot_paths(1, n)
 	DirAccess.rename_absolute(ProjectSettings.globalize_path(p[0]), ProjectSettings.globalize_path(GameState.OLD_SLOT_PATH % n))
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(p[1]))
+	SaveIO.delete_all(p[0])  # old (pre-towns) saves had no SaveIO backups or daily copy
 
 func _initialize() -> void:
 	if not TestHero.safe():

@@ -63,7 +63,7 @@ const ACHIEVEMENTS := [
 	{"id": "set1", "name": "Apprentice Smith", "text": "Craft a Set item", "key": "sets_crafted", "target": 1, "reward": {"scrap": 40}},
 	{"id": "setfull", "name": "Matching Outfit", "text": "Wear a full 3-piece set", "key": "set_worn", "target": 3, "reward": {"gold": 1500}, "title": "Well-Dressed"},
 	{"id": "up10", "name": "Overclocked", "text": "Upgrade an item to +10", "key": "max_upgrade", "target": 10, "reward": {"scrap": 100}},
-	{"id": "reroll10", "name": "Gambler", "text": "Win 10 rerolls", "key": "rerolls_won", "target": 10, "reward": {"scrap": 60}},
+	{"id": "reroll10", "name": "Lucky Hands", "text": "Win 10 rerolls", "key": "rerolls_won", "target": 10, "reward": {"scrap": 60}},
 	# Dungeon events
 	{"id": "gob1", "name": "Goblin Mugger", "text": "Catch a treasure goblin", "key": "goblins", "target": 1, "reward": {"potions": 2}},
 	{"id": "gob10", "name": "Goblin Hunter", "text": "Catch 10 treasure goblins", "key": "goblins", "target": 10, "reward": {"gold": 1500}, "title": "Goblin Hunter"},

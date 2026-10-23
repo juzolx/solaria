@@ -126,8 +126,22 @@ func _initialize() -> void:
 	hero_img.fill_rect(Rect2i(1, 1, 5, 6), Color.RED)
 	var ch := Sprites.chunky(hero_img, 2)
 	check(ch.get_size() == hero_img.get_size(), "chunky keeps the size")
-	check(ch.get_pixel(2, 2) == ch.get_pixel(3, 3) and ch.get_pixel(2, 2).a8 == 255, "chunky makes 2x2 blocks")
-	check(Sprites.chunky(hero_img, 1) == hero_img, "pixel size 1 leaves the hero alone")
+	var blocks_ok := true
+	for by in range(0, 8, 2):
+		for bx in range(0, 8, 2):
+			var c0 := ch.get_pixel(bx, by)
+			for dy in 2:
+				for dx in 2:
+					blocks_ok = blocks_ok and ch.get_pixel(bx + dx, by + dy) == c0
+	check(blocks_ok, "chunky makes every 2x2 block one color")
+	check(ch.get_pixel(2, 2) == Color.RED and ch.get_pixel(6, 6).a8 == 0, "chunky keeps solid blocks solid and clear blocks clear")
+	var before := hero_img.get_data()
+	check(Sprites.chunky(hero_img, 1).get_data() == before, "pixel size 1 leaves the hero's pixels alone")
+	check(hero_img.get_data() == before, "chunky never changes its source image")
+	var spec := {"body": "male"}
+	var spec2 := Sprites._px_spec(spec)
+	check(not spec.has("px") or Sprites.HERO_PIXEL <= 1, "_px_spec doesn't change the caller's spec")
+	check((spec2.get("px", 1) == Sprites.HERO_PIXEL) or Sprites.HERO_PIXEL <= 1, "_px_spec adds the pixel size to its copy")
 
 	print("ART RULES DONE, failures: ", fails)
 	quit()

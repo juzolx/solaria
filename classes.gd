@@ -62,7 +62,7 @@ const CLASSES := {
 	"Trickster": {"color": "#a8ca58", "role": "Chaos", "atk": 1.35, "hp": 1.0, "def": 1.0, "dodge": 10,
 		"tags": ["Trick", "Shadow"], "start": ["pocket_sand", "light_fingers"], "build": {"AGI": 2, "DEX": 2, "LUK": 1},
 		"look": {"Weapon": "dagger", "Helmet": "cap", "Chest": "tunic", "Legs": "leggings", "Feet": "boots"},
-		"blurb": "Confuses monsters, steals gold and loves a gamble. 10% dodge, +gold."},
+		"blurb": "Confuses monsters, steals gold and loves long odds. 10% dodge, +gold."},
 	"Ranger": {"color": "#16a34a", "role": "Marksman", "atk": 1.15, "hp": 1.05, "def": 1.0, "dodge": 6,
 		"tags": ["Nature", "Storm"], "start": ["piercing_shot", "keen_eye"], "build": {"DEX": 3, "AGI": 1, "STR": 1},
 		"look": {"Weapon": "bow", "Helmet": "hood", "Chest": "tunic", "Legs": "leggings", "Feet": "boots"},

@@ -185,7 +185,7 @@ func _sz(t: Texture2D) -> String:
 func _monster_entry(m: Dictionary, boss: bool, used: Dictionary) -> Dictionary:
 	var key: String = m.get("art", "")
 	if key == "":
-		key = Sprites.enemy_key(m["name"], boss)
+		key = ("boss_" if boss else "") + String(m.get("id", ""))  # art goes by id, like the game
 	used[key] = true
 	var raw := _load_img("res://art/enemies/%s.png" % key)
 	var graded: Image = DarkGrade.image(raw) if raw != null else null

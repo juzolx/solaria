@@ -54,7 +54,7 @@ const NAMES := {
 	# Trickster
 	"rogue": ["Backstab", "crit"], "assassin": ["Assassinate", "execute"], "nightblade": ["Nightfall", "crit"],
 	"kingslayer": ["Regicide", "execute"], "shadowdancer": ["Shadow Dance", "veil"], "god_phantom": ["Phantom's Embrace", "veil"],
-	"mirage": ["Hall of Mirrors", "veil"], "gambler": ["Double or Nothing", "fortune"], "illusionist": ["Bewilder", "charm"],
+	"mirage": ["Hall of Mirrors", "veil"], "gambler": ["Twist of Fate", "fortune"], "illusionist": ["Bewilder", "charm"],
 	"grand_illusionist": ["Grand Illusion", "charm"], "dreamweaver": ["Sweet Dreams", "charm"], "pirate": ["Plunder", "fortune"],
 	"corsair_king": ["Broadside", "flurry"], "fortune_s_fool": ["Lucky Break", "fortune"],
 	# Ranger
@@ -94,6 +94,23 @@ const KEY_TEMPLATE := {"atk": "strike", "crit": "crit", "double_strike": "flurry
 const NOUNS := {"strike": "Blow", "crit": "Edge", "flurry": "Flurry", "drain": "Hunger", "bulwark": "Ward", "mend": "Grace",
 	"burst": "Burst", "veil": "Veil", "execute": "End", "rage": "Fury", "fortune": "Fortune", "charm": "Charm", "summon": "Call",
 	"song": "Anthem", "time": "Moment"}
+## Used instead when the class name already holds the noun (no "Fortune's Fortune").
+const ALT_NOUNS := {"strike": "Strike", "crit": "Cut", "flurry": "Storm", "drain": "Thirst", "bulwark": "Bastion", "mend": "Mercy",
+	"burst": "Blast", "veil": "Shroud", "execute": "Verdict", "rage": "Wrath", "fortune": "Windfall", "charm": "Allure", "summon": "Summons",
+	"song": "Refrain", "time": "Hour"}
+
+## "<Class>'s <Noun>" for a class with no hand-written signature name.
+static func auto_name(class_name_text: String, tpl: String) -> String:
+	var noun := String(NOUNS.get(tpl, "Art"))
+	var words: Array = []
+	for w in class_name_text.to_lower().split(" ", false):
+		words.append(w.trim_suffix("'s"))
+	if noun.to_lower() in words:
+		noun = String(ALT_NOUNS.get(tpl, "Art"))
+	if noun.to_lower() in words:
+		noun = "Art"
+	return "%s's %s" % [class_name_text, noun]
+
 const TEMPLATE_TEXT := {
 	"strike": "A huge blow for %sx damage.",
 	"crit": "A guaranteed crit for %sx damage.",
@@ -157,7 +174,7 @@ static func _f(v: float) -> String:
 static func _build(n: Dictionary) -> Dictionary:
 	var nm: Array = NAMES.get(String(n["id"]), [])
 	var tpl := String(nm[1]) if nm.size() > 1 and String(nm[1]) != "" else String(KEY_TEMPLATE.get(ClassTree._main_key(n), "strike"))
-	var skill_name := String(nm[0]) if not nm.is_empty() else "%s's %s" % [n["name"], NOUNS.get(tpl, "Art")]
+	var skill_name := String(nm[0]) if not nm.is_empty() else auto_name(String(n["name"]), tpl)
 	var t := clampi(int(n["tier"]), 1, 3)
 	var p := float(TIER_POWER[t - 1]) * float(RANK_POWER.get(ClassTree.rank_of(n), 1.0))
 	var tags := _tags(n)

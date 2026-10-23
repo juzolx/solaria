@@ -266,7 +266,7 @@ func _cloud_backup() -> void:
 
 func _restore_popup() -> void:
 	var o := Overlay.new().open(main, "Restore from the cloud", 460.0, UI.RED)
-	var t := UI.label("Enter your backup code. This replaces the heroes, Codex and stash on this device. The game restarts after.", 13, UI.TEXT)
+	var t := UI.label("Enter your backup code. Every town in the backup gets back its heroes and stash, and the Codex is replaced. Towns that aren't in the backup are kept as they are. The game restarts after.", 13, UI.TEXT)
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	o.content.add_child(t)
 	var edit := LineEdit.new()

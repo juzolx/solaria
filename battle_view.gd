@@ -1260,8 +1260,9 @@ func _hero_canvas() -> Rect2:
 ## With companions around, everyone is drawn a size smaller so the group fits.
 func _hero_unit() -> int:
 	# Sprites.HERO_PIXEL 2: hero pixels are 2x2 blocks like the monsters', so they share one unit
+	var room := (_team_ground() - _ground() - 18.0) * _scr() / (31.0 * Sprites.HD)
 	if Sprites.HERO_PIXEL > 1 and hero_art.has("lpc"):
-		return _unit()
+		return clampi(_unit(), 1, maxi(1, floori(room)))  # still never covers the monster's feet and HP bar
 	var un := maxi(1, _unit() - (1 if _party_members().size() > 0 and _unit() > 2 else 0))
 	# LPC heroes are drawn smaller (about 48 of 64 pixels tall): one size up
 	# keeps them as big as the monsters while staying on whole pixels
@@ -1269,8 +1270,7 @@ func _hero_unit() -> int:
 		un = maxi(un, roundi(un * 4.0 / 3.0))
 	# Your leader is closest to you (back-to-front): a size bigger than everyone else,
 	# but never so big that their head covers the monster's feet and HP bar
-	# (the body is about 31 art pixels tall; keep it under the gap between the two ground lines)
-	var room := (_team_ground() - _ground() - 18.0) * _scr() / (31.0 * Sprites.HD)
+	# (the body is about 31 art pixels tall; keep it under the gap between the two ground lines: room)
 	return clampi(un + 1, 1, maxi(1, floori(room)))
 
 func _party_members() -> Array:
@@ -1384,18 +1384,24 @@ func _enemy_poses(art: Dictionary) -> Dictionary:
 	var key := state.enemy_art if state.enemy_art != "" else str(state.enemy_name.hash())
 	return Sprites.poses_for("e" + key, (art["tex"] as Texture2D).get_image(), -1)
 
-func _enemy_art(boss: bool, enemy_name := "") -> Dictionary:
-	if enemy_name == "" and state.enemy_art != "":
+## The monster's picture by its art key, falling back to its species id (never its
+## shown name: names change with ranks, variants and realm spirits).
+func _enemy_art(boss: bool) -> Dictionary:
+	if state.enemy_art != "":
 		var a := Sprites.enemy_by_key(state.enemy_art)
 		if not a.is_empty():
 			return a
-	return Sprites.enemy(enemy_name if enemy_name != "" else state.enemy_name, boss)
+	if boss:
+		var b := Sprites.enemy_by_key("boss_" + state.enemy_species)
+		if not b.is_empty():
+			return b
+	return Sprites.enemy_by_key(state.enemy_species)
 
 func _dying_rect() -> Rect2:
 	return _rect_for(Sprites.enemy_by_key(dying.get("art", "")), dying["boss"], float(dying.get("scale", 1.0)))
 
-func _enemy_rect(boss: bool, enemy_name := "") -> Rect2:
-	return _rect_for(_enemy_art(boss, enemy_name), boss, state.enemy_scale())
+func _enemy_rect(boss: bool) -> Rect2:
+	return _rect_for(_enemy_art(boss), boss, state.enemy_scale())
 
 ## Rarer monsters are drawn bigger (by whole art pixels so they stay crisp).
 func _rect_for(art: Dictionary, boss: bool, scale_mult: float) -> Rect2:

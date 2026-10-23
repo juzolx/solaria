@@ -637,7 +637,7 @@ func _initialize() -> void:
 	var pfx := Profile.load_profile()
 	pfx.stash = [GameData.make_item("Feet", 3, 40, 5)]
 	var pack := Online.pack_local(pfx)
-	check(pack["heroes"].has(3), "backup packs heroes")
+	check(pack["towns"][GameState.town]["heroes"].has(3) and int(pack["epoch"]) == Profile.SAVE_EPOCH, "backup packs heroes")
 	var blob := Marshalls.variant_to_base64(pack)
 	GameState.delete_slot(3)
 	Online.unpack_local(pfx, Marshalls.base64_to_variant(blob))
@@ -984,8 +984,8 @@ func _initialize() -> void:
 	eg.codex.path = ""
 	eg.new_game()
 	eg.choose_class("Warrior")
-	eg.give_reward({"egg": 1})
-	check(eg.eggs.size() == 1 and Menagerie.has_any(eg), "eggs come from rewards")
+	Menagerie.give_egg(eg, "nest")
+	check(eg.eggs.size() == 1 and Menagerie.has_any(eg), "eggs come from nests")
 	for _f in Menagerie.EGG_FLOORS:
 		Menagerie.on_floor(eg)
 	check(eg.eggs.is_empty() and eg.pets.size() == 1 and String(eg.pets[0]["from"]) == "egg", "an egg hatches into a random pet")

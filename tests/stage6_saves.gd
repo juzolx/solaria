@@ -155,6 +155,39 @@ func _initialize() -> void:
 	SaveIO.write(P, {"n": 7}, "codex")
 	DirAccess.rename_absolute(ProjectSettings.globalize_path(P), ProjectSettings.globalize_path(SaveIO.tmp_path(P)))
 	check(int(SaveIO.read(P, "codex")["n"]) == 7, "a finished temp file is used when the main file is missing")
+	# a hero with only a .tmp (or only an older backup) still counts as a hero
+	var ht := hero(3)
+	ht.save_game()
+	var hp: String = GameState.slot_paths(3)[0]
+	DirAccess.rename_absolute(ProjectSettings.globalize_path(hp), ProjectSettings.globalize_path(SaveIO.tmp_path(hp)))
+	check(GameState.has_slot(3) and GameState.town_heroes(GameState.town) >= 1, "has_slot sees a hero whose only file is the .tmp")
+	check(not GameState.slot_meta(3).is_empty(), "and the title screen can read it")
+	SaveIO.delete_all(hp)
+	ht.save_game()
+	DirAccess.rename_absolute(ProjectSettings.globalize_path(hp), ProjectSettings.globalize_path(SaveIO.backup_path(hp, 2)))
+	check(GameState.has_slot(3), "has_slot sees a hero whose only file is .bak2")
+	GameState.delete_slot(3)
+	check(not GameState.has_slot(3), "delete_slot removes every fallback file")
+	# renaming over an existing file (some platforms refuse): the new file wins
+	SaveIO.delete_all(P)
+	SaveIO.write(P, {"n": 1}, "codex")
+	var other := "user://r4_other.dat"
+	SaveIO.write(other, {"n": 2}, "codex")
+	SaveIO._move(other, P)
+	check(int(raw(P)["n"]) == 2 and not FileAccess.file_exists(other), "a rename over an existing file replaces it")
+	SaveIO.delete_all(other)
+	# write never changes the caller's dictionary
+	var mine := {"n": 3}
+	SaveIO.write(P, mine, "codex")
+	check(not mine.has("save_kind") and not mine.has("save_version"), "write leaves the caller's dictionary alone")
+	# a clock moved back makes the backups look written in the future: they rotate
+	SaveIO.delete_all(P)
+	SaveIO.write(P, {"n": 1}, "codex")
+	SaveIO.write(P, {"n": 2}, "codex")
+	SaveIO.test_now_unix = int(Time.get_unix_time_from_system()) - 1000
+	SaveIO.write(P, {"n": 3}, "codex")
+	later(0)
+	check(int(raw(SaveIO.backup_path(P, 1))["n"]) == 2, "a negative backup age (clock moved back) rotates the backups")
 
 	# --- A broken settings file never wipes the heroes
 	SaveIO.delete_all(Profile.PATH)
@@ -203,15 +236,63 @@ func _initialize() -> void:
 	# --- Cloud restore: a bad bundle never deletes local heroes
 	var pf := Profile.load_profile()
 	var h2raw: Dictionary = raw(GameState.slot_paths(2)[0])
+	var E := Profile.SAVE_EPOCH
+	var cur := GameState.town
 	check(GameState.has_slot(1) and GameState.has_slot(2), "setup: two local heroes")
-	check(not Online.unpack_local(pf, {"heroes": {}}), "a bundle with no heroes is refused")
-	check(not Online.unpack_local(pf, {"heroes": {2: {"floor": 3}, 3: "junk"}}), "a bundle with a broken hero is refused")
-	check(not Online.unpack_local(pf, {"heroes": {99: {"floor": 3}}}), "a bundle with a bad slot is refused")
-	check(not Online.unpack_local(pf, {"heroes": {2: {"floor": 3}}, "codex": "junk"}), "a bundle with a broken codex is refused")
+	check(not Online.unpack_local(pf, {"epoch": E, "towns": {cur: {"heroes": {}}}})["ok"], "a bundle with no heroes is refused")
+	check(not Online.unpack_local(pf, {"epoch": E, "towns": {cur: {"heroes": {2: {"floor": 3}, 3: "junk"}}}})["ok"], "a bundle with a broken hero is refused")
+	check(not Online.unpack_local(pf, {"epoch": E, "towns": {cur: {"heroes": {99: {"floor": 3}}}}})["ok"], "a bundle with a bad slot is refused")
+	check(not Online.unpack_local(pf, {"epoch": E, "towns": {99: {"heroes": {2: {"floor": 3}}}}})["ok"], "a bundle with a bad town is refused")
+	check(not Online.unpack_local(pf, {"epoch": E, "towns": {cur: {"heroes": {2: {"floor": 3}}}}, "codex": "junk"})["ok"], "a bundle with a broken codex is refused")
+	# backups from before the 2.1 fresh start (no epoch, or an older one) can't bring wiped heroes back
+	var old1: Dictionary = Online.unpack_local(pf, {"version": 1, "heroes": {2: {"floor": 3}}})
+	check(not old1["ok"] and old1["error"] == "That backup is from before Solaria 2.1 and can't be restored.", "a 2.0 backup (no epoch) is refused with a clear message")
+	check(not Online.unpack_local(pf, {"epoch": E - 1, "towns": {cur: {"heroes": {2: {"floor": 3}}}}})["ok"], "an older-epoch backup is refused")
 	check(GameState.has_slot(1) and GameState.has_slot(2) and int(raw(GameState.slot_paths(2)[0])["gold"]) == int(h2raw["gold"]), "refused bundles changed nothing")
 	h2raw["gold"] = 4242
-	check(Online.unpack_local(pf, {"heroes": {2: h2raw}}), "a good bundle restores")
-	check(int(raw(GameState.slot_paths(2)[0])["gold"]) == 4242 and not GameState.has_slot(1), "bundle heroes written, the others removed")
+	check(Online.unpack_local(pf, {"epoch": E, "towns": {cur: {"heroes": {2: h2raw}}}})["ok"], "a good bundle restores")
+	check(int(raw(GameState.slot_paths(2)[0])["gold"]) == 4242 and not GameState.has_slot(1), "bundle heroes written, the others in that town removed")
+	check(not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(Online.STAGING)), "the staging folder is cleaned up")
+
+	# --- Cloud restore across towns: every town comes back to the same town;
+	# a town that isn't in the backup keeps its heroes
+	var o2 := cur % GameData.MAX_TOWNS + 1   # another town
+	var o3 := o2 % GameData.MAX_TOWNS + 1    # a third town, not in the backup
+	var hx := hero(2)
+	hx.gold = 77
+	hx.save_game()                           # town cur, slot 2
+	GameState.town = o2
+	var hy := hero(1)
+	hy.gold = 88
+	hy.save_game()                           # town o2, slot 1
+	GameState.town = cur
+	pf = Profile.load_profile()
+	pf.stash = [GameData.make_item("Feet", 3, 40, 5)]
+	pf.save()
+	var pack := Online.pack_local(pf)
+	check(pack["towns"].has(cur) and pack["towns"].has(o2) and int(pack["epoch"]) == E, "the backup packs every town with its epoch")
+	pack = Marshalls.base64_to_variant(Marshalls.variant_to_base64(pack))
+	# the device changes: town o2's hero is lost, town o3 gets a hero of its own
+	GameState.town = o2
+	GameState.delete_slot(1)
+	GameState.town = o3
+	var hz := hero(3)
+	hz.gold = 99
+	hz.save_game()
+	GameState.town = cur
+	pf.switch_town(o3)                       # restoring from inside another town
+	pf.stash = []
+	pf.save()
+	check(Online.unpack_local(pf, pack)["ok"], "a multi-town backup restores")
+	check(int(raw(GameState.town_slot_paths(cur, 2)[0])["gold"]) == 77 and int(raw(GameState.town_slot_paths(o2, 1)[0])["gold"]) == 88, "each hero goes back to its own town")
+	check(int(raw(GameState.town_slot_paths(o3, 3)[0])["gold"]) == 99, "a town that isn't in the backup keeps its heroes")
+	check(not FileAccess.file_exists(GameState.town_slot_paths(o3, 2)[0]) and not FileAccess.file_exists(GameState.town_slot_paths(o3, 1)[0]), "no hero is copied into the wrong town")
+	check(pf.town == cur and GameState.town == cur and pf.stash.size() == 1, "you're back in the backup's town with its stash")
+	GameState.town = o2
+	GameState.delete_slot(1)
+	GameState.town = o3
+	GameState.delete_slot(3)
+	GameState.town = cur
 
 	# --- Migration hook
 	SaveIO.MIGRATIONS["codex"][0] = func(d: Dictionary) -> Dictionary:

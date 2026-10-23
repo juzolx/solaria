@@ -37,7 +37,7 @@ func refresh() -> void:
 	var mine: RichTextLabel = box.get_node("Mine")
 	var p: Profile = main.profile
 	if p.hc_runs.is_empty():
-		mine.text = "[color=%s]No fallen Hardcore heroes yet. Start one from Menu > Switch mode.[/color]" % UI.hex(UI.DIM)
+		mine.text = "[color=%s]No fallen Hardcore heroes yet. Found a Hardcore town from Towns on the title screen to start one.[/color]" % UI.hex(UI.DIM)
 	else:
 		var lines := ["Best: [color=#e8b14a]floor %d[/color]" % p.hc_best]
 		for r in p.hc_runs.slice(0, 8):

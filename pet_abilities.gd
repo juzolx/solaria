@@ -51,21 +51,21 @@ const FAMILIES := {
 		"trick": {"name": "Ruin", "do": "strike", "chance": [20, 25], "value": [2.0, 2.0], "text": "{c}% chance each turn to strike again for {v}x its hit"}},
 }
 
-## Mythic signatures by region id (claude/stable-ids.md). when: "start" (its
-## first turn of every fight), "low" (once a fight, when you drop low) or "kill".
+## Mythic signatures by region id (claude/stable-ids.md). when: "start" (the
+## pet's first turn of every fight; the texts say so), "low" (once a fight, when you drop low) or "kill".
 const SIGNATURES := {
-	"mossy_hollows": {"name": "Bramble Snare", "when": "start", "do": "stun", "value": 1, "text": "Roots hold every monster still for its first turn"},
-	"sunken_catacombs": {"name": "Grave Chill", "when": "start", "do": "weaken", "value": 25, "text": "Every monster starts the fight chilled: it hits {v}% softer for 3 turns"},
+	"mossy_hollows": {"name": "Bramble Snare", "when": "start", "do": "stun", "value": 1, "text": "On its first turn each fight, roots hold the monster still for a turn"},
+	"sunken_catacombs": {"name": "Grave Chill", "when": "start", "do": "weaken", "value": 25, "text": "On its first turn each fight, chills the monster: it hits {v}% softer for 3 turns"},
 	"flooded_depths": {"name": "Undertow", "when": "low", "do": "heal", "value": 15, "text": "Once a fight, when you drop low, the tide pulls you back: heals {v}% of your max HP"},
-	"ember_halls": {"name": "Ember Breath", "when": "start", "do": "burn", "value": 1.0, "text": "Opens every fight with fire: the monster burns for {v}x its hit for 3 turns"},
-	"the_shadow_deep": {"name": "Shadow Fang", "when": "start", "do": "strike", "value": 3.0, "text": "Opens every fight from the dark for {v}x its hit"},
+	"ember_halls": {"name": "Ember Breath", "when": "start", "do": "burn", "value": 1.0, "text": "On its first turn each fight, breathes fire: the monster burns for {v}x its hit for 3 turns"},
+	"the_shadow_deep": {"name": "Shadow Fang", "when": "start", "do": "strike", "value": 3.0, "text": "On its first turn each fight, strikes from the dark for {v}x its hit"},
 	"elf": {"name": "Hush of the Wood", "when": "low", "do": "shield", "value": 20, "text": "Once a fight, when you drop low, the wood hides you: a shield of {v}% of your max HP"},
 	"fairy": {"name": "Fairy Gold", "when": "kill", "do": "gold", "value": 1, "text": "Every kill shakes loose extra gold ({v}x the floor's coin)"},
-	"dwarf": {"name": "Ironroot Wall", "when": "start", "do": "shield", "value": 10, "text": "Every fight starts behind a shield of {v}% of your max HP"},
+	"dwarf": {"name": "Ironroot Wall", "when": "start", "do": "shield", "value": 10, "text": "On its first turn each fight, raises a shield of {v}% of your max HP"},
 	"angel": {"name": "Gilded Grace", "when": "low", "do": "heal", "value": 25, "text": "Once a fight, when you drop low, a light heals {v}% of your max HP"},
-	"demon": {"name": "Hellfire", "when": "start", "do": "burn", "value": 1.5, "text": "Opens every fight with hellfire: the monster burns for {v}x its hit for 3 turns"},
-	"calamity": {"name": "Echo of the End", "when": "start", "do": "strike", "value": 4.0, "text": "Opens every fight with its parent's fury for {v}x its hit"},
-	"": {"name": "Wild Heart", "when": "start", "do": "strike", "value": 2.0, "text": "Opens every fight with a wild lunge for {v}x its hit"},
+	"demon": {"name": "Hellfire", "when": "start", "do": "burn", "value": 1.5, "text": "On its first turn each fight, calls hellfire: the monster burns for {v}x its hit for 3 turns"},
+	"calamity": {"name": "Echo of the End", "when": "start", "do": "strike", "value": 4.0, "text": "On its first turn each fight, strikes with its parent's fury for {v}x its hit"},
+	"": {"name": "Wild Heart", "when": "start", "do": "strike", "value": 2.0, "text": "On its first turn each fight, lunges wildly for {v}x its hit"},
 }
 
 static var _home := {}  # species id -> region id (built once)
@@ -211,7 +211,9 @@ static func pet_shield(g: GameState) -> int:
 # In the fight (called from Menagerie)
 # =====================================================================
 
-## A new fight: pet shields don't carry over from the last one.
+## A new fight: pet shields don't carry over from the last one. Called from
+## ClassTree.on_fight_start for every fight (even when no pet came along), and
+## again (harmlessly) on a pet's first turn.
 static func _fight_start(g: GameState) -> void:
 	if g.cfight.get("pet_fight", false):
 		return

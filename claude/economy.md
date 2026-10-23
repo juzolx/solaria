@@ -36,7 +36,7 @@ one per zone and realm. They are gone (no field in the save, no constants).
 | Old cost (materials) | 2.1 cost |
 |---|---|
 | Set piece: 10 of its zone's material + 40 scrap | **10 + 5 x zone dust** + 40 scrap; you must have reached the set's zone. First set 10 dust, fifth 30, last realm set 55 |
-| Crafted bag: 5 + L/4 of any material + 30 + 10L scrap | scrap only: 30 + 10L + 4 x (5 + L/4). Level 0: 50, level 10: 138, level 19: 254 |
+| Crafted bag: 5 + L/4 of any material + 30 + 10L scrap | scrap only: 30 + 10L + 4 x (5 + floor(L/4)). Level 0: 50, level 10: 158, level 19: 256 |
 
 Ability stones are not a currency (they are skill drops) and stay as they are.
 The Wheel (gold fee, no money for spins beyond its fee) and the premium/cosmetic
@@ -102,7 +102,7 @@ the balance sim); at 1,030 gold at best floor 100 it is now a real choice.
 | Potion | 5 | |
 | Mystery gear | 20 | |
 | Set piece | 40 (+ dust) | |
-| Crafted bag | 30 + 10L + 4 x (5 + L/4) | 50 / 138 / 254 |
+| Crafted bag | 30 + 10L + 4 x (5 + floor(L/4)) | 50 / 158 / 256 |
 | Traveler hone | 4 x (1 + zone) | |
 
 Scrap stays tight (the sim ends most checkpoints with under 20): it is the gear

@@ -373,8 +373,6 @@ static func reward_text(r: Dictionary, g: GameState) -> String:
 		var what: String = {"Weapon": "weapon for your class", "Chest": "body armor", "Legs": "leg armor", "Feet": "boots",
 			"Helmet": "helmet", "Off Hand": "off-hand"}.get(slot, slot.to_lower())
 		parts.append("%s %s" % [GameData.RARITY_NAMES[int(it["rarity"])], what])
-	if r.has("egg"):
-		parts.append("an egg")
 	return " + ".join(parts)
 
 ## Pays a finished contract into the Mailbox and takes it off the board.

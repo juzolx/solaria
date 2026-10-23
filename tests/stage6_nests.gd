@@ -46,20 +46,22 @@ func _initialize() -> void:
 		check(n.eggs.size() == 1, "a nest holds an egg")
 		if n.eggs.size() == 1:
 			var e: Dictionary = n.eggs[0]
-			check(e.has("zone") and e.has("tier") and int(e["zone"]) == GameData.zone_index(n.floor_num), "the egg knows its region and rank")
-			check(Menagerie.egg_name(e).contains(Menagerie.TIER_NAMES[int(e["tier"])]) and Menagerie.egg_name(e).contains(String(GameData.ZONES[int(e["zone"])]["name"])), "egg name shows rank and region (%s)" % Menagerie.egg_name(e))
+			check(e.has("zone") and e.has("tier") and typeof(e["zone"]) == TYPE_STRING and Menagerie.egg_zone(e) == GameData.zone_index(n.floor_num), "the egg knows its region (by id) and rank")
+			var zname := String(GameData.ZONES[Menagerie.egg_zone(e)]["name"])
+			check(Menagerie.egg_name(e) == "%s Egg of %s" % [Menagerie.TIER_NAMES[int(e["tier"])], zname], "egg name shows rank and region (%s)" % Menagerie.egg_name(e))
 	# Hatching: that region's monsters, at the egg's rank
 	for zi in [0, 1, 2]:
 		var z: Dictionary = GameData.ZONES[zi]
-		var names: Array = []
+		var ids: Array = []
 		for en in z["enemies"]:
-			names.append(en["name"])
+			ids.append(String(en["id"]))
 		for s in z["subs"]:
-			names.append(s["monster"]["name"])
+			ids.append(String(s["monster"]["id"]))
 		for t in 6:
 			var h := hero()
-			var p := Menagerie.hatch(h, {"id": 1, "floors": 0, "zone": zi, "tier": t})
-			check(String(p["species"]) in names or String(p["name"]) in names, "zone %d tier %d hatches a local monster (%s)" % [zi, t, p["species"]])
+			var egg_zone = String(z["id"]) if t % 2 == 0 else zi  # new eggs keep the id, older ones the index
+			var p := Menagerie.hatch(h, {"id": 1, "floors": 0, "zone": egg_zone, "tier": t})
+			check(String(p["species"]) in ids, "zone %d tier %d hatches a local monster (%s)" % [zi, t, p["species"]])
 			check(int(p["tier"]) == t, "zone %d hatches at the egg's rank %d (got %d)" % [zi, t, int(p["tier"])])
 	# No other egg source
 	var eggs := 0
@@ -96,11 +98,17 @@ func _initialize() -> void:
 		if c.has("reward") and c["reward"].has("egg"):
 			eggs += 1
 	check(eggs == 0, "bounties never pay an egg (%d)" % eggs)
-	# Old saves: Snik's egg item and eggs without a region still work
+	# Snik's old Strange Egg is gone: reading an "egg" scroll gives nothing
 	var o := hero()
-	o.merchant = [{"kind": "scroll", "id": "egg", "price": 1, "sold": false}]
-	o.gold = 100
-	check(o.buy_merchant(0) and o.eggs.size() == 1, "an old Snik egg can still be bought")
+	check(o.use_scroll("egg") == "" and o.eggs.is_empty(), "use_scroll(\"egg\") gives no egg")
+	check(not o.SCROLLS.has("egg"), "there is no egg scroll any more")
+	# The Wheel and rewards never give an egg either
+	for pz in WheelTables.LEGENDARY_PRIZES:
+		check(not (pz.get("reward", {}) as Dictionary).has("egg"), "Wheel prize %s gives no egg" % pz["id"])
+	o.give_reward({"egg": 1})
+	check(o.eggs.is_empty(), "an old egg reward pays nothing")
+	# Old eggs (index zone, or no region at all) still hatch
+	check(Menagerie.egg_name({"tier": 3, "zone": 0}) == "Epic Egg of %s" % GameData.ZONES[0]["name"], "an old egg with a zone index still names its region")
 	var legacy := Menagerie.hatch(o, {"id": 2, "floors": 0, "from": "old"})
 	check(not legacy.is_empty(), "an old egg (no region, no rank) still hatches")
 	# Higher ranks hit clearly harder
