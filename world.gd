@@ -24,13 +24,13 @@ const HAZARDS := {
 	"leyline": {"name": "Ley Line", "color": "#c084fc", "text": "A ley line: all skills +15%, and their cooldowns tick faster."},
 	"frost": {"name": "Bitter Cold", "color": "#bae6fd", "text": "Bitter cold: Frost skills +25%, and every Frost hit chills."},
 }
-# Which hazards each zone has
+# Which hazards each zone has (by zone id)
 const ZONE_HAZARDS := {
-	"Mossy Hollows": ["overgrowth", "fog", "leyline"],
-	"Sunken Catacombs": ["fog", "dark", "holy"],
-	"Flooded Depths": ["flood", "dark", "frost"],
-	"Ember Halls": ["heat", "dark", "leyline"],
-	"The Shadow Deep": ["dark", "fog", "holy"],
+	"mossy_hollows": ["overgrowth", "fog", "leyline"],
+	"sunken_catacombs": ["fog", "dark", "holy"],
+	"flooded_depths": ["flood", "dark", "frost"],
+	"ember_halls": ["heat", "dark", "leyline"],
+	"the_shadow_deep": ["dark", "fog", "holy"],
 }
 const HAZARD_TAGS := {
 	"fog": {"Nature": 0.2}, "dark": {"Shadow": 0.25}, "holy": {"Holy": 0.25, "Shadow": -0.15},
@@ -44,8 +44,7 @@ const HAZARD_TAGS := {
 static func hazard_at(floor_num: int) -> String:
 	if floor_num < 8 or GameData.is_boss_floor(floor_num) or GameData.realm_of(floor_num) != "" or is_milestone(floor_num):
 		return ""
-	var zname := String(GameData.zone_for_floor(floor_num)["name"])
-	var pool: Array = ZONE_HAZARDS.get(zname, [])
+	var pool: Array = ZONE_HAZARDS.get(String(GameData.zone_for_floor(floor_num)["id"]), [])
 	if pool.is_empty():
 		return ""
 	var h := absi(hash("hz%d" % floor_num))
@@ -242,7 +241,7 @@ static func choose(g: GameState, kind: String) -> void:
 			g.spawn_enemy()
 			g.horde_left = 0
 			g.horde_pack = false
-			g.enemy_name = "Jailer " + g.enemy_species
+			g.enemy_name = "Jailer " + Monsters.name_of(g.enemy_species)
 			g._apply_tier(maxi(g.enemy_tier, Monsters.EPIC))
 			g.cfight["prisoner"] = true
 			g.say("[color=#f59e0b]You break the chains. The jailer comes running![/color]")

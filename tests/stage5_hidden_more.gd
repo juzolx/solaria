@@ -44,7 +44,7 @@ func _initialize() -> void:
 			if k.begins_with("path:"):
 				var found := false
 				for nd in ClassTree.all_nodes().values():
-					if String(nd.get("name", "")) == k.substr(5):
+					if String(nd.get("id", "")) == k.substr(5):
 						found = true
 				check(found, "%s: real evolution %s" % [id, k])
 		var b: Array = c["stage_bonus"]
@@ -94,7 +94,7 @@ func _initialize() -> void:
 	Hidden.check(rg)
 	check(not rg.hidden.has("quiet_death"), "Quiet Death needs the Assassin path")
 	rg.class_path.append("assassin")
-	check(Hidden._have(rg, "path:Assassin") == 1 and Hidden._have(rg, "path:Paladin") == 0, "path: checks your evolutions")
+	check(Hidden._have(rg, "path:assassin") == 1 and Hidden._have(rg, "path:paladin") == 0, "path: checks your evolutions")
 	Hidden.check(rg)
 	check(rg.hidden.has("quiet_death"), "taking the Assassin path earns it")
 

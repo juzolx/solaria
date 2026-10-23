@@ -8,15 +8,15 @@ const CHANCE := 0.4        # % of ordinary fights from FROM_FLOOR
 const FROM_FLOOR := 15
 const STAY_TURNS := 10     # it wanders off after this many turns
 const LIST := [
-	{"name": "Black Shuck", "art": "barghest", "shape": "beast", "color": "#1f2937",
+	{"id": "black_shuck", "name": "Black Shuck", "art": "barghest", "shape": "beast", "color": "#1f2937",
 		"lore": "The great black dog of the lonely roads. Its eyes burn like coals, and it is never seen twice in one night."},
-	{"name": "The Lantern Man", "art": "grief_wisp", "shape": "spirit", "color": "#fde68a",
+	{"id": "the_lantern_man", "name": "The Lantern Man", "art": "grief_wisp", "shape": "spirit", "color": "#fde68a",
 		"lore": "A swinging light over the marsh. Follow it and you are lost; chase it off and it drops what it was carrying."},
-	{"name": "Old Hob", "art": "boggart", "shape": "humanoid", "color": "#92400e",
+	{"id": "old_hob", "name": "Old Hob", "art": "boggart", "shape": "humanoid", "color": "#92400e",
 		"lore": "A hob who was kind once, and isn't now. It walks from house to empty house looking for someone who remembers it."},
-	{"name": "Jenny Greenteeth", "art": "grindylow", "shape": "serpent", "color": "#4d7c0f",
+	{"id": "jenny_greenteeth", "name": "Jenny Greenteeth", "art": "grindylow", "shape": "serpent", "color": "#4d7c0f",
 		"lore": "She waits under the duckweed for anyone who walks too close to the water, and then she doesn't wait."},
-	{"name": "The Grey Walker", "art": "barrow_wight", "shape": "spirit", "color": "#9ca3af",
+	{"id": "the_grey_walker", "name": "The Grey Walker", "art": "barrow_wight", "shape": "spirit", "color": "#9ca3af",
 		"lore": "A tall grey shape that walks the barrows at dusk. It is going somewhere, and it has been going there for a thousand years."},
 ]
 
@@ -33,7 +33,7 @@ static func make(g: GameState, w: Dictionary) -> void:
 	g.enemy_wanderer = true
 	g.horde_left = 0  # always alone
 	g.horde_pack = false
-	g.enemy_species = String(w["name"])
+	g.enemy_species = String(w["id"])
 	g.enemy_name = String(w["name"])
 	g.enemy_art = String(w["art"])
 	g.enemy_shape = String(w["shape"])
@@ -79,7 +79,7 @@ static func reward(g: GameState) -> void:
 	g.codex.add("wanderers")
 	ClassTree.count(g, "wanderers")
 	# a trophy: a title of its own for each legend you bring down
-	var trophy: String = {"Black Shuck": "Shuck-Slayer", "The Lantern Man": "Lantern-Snuffer", "Old Hob": "Hob's Bane", "Jenny Greenteeth": "Weed-Walker", "The Grey Walker": "Grey-Stopper"}.get(g.enemy_species, "")
+	var trophy: String = {"black_shuck": "Shuck-Slayer", "the_lantern_man": "Lantern-Snuffer", "old_hob": "Hob's Bane", "jenny_greenteeth": "Weed-Walker", "the_grey_walker": "Grey-Stopper"}.get(g.enemy_species, "")
 	if trophy != "" and not trophy in g.codex.extra_titles:
 		g.codex.extra_titles.append(trophy)
 		g.codex.dirty = true

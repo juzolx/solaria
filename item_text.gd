@@ -52,9 +52,9 @@ static func describe(state: GameState, item: Dictionary) -> String:
 		if sl < GameData.SOUL_MAX:
 			text += "\n[color=%s]Soul %d/%d: %d / %d kills while worn to the next level (+%d%% power each; level %d awakens a hidden effect).[/color]" % [
 				dim, sl, GameData.SOUL_MAX, int(item.get("soul", 0)), int(GameData.SOUL_KILLS[sl]), int(GameData.SOUL_POWER * 100), GameData.SOUL_MAX]
-	var set_name: String = item.get("set", "")
-	if set_name != "":
-		text += "\n[color=#2dd4bf]Set: %s (wearing %d/3) - %s[/color]" % [set_name, int(state.set_counts().get(set_name, 0)), GameData.set_info(set_name).get("text", "")]
+	var set_id: String = item.get("set", "")
+	if set_id != "":
+		text += "\n[color=#2dd4bf]Set: %s (wearing %d/3) - %s[/color]" % [GameData.set_name_of(set_id), int(state.set_counts().get(set_id, 0)), GameData.set_info(set_id).get("text", "")]
 	var flavor: String = item.get("flavor", "")
 	if flavor != "":
 		text += "\n[color=%s][i]%s[/i][/color]" % [dim, flavor]
@@ -87,7 +87,7 @@ static func plain(item: Dictionary) -> String:
 	if item["effect"] != "":
 		text += "\nSpecial: " + GameData.effect_text(item["effect"], int(item["effect_value"]))
 	if item.get("set", "") != "":
-		text += "\nSet: %s - %s" % [item["set"], GameData.set_info(item["set"]).get("text", "")]
+		text += "\nSet: %s - %s" % [GameData.set_name_of(item["set"]), GameData.set_info(item["set"]).get("text", "")]
 	if item.get("flavor", "") != "":
 		text += "\n" + str(item["flavor"])
 	return text

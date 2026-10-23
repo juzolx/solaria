@@ -8,7 +8,7 @@ extends RefCounted
 const PATH := "user://codex.dat"
 
 # ---------- Achievements ----------
-# key: what's counted (see value()), target: how much. Rewards are small;
+# key: what's counted (see value(); "boss:<monster id>" = kills of that boss), target: how much. Rewards are small;
 # some give a title you can show off. Gold rewards grow with how deep you've been.
 const ACHIEVEMENTS := [
 	# Depth
@@ -37,11 +37,11 @@ const ACHIEVEMENTS := [
 	{"id": "rare100", "name": "Big Game Hunter", "text": "Defeat 100 Rare or better monsters", "key": "rare_kills", "target": 100, "reward": {"gold": 1500}, "title": "Big Game Hunter"},
 	# Bosses
 	{"id": "mid1", "name": "Midway Menace", "text": "Defeat a mid boss", "key": "mids", "target": 1, "reward": {"potions": 3}},
-	{"id": "grendel", "name": "Grendel's Bane", "text": "Defeat Grendel", "key": "boss:Grendel", "target": 1, "reward": {"mats": 3}, "title": "Grendel's Bane"},
-	{"id": "hel", "name": "Hel-Breaker", "text": "Defeat Hel, Queen of the Dead", "key": "boss:Hel, Queen of the Dead", "target": 1, "reward": {"mats": 3}, "title": "Hel-Breaker"},
-	{"id": "charybdis", "name": "Whirlpool Survivor", "text": "Defeat Charybdis", "key": "boss:Charybdis", "target": 1, "reward": {"mats": 3}, "title": "Stormrider"},
-	{"id": "surtr", "name": "Giant-Felled", "text": "Defeat Surtr the Fire Giant", "key": "boss:Surtr the Fire Giant", "target": 1, "reward": {"mats": 3}, "title": "Flamebreaker"},
-	{"id": "typhon", "name": "Father-Slayer", "text": "Defeat Typhon, Father of Monsters", "key": "boss:Typhon, Father of Monsters", "target": 1, "reward": {"mats": 5}, "title": "Monsterbane"},
+	{"id": "grendel", "name": "Grendel's Bane", "text": "Defeat Grendel", "key": "boss:grendel", "target": 1, "reward": {"mats": 3}, "title": "Grendel's Bane"},
+	{"id": "hel", "name": "Hel-Breaker", "text": "Defeat Hel, Queen of the Dead", "key": "boss:hel", "target": 1, "reward": {"mats": 3}, "title": "Hel-Breaker"},
+	{"id": "charybdis", "name": "Whirlpool Survivor", "text": "Defeat Charybdis", "key": "boss:charybdis", "target": 1, "reward": {"mats": 3}, "title": "Stormrider"},
+	{"id": "surtr", "name": "Giant-Felled", "text": "Defeat Surtr the Fire Giant", "key": "boss:surtr", "target": 1, "reward": {"mats": 3}, "title": "Flamebreaker"},
+	{"id": "typhon", "name": "Father-Slayer", "text": "Defeat Typhon, Father of Monsters", "key": "boss:typhon", "target": 1, "reward": {"mats": 5}, "title": "Monsterbane"},
 	{"id": "allmids", "name": "Five Terrors", "text": "Defeat all 5 mid bosses", "key": "mids", "target": 5, "reward": {"gold": 2500}},
 	{"id": "boss25", "name": "Boss Rush", "text": "Defeat 25 bosses", "key": "boss_kills", "target": 25, "reward": {"gold": 1500}},
 	{"id": "boss100", "name": "Bossbreaker", "text": "Defeat 100 bosses", "key": "boss_kills", "target": 100, "reward": {"gold": 4000}, "title": "Bossbreaker"},
@@ -86,11 +86,11 @@ const ACHIEVEMENTS := [
 	{"id": "f500", "name": "The Bottom of the World", "text": "Reach floor 500", "key": "best_floor", "target": 500, "reward": {"gold": 8000}, "title": "Rootbreaker"},
 	{"id": "realm1", "name": "Through the Roots", "text": "Step into a realm", "key": "realms_entered", "target": 1, "reward": {"mats": 3}},
 	{"id": "realm5", "name": "Walker of Realms", "text": "Enter all 5 realms", "key": "realms_entered", "target": 5, "reward": {"gold": 5000}, "title": "Realmwalker"},
-	{"id": "queen", "name": "The Last Leaf", "text": "Defeat the Withered Queen", "key": "boss:The Withered Queen", "target": 1, "reward": {"mats": 5}, "title": "Leafbane"},
-	{"id": "fairyq", "name": "Game Over", "text": "Defeat the Fairy Queen", "key": "boss:The Fairy Queen", "target": 1, "reward": {"mats": 5}, "title": "Unglamoured"},
-	{"id": "thrandor", "name": "Kingslayer Under the Mountain", "text": "Defeat High King Thrandor", "key": "boss:High King Thrandor", "target": 1, "reward": {"mats": 5}, "title": "Mountainbreaker"},
-	{"id": "seraphiel", "name": "Put Out the Light", "text": "Defeat Seraphiel, the First Light", "key": "boss:Seraphiel, the First Light", "target": 1, "reward": {"mats": 5}, "title": "Dawnbreaker"},
-	{"id": "azgaroth", "name": "Abyss-Lord's End", "text": "Defeat Azgaroth, Lord of the Abyss", "key": "boss:Azgaroth, Lord of the Abyss", "target": 1, "reward": {"mats": 5}, "title": "Hellwalker"},
+	{"id": "queen", "name": "The Last Leaf", "text": "Defeat the Withered Queen", "key": "boss:withered_queen", "target": 1, "reward": {"mats": 5}, "title": "Leafbane"},
+	{"id": "fairyq", "name": "Game Over", "text": "Defeat the Fairy Queen", "key": "boss:fairy_queen", "target": 1, "reward": {"mats": 5}, "title": "Unglamoured"},
+	{"id": "thrandor", "name": "Kingslayer Under the Mountain", "text": "Defeat High King Thrandor", "key": "boss:high_king_thrandor", "target": 1, "reward": {"mats": 5}, "title": "Mountainbreaker"},
+	{"id": "seraphiel", "name": "Put Out the Light", "text": "Defeat Seraphiel, the First Light", "key": "boss:seraphiel", "target": 1, "reward": {"mats": 5}, "title": "Dawnbreaker"},
+	{"id": "azgaroth", "name": "Abyss-Lord's End", "text": "Defeat Azgaroth, Lord of the Abyss", "key": "boss:azgaroth", "target": 1, "reward": {"mats": 5}, "title": "Hellwalker"},
 	{"id": "aw1", "name": "Awakened", "text": "Awaken your race once", "key": "awakenings", "target": 1, "reward": {"gold": 1500}, "title": "Awakened"},
 	{"id": "aw5", "name": "Blood Will Tell", "text": "Awaken 5 times (any heroes)", "key": "awakenings", "target": 5, "reward": {"gold": 4000}},
 	{"id": "changed", "name": "Not Quite Yourself", "text": "Be transformed", "key": "transformations", "target": 1, "reward": {"potions": 5}},
@@ -138,10 +138,10 @@ const LOGIN_REWARDS := [
 	{"text": "Mystery Box", "scroll": "box"},
 ]
 
-var bestiary := {}      # monster name -> {"kills": n, "tiers": [6 counts], "sig": bool}
+var bestiary := {}      # monster id -> {"kills": n, "tiers": [6 counts], "sig": bool}  (ids: Monsters.registry())
 var stats := {}         # counter name -> number (see value())
-var collection := {}    # Unique / Signature / Set item name -> date found
-var pet_book := {}      # next update: pet species you have owned -> best tier (Codex > Pets)
+var collection := {}    # Unique / Signature / Set item def id (item["def"]) -> date found
+var pet_book := {}      # next update: pet species (monster id) you have owned -> best tier (Codex > Pets)
 var achievements := {}  # id -> date unlocked
 var title := ""         # the achievement title you're showing ("" = your class)
 var name_color := ""    # Stage 3: the name color you show (cosmetics.gd), "" = Plain
@@ -254,8 +254,9 @@ func found_item(item: Dictionary) -> bool:
 	if r == GameData.LEGENDARY:
 		add("legendaries")
 	if r in [GameData.UNIQUE, GameData.SIGNATURE, GameData.SET_RARITY]:
-		if not collection.has(item["base_name"]):
-			collection[item["base_name"]] = Time.get_date_string_from_system()
+		var key := String(item.get("def", item["base_name"]))
+		if not collection.has(key):
+			collection[key] = Time.get_date_string_from_system()
 			first = true
 	if r == GameData.SIGNATURE and item.get("sig_of", "") != "":
 		entry(item["sig_of"])["sig"] = true
@@ -302,14 +303,14 @@ func value(key: String, state: GameState = null) -> int:
 		"mids":
 			var n := 0
 			for z in GameData.ZONES:
-				if kills(z["mid"]["name"]) > 0:
+				if kills(z["mid"]["id"]) > 0:
 					n += 1
 			return n
 		"uniques":
 			var n := 0
 			for zi in GameData.ZONES.size():
 				for u in GameData.zone_uniques(zi):
-					if collection.has(u["name"]):
+					if collection.has(u["id"]):
 						n += 1
 			return n
 		"signatures":
@@ -398,12 +399,12 @@ func _make_bounties(state: GameState, count: int, mult: int) -> Array:
 			"kill_monster":
 				var pool: Array = []
 				for m in GameData.floor_monsters(state.floor_num):
-					if seen(m[0]["name"]):
-						pool.append(m[0]["name"])
+					if seen(m[0]["id"]):
+						pool.append(m[0]["id"])
 				if pool.is_empty():
 					continue
 				b["monster"] = pool.pick_random()
-				b["text"] = k["text"] % [b["need"], b["monster"]]
+				b["text"] = k["text"] % [b["need"], Monsters.name_of(b["monster"])]
 			"boss":
 				b["need"] = 1 if mult == 1 else 5
 				b["text"] = ("Defeat %d boss" if b["need"] == 1 else "Defeat %d bosses") % b["need"]
@@ -412,7 +413,7 @@ func _make_bounties(state: GameState, count: int, mult: int) -> Array:
 		out.append(b)
 	return out
 
-## Counts progress. kind: "kill" (info: monster, zone, tier), "floor", "item" (rarity), "boss", "event".
+## Counts progress. kind: "kill" (info: monster id, zone, tier), "floor", "item" (rarity), "boss", "event".
 func bounty_progress(kind: String, info := {}) -> void:
 	for list_name in ["daily", "weekly"]:
 		for b in bounties.get(list_name, []):

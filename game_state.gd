@@ -119,7 +119,7 @@ var materials := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # boss materials, one per zone 
 var appearance := {"body": "masc", "skin": 1, "hair": "Short", "hair_color": 1, "eyes": 0, "race": "Human"}
 var wardrobe := {}      # every look you've found: key -> look (for transmog)
 var transmog := {}      # slot -> look to show instead of the real item ("hide" = show nothing)
-var discovered := {}    # class names you've reached (specs and evolutions show ??? until then)
+var discovered := {}    # class node ids you've reached (evolutions show ??? until then), race rank and form names
 var dev_mode := false
 var volume := 0.8       # sound effects volume, 0..1
 var music_volume := 0.5 # music volume, 0..1
@@ -199,7 +199,7 @@ var enemy_attack := 0
 var enemy_is_boss := false
 var enemy_shape := "humanoid"
 var enemy_color := "#ffffff"
-var enemy_species := ""     # the creature's plain name ("Kobold"), for the Bestiary and loot
+var enemy_species := ""     # the creature's id ("kobold", Monsters.registry()), for the Bestiary and loot; Monsters.name_of() shows it
 var enemy_art := ""         # sprite key in art/enemies/
 var enemy_tier := 0         # Monsters.TIERS: 0 Common .. 5 Mythic
 var enemy_mods: Array = []  # Monsters.MODS names
@@ -1320,8 +1320,8 @@ func spawn_enemy() -> void:
 		enemy_goblin = false
 		def = GameData.boss_for_floor(floor_num)
 		enemy_name = GameData.boss_name(floor_num)
-		enemy_species = def["name"]
-		enemy_art = def.get("art", "boss_" + GameData.art_key(def["name"]))
+		enemy_species = def["id"]
+		enemy_art = def.get("art", "boss_" + String(def["id"]))
 		hp = int(hp * (GameData.ZONE_BOSS_HP if enemy_boss_kind == "zone" else GameData.MID_BOSS_HP))
 		atk = int(atk * GameData.BOSS_ATK)
 		# Region bosses close each 100 floors; walls (250, 500, 750, 1000) dwarf them
@@ -1331,18 +1331,18 @@ func spawn_enemy() -> void:
 		hp = int(hp * wall)
 		atk = int(atk * sqrt(wall))
 	elif enemy_goblin:
-		def = {"name": "Treasure Goblin", "shape": "humanoid", "color": "#fbbf24"}
-		enemy_name = "Treasure Goblin"
-		enemy_species = "Treasure Goblin"
+		def = Monsters.by_id("treasure_goblin")
+		enemy_species = "treasure_goblin"
+		enemy_name = Monsters.name_of(enemy_species)
 		enemy_art = "treasure_goblin"
 		hp = int(hp * 2.5)
 		atk = 0
 		goblin_turns = GameData.GOBLIN_TURNS
 	else:
 		def = GameData.pick_monster(floor_num)
-		enemy_species = def["name"]
-		enemy_name = GameData.rank_prefix(floor_num) + enemy_species
-		enemy_art = GameData.art_key(enemy_species)
+		enemy_species = def["id"]
+		enemy_name = GameData.rank_prefix(floor_num) + String(def["name"])
+		enemy_art = def.get("art", enemy_species)
 		var boost := 1.0
 		if hunt_spawns > 0:
 			hunt_spawns -= 1
@@ -1725,7 +1725,7 @@ func _basic_attack() -> Dictionary:
 		return {"line": "Blinded, you swing at nothing", "dealt": 0}
 	if enemy_variant == "Pale" and randf() < Variants.PALE_MISS:
 		events.append({"type": "blink"})
-		return {"line": "You lose sight of the pale %s and strike only air" % enemy_species, "dealt": 0}
+		return {"line": "You lose sight of the pale %s and strike only air" % Monsters.name_of(enemy_species), "dealt": 0}
 	if World.dark_miss(self):
 		events.append({"type": "blink"})
 		return {"line": "You swing at shadows", "dealt": 0}
@@ -1842,7 +1842,7 @@ func _enemy_defeated() -> void:
 	Menagerie.on_kill(self)
 	EggQuests.on_kill(self, tier, was_boss)
 	if was_boss:
-		Milestones.on_boss(self, species)
+		Milestones.on_boss(self, Monsters.name_of(species))
 	var gold_gain := (2 + floor_num) * (10 if was_boss else 1)
 	if enemy_variant == "Gilded":
 		gold_gain = int(gold_gain * Variants.GOLD_MULT)
@@ -2001,8 +2001,8 @@ func compare_pct(item: Dictionary) -> float:
 
 func _give_signature(monster: String) -> void:
 	var item := GameData.make_signature(monster, floor_num, _new_id())
-	say("[color=#ff6b9d]*** SIGNATURE DROP! *** The %s dropped %s![/color]" % [monster, item["name"]])
-	events.append({"type": "signature", "name": item["name"], "monster": monster})
+	say("[color=#ff6b9d]*** SIGNATURE DROP! *** The %s dropped %s![/color]" % [Monsters.name_of(monster), item["name"]])
+	events.append({"type": "signature", "name": item["name"], "monster": Monsters.name_of(monster)})
 	_give_item(item)
 
 func _add_gold(amount: int) -> void:
@@ -2988,7 +2988,7 @@ func dev_grant(kind: String) -> void:
 			hero_hp = get_max_hp()
 			potions += 10
 		"signature":
-			_give_signature(GameData.pick_monster(floor_num)["name"])
+			_give_signature(GameData.pick_monster(floor_num)["id"])
 		"rare":
 			_apply_tier(mini(Monsters.MYTHIC, maxi(enemy_tier + 1, Monsters.EPIC)))
 		"event":
@@ -3574,7 +3574,7 @@ func load_game() -> bool:
 	for i in mini(saved_mats.size(), materials.size()):
 		materials[i] = int(saved_mats[i])
 	for n in ClassTree.path_nodes(self):
-		discovered[n["name"]] = true
+		discovered[n["id"]] = true
 	bag.assign(data.get("bag", []))
 	equipped = data.get("equipped", {})
 	needs_creator = not data.has("appearance")
@@ -3736,7 +3736,7 @@ func add_to_wardrobe(item: Dictionary) -> void:
 	if item.get("art", "") != "":
 		key = item["art"]
 	elif item.get("set", "") != "":
-		key = "set:" + str(item["base_name"])
+		key = "set:" + str(item.get("def", item["base_name"]))
 	else:
 		key = "%s:%d" % [t, mini(int(item["rarity"]), GameData.LEGENDARY)]
 	if wardrobe.has(key):
@@ -4457,7 +4457,7 @@ func start_special_trial(info: Dictionary, kind: String, data: Dictionary) -> bo
 	enemy_shield = 0
 	enemy_people = ""
 	enemy_name = info["name"]
-	enemy_species = info["name"]
+	enemy_species = "trial"
 	enemy_art = info["art"]
 	enemy_shape = "humanoid"
 	enemy_color = "#e8b14a"

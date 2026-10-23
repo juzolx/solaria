@@ -26,7 +26,7 @@ func refresh() -> void:
 	OnlineUI.clear(box)
 	var head := UI.hbox(8)
 	box.add_child(head)
-	var title := UI.heading("Bounty Board  -  %s" % Town.look(g)["name"])
+	var title := UI.heading("Bounty Board  -  %s" % String(GameData.zone_for_floor(maxi(1, g.floor_num))["name"]))
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
 	var reroll := UI.button("New postings (%d gold)" % Town.reroll_cost(g), func():

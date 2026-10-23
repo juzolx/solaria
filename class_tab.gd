@@ -219,7 +219,7 @@ func _detail() -> void:
 ## Is this class shown by name? Yes if you've been it, if you can choose it
 ## right now, or in Dev Mode. Everything else on the tree is "???".
 static func revealed(g: GameState, n: Dictionary) -> bool:
-	if g.dev_mode or String(n["id"]) in g.class_path or g.discovered.has(n["name"]):
+	if g.dev_mode or String(n["id"]) in g.class_path or g.discovered.has(n["id"]):
 		return true
 	if ClassTree.pick_tier(g) >= 0:
 		return ClassTree.options(g).any(func(o): return String(o["id"]) == String(n["id"]))

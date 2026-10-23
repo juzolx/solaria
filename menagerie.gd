@@ -10,7 +10,7 @@ extends RefCounted
 ## lost: when they go down they come home hurt and rest (or get healed at the
 ## Clinic) before they can fight again.
 ##
-## A pet: {"id", "name", "species", "art", "tier", "level", "kills", "hurt": floors left to rest (0 = fine), "from"}
+## A pet: {"id", "name" (shown; the species' name when it joined), "species" (monster id, Monsters.name_of), "art", "tier", "level", "kills", "hurt": floors left to rest (0 = fine), "from"}
 ## An egg: {"id", "floors": floors left until it hatches, "from", "zone": region index, "tier": rank}
 
 const TAMER_OUT := 3
@@ -79,8 +79,9 @@ static func toggle_out(g: GameState, id: int) -> bool:
 	g.pets_out.append(id)
 	return true
 
+## monster: the species id (Monsters.registry()).
 static func make_pet(g: GameState, monster: String, art: String, tier: int, from: String) -> Dictionary:
-	var p := {"id": g._new_id(), "name": monster, "species": monster, "art": art, "tier": clampi(tier, 0, 5),
+	var p := {"id": g._new_id(), "name": Monsters.name_of(monster), "species": monster, "art": art, "tier": clampi(tier, 0, 5),
 		"level": 1, "kills": 0, "hurt": 0, "from": from}
 	g.pets.append(p)
 	if g.pets_out.size() < max_out(g):
@@ -90,7 +91,7 @@ static func make_pet(g: GameState, monster: String, art: String, tier: int, from
 		if from == "egg":
 			p["new_kind"] = true  # hatch() shows the fanfare itself
 		else:
-			g.events.append({"type": "first_find", "kind": "pet", "name": str(p["species"]), "tier": int(p["tier"]), "art": art})
+			g.events.append({"type": "first_find", "kind": "pet", "name": Monsters.name_of(str(p["species"])), "tier": int(p["tier"]), "art": art})
 	return p
 
 static func power(p: Dictionary) -> float:
@@ -130,10 +131,10 @@ static func try_catch(g: GameState) -> bool:
 		return false
 	var helper := whisperer_near(g)
 	if randf() * 100.0 < catch_chance(g):
-		var p := make_pet(g, g.enemy_species if g.enemy_species != "" else g.enemy_name, g.enemy_art, g.enemy_tier, "caught")
+		var p := make_pet(g, g.enemy_species, g.enemy_art, g.enemy_tier, "caught")
 		g.say("[color=#d9a066]%sThe %s stops fighting and follows you.[/color] It's your pet now%s." % [
-			"Your Beast Whisperer hums it calm. " if helper else "", p["species"], "" if int(p["id"]) in g.pets_out else " (waiting at home: your team is full)"])
-		g.events.append({"type": "mini_event", "kind": "pet", "title": "CAUGHT!", "sub": "%s joins you" % p["species"]})
+			"Your Beast Whisperer hums it calm. " if helper else "", p["name"], "" if int(p["id"]) in g.pets_out else " (waiting at home: your team is full)"])
+		g.events.append({"type": "mini_event", "kind": "pet", "title": "CAUGHT!", "sub": "%s joins you" % p["name"]})
 		g.feats["caught"] = int(g.feats.get("caught", 0)) + 1
 		g.tip("caught", "Pets fight beside you and grow with every kill. Pick who comes along in Hero > Pets. Pets are never lost: when they go down they come home hurt and rest.")
 		Lineage._move_on(g)
@@ -219,28 +220,28 @@ static func hatch(g: GameState, egg := {}) -> Dictionary:
 		var z: Dictionary = GameData.ZONES[zi]
 		pool = []
 		for e in z["enemies"]:
-			pool.append(e["name"])
+			pool.append(e["id"])
 		for s in z["subs"]:
-			pool.append(s["monster"]["name"])
-	var name := ""
+			pool.append(s["monster"]["id"])
+	var species := ""
 	var art := ""
 	for _try in 12:
-		name = String(pool.pick_random())
-		art = Sprites.enemy_key(name, false)
+		species = String(pool.pick_random())
+		art = String(Monsters.by_id(species).get("art", species))
 		if not Sprites.enemy_by_key(art).is_empty():
 			break
 	var tier := int(egg["tier"]) if egg.has("tier") else roll_tier()
 	var cherished := EggQuests.done(egg)
 	if cherished:
 		tier = mini(5, maxi(tier + 1, Monsters.RARE))  # its quest was done: it hatches stronger (a Legendary can turn Mythic)
-	var p := make_pet(g, name, art, tier, "egg")
+	var p := make_pet(g, species, art, tier, "egg")
 	if cherished:
 		p["cherished"] = true
 		g.codex.add("cherished_pets")
-	g.say("[color=#fde68a]Your egg hatches: a %sbaby %s![/color]" % ["Cherished " if cherished else "", name])
-	g.events.append({"type": "hatch_moment", "name": name, "art": art, "cherished": cherished, "tier": tier, "first": p.has("new_kind")})
+	g.say("[color=#fde68a]Your egg hatches: a %sbaby %s![/color]" % ["Cherished " if cherished else "", p["name"]])
+	g.events.append({"type": "hatch_moment", "name": String(p["name"]), "art": art, "cherished": cherished, "tier": tier, "first": p.has("new_kind")})
 	p.erase("new_kind")
-	g.events.append({"type": "mini_event", "kind": "pet", "title": "IT HATCHED!", "sub": ("A Cherished baby %s" if cherished else "A baby %s") % name})
+	g.events.append({"type": "mini_event", "kind": "pet", "title": "IT HATCHED!", "sub": ("A Cherished baby %s" if cherished else "A baby %s") % String(p["name"])})
 	return p
 
 # =====================================================================

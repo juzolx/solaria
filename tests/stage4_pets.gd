@@ -12,8 +12,8 @@ func _initialize() -> void:
 	g.autosave = false
 	g.new_game()
 	g.choose_class("Warrior")
-	var a := Menagerie.make_pet(g, "Barghest", "barghest", 1, "t")
-	var b := Menagerie.make_pet(g, "Kobold", "kobold", 1, "t")
+	var a := Menagerie.make_pet(g, "barghest", "barghest", 1, "t")
+	var b := Menagerie.make_pet(g, "kobold", "kobold", 1, "t")
 	check(Menagerie.out(g).size() == 1 and int(a["id"]) in g.pets_out, "the first pet comes along")
 	check(Menagerie.toggle_out(g, int(b["id"])), "bringing the second works with the spot taken")
 	check(g.pets_out == [int(b["id"])], "the two swap places")

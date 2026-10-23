@@ -29,7 +29,7 @@ func _initialize() -> void:
 	check(not Lore.maybe_find(e, 100.0), "not on the first floors")
 	for page in Lore.KEEPERS:
 		check(Lore.talk(g, page).contains(": \""), "keeper %d talks" % page)
-	g.grave = {"floor": 33, "killer": "Barghest", "items": [], "gold": 0, "boss": false}
+	g.grave = {"floor": 33, "killer": "barghest", "items": [], "gold": 0, "boss": false}
 	var mentions := false
 	for trip in 40:
 		g.codex.stats["home_trips"] = trip

@@ -35,11 +35,11 @@ const OLD_NAMES := {
 
 ## Types for the uniques and set pieces (they also get their own art key).
 const SPECIAL_TYPES := {
-	"Hrunting": "sword", "Grendel's Hide": "plate", "Helskor": "boots", "Mask of Half-Death": "helm",
-	"Scylla's Fang": "spear", "Drowned Captain's Boots": "boots", "Flame of Muspelheim": "sword",
-	"Emberforged Greaves": "greaves", "Aegis Fragment": "shield", "Crown of a Hundred Heads": "crown",
-	"Annis's Skinning Claw": "dagger", "The Hollow Helm": "helm", "Sailor's Bane": "spear",
-	"Dragonblood Plate": "plate", "Book of Every Monster": "tome",
+	"hrunting": "sword", "grendels_hide": "plate", "helskor": "boots", "mask_of_half_death": "helm",
+	"scyllas_fang": "spear", "drowned_captains_boots": "boots", "flame_of_muspelheim": "sword",
+	"emberforged_greaves": "greaves", "aegis_fragment": "shield", "crown_of_a_hundred_heads": "crown",
+	"anniss_skinning_claw": "dagger", "the_hollow_helm": "helm", "sailors_bane": "spear",
+	"dragonblood_plate": "plate", "book_of_every_monster": "tome",
 }
 
 const ZONES := [

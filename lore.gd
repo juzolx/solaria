@@ -63,7 +63,7 @@ static func talk(g: GameState, page: int) -> String:
 	var lines: Array = (k[1] as Array).duplicate()
 	# They notice how you're doing
 	if not g.grave.is_empty():
-		lines.append("Word is you fell on floor %d, and the %s is wearing your boots. Go get them back." % [int(g.grave["floor"]), String(g.grave["killer"])])
+		lines.append("Word is you fell on floor %d, and the %s is wearing your boots. Go get them back." % [int(g.grave["floor"]), Monsters.name_of(String(g.grave["killer"]))])
 	if g.best_floor >= 100:
 		lines.append("Floor %d! Half the town thinks you're a ghost now." % g.best_floor)
 	elif g.best_floor >= 25:

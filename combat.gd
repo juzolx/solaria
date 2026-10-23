@@ -18,13 +18,13 @@ const RESIST_MULT := 0.7
 const RESIST_PHYSICAL := 0.85   # resisting plain hits is gentler, so melee classes never feel stuck
 const ELEMENT_COLORS := {"Physical": "#c0cbdc", "Fire": "#f77622", "Frost": "#7fd0f0", "Storm": "#fee761", "Holy": "#fde68a",
 	"Shadow": "#8b5cf6", "Nature": "#63c74d", "Arcane": "#c084fc", "Blood": "#e43b44"}
-# Each zone's creatures share a nature. Realms are keyed by their realm id.
+# Each zone's creatures share a nature. Keyed by zone id (a realm's zone id is its realm id).
 const ZONE_ELEMENTS := {
-	"Mossy Hollows": {"weak": ["Fire"], "resist": ["Nature"]},
-	"Sunken Catacombs": {"weak": ["Holy", "Fire"], "resist": ["Shadow", "Frost"]},
-	"Flooded Depths": {"weak": ["Storm"], "resist": ["Fire", "Frost"]},
-	"Ember Halls": {"weak": ["Frost"], "resist": ["Fire"]},
-	"The Shadow Deep": {"weak": ["Holy"], "resist": ["Shadow", "Arcane"]},
+	"mossy_hollows": {"weak": ["Fire"], "resist": ["Nature"]},
+	"sunken_catacombs": {"weak": ["Holy", "Fire"], "resist": ["Shadow", "Frost"]},
+	"flooded_depths": {"weak": ["Storm"], "resist": ["Fire", "Frost"]},
+	"ember_halls": {"weak": ["Frost"], "resist": ["Fire"]},
+	"the_shadow_deep": {"weak": ["Holy"], "resist": ["Shadow", "Arcane"]},
 	"elf": {"weak": ["Fire"], "resist": ["Nature", "Shadow"]},
 	"fairy": {"weak": ["Physical", "Blood"], "resist": ["Arcane"]},
 	"dwarf": {"weak": ["Frost", "Storm"], "resist": ["Fire"]},
@@ -43,10 +43,7 @@ const SHAPE_ELEMENTS := {
 static func profile(g: GameState) -> Dictionary:
 	var weak: Array = []
 	var resist: Array = []
-	var key := GameData.realm_of(g.floor_num)
-	if key == "":
-		key = String(GameData.zone_for_floor(g.floor_num)["name"])
-	var z: Dictionary = ZONE_ELEMENTS.get(key, {})
+	var z: Dictionary = ZONE_ELEMENTS.get(String(GameData.zone_for_floor(g.floor_num)["id"]), {})
 	for e in z.get("weak", []):
 		weak.append(e)
 	for e in z.get("resist", []):
@@ -300,15 +297,19 @@ const MINION_BITE := 0.25   # each minion hits for 25% of the boss's Attack
 
 ## Picks a boss's mechanics: mid bosses get 1, zone bosses and trials get 2.
 ## Each named boss fights its own way (the rest roll from the pool).
-const BOSS_MECHANICS := {
-	"Black Annis": ["minions", "crush"], "Grendel": ["crush", "enrage"], "The Dullahan": ["crush", "minions"],
-	"Hel, Queen of the Dead": ["minions", "breath"], "Scylla": ["minions", "crush"], "Charybdis": ["breath", "shield"],
-	"Fafnir": ["breath", "crush"], "Surtr the Fire Giant": ["breath", "enrage"], "Echidna": ["minions", "breath"],
-	"Typhon, Father of Monsters": ["crush", "breath"], "The Weeping Warden": ["shield", "crush"], "The Withered Queen": ["minions", "shield"],
-	"The Jester of Thorns": ["breath", "minions"], "The Fairy Queen": ["shield", "minions"], "Forgemaster Brann": ["crush", "shield"],
-	"High King Thrandor": ["crush", "enrage"], "Archon Valeth": ["shield", "breath"], "Seraphiel, the First Light": ["shield", "enrage"],
-	"Duke Malgrath": ["crush", "minions"], "Azgaroth, Lord of the Abyss": ["breath", "crush"],
+const BOSS_MECHANICS := {  # by boss id
+	"black_annis": ["minions", "crush"], "grendel": ["crush", "enrage"], "dullahan": ["crush", "minions"],
+	"hel": ["minions", "breath"], "scylla": ["minions", "crush"], "charybdis": ["breath", "shield"],
+	"fafnir": ["breath", "crush"], "surtr": ["breath", "enrage"], "echidna": ["minions", "breath"],
+	"typhon": ["crush", "breath"], "weeping_warden": ["shield", "crush"], "withered_queen": ["minions", "shield"],
+	"jester_of_thorns": ["breath", "minions"], "fairy_queen": ["shield", "minions"], "forgemaster_brann": ["crush", "shield"],
+	"high_king_thrandor": ["crush", "enrage"], "archon_valeth": ["shield", "breath"], "seraphiel": ["shield", "enrage"],
+	"duke_malgrath": ["crush", "minions"], "azgaroth": ["breath", "crush"],
 }
+
+## What seeds a boss's random picks: trials all share the id "trial", so they go by their name.
+static func _boss_seed(g: GameState) -> String:
+	return g.enemy_name if g.enemy_species == "trial" else g.enemy_species
 
 static func roll_mechanics(g: GameState) -> Array:
 	if BOSS_MECHANICS.has(g.enemy_species):
@@ -316,7 +317,7 @@ static func roll_mechanics(g: GameState) -> Array:
 		# mid bosses use their first mechanic, zone bosses and trials both
 		return own.duplicate() if g.enemy_boss_kind in ["zone", "trial"] else [own[0]]
 	var pool := ["shield", "enrage", "minions", "breath", "crush"]
-	var h := absi(hash(g.enemy_species))
+	var h := absi(hash(_boss_seed(g)))
 	var first: String = pool[h % pool.size()]
 	var out: Array = [first]
 	if g.enemy_boss_kind in ["zone", "trial"]:
@@ -329,10 +330,9 @@ static func start_boss(g: GameState) -> void:
 	g.boss_mechanics = roll_mechanics(g)
 	g.boss_phase = {}
 	if "breath" in g.boss_mechanics:
-		var key := GameData.realm_of(g.floor_num)
-		var z := String(GameData.zone_for_floor(g.floor_num)["name"]) if key == "" else key
-		g.cfight["breath"] = {"Ember Halls": "burn", "demon": "burn", "dwarf": "burn", "Flooded Depths": "chill", "angel": "chill",
-			"Sunken Catacombs": "poison", "The Shadow Deep": "poison"}.get(z, ["burn", "poison", "chill"][absi(hash(g.enemy_species)) % 3])
+		var z := String(GameData.zone_for_floor(g.floor_num)["id"])
+		g.cfight["breath"] = {"ember_halls": "burn", "demon": "burn", "dwarf": "burn", "flooded_depths": "chill", "angel": "chill",
+			"sunken_catacombs": "poison", "the_shadow_deep": "poison"}.get(z, ["burn", "poison", "chill"][absi(hash(_boss_seed(g))) % 3])
 
 ## Every boss turn: shields, minions and the enrage clock. Returns a log line.
 static func boss_turn(g: GameState) -> String:

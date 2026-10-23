@@ -13,79 +13,79 @@ const TIER_POWER := [1.0, 1.35, 1.75]   # level 15, 35, 75 classes
 const RANK_POWER := {"C": 1.0, "B": 1.05, "A": 1.1, "S": 1.15, "SS": 1.25, "God": 1.4}
 const COLOR := "#fde047"
 
-# class name -> [skill name, template]  (template "" = pick from the class's focus)
+# class node id -> [skill name, template]  (template "" = pick from the class's focus)
 const NAMES := {
 	# Warrior
-	"Berserker": ["Frenzied Cleave", "rage"], "Bloodreaver": ["Reaver's Kiss", "drain"], "Slaughter King": ["Red Harvest", "execute"],
-	"Crimson Juggernaut": ["Crimson Tide", "drain"], "Warlord": ["Warlord's Command", "strike"], "Conqueror": ["Conquest", "crit"],
-	"Grand Marshal": ["Hold the Line", "bulwark"], "Champion": ["Champion's Stand", "bulwark"], "Crusader": ["Crusade", "burst"],
-	"Holy Avenger": ["Avenging Light", "crit"], "Templar Lord": ["Oathwall", "bulwark"], "Weaponmaster": ["Arsenal", "flurry"],
-	"Blademaster": ["Perfect Cut", "crit"], "Titan": ["Titan's Fall", "strike"],
+	"berserker": ["Frenzied Cleave", "rage"], "bloodreaver": ["Reaver's Kiss", "drain"], "slaughter_king": ["Red Harvest", "execute"],
+	"crimson_juggernaut": ["Crimson Tide", "drain"], "warlord": ["Warlord's Command", "strike"], "conqueror": ["Conquest", "crit"],
+	"grand_marshal": ["Hold the Line", "bulwark"], "champion": ["Champion's Stand", "bulwark"], "crusader": ["Crusade", "burst"],
+	"holy_avenger": ["Avenging Light", "crit"], "templar_lord": ["Oathwall", "bulwark"], "weaponmaster": ["Arsenal", "flurry"],
+	"blademaster": ["Perfect Cut", "crit"], "god_titan": ["Titan's Fall", "strike"],
 	# Knight
-	"Guardian": ["Bastion", "bulwark"], "Paladin": ["Lay on Hands", "mend"], "Holy Bulwark": ["Unbreakable", "bulwark"],
-	"Lightsworn": ["Dawnblade", "burst"], "Juggernaut": ["Unstoppable", "strike"], "Iron Colossus": ["Iron Avalanche", "bulwark"],
-	"Warden of Ruin": ["Ruinguard", "bulwark"], "Lancer": ["Lunge", "flurry"], "Dragoon": ["Dragon Dive", "strike"],
-	"Sky Dragoon": ["Skyfall", "strike"], "Wyrmlancer": ["Wyrmpiercer", "flurry"], "Death Knight": ["Deathgrip", "drain"],
-	"Dread Lord": ["Dread", "drain"], "Hellrider": ["Hellcharge", "burst"],
+	"guardian": ["Bastion", "bulwark"], "paladin": ["Lay on Hands", "mend"], "holy_bulwark": ["Unbreakable", "bulwark"],
+	"lightsworn": ["Dawnblade", "burst"], "juggernaut": ["Unstoppable", "strike"], "iron_colossus": ["Iron Avalanche", "bulwark"],
+	"warden_of_ruin": ["Ruinguard", "bulwark"], "lancer": ["Lunge", "flurry"], "dragoon": ["Dragon Dive", "strike"],
+	"god_sky_dragoon": ["Skyfall", "strike"], "wyrmlancer": ["Wyrmpiercer", "flurry"], "death_knight": ["Deathgrip", "drain"],
+	"dread_lord": ["Dread", "drain"], "hellrider": ["Hellcharge", "burst"],
 	# Wanderer
-	"Swordsman": ["Drawing Cut", "crit"], "Sword Saint": ["Sword Saint's Truth", "crit"], "Sword God": ["Heaven-Splitting Sword", "crit"],
-	"Sword Immortal": ["Undying Edge", "crit"], "Blade Phantom": ["Phantom Step", "veil"], "Ghost Blade": ["Ghost Cut", "crit"],
-	"Thousand Edges": ["A Thousand Edges", "flurry"], "Demonic Disciple": ["Demon Palm", "drain"], "Demon Saint": ["Demon Saint's Palm", "drain"],
-	"Heavenly Demon": ["Heavenly Demon's Descent", "rage"], "Asura": ["Asura's Wrath", "rage"], "Blood Fiend": ["Blood Feast", "drain"],
-	"Blood Demon King": ["Sea of Blood", "drain"], "Poison Sovereign": ["Venom Throne", "execute"],
+	"swordsman": ["Drawing Cut", "crit"], "sword_saint": ["Sword Saint's Truth", "crit"], "god_sword_god": ["Heaven-Splitting Sword", "crit"],
+	"sword_immortal": ["Undying Edge", "crit"], "blade_phantom": ["Phantom Step", "veil"], "ghost_blade": ["Ghost Cut", "crit"],
+	"thousand_edges": ["A Thousand Edges", "flurry"], "demonic_disciple": ["Demon Palm", "drain"], "demon_saint": ["Demon Saint's Palm", "drain"],
+	"god_heavenly_demon": ["Heavenly Demon's Descent", "rage"], "asura": ["Asura's Wrath", "rage"], "blood_fiend": ["Blood Feast", "drain"],
+	"blood_demon_king": ["Sea of Blood", "drain"], "poison_sovereign": ["Venom Throne", "execute"],
 	# Cleric
-	"Priest": ["Prayer of Mending", "mend"], "High Priest": ["Holy Word", "mend"], "Saint": ["Miracle", "mend"],
-	"Oracle": ["Foresight", "veil"], "Inquisitor": ["Inquisition", "burst"], "Zealot": ["Zeal", "crit"],
-	"Purifier": ["Purifying Flame", "burst"], "Druid": ["Rejuvenate", "mend"], "Grove Keeper": ["Thornwall", "bulwark"],
-	"Archdruid": ["World Tree's Bloom", "mend"], "Lifebinder": ["Lifebind", "mend"], "Storm Druid": ["Squall", "burst"],
-	"Thunder Shaman": ["Thunder Totem", "burst"], "Wildshaper": ["Bear Form", "rage"],
+	"priest": ["Prayer of Mending", "mend"], "high_priest": ["Holy Word", "mend"], "saint": ["Miracle", "mend"],
+	"oracle": ["Foresight", "veil"], "inquisitor": ["Inquisition", "burst"], "zealot": ["Zeal", "crit"],
+	"purifier": ["Purifying Flame", "burst"], "druid": ["Rejuvenate", "mend"], "grove_keeper": ["Thornwall", "bulwark"],
+	"god_archdruid": ["World Tree's Bloom", "mend"], "lifebinder": ["Lifebind", "mend"], "storm_druid": ["Squall", "burst"],
+	"thunder_shaman": ["Thunder Totem", "burst"], "wildshaper": ["Bear Form", "rage"],
 	# Acolyte
-	"Dawn Disciple": ["First Light", "mend"], "Templar": ["Sacred Shield", "bulwark"], "Sun Templar": ["Sunstrike", "burst"],
-	"Saint Militant": ["Holy War", "strike"], "Seer": ["Glimpse", "veil"], "Prophet": ["Prophecy", "crit"],
-	"Star Seer": ["Falling Star", "burst"], "Cultist": ["Dark Rite", "drain"], "Warlock": ["Eldritch Blast", "burst"],
-	"Hexlord": ["Grand Hex", "execute"], "Void Caller": ["Call the Void", "burst"], "Blood Knight": ["Blood Oath", "drain"],
-	"Blood Lord": ["Blood Tithe", "drain"], "Reaper": ["Harvest Souls", "execute"],
+	"dawn_disciple": ["First Light", "mend"], "templar": ["Sacred Shield", "bulwark"], "sun_templar": ["Sunstrike", "burst"],
+	"god_saint_militant": ["Holy War", "strike"], "seer": ["Glimpse", "veil"], "prophet": ["Prophecy", "crit"],
+	"star_seer": ["Falling Star", "burst"], "cultist": ["Dark Rite", "drain"], "warlock": ["Eldritch Blast", "burst"],
+	"hexlord": ["Grand Hex", "execute"], "void_caller": ["Call the Void", "burst"], "blood_knight": ["Blood Oath", "drain"],
+	"blood_lord": ["Blood Tithe", "drain"], "reaper": ["Harvest Souls", "execute"],
 	# Mage
-	"Elementalist": ["Elemental Surge", "burst"], "Pyromancer": ["Firestorm", "burst"], "Inferno Archmage": ["Inferno", "burst"],
-	"Storm Sovereign": ["Sovereign Storm", "flurry"], "Cryomancer": ["Deep Freeze", "burst"], "Glacial Sage": ["Glacier", "bulwark"],
-	"Frost Witch": ["Witch's Winter", "burst"], "Arcanist": ["Arcane Barrage", "flurry"], "Lightbinder": ["Bound Light", "burst"],
-	"Archmage of Dawn": ["Dawnbreak", "burst"], "Chronomancer": ["Stop Time", "time"], "Necromancer": ["Raise the Fallen", "summon"],
-	"Necrolord": ["Army of the Dead", "summon"], "Bone Sovereign": ["Bone Storm", "flurry"],
+	"elementalist": ["Elemental Surge", "burst"], "pyromancer": ["Firestorm", "burst"], "inferno_archmage": ["Inferno", "burst"],
+	"storm_sovereign": ["Sovereign Storm", "flurry"], "cryomancer": ["Deep Freeze", "burst"], "glacial_sage": ["Glacier", "bulwark"],
+	"frost_witch": ["Witch's Winter", "burst"], "arcanist": ["Arcane Barrage", "flurry"], "lightbinder": ["Bound Light", "burst"],
+	"archmage_of_dawn": ["Dawnbreak", "burst"], "god_chronomancer": ["Stop Time", "time"], "necromancer": ["Raise the Fallen", "summon"],
+	"necrolord": ["Army of the Dead", "summon"], "bone_sovereign": ["Bone Storm", "flurry"],
 	# Trickster
-	"Rogue": ["Backstab", "crit"], "Assassin": ["Assassinate", "execute"], "Nightblade": ["Nightfall", "crit"],
-	"Kingslayer": ["Regicide", "execute"], "Shadowdancer": ["Shadow Dance", "veil"], "Phantom": ["Phantom's Embrace", "veil"],
-	"Mirage": ["Hall of Mirrors", "veil"], "Gambler": ["Double or Nothing", "fortune"], "Illusionist": ["Bewilder", "charm"],
-	"Grand Illusionist": ["Grand Illusion", "charm"], "Dreamweaver": ["Sweet Dreams", "charm"], "Pirate": ["Plunder", "fortune"],
-	"Corsair King": ["Broadside", "flurry"], "Fortune's Fool": ["Jackpot", "fortune"],
+	"rogue": ["Backstab", "crit"], "assassin": ["Assassinate", "execute"], "nightblade": ["Nightfall", "crit"],
+	"kingslayer": ["Regicide", "execute"], "shadowdancer": ["Shadow Dance", "veil"], "god_phantom": ["Phantom's Embrace", "veil"],
+	"mirage": ["Hall of Mirrors", "veil"], "gambler": ["Double or Nothing", "fortune"], "illusionist": ["Bewilder", "charm"],
+	"grand_illusionist": ["Grand Illusion", "charm"], "dreamweaver": ["Sweet Dreams", "charm"], "pirate": ["Plunder", "fortune"],
+	"corsair_king": ["Broadside", "flurry"], "fortune_s_fool": ["Jackpot", "fortune"],
 	# Ranger
-	"Hunter": ["Aimed Shot", "crit"], "Beastmaster": ["Call the Pack", "summon"], "Pack Lord": ["Alpha's Howl", "summon"],
-	"Wild King": ["King of Beasts", "summon"], "Deadeye": ["Deadeye", "crit"], "Hawkeye": ["Eye of the Hawk", "crit"],
-	"Death's Arrow": ["Last Arrow", "execute"], "Warden": ["Warden's Watch", "bulwark"], "Grove Ranger": ["Grove's Gift", "mend"],
-	"Sylvan Guardian": ["Sylvan Ward", "bulwark"], "Moonbow": ["Moonlit Arrow", "burst"], "Stormcaller": ["Call Lightning", "burst"],
-	"Tempest Archer": ["Tempest Volley", "flurry"], "Sky Hunter": ["Thunder Dive", "strike"],
+	"hunter": ["Aimed Shot", "crit"], "beastmaster": ["Call the Pack", "summon"], "pack_lord": ["Alpha's Howl", "summon"],
+	"wild_king": ["King of Beasts", "summon"], "deadeye": ["Deadeye", "crit"], "god_hawkeye": ["Eye of the Hawk", "crit"],
+	"death_s_arrow": ["Last Arrow", "execute"], "warden": ["Warden's Watch", "bulwark"], "grove_ranger": ["Grove's Gift", "mend"],
+	"sylvan_guardian": ["Sylvan Ward", "bulwark"], "moonbow": ["Moonlit Arrow", "burst"], "stormcaller": ["Call Lightning", "burst"],
+	"tempest_archer": ["Tempest Volley", "flurry"], "sky_hunter": ["Thunder Dive", "strike"],
 	# Bard
-	"Minstrel": ["Song of Rest", "song"], "Troubadour": ["Troubadour's Tale", "song"], "Songweaver": ["The Song That Weaves", "song"],
-	"Choir Saint": ["Hymn of the Choir", "mend"], "Siren": ["Siren Song", "charm"], "Dirge Singer": ["Dirge", "execute"],
-	"Doom Chanter": ["Chant of Doom", "burst"], "Skald": ["Saga", "song"], "War Chanter": ["War Chant", "song"],
-	"Warhorn": ["Sound the Horn", "song"], "Skald King": ["Saga of Kings", "song"], "Spellsinger": ["Spellsong", "burst"],
-	"Arcane Harpist": ["Harp of Stars", "flurry"], "Echo Mage": ["Echo", "flurry"],
+	"minstrel": ["Song of Rest", "song"], "troubadour": ["Troubadour's Tale", "song"], "god_songweaver": ["The Song That Weaves", "song"],
+	"choir_saint": ["Hymn of the Choir", "mend"], "siren": ["Siren Song", "charm"], "dirge_singer": ["Dirge", "execute"],
+	"doom_chanter": ["Chant of Doom", "burst"], "skald": ["Saga", "song"], "war_chanter": ["War Chant", "song"],
+	"warhorn": ["Sound the Horn", "song"], "skald_king": ["Saga of Kings", "song"], "spellsinger": ["Spellsong", "burst"],
+	"arcane_harpist": ["Harp of Stars", "flurry"], "echo_mage": ["Echo", "flurry"],
 	# Sentinel
-	"Oathguard": ["Sworn Stand", "bulwark"], "Aegis Bearer": ["Raise the Aegis", "bulwark"], "Aegis Eternal": ["Eternal Aegis", "bulwark"],
-	"Dawnwall": ["Wall of Dawn", "mend"], "Vowkeeper": ["Keep the Vow", "bulwark"], "Oath Eternal": ["Undying Oath", "bulwark"],
-	"Last Vow": ["Last Stand of Vows", "mend"], "Ironclad": ["Cold Iron", "bulwark"], "Frostwall": ["Frostwall", "bulwark"],
-	"Glacier Lord": ["Glacial Advance", "bulwark"], "Barrow Warden": ["Grave Watch", "drain"], "Tomb Sentinel": ["Tomb Guard", "drain"],
+	"oathguard": ["Sworn Stand", "bulwark"], "aegis_bearer": ["Raise the Aegis", "bulwark"], "aegis_eternal": ["Eternal Aegis", "bulwark"],
+	"dawnwall": ["Wall of Dawn", "mend"], "vowkeeper": ["Keep the Vow", "bulwark"], "oath_eternal": ["Undying Oath", "bulwark"],
+	"last_vow": ["Last Stand of Vows", "mend"], "ironclad": ["Cold Iron", "bulwark"], "frostwall": ["Frostwall", "bulwark"],
+	"glacier_lord": ["Glacial Advance", "bulwark"], "barrow_warden": ["Grave Watch", "drain"], "tomb_sentinel": ["Tomb Guard", "drain"],
 	# Ironbark
-	"Thornback": ["Thorn Coat", "bulwark"], "Briarheart": ["Briar Burst", "bulwark"], "Bramble King": ["Crown of Thorns", "bulwark"],
-	"Mossback": ["Moss Mend", "mend"], "Elder Oak": ["Elder's Shade", "mend"], "Stonefist": ["Stone Fist", "strike"],
-	"Rockbreaker": ["Rockbreak", "strike"], "Cragborn": ["Crag Skin", "bulwark"], "Granite Titan": ["Granite Wall", "bulwark"],
+	"thornback": ["Thorn Coat", "bulwark"], "briarheart": ["Briar Burst", "bulwark"], "bramble_king": ["Crown of Thorns", "bulwark"],
+	"mossback": ["Moss Mend", "mend"], "elder_oak": ["Elder's Shade", "mend"], "stonefist": ["Stone Fist", "strike"],
+	"rockbreaker": ["Rockbreak", "strike"], "cragborn": ["Crag Skin", "bulwark"], "granite_titan": ["Granite Wall", "bulwark"],
 	# Nightstalker
-	"Stalker": ["Stalk", "veil"], "Cutthroat": ["Cutthroat", "execute"], "Night Reaper": ["Night Harvest", "execute"],
-	"Duskrunner": ["Dusk Dash", "veil"], "Moonlit Ghost": ["Ghost Step", "veil"], "Skirmisher": ["Skirmish", "flurry"],
-	"Knife Dancer": ["Knife Dance", "flurry"], "Ambusher": ["Ambush", "crit"], "Silent Death": ["Silent Kill", "crit"],
+	"stalker": ["Stalk", "veil"], "cutthroat": ["Cutthroat", "execute"], "night_reaper": ["Night Harvest", "execute"],
+	"duskrunner": ["Dusk Dash", "veil"], "moonlit_ghost": ["Ghost Step", "veil"], "skirmisher": ["Skirmish", "flurry"],
+	"knife_dancer": ["Knife Dance", "flurry"], "ambusher": ["Ambush", "crit"], "silent_death": ["Silent Kill", "crit"],
 	# Conjurer
-	"Binder": ["Binding Circle", "summon"], "Spiritcaller": ["Call Spirits", "summon"], "Ancestor Speaker": ["Ancestors' Aid", "summon"],
-	"Golemwright": ["Raise Golem", "summon"], "Stone Artificer": ["Stone Guardian", "summon"], "Demonologist": ["Infernal Pact", "summon"],
-	"Imp Master": ["Imp Swarm", "summon"], "Legion Lord": ["Legion", "summon"], "Voidbinder": ["Void Chains", "summon"],
+	"binder": ["Binding Circle", "summon"], "spiritcaller": ["Call Spirits", "summon"], "ancestor_speaker": ["Ancestors' Aid", "summon"],
+	"golemwright": ["Raise Golem", "summon"], "stone_artificer": ["Stone Guardian", "summon"], "demonologist": ["Infernal Pact", "summon"],
+	"imp_master": ["Imp Swarm", "summon"], "legion_lord": ["Legion", "summon"], "voidbinder": ["Void Chains", "summon"],
 }
 const KEY_TEMPLATE := {"atk": "strike", "crit": "crit", "double_strike": "flurry", "lifesteal": "drain", "def": "bulwark",
 	"thorns": "bulwark", "hp": "bulwark", "regen": "mend", "skill": "burst", "dodge": "veil", "execute": "execute", "rage": "rage",
@@ -155,7 +155,7 @@ static func _f(v: float) -> String:
 	return str(snappedf(v, 0.1)).trim_suffix(".0")
 
 static func _build(n: Dictionary) -> Dictionary:
-	var nm: Array = NAMES.get(String(n["name"]), [])
+	var nm: Array = NAMES.get(String(n["id"]), [])
 	var tpl := String(nm[1]) if nm.size() > 1 and String(nm[1]) != "" else String(KEY_TEMPLATE.get(ClassTree._main_key(n), "strike"))
 	var skill_name := String(nm[0]) if not nm.is_empty() else "%s's %s" % [n["name"], NOUNS.get(tpl, "Art")]
 	var t := clampi(int(n["tier"]), 1, 3)
