@@ -149,7 +149,7 @@ const PROP_HINTS := {"chest": "Tap the chest", "camp": "Tap the camp to trade or
 static func enter_event_room(g: GameState, kind: String) -> void:
 	g.room_kind = kind
 	g.horde_left = 0   # an ambush from the door doesn't follow you into a quiet room
-	g.fight = GameData.FIGHTS_PER_FLOOR   # a monster here (mimic, a nest's mother) ends the room
+	g.fight = GameData.FIGHTS_PER_FLOOR   # a monster here (a mimic) ends the room
 	var p := {"kind": String(EVENT_ROOMS[kind]), "used": false, "x": 0.5, "y": 0.5}
 	if kind == "treasure":
 		p["mimic"] = randf() * 100.0 < MIMIC_CHANCE
@@ -290,7 +290,7 @@ static func interact(g: GameState, i: int) -> String:
 static func _monster(g: GameState, name: String, art: String, line: String) -> void:
 	g.exploring = false
 	g.spawn_enemy()
-	# A room's own monster (a mimic, an angry nest mother) comes alone: spawn_enemy can
+	# A room's own monster (a mimic) comes alone: spawn_enemy can
 	# roll a pack, which left ordinary monsters stepping out of a treasure room after it
 	g.horde_left = 0
 	g.horde_pack = false

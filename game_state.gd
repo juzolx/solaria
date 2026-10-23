@@ -3922,7 +3922,7 @@ func roll_doors(was_boss := false) -> Array:
 					break
 		if (floor_num < 3 and kind == "elite") or (floor_num < Travelers.FROM_FLOOR and kind == "traveler"):
 			kind = "fight"
-		if floor_num >= 3 and randf() * 100.0 < Menagerie.NEST_DOOR_CHANCE:
+		if floor_num >= 3 and kind != "merchant" and randf() * 100.0 < Menagerie.NEST_DOOR_CHANCE:
 			kind = "nest"  # Juzo: a nest is the second-rarest find, after a Calamity
 		out.append(Rifts.maybe_door(self, kind))  # very rarely: a hidden portal
 	if was_boss and not "camp" in out:
