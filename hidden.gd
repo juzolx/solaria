@@ -358,7 +358,7 @@ static func unlock(g: GameState, id: String) -> void:
 # ---------- The reveal, the choice and the steps ----------
 
 const STAGE_LEVELS := [15, 35, 75]
-const STAGE_POWER := [1.18, 1.28, 1.40]   # Attack, HP and Defense, each step (about x2.1 by 75; the main route gives about x1.9 to its own stats)
+const STAGE_POWER := [1.15, 1.22, 1.35]   # Attack, HP and Defense, each step (about x1.9 by 75, level with the main route; God classes sit above both - Juzo, 2.1)
 
 ## How far your hidden class has grown (1..3) at your level.
 static func stage(g: GameState) -> int:
