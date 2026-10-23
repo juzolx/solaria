@@ -11,6 +11,11 @@ past ~111 in 10 h. Cliff at floors 51-100 (monster HP outgrows hero attack;
 snowball. Dust has no sink, gold piles up, shop reroll (30 g) nearly free.
 Boss cooldown uses real clock time.
 
+Oct 23 later: F1 stable ids merged (2a5a200d, +grave fix), A3/A5 license+sound
+merged, balance sim merged. Running: A1 art plumbing (wt/art), G5 pet abilities
+(wt/pets), R4 save safety (wt/saves). Next batch: F4+F5 loot filter/auto-dive/
+presets, F3 portals. Waiting on Juzo: D1-D10, ComfyUI install OK, SpriteCook /mcp.
+
 Rule: game_state.gd is touched by everything; helpers add new files and only
 small hooks there; the lead merges worktrees one at a time.
 
