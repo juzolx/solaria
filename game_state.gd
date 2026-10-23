@@ -1134,7 +1134,7 @@ func _auto_skill() -> void:
 				if not skill_ready(id) or skill_auto_off.has(id):
 					continue
 				var ws := SkillData.info(id)
-				if (want == "break" and (ws.has("power") or ws.has("stun"))) or (want == "shield" and ws.has("shield") and shield_hp <= 0):
+				if (want == "break" and (ws.has("power") or ws.has("stun"))) or (want == "shield" and ws.has("shield") and shield_hp <= PetAbilities.pet_shield(self)):
 					use_skill(id)
 					return
 	var best := ""

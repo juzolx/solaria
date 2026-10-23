@@ -39,13 +39,13 @@ const FAMILIES := {
 		"trick": {"name": "Guard", "do": "shield", "chance": [12, 18], "value": [5, 8], "text": "{c}% chance each turn to shield you for {v}% of your max HP"}},
 	"spirit": {"name": "Spirit",
 		"passive": {"name": "Soft Glow", "key": "regen", "values": [0.2, 0.3, 0.4, 0.5, 0.6, 0.7], "text": "you heal {v}% of your max HP every turn"},
-		"trick": {"name": "Mend", "do": "heal", "chance": [20, 30], "value": [5, 8], "text": "{c}% chance each turn, when you're below half health, to heal you for {v}% of your max HP"}},
+		"trick": {"name": "Mend", "do": "heal", "chance": [15, 20], "value": [4, 6], "text": "{c}% chance each turn, when you're below half health, to heal you for {v}% of your max HP"}},
 	"serpent": {"name": "Serpent",
 		"passive": {"name": "Leech", "key": "lifesteal", "values": [1, 1, 2, 2, 3, 3], "text": "+{v}% lifesteal"},
 		"trick": {"name": "Venom", "do": "poison", "chance": [15, 22], "value": [0.5, 0.8], "text": "{c}% chance each turn to poison the monster for {v}x its hit every turn"}},
 	"humanoid": {"name": "Folk",
 		"passive": {"name": "Sticky Fingers", "key": "gold_find", "values": [3, 5, 7, 8, 10, 12], "text": "+{v}% gold"},
-		"trick": {"name": "Pickpocket", "do": "gold", "chance": [15, 22], "value": [3, 5], "text": "{c}% chance each turn to steal a little gold ({v}x the floor's coin)"}},
+		"trick": {"name": "Pickpocket", "do": "gold", "chance": [15, 22], "value": [0.5, 1.0], "text": "{c}% chance each turn to steal a little gold ({v}x the floor's coin), once a fight"}},
 	"calamity": {"name": "Calamity",
 		"passive": {"name": "Dread", "key": "def", "values": [6, 6, 6, 6, 6, 6], "text": "+{v}% Defense"},
 		"trick": {"name": "Ruin", "do": "strike", "chance": [20, 25], "value": [2.0, 2.0], "text": "{c}% chance each turn to strike again for {v}x its hit"}},
@@ -60,7 +60,7 @@ const SIGNATURES := {
 	"ember_halls": {"name": "Ember Breath", "when": "start", "do": "burn", "value": 1.0, "text": "Opens every fight with fire: the monster burns for {v}x its hit for 3 turns"},
 	"the_shadow_deep": {"name": "Shadow Fang", "when": "start", "do": "strike", "value": 3.0, "text": "Opens every fight from the dark for {v}x its hit"},
 	"elf": {"name": "Hush of the Wood", "when": "low", "do": "shield", "value": 20, "text": "Once a fight, when you drop low, the wood hides you: a shield of {v}% of your max HP"},
-	"fairy": {"name": "Fairy Gold", "when": "kill", "do": "gold", "value": 3, "text": "Every kill shakes loose extra gold ({v}x the floor's coin)"},
+	"fairy": {"name": "Fairy Gold", "when": "kill", "do": "gold", "value": 1, "text": "Every kill shakes loose extra gold ({v}x the floor's coin)"},
 	"dwarf": {"name": "Ironroot Wall", "when": "start", "do": "shield", "value": 10, "text": "Every fight starts behind a shield of {v}% of your max HP"},
 	"angel": {"name": "Gilded Grace", "when": "low", "do": "heal", "value": 25, "text": "Once a fight, when you drop low, a light heals {v}% of your max HP"},
 	"demon": {"name": "Hellfire", "when": "start", "do": "burn", "value": 1.5, "text": "Opens every fight with hellfire: the monster burns for {v}x its hit for 3 turns"},
@@ -173,24 +173,56 @@ static func lines(p: Dictionary) -> Array:
 # Passives: bonus sources like gear and race (GameState._bonus_sources)
 # =====================================================================
 
+const REGEN_CAP := 1.5     # all pets together heal at most this % of max HP a turn
+const SHIELD_CAP := 0.5    # pet shields never push your shield past half your max HP
+
+## Pets' passives. Cached on the hero until the team (who's out, their rank) changes:
+## this runs on every stat lookup.
 static func bonus_sources(g: GameState) -> Array:
-	var out: Array = []
 	if g.pets.is_empty():
-		return out
-	for p in Menagerie.out(g):
+		return []
+	var team := Menagerie.out(g)
+	var key: Array = []
+	for p in team:
+		key.append([int(p["id"]), _rank(p), String(p["species"])])
+	var cached: Array = g.get_meta("pet_bonus", [])
+	if not cached.is_empty() and cached[0] == key:
+		return cached[1]
+	var out: Array = []
+	var regen := 0.0
+	for p in team:
 		var sp := String(p["species"])
-		var key := String(FAMILIES[family(sp)]["passive"]["key"])
+		var k := String(FAMILIES[family(sp)]["passive"]["key"])
 		var v := passive_value(sp, _rank(p))
-		out.append({key: 1.0 + v / 100.0} if key in ["hp", "def", "atk"] else {key: v})
+		if k == "regen":
+			v = minf(v, REGEN_CAP - regen)
+			regen += v
+			if v <= 0.0:
+				continue
+		out.append({k: 1.0 + v / 100.0} if k in ["hp", "def", "atk"] else {k: v})
+	g.set_meta("pet_bonus", [key, out])
 	return out
+
+## How much of your shield came from pets (auto play still casts its own shield over it).
+static func pet_shield(g: GameState) -> int:
+	return mini(g.shield_hp, int(g.get_meta("pet_shield", 0)))
 
 # =====================================================================
 # In the fight (called from Menagerie)
 # =====================================================================
 
+## A new fight: pet shields don't carry over from the last one.
+static func _fight_start(g: GameState) -> void:
+	if g.cfight.get("pet_fight", false):
+		return
+	g.cfight["pet_fight"] = true
+	g.shield_hp -= pet_shield(g)
+	g.set_meta("pet_shield", 0)
+
 ## After a pet's turn: its signature (once a fight) and its trick (a chance).
 ## hit: what its normal hit would deal.
 static func on_pet_turn(g: GameState, p: Dictionary, hit: int) -> void:
+	_fight_start(g)
 	var r := _rank(p)
 	var id := int(p["id"])
 	if r >= SIGNATURE_RANK:
@@ -199,17 +231,22 @@ static func on_pet_turn(g: GameState, p: Dictionary, hit: int) -> void:
 		var when := String(sig["when"])
 		var low := g.hero_hp > 0 and g.hero_hp < int(g.get_max_hp() * LOW_HP)
 		if not used.has(id) and (when == "start" or (when == "low" and low)):
-			used[id] = true
-			g.cfight["pet_sig"] = used
-			apply(g, p, String(sig["do"]), float(sig["value"]), hit, String(sig["name"]))
+			if apply(g, p, String(sig["do"]), float(sig["value"]), hit, String(sig["name"])) or when == "start":
+				used[id] = true
+				g.cfight["pet_sig"] = used
 	if r >= TRICK_RANK and g.enemy_hp > 0:
 		var t: Dictionary = FAMILIES[family(String(p["species"]))]["trick"]
 		var st := _step(r)
 		if String(t["do"]) == "heal" and g.hero_hp * 2 >= g.get_max_hp():
 			return  # Mend waits until you need it
-		if randf() * 100.0 < float(t["chance"][st]):
-			apply(g, p, String(t["do"]), float(t["value"][st]), hit, String(t["name"]))
+		var picked: Dictionary = g.cfight.get("pet_pick", {})
+		if String(t["do"]) == "gold" and picked.has(id):
+			return  # Pickpocket: once a fight
+		if randf() * 100.0 < float(t["chance"][st]) and apply(g, p, String(t["do"]), float(t["value"][st]), hit, String(t["name"])):
 			g.feats["pet_tricks"] = int(g.feats.get("pet_tricks", 0)) + 1
+			if String(t["do"]) == "gold":
+				picked[id] = true
+				g.cfight["pet_pick"] = picked
 
 ## A kill: "kill" signatures go off.
 static func on_kill(g: GameState) -> void:
@@ -233,7 +270,11 @@ static func apply(g: GameState, p: Dictionary, what: String, value: float, hit: 
 			var d := g._damage_enemy(maxi(1, int(hit * value)), ["Physical"])
 			g.events.append({"type": "summon_hit", "dmg": d, "name": String(p["name"])})
 		"shield":
-			g.shield_hp += maxi(1, int(maxhp * value / 100.0))
+			var add := mini(maxi(1, int(maxhp * value / 100.0)), int(maxhp * SHIELD_CAP) - g.shield_hp)
+			if add <= 0:
+				return false  # already well shielded
+			g.shield_hp += add
+			g.set_meta("pet_shield", pet_shield(g) + add)
 		"heal":
 			var h := maxi(1, int(maxhp * value / 100.0 * g.heal_mult()))
 			g.hero_hp = mini(maxhp, g.hero_hp + h)
@@ -247,8 +288,9 @@ static func apply(g: GameState, p: Dictionary, what: String, value: float, hit: 
 			g.enemy_weaken_turns = maxi(g.enemy_weaken_turns, 3)
 		"burn":
 			g.burn_dmg = maxi(g.burn_dmg if g.burn_turns > 0 else 0, maxi(1, int(hit * value)))
+			if g.burn_tag != "Blood" or g.burn_turns <= 0:
+				g.burn_tag = "Fire"  # a Blood skill's bleed keeps its tag
 			g.burn_turns = GameData.BURN_TURNS
-			g.burn_tag = "Fire"
 		"poison":
 			g.enemy_poison_dmg = maxi(g.enemy_poison_dmg, maxi(1, int(hit * value)))  # pets don't stack it
 			g.enemy_poison_turns = Combat.POISON_TURNS

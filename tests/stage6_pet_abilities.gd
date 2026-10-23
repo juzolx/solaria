@@ -135,6 +135,38 @@ func _initialize() -> void:
 	gg.burn_turns = 0
 	PetAbilities.apply(gg, gs[1], "burn", 1.0, 40, "Ember Breath")
 	check(gg.burn_turns == GameData.BURN_TURNS and gg.burn_dmg == 40, "Ember Breath burns")
+	gg.burn_tag = "Blood"
+	PetAbilities.apply(gg, gs[1], "burn", 1.0, 40, "Ember Breath")
+	check(gg.burn_tag == "Blood", "a pet's fire doesn't overwrite a bleed")
+
+	# Balance caps
+	var mx := gg.get_max_hp()
+	gg.shield_hp = 0
+	gg.set_meta("pet_shield", 0)
+	for i in 30:
+		PetAbilities.apply(gg, gs[1], "shield", 8, 10, "Guard")
+	check(gg.shield_hp <= int(mx * PetAbilities.SHIELD_CAP), "pet shields stop at half your max HP (%d of %d)" % [gg.shield_hp, mx])
+	check(PetAbilities.pet_shield(gg) == gg.shield_hp, "the game knows the shield is the pet's")
+	ClassTree.on_fight_start(gg)
+	PetAbilities.on_pet_turn(gg, gs[1], 10)
+	check(gg.shield_hp == 0, "pet shields don't carry into the next fight (%d)" % gg.shield_hp)
+	var tm := hero()
+	tm.hidden_class = "beast_tamer"
+	var spirit := of_shape("spirit")
+	var regen0 := tm.effect_value("regen")
+	for i in 3:
+		Menagerie.make_pet(tm, spirit, "", 5, "egg")
+	check(Menagerie.out(tm).size() == 3, "a tamer brings three pets")
+	check(tm.effect_value("regen") - regen0 <= PetAbilities.REGEN_CAP + 0.001, "three Mythic spirits heal at most %.1f%% a turn (%.2f)" % [PetAbilities.REGEN_CAP, tm.effect_value("regen") - regen0])
+	check(str(PetAbilities.bonus_sources(tm)) == str(PetAbilities.bonus_sources(tm)), "cached passives stay the same")
+	(Menagerie.out(tm)[0] as Dictionary)["hurt"] = 2
+	check(Menagerie.out(tm).size() == 2 and PetAbilities.bonus_sources(tm).size() == 2, "the cache notices a pet getting hurt")
+	# Pickpocket: once a fight
+	var pk := with_pet(of_shape("humanoid"), 4)
+	var gpk: GameState = pk[0]
+	for i in 200:
+		Menagerie.turn(gpk)
+	check(int(gpk.feats.get("pet_tricks", 0)) == 1, "Pickpocket steals once a fight (%d)" % int(gpk.feats.get("pet_tricks", 0)))
 
 	# Signatures: a Mythic from the Mossy Hollows snares on its first turn, once a fight
 	var moss := String(GameData.ZONES[0]["enemies"][0]["id"])

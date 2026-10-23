@@ -26,9 +26,9 @@ play uses it with no buttons.
 |---|---|---|
 | Beast | Keen Eye: +1..5% crit | Pounce: 15/22% a turn, extra hit for 1/1.5x its hit |
 | Brute | Thick Hide: +2..7% max HP | Guard: 12/18% a turn, shield 5/8% max HP |
-| Spirit | Soft Glow: 0.2..0.7% max HP regen a turn | Mend: 20/30% a turn while below half HP, heal 5/8% |
+| Spirit | Soft Glow: 0.2..0.7% max HP regen a turn | Mend: 15/20% a turn while below half HP, heal 4/6% |
 | Serpent | Leech: +1..3% lifesteal | Venom: 15/22% a turn, poison 0.5/0.8x its hit a turn (doesn't stack) |
-| Folk (humanoid) | Sticky Fingers: +3..12% gold | Pickpocket: 15/22% a turn, 3/5x the floor's coin |
+| Folk (humanoid) | Sticky Fingers: +3..12% gold | Pickpocket: 15/22% a turn, 0.5/1x the floor's coin, once a fight |
 | Calamity (Calamity pets) | Dread: +6% Defense | Ruin: 20/25% a turn, extra hit 2x |
 
 ## Mythic signatures (by region id)
@@ -41,7 +41,7 @@ play uses it with no buttons.
 | ember_halls | Ember Breath: fight opens with a burn (1x its hit, 3 turns) |
 | the_shadow_deep | Shadow Fang: fight opens with a 3x hit |
 | elf | Hush of the Wood: once a fight below 35% HP, shield 20% |
-| fairy | Fairy Gold: every kill, 3x the floor's coin |
+| fairy | Fairy Gold: every kill, 1x the floor's coin |
 | dwarf | Ironroot Wall: every fight starts with a 10% shield |
 | angel | Gilded Grace: once a fight below 35% HP, heal 25% |
 | demon | Hellfire: fight opens with a burn (1.5x its hit) |
@@ -61,3 +61,11 @@ A Beast Tamer with three Mythics gets three sets; that's the hidden class's rewa
    species to get its own trick instead (e.g. Gullinbursti)?
 4. Calamity pets (always Mythic) get their own family and signature. OK?
 5. Trick pop-ups show as a floating name ("POUNCE!") like skills. Too noisy with 3 pets?
+
+## Caps (checker pass, Oct 23)
+- All pets together heal at most 1.5% of max HP a turn (REGEN_CAP).
+- Pet shields never push your shield past half your max HP (SHIELD_CAP), are cleared at the
+  next fight, and don't stop Auto play casting its own shield skill (GameState auto checks
+  `PetAbilities.pet_shield`).
+- "Low" signatures are only used up when they actually go off; a pet's fire keeps a Blood bleed's tag.
+- Passives are cached on the hero until the team on the run changes.
