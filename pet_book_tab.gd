@@ -39,6 +39,7 @@ func refresh() -> void:
 	box.add_child(legend)
 	for t in Menagerie.TIER_NAMES.size():
 		legend.add_child(UI.label(Menagerie.TIER_NAMES[t], 11, Color(Menagerie.TIER_COLORS[t])))
+	_abilities()
 	for zi in GameData.ZONES.size():
 		var z: Dictionary = GameData.ZONES[zi]
 		var mons: Array = []
@@ -47,6 +48,7 @@ func refresh() -> void:
 		for s in z["subs"]:
 			mons.append(s["monster"]["id"])
 		box.add_child(UI.heading(str(z["name"])))
+		box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text(String(z["id"])), 11, Color(Menagerie.TIER_COLORS[PetAbilities.SIGNATURE_RANK])))
 		var flow := HFlowContainer.new()
 		flow.add_theme_constant_override("h_separation", 6)
 		flow.add_theme_constant_override("v_separation", 6)
@@ -77,4 +79,21 @@ func _cell(n: String) -> Control:
 	l.custom_minimum_size = Vector2(68, 0)
 	v.add_child(l)
 	c.tooltip_text = ("Owned: best %s" % Menagerie.TIER_NAMES[tier]) if have else ("Seen in the dungeon, never owned" if met else "Not met yet")
+	if met:
+		c.tooltip_text += "\n%s family. %s" % [PetAbilities.FAMILIES[PetAbilities.family(n)]["name"], PetAbilities.passive_text(n, tier if have else 0)]
+		if have and tier >= PetAbilities.TRICK_RANK:
+			c.tooltip_text += "\n" + PetAbilities.trick_text(n, tier)
+		if have and tier >= PetAbilities.SIGNATURE_RANK:
+			c.tooltip_text += "\n" + PetAbilities.signature_text(n)
 	return c
+
+## 2.1: what pets can do by rank, and each family's passive and trick.
+func _abilities() -> void:
+	box.add_child(UI.heading("Abilities by rank"))
+	for t in PetAbilities.RANK_TEXT.size():
+		box.add_child(UI.wrap("%s: %s" % [Menagerie.TIER_NAMES[t], PetAbilities.RANK_TEXT[t]], 11, Color(Menagerie.TIER_COLORS[t])))
+	box.add_child(UI.wrap("A pet's family is its kind of monster. Hold a pet below to see its own.", 11, UI.DIM))
+	for f in PetAbilities.FAMILIES:
+		box.add_child(UI.label(String(PetAbilities.FAMILIES[f]["name"]).to_upper(), 11, UI.GOLD))
+		box.add_child(UI.wrap("Passive, %s" % PetAbilities.family_passive_range(f), 11, UI.TEXT))
+		box.add_child(UI.wrap("Epic trick, %s" % PetAbilities.family_trick_text(f, PetAbilities.TRICK_RANK), 11, UI.TEXT))

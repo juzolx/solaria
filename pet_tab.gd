@@ -91,6 +91,7 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 	v.add_child(UI.label("%s %s  ·  Lv %d" % [Menagerie.TIER_NAMES[tier], Monsters.name_of(str(p["species"])), int(p["level"])], 12, tc))
 	v.add_child(UI.label(("Hurt: rests %d more floor%s" % [int(p["hurt"]), "" if int(p["hurt"]) == 1 else "s"]) if hurt else
 		"Hits for %d%% of your Attack" % int(Menagerie.power(p) * 100), 11, UI.RED if hurt else UI.DIM))
+	_ability_lines(v, p)
 	var right := UI.vbox(4)
 	right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(right)
@@ -137,6 +138,14 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 		rel.custom_minimum_size = Vector2(0, UI.TAP)
 		row.add_child(rel)
 	return c[0]
+
+## 2.1: what the pet knows (by its rank), and what a higher-ranked one of its kind would add.
+func _ability_lines(v: VBoxContainer, p: Dictionary) -> void:
+	for a in PetAbilities.lines(p):
+		if a["on"]:
+			v.add_child(UI.wrap("+ " + String(a["text"]), 11, UI.TEXT))
+		else:
+			v.add_child(UI.wrap("Locked (%s and up): %s" % [Menagerie.TIER_NAMES[int(a["rank"])], a["text"]], 11, UI.DIM))
 
 ## Your class companion: what it is, what it does, and what it becomes.
 func _pet_card() -> void:

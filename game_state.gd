@@ -486,6 +486,7 @@ func _bonus_sources() -> Array:
 	out.append_array(ClassTree.bonus_sources(self))
 	out.append_array(set_bonuses())
 	out.append_array(_passive_sources())
+	out.append_array(PetAbilities.bonus_sources(self))  # 2.1: pets' passives, by rank
 	var mb := Mastery.bonus(self)
 	if not mb.is_empty():
 		out.append(mb)
