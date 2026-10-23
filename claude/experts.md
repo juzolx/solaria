@@ -1,7 +1,10 @@
 # Solaria expert agents (from Oct 23 2026)
 
 How work flows:
-1. **Research loop** (Fable): 10 rounds on one topic. Each round researches, then
+Model rule (Juzo): Fable 5 is used ONLY for final checks (it is expensive).
+Research loops and experts use the normal model.
+
+1. **Research loop**: 10 rounds on one topic. Each round researches, then
    double-checks the previous round's claims against sources, goes deeper on gaps,
    and rewrites the document. Output: one complete document in `claude/research/`.
 2. **Expert agent** takes that document and does the work slowly and carefully in
