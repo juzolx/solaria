@@ -60,7 +60,7 @@ What keeps it infrequent:
   "stakes"; the Wheel says "spin", "prize", "fortune". Checked across all player
   text in the 2.1 fix pass: the coin-toss event is "Flip the coin" / "A COIN TOSS",
   the Trickster "loves long odds", the reroll deed is "Lucky Hands" and the old
-  "Gambler" class is shown as "Daredevil" (its id is unchanged). Keep "gambling" and "casino" out of the store title,
+  "Gambler" class keeps its name (Juzo's call; it names a playstyle, not a gambling feature). Keep "gambling" and "casino" out of the store title,
   keywords and screenshot captions (research, Section 5; update-2.1-ideas.md).
 
 What could make a reviewer call it frequent:

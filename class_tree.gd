@@ -170,7 +170,7 @@ const TREES := {
 			["shadowdancer", "Shadowdancer", "N", "dodge:.6 double_strike:.4", "Shadow Trick", "Never where you look", [
 				["shade_dancer", "Shade Dancer", "N", "dodge:.5 crit:.5", "Shadow Trick", "Never where the blow lands", {}],
 				["mirage", "Mirage", "N", "dodge:.7 thorns:.3", "Trick", "Was never there", {}]]]]],
-		["gambler", "Daredevil", "N", "crit:.5 gold_find:.5", "Trick", "Lives on luck", [
+		["gambler", "Gambler", "N", "crit:.5 gold_find:.5", "Trick", "Lives on luck", [
 			["illusionist", "Illusionist", "N", "dodge:.6 skill:.4", "Trick", "Tricks of the light", [
 				["grand_illusionist", "Grand Illusionist", "N", "dodge:.5 skill:.5", "Trick", "The greatest show", {}],
 				["dreamweaver", "Dreamweaver", "G", "regen:.5 dodge:.5", "Trick Song", "Weaves good dreams", {}]]],
