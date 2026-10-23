@@ -126,6 +126,14 @@ func _ready() -> void:
 
 	add_child(sfx)
 	UI.sfx = sfx
+	# R4: the real game coalesces frequent hero saves; test scripts (a scripted SceneTree) write at once
+	SaveIO.coalesce = get_tree().get_script() == null
+	var flush := Timer.new()
+	flush.wait_time = 1.0
+	flush.process_mode = Node.PROCESS_MODE_ALWAYS  # keeps flushing while the game is paused
+	flush.timeout.connect(_flush_saves)
+	add_child(flush)
+	flush.start()
 	profile = Profile.load_profile()
 	codex = Codex.load_codex()
 	state.codex = codex
@@ -150,6 +158,7 @@ func _ready() -> void:
 			state.set_party(action["party"])  # a team preset with another leader
 	else:
 		show_title()
+	_show_save_notices.call_deferred()
 
 var fresh_start_notice := false
 
@@ -265,20 +274,40 @@ func dive_again() -> void:
 ## Saves the hero, the party, the codex and the profile.
 func save_everything() -> void:
 	if started and not state.run_over:
-		state.save_game()
+		state.save_game(true)  # force: skip the throttle (save_io.gd)
 		if state.party != null:
-			state.party.save_all()
+			state.party.save_all(true)
 	if codex:
 		codex.save()
 	if profile:
 		profile.save()
 
+## R4: writes hero saves the throttle held back (every second, and when this screen goes away).
+func _flush_saves() -> void:
+	if started and not state.run_over:
+		state.flush_save()
+
 ## Phones can kill a backgrounded app without warning (iOS allows about 5 s after a pause),
 ## so save the moment the app is paused, loses focus or is asked to close.
 func _notification(what: int) -> void:
 	match what:
-		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST:
+		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST, \
+				NOTIFICATION_WM_GO_BACK_REQUEST:
 			save_everything()
+		NOTIFICATION_EXIT_TREE:
+			_flush_saves()
+
+## A save file was damaged and a backup was used (or it couldn't be): tell the player gently.
+func _show_save_notices() -> void:
+	if SaveIO.notices.is_empty():
+		return
+	var text := "\n\n".join(SaveIO.notices)
+	SaveIO.notices.clear()
+	var o := Overlay.new().open(self, "Save restored", 440.0, UI.GOLD)
+	o.content.add_child(UI.wrap(text, 14, UI.TEXT))
+	var b := UI.primary("OK", o.close, UI.GOLD)
+	b.custom_minimum_size = Vector2(0, 44)
+	o.content.add_child(b)
 
 ## Saves and goes back to the title screen (to switch heroes).
 func back_to_title() -> void:
@@ -309,7 +338,8 @@ func _start(is_new: bool) -> void:
 	if loaded:
 		state.say("Welcome back, %s. Floor %d, %s." % [state.hero_name if state.hero_name != "" else "hero", state.floor_num, GameData.sub_name(state.floor_num)])
 		if state.restored_backup:
-			state.say("[color=#f87171]Your save was damaged, so your backup save was restored.[/color]")
+			state.say("[color=#fbbf24]Your save was damaged, so your most recent backup was restored.[/color]")
+			_show_save_notices.call_deferred()
 	else:
 		state.new_game()
 		state.say("Your descent begins..." if not state.hardcore else "[color=#f87171]Hardcore: one life. Make it count.[/color]")

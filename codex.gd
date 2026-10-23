@@ -161,12 +161,10 @@ var dirty := false
 static func load_codex(p := PATH) -> Codex:
 	var c := Codex.new()
 	c.path = p
-	if p != "" and FileAccess.file_exists(p):
-		var f := FileAccess.open(p, FileAccess.READ)
-		if f:
-			var d = f.get_var()
-			if typeof(d) == TYPE_DICTIONARY:
-				c._from(d)
+	if p != "":
+		var d = SaveIO.read(p, "codex")  # falls back to the backups (save_io.gd)
+		if d != null:
+			c._from(d)
 	return c
 
 func _from(d: Dictionary) -> void:
@@ -190,14 +188,11 @@ func save() -> void:
 	dirty = false
 	if path == "":
 		return
-	var f := FileAccess.open(path, FileAccess.WRITE)
-	if f == null:
-		return
-	f.store_var({"bestiary": bestiary, "stats": stats, "collection": collection, "pet_book": pet_book, "achievements": achievements,
-		"title": title, "name_color": name_color, "frame": frame, "lore": lore, "bounties": bounties, "login": login, "guide": guide, "deeds": deeds, "extra_titles": extra_titles, "bought": bought})
+	SaveIO.write(path, {"bestiary": bestiary, "stats": stats, "collection": collection, "pet_book": pet_book, "achievements": achievements,
+		"title": title, "name_color": name_color, "frame": frame, "lore": lore, "bounties": bounties, "login": login, "guide": guide, "deeds": deeds, "extra_titles": extra_titles, "bought": bought}, "codex")
 
 static func delete() -> void:
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))
+	SaveIO.delete_all(PATH)  # with its backups
 
 # =====================================================================
 # Counting
