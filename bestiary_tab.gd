@@ -15,6 +15,8 @@ var plate: PanelContainer
 var backdrop: TextureRect
 static var _grounds := {}
 var text: RichTextLabel
+var strip: VBoxContainer  # 2.1 G4: this region's Bestiary progress and its next reward
+var strip_key := ""
 var selected := ""
 var shown := ""
 
@@ -39,6 +41,8 @@ func setup(m) -> void:
 	detail = UI.vbox(8)
 	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(detail)
+	strip = UI.vbox(4)
+	detail.add_child(strip)
 	var top := UI.hbox(10)
 	detail.add_child(top)
 	# 0.13+: an illustrated plate: the monster lit in its home region's colors on a glowing ground
@@ -111,6 +115,7 @@ func refresh() -> void:
 	_show()
 
 func _show() -> void:
+	_strip()
 	if selected == "" or not codex.seen(selected):
 		pic.texture = null
 		text.text = "[color=%s]Meet a monster to learn about it. Monsters you haven't met show as ???.\n\nKill milestones (10, 100, 500 and 1,000 kills) give you lasting bonus damage and gold against that monster.[/color]" % UI.hex(UI.DIM)
@@ -241,3 +246,16 @@ static func _ground(zi: int) -> Texture2D:
 	var tex := ImageTexture.create_from_image(img)
 	_grounds[zi] = tex
 	return tex
+
+## 2.1 G4: the selected monster's region: how much of its Bestiary you've defeated and the next reward.
+func _strip() -> void:
+	var zi := 0
+	if selected != "" and codex.seen(selected):
+		zi = clampi(int(GameData.monster_home(selected).get("zone", 0)), 0, GameData.ZONES.size() - 1)
+	var track := "zone:" + String(GameData.ZONES[zi]["id"])
+	var key := "%s|%d|%d" % [track, Collections.count(codex, track), codex.coll_earned.size()]
+	if key == strip_key:
+		return
+	strip_key = key
+	OnlineUI.clear(strip)
+	strip.add_child(Collections.track_card(codex, track))

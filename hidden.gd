@@ -352,6 +352,7 @@ static func unlock(g: GameState, id: String) -> void:
 		g.codex.stats["legend_" + id] = g.slot
 		g.codex.dirty = true
 	g.codex.add("hidden_classes")
+	Collections.found_class(g.codex, id)  # 2.1 G4: counts toward the Codex rewards (no names shown)
 	g.say("[color=#c4b5fd]Something in you shifts.[/color] You'll understand at your next turning point.")
 	g.save_game()
 

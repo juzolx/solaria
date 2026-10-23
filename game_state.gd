@@ -2463,6 +2463,9 @@ func _check_codex() -> void:
 			line += "  New title: [color=#e8b14a]%s[/color]" % a["title"]
 		say(line)
 		events.append({"type": "achievement", "name": a["name"], "text": a["text"], "title": a.get("title", "")})
+	for m in Collections.check(codex):  # 2.1 G4: Codex collection rewards (titles and looks only)
+		say("[color=#e8b14a]%s[/color]" % Collections.toast_text(m))
+		events.append({"type": "toast", "text": Collections.toast_text(m), "collection": m["id"]})
 	if codex.dirty and autosave:
 		codex.save()
 

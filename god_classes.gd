@@ -118,6 +118,7 @@ static func check(g: GameState) -> void:
 		g.god_offers.append(id)
 		var c := info(id)
 		g.discovered[id] = true
+		Collections.found_class(g.codex, id)  # 2.1 G4: Codex rewards
 		Trophies.on_god(g, id, String(c["name"]))  # 2.1: the Trophy Cabin
 		g.events.append({"type": "god_offer", "id": id, "name": c["name"]})
 		g.say("[color=#fde047]*** A GOD CLASS ANSWERS YOU: %s ***[/color] %s You can swap into it now." % [c["name"], c["lore"]])

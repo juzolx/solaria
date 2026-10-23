@@ -16,6 +16,8 @@ const NOTES := [
 		"Three currencies: gold, scrap and dust. The ten zone materials are gone; dust crafts skills and Set items and pays for the last upgrades. Gear bought with gold salvages for scrap only.",
 		"Fortune's Wheel has a Legendary table from floor 250 (open for your whole account once any hero gets there). Tap Odds to see every prize, its real amount and your chances. Spins use game gold only.",
 		"Safer saves: every save is checked before it replaces the old one, with rolling backups and a daily copy. A damaged save is repaired from the newest backup, and you are told gently. Cloud backups now bring back every town.",
+		"Codex rewards: defeat every monster of a region, fill the Collection and the Pet book, find secret classes and more to earn titles, name colors and plate frames. Looks only, never power. See Codex > Rewards, and pick your title on the Hero tab.",
+		"Share card: the Share button on the Hero tab makes a picture of your hero (name, title, class, depth, gear, pet and proudest trophies) to keep or share.",
 		"Art cleanup across heroes, monsters and the dungeon, and a new Credits screen (Menu > Credits and licenses) thanking every artist.",
 	]},
 	{"version": "0.13", "name": "The Halls Below", "lines": [
