@@ -8,7 +8,7 @@ const RUMORS := [
 	"\"WANTED posters pay in steel. A boss's weapon is worth the walk back up.\"",
 	"\"Every deed you finish earns a reward from the Guild. It comes by mail.\"",
 	"\"The Blacksmith turns dust and scrap into whole sets. Ask about bigger bags too.\"",
-	"\"Feeling lucky? The Tavern's wheel will bet on any of your spare gear.\"",
+	"\"Feeling lucky? The Tavern's wheel will spin for any of your spare gear.\"",
 	"\"Nothing down below can reach you in town. Rest up before a boss.\"",
 	"\"Keep your Vault stocked: every one of your heroes can open it.\"",
 ]

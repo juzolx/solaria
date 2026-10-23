@@ -56,7 +56,7 @@ const NAMES := {
 	"kingslayer": ["Regicide", "execute"], "shadowdancer": ["Shadow Dance", "veil"], "god_phantom": ["Phantom's Embrace", "veil"],
 	"mirage": ["Hall of Mirrors", "veil"], "gambler": ["Double or Nothing", "fortune"], "illusionist": ["Bewilder", "charm"],
 	"grand_illusionist": ["Grand Illusion", "charm"], "dreamweaver": ["Sweet Dreams", "charm"], "pirate": ["Plunder", "fortune"],
-	"corsair_king": ["Broadside", "flurry"], "fortune_s_fool": ["Jackpot", "fortune"],
+	"corsair_king": ["Broadside", "flurry"], "fortune_s_fool": ["Lucky Break", "fortune"],
 	# Ranger
 	"hunter": ["Aimed Shot", "crit"], "beastmaster": ["Call the Pack", "summon"], "pack_lord": ["Alpha's Howl", "summon"],
 	"wild_king": ["King of Beasts", "summon"], "deadeye": ["Deadeye", "crit"], "god_hawkeye": ["Eye of the Hawk", "crit"],
@@ -92,7 +92,7 @@ const KEY_TEMPLATE := {"atk": "strike", "crit": "crit", "double_strike": "flurry
 	"boss": "execute", "gold_find": "fortune", "charm": "charm", "potion": "mend", "escape": "crit", "scout": "veil", "xp": "strike",
 	"scrap": "strike", "stone_find": "fortune"}
 const NOUNS := {"strike": "Blow", "crit": "Edge", "flurry": "Flurry", "drain": "Hunger", "bulwark": "Ward", "mend": "Grace",
-	"burst": "Burst", "veil": "Veil", "execute": "End", "rage": "Fury", "fortune": "Gamble", "charm": "Charm", "summon": "Call",
+	"burst": "Burst", "veil": "Veil", "execute": "End", "rage": "Fury", "fortune": "Fortune", "charm": "Charm", "summon": "Call",
 	"song": "Anthem", "time": "Moment"}
 const TEMPLATE_TEXT := {
 	"strike": "A huge blow for %sx damage.",

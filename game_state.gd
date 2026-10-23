@@ -1105,7 +1105,7 @@ func _wild_card(s: Dictionary) -> Dictionary:
 	match roll:
 		0:
 			out["power"] = 5.0
-			out["name"] = "Wild Card: Jackpot"
+			out["name"] = "Wild Card: Fortune"
 		1:
 			out["heal"] = 30
 			out["name"] = "Wild Card: Second Wind"
@@ -3942,7 +3942,7 @@ func path_info(kind: String) -> Dictionary:
 	if World.EVENT_PATHS.has(kind):
 		var d: Dictionary = World.EVENT_PATHS[kind].duplicate()
 		if kind == "bet":
-			d["text"] = "Bet %d gold on a coin toss. Luck and Charisma tilt the coin." % World.bet_amount(self)
+			d["text"] = "Flip a coin for %d gold. Luck and Charisma tilt the coin." % World.bet_amount(self)
 		return d
 	return GameData.PATHS[kind] if GameData.PATHS.has(kind) else Realms.path_info(self, kind)
 
