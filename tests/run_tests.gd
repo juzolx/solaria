@@ -545,16 +545,17 @@ func _initialize() -> void:
 		z.buy_merchant(i)
 	# Loot filter
 	z.loot_filter = {"slots": {"Helmet": true}, "weaker": false}
-	LootRules.set_rule(z, "keep_better", false)  # 2.1: upgrades are kept by default; test the slot rule alone
+	LootRules.test_ignore_upgrades = true  # 2.1: upgrades are always kept; test the slot rule alone
 	check(z.filter_salvages(GameData.make_item("Helmet", 1, 30, 9001)) and not z.filter_salvages(GameData.make_item("Helmet", 4, 30, 9002)), "loot filter by slot, keeps Legendary")
-	# Loadouts
+	LootRules.test_ignore_upgrades = false
+	# Presets (2.1: gear loadouts live in presets)
 	z.bag.append(GameData.make_item("Weapon", 2, 30, 9100))
 	z.bag.append(GameData.make_item("Weapon", 3, 30, 9101))
 	z.equip(9100)
-	z.save_loadout(0)
+	Presets.save(z, 0)
 	z.equip(9101)
-	z.wear_loadout(0)
-	check(int(z.equipped["Weapon"]["id"]) == 9100, "loadout swaps gear back")
+	Presets.apply(z, 0)
+	check(int(z.equipped["Weapon"]["id"]) == 9100, "preset swaps gear back")
 	# Stash
 	z.bag.clear()
 	z.bag.append(GameData.make_item("Weapon", 3, 30, 9101))
@@ -611,7 +612,7 @@ func _initialize() -> void:
 	var z2 := GameState.new()
 	z2.slot = 3
 	z2.codex = z.codex
-	check(z2.load_game() and z2.hero_name == "Zed" and z2.curse_turns == z.curse_turns and z2.loadouts[0].size() > 0, "new fields saved")
+	check(z2.load_game() and z2.hero_name == "Zed" and z2.curse_turns == z.curse_turns and z2.builds[0].size() > 0, "new fields saved")
 	check(GameState.slot_meta(3)["name"] == "Zed", "slot meta for the title screen")
 	# Cloud backup pack / unpack
 	var pfx := Profile.load_profile()

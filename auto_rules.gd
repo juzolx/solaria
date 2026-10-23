@@ -19,9 +19,9 @@ static func toggle(g: GameState, id: String) -> void:
 
 ## Why Auto should pause right now ("" = keep going). Each reason fires once per thing.
 static func check(g: GameState) -> String:
+	AutoDive.tick(g)  # 2.1: auto-dive settings (head home, elixirs before bosses; re-arms in town)
 	if not g.autoplay or g.in_town:
 		return ""
-	AutoDive.tick(g)  # 2.1: auto-dive settings (head home, elixirs before bosses)
 	var floor_stop := AutoDive.pause_reason(g)
 	if floor_stop != "":
 		return floor_stop

@@ -7,11 +7,15 @@ extends RefCounted
 ## the rarity threshold stays in GameState.auto_salvage.
 ##
 ## Never touched, whatever the rules say: locked items, Legendary and better,
-## Unique / Set / Signature rarities, and (on by default) set pieces of any rarity.
+## Unique / Set / Signature rarities, upgrades (Juzo: always, not a setting), and
+## (on by default) set pieces of any rarity.
 
 const VERSION := 2
 const RARITY_NAMES := ["Off", "Commons", "Uncommon and below", "Rare and below", "Epic and below"]
 const ACTIONS := ["salvage", "sell"]
+
+## Tests only: let rules match upgrades too, to test one rule on its own.
+static var test_ignore_upgrades := false
 
 static func defaults() -> Dictionary:
 	return {
@@ -21,7 +25,6 @@ static func defaults() -> Dictionary:
 		"weaker": false,      # Common to Rare drops weaker than what you wear in that slot go
 		"below_gs": false,    # Common to Epic drops below your average Gear Score go
 		"keep_sets": true,    # set pieces are always kept
-		"keep_better": true,  # anything that would make you stronger is always kept
 		"action": "salvage",  # what happens to a filtered drop: "salvage" (scrap) or "sell" (gold)
 	}
 
@@ -35,9 +38,11 @@ static func rules(g: GameState) -> Dictionary:
 		lf["slots"] = old.get("slots", {})
 		lf["weaker"] = bool(old.get("weaker", false))
 		lf["below_gs"] = bool(old.get("below_gs", false))
-	for k in defaults():
-		if not lf.has(k):
-			lf[k] = defaults()[k]
+	if lf.size() < 7:  # a key missing (a save from a test build): fill it in
+		var d := defaults()
+		for k in d:
+			if not lf.has(k):
+				lf[k] = d[k]
 	return lf
 
 static func get_rule(g: GameState, key: String) -> Variant:
@@ -81,8 +86,8 @@ static func decide(g: GameState, item: Dictionary) -> String:
 		return "keep"
 	if g.autoplay and not AutoDive.filter_in_auto(g):
 		return "keep"
-	if bool(lf["keep_better"]) and g.is_upgrade(item):
-		return "keep"
+	if not test_ignore_upgrades and g.is_upgrade(item):
+		return "keep"  # Juzo: upgrades are always kept
 	if not _matches(g, lf, item):
 		return "keep"
 	return String(lf["action"]) if String(lf["action"]) in ACTIONS else "salvage"
@@ -105,10 +110,13 @@ static func _matches(g: GameState, lf: Dictionary, item: Dictionary) -> bool:
 static func carry_out(g: GameState, item: Dictionary, action: String) -> String:
 	if action == "sell":
 		var p := g.sell_price(item)
-		g.gold += p
+		g.gold += p  # carried gold, like any gold found down there
+		ClassTree.count(g, "sold")
 		return "Auto-sold %s (+%d gold)" % [g._tag(item), p]
-	var s := GameData.scrap_value(item)
+	var s := int(GameData.scrap_value(item) * g.scrap_mult())
 	g.scrap += s
+	ClassTree.count(g, "scrapped")
+	g._salvage_dust(item)
 	return "Auto-salvaged %s (+%d scrap)" % [g._tag(item), s]
 
 ## One line for buttons: what the filter does right now.

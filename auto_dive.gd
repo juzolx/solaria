@@ -113,24 +113,31 @@ static func elixir_to_drink(g: GameState) -> String:
 			return id
 	return ""
 
-## Runs every Auto tick (from AutoRules.check): drinks before bosses and starts the
-## trip home when a rule says so. Tells you with a toast; never pauses Auto.
+## Runs every game tick (from AutoRules.check, in town too): drinks before bosses
+## and starts the trip home when a rule says so. Tells you with a toast; never pauses Auto.
 static func tick(g: GameState) -> void:
-	if not g.autoplay or g.in_town or g.run_over:
+	var fired := _fired(g)
+	var said := _said(g)
+	if g.in_town:
+		fired.erase("floor")  # a new dive: the floor pause is armed again
+		return
+	if not g.autoplay or g.run_over:
 		return
 	var s := settings(g)
-	if bool(s["elixir_boss"]) and g.enemy_is_boss and g.enemy_hp > 0 and g.elixirs.is_empty():
+	if bool(s["elixir_boss"]) and g.enemy_is_boss and g.enemy_hp > 0:
 		var id := elixir_to_drink(g)
 		if id != "" and g.drink_elixir(id):
 			g.events.append({"type": "toast", "text": "Auto drank %s before the boss." % GameData.ELIXIRS[id]["name"]})
 	# re-arm rules whose condition has cleared
-	var fired := _fired(g)
 	var holding := {}
 	for c in conditions(g):
 		holding[c[0]] = true
 	for k in fired.keys():
 		if k != "floor" and not holding.has(k):
 			fired.erase(k)
+	for k in said.keys():
+		if not holding.has(k):
+			said.erase(k)
 	if g.go_home_after:
 		return
 	var key := ""
@@ -142,17 +149,28 @@ static func tick(g: GameState) -> void:
 			break
 	if key == "":
 		return
-	fired[key] = true
 	var blocked := Town.blocked(g, true)
 	if blocked != "":
-		g.say("[color=#fca5a5]Auto can't go home: %s[/color]" % blocked)
-		g.events.append({"type": "toast", "text": "Auto can't go home: %s" % blocked})
-		g.save_game()
+		# not fired: it tries again once the way home is open; the note shows once
+		if not said.has(key):
+			said[key] = true
+			g.say("[color=#fca5a5]Auto can't go home: %s[/color]" % blocked)
+			g.events.append({"type": "toast", "text": "Auto can't go home: %s" % blocked})
+			g.save_game()
 		return
 	g.go_home_after = true
+	fired[key] = true
+	said.erase(key)
 	g.say("[color=#5eead4]Auto heads home after this floor: %s.[/color]" % why)
 	g.events.append({"type": "toast", "text": "Heading home after this floor: %s." % why})
 	g.save_game()
+
+## Rules whose "can't go home" note was already shown (key -> true).
+static func _said(g: GameState) -> Dictionary:
+	var s := settings(g)
+	if not (s.get("said") is Dictionary):
+		s["said"] = {}
+	return s["said"]
 
 ## Short words for the panel buttons.
 static func label_for(key: String, v: int) -> String:

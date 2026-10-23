@@ -67,7 +67,9 @@ func _fill_teams() -> void:
 		inner.add_child(row)
 		var idx := i
 		var use := UI.primary("Use", func(): _use_team(idx), UI.GOLD)
-		use.disabled = not saved
+		use.disabled = not saved or Presets.team_leader_gone(m.profile, i)
+		if Presets.team_leader_gone(m.profile, i):
+			inner.add_child(UI.wrap("Its leader is gone: save a new team here.", 13, UI.DIM))
 		var save := UI.button("Save team here", func(): _save_team(idx))
 		var clr := UI.button("Clear", func():
 			Presets.clear_team(m.profile, idx)
@@ -88,8 +90,12 @@ func _use_team(i: int) -> void:
 		m.sfx.play("equip")
 		m.back_to_title()
 		return
-	m.sfx.play("equip")
 	note.visible = true
+	if not bool(out["ok"]):
+		note.text = "Couldn't use this team: " + (" ".join(notes) if not notes.is_empty() else "nothing to change.")
+		_changed()
+		return
+	m.sfx.play("equip")
 	note.text = ("Team ready: %s." % Presets.team_label(m.profile, i)) + ("" if notes.is_empty() else "\n" + "\n".join(notes))
 	_changed()
 

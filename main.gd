@@ -155,8 +155,11 @@ func _ready() -> void:
 		new_hero(int(action["new"]), bool(action.get("hc", false)))
 	elif action.has("play") and GameState.has_slot(int(action["play"])):
 		play_slot(int(action["play"]))
-		if action.has("party") and not state.hardcore:
-			state.set_party(action["party"])  # a team preset with another leader
+		if action.has("party"):  # a team line-up with another leader (presets.gd)
+			var why := Presets.apply_pending_team(state, action["party"])
+			if why != "":
+				state.say(why)
+				toast.call_deferred(why)
 	else:
 		show_title()
 	_show_save_notices.call_deferred()

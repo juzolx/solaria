@@ -123,8 +123,6 @@ func _show(id: int) -> void:
 		acts.append(["Unequip", func(): state.unequip(id); main.refresh(), UI.RED])
 	ItemPopup.show_item(main, found["item"], acts)
 
-	main.refresh()
-
 var _ghosts := {}
 ## A plain item picture for an empty slot (same look every time).
 func _ghost(s: String) -> Texture2D:

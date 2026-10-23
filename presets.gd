@@ -113,12 +113,19 @@ static func _apply_skills(g: GameState, p: Dictionary, notes: Array) -> void:
 			continue
 		var want: Array = p[pair[0]]
 		var slots: Array = pair[1]
+		var next: Array = slots.duplicate()
 		for k in slots.size():
 			var id: String = String(want[k]) if k < want.size() else ""
 			if id == "" or g.skill_book.has(id):
-				slots[k] = id
+				next[k] = id
 			else:
 				notes.append("Skipped %s: it's not in your skill book." % SkillData.skill_name(id))
+		# skills leaving their slot come off properly (their buffs end)
+		for old in slots.duplicate():
+			if String(old) != "" and not next.has(old):
+				g.unequip_skill(String(old))
+		for k in slots.size():
+			slots[k] = next[k]
 
 static func _apply_gear(g: GameState, p: Dictionary, notes: Array, stash: Array) -> void:
 	var gear: Dictionary = p.get("gear", {})
@@ -163,7 +170,7 @@ static func _apply_party(g: GameState, want: Array, notes: Array) -> void:
 	if comps == g.party_slots:
 		return
 	if not g.in_town:
-		notes.append("Your team changes when you're back in town.")
+		notes.append("Team skipped: you pick that in town.")
 		return
 	if g.party != null:
 		g.party.save_all()
@@ -234,8 +241,8 @@ static func migrate(g: GameState) -> void:
 		g.builds[j] = {"name": "Gear set %d" % (li + 1), "gear": lo.duplicate()}
 		g.loadouts[li] = {}
 		moved = true
-	if left > 0 and not bool(g.auto_rules.get("presets_full_said", false)):
-		g.auto_rules["presets_full_said"] = true
+	if left > 0 and not g.tips_seen.has("presets_full"):
+		g.tips_seen["presets_full"] = true
 		g.say("%d old gear set%s didn't fit in Presets. Clear a preset to bring %s over." % [left, "" if left == 1 else "s", "it" if left == 1 else "them"])
 		moved = true
 	if moved:
@@ -300,12 +307,13 @@ static func team_label(profile: Profile, i: int) -> String:
 		names.append(str(GameState.slot_meta(int(n)).get("name", "Hero")) if GameState.has_slot(int(n)) else "(gone)")
 	return " + ".join(names) if not names.is_empty() else "Empty"
 
-## Uses line-up i from hero g. Returns {"switch": leader slot to switch to (-1 = none),
-## "comps": [...], "notes": [...]}. With the same leader the team changes right away.
+## Uses line-up i from hero g. Returns {"ok": something happened, "switch": leader slot
+## to switch to (-1 = none), "comps": [...], "notes": [...]}. Same leader: the team
+## changes right away.
 static func apply_team(g: GameState, profile: Profile, i: int) -> Dictionary:
 	var plan := team_plan(profile, i)
 	var notes: Array = plan["notes"]
-	var out := {"switch": -1, "comps": plan["comps"], "notes": notes}
+	var out := {"ok": false, "switch": -1, "comps": plan["comps"], "notes": notes}
 	if g.hardcore:
 		notes.append("Hardcore heroes fight alone.")
 		return out
@@ -314,6 +322,7 @@ static func apply_team(g: GameState, profile: Profile, i: int) -> Dictionary:
 	if not g.in_town:
 		notes.append("Teams change in town.")
 		return out
+	out["ok"] = true
 	if int(plan["leader"]) != g.slot:
 		out["switch"] = int(plan["leader"])
 		return out
@@ -322,3 +331,21 @@ static func apply_team(g: GameState, profile: Profile, i: int) -> Dictionary:
 			g.party.save_all()
 		g.set_party(plan["comps"])
 	return out
+
+## After switching heroes for a line-up (main.gd): the team joins only if that hero
+## is in town and can have one. Returns a note ("" = the team is set).
+static func apply_pending_team(g: GameState, comps: Array) -> String:
+	var who := g.hero_name if g.hero_name != "" else "Your hero"
+	if g.hardcore:
+		return "%s is Hardcore and fights alone." % who
+	if not g.in_town or g.run_over:
+		return "%s is in the dungeon: the team changes once they're back in town." % who
+	var keep: Array = []
+	for n in comps:
+		if int(n) != g.slot and not keep.has(int(n)) and GameState.has_slot(int(n)):
+			keep.append(int(n))
+	g.set_party(keep)
+	return ""
+
+static func team_leader_gone(profile: Profile, i: int) -> bool:
+	return team_saved(profile, i) and int(team_plan(profile, i)["leader"]) < 0
