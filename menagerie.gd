@@ -3,14 +3,15 @@ extends RefCounted
 ## Owned pets (0.12). Separate from the class companion (World.PETS), which some
 ## classes get for free. Owned pets come from:
 ##  - a Beast Tamer catching a monster whose run-away chance is over 80%,
-##  - hatching an egg (eggs come mostly from quests; the pet inside is random),
-##  - later: killing a Calamity.
+##  - hatching an egg from a nest (Juzo, Oct 20: nests are the rarest find after a
+##    Calamity; each region has its own eggs, and an egg shows its rank when found),
+
 ## A Beast Tamer brings up to 3 pets on a run, anyone else 1. Pets are never
 ## lost: when they go down they come home hurt and rest (or get healed at the
 ## Clinic) before they can fight again.
 ##
 ## A pet: {"id", "name", "species", "art", "tier", "level", "kills", "hurt": floors left to rest (0 = fine), "from"}
-## An egg: {"id", "floors": floors left until it hatches, "from"}
+## An egg: {"id", "floors": floors left until it hatches, "from", "zone": region index, "tier": rank}
 
 const TAMER_OUT := 3
 const OTHERS_OUT := 1
@@ -22,14 +23,12 @@ const WHISPER_POWER := 1.25     # and pets fight harder with their song
 const HEAL_FLOORS := 10         # a hurt pet rests this many cleared floors
 const HEAL_COST := 40           # gold per floor of rest left, x the pet's level (Clinic)
 const EGG_FLOORS := 10          # an egg hatches after this many cleared floors
+const NEST_DOOR_CHANCE := 0.05  # % per door from floor 3 (about 1 in 2,000): only a Calamity is rarer
+## Each rank is clearly stronger: how hard a pet hits, x your Attack (Common .. Mythic)
+const POWER_BY_TIER := [0.08, 0.12, 0.17, 0.24, 0.33, 0.45]
 const MAX_LEVEL := 50
 const KILLS_PER_LEVEL := 40
-const POWER_BASE := 0.08        # x your Attack per hit
-const POWER_PER_TIER := 0.03
 const POWER_PER_LEVEL := 0.004
-const EGG_SPARE_CHANCE := 0.15  # % chance a spared beast leaves an egg behind (next update: pets are a real find)
-const EGG_SNIK_CHANCE := 1.0    # % chance Snik has an egg for sale
-const EGG_BOUNTY_CHANCE := 1.5  # % chance a WANTED poster pays with an egg too
 
 static func is_tamer(g: GameState) -> bool:
 	return g.hidden_class == "beast_tamer"
@@ -95,7 +94,7 @@ static func make_pet(g: GameState, monster: String, art: String, tier: int, from
 	return p
 
 static func power(p: Dictionary) -> float:
-	return POWER_BASE + POWER_PER_TIER * int(p["tier"]) + POWER_PER_LEVEL * int(p["level"])
+	return float(POWER_BY_TIER[clampi(int(p["tier"]), 0, 5)]) + POWER_PER_LEVEL * int(p["level"])
 
 # =====================================================================
 # Catching (Beast Tamer only)
@@ -193,17 +192,36 @@ static func on_floor(g: GameState) -> void:
 # Eggs
 # =====================================================================
 
-static func give_egg(g: GameState, from: String) -> void:
-	var egg := {"id": g._new_id(), "floors": EGG_FLOORS, "from": from}
+## Juzo (Oct 20): pets come from nests, and a nest is the rarest find in the game
+## after a Calamity. Every region has its own eggs (they hatch that region's
+## monsters), and each egg's rank shows the moment you find it.
+static func give_egg(g: GameState, from: String, zone := -1, tier := -1) -> void:
+	var zi := GameData.zone_index(g.floor_num) if zone < 0 else zone
+	var egg := {"id": g._new_id(), "floors": EGG_FLOORS, "from": from, "zone": zi, "tier": roll_tier() if tier < 0 else tier}
 	EggQuests.assign(egg)  # a little care before it hatches
 	g.eggs.append(egg)
-	g.say("[color=#fde68a]You got an egg![/color] Something inside is moving. It hatches after %d floors." % EGG_FLOORS)
-	g.events.append({"type": "toast", "text": "An egg! It hatches in %d floors." % EGG_FLOORS})
-	g.tip("egg", "Eggs hatch after a few cleared floors, and anything could be inside. Any hero can keep the pet.")
+	var col := String(TIER_COLORS[int(egg["tier"])])
+	g.say("[color=%s]A %s![/color] Something inside is moving. It hatches after %d floors." % [col, egg_name(egg), EGG_FLOORS])
+	g.events.append({"type": "mini_event", "kind": "pet", "title": "AN EGG!", "sub": egg_name(egg)})
+	g.tip("egg", "Eggs hatch after a few cleared floors into one of that region's monsters, at the egg's rank. Any hero in your town can keep the pet.")
 
-## A random pet: any monster from the zones (most eggs don't care what's inside).
+## "Rare Mossy Hollows Egg"
+static func egg_name(egg: Dictionary) -> String:
+	var zi := int(egg.get("zone", -1))
+	var where := String(GameData.ZONES[zi]["name"]) + " " if zi >= 0 and zi < GameData.ZONES.size() else ""
+	return "%s %sEgg" % [TIER_NAMES[int(egg.get("tier", 0))], where] if egg.has("tier") else "Strange Egg"
+
+## The pet inside: one of the egg's region's monsters, at the egg's rank.
 static func hatch(g: GameState, egg := {}) -> Dictionary:
 	var pool := Monsters.all_monsters()
+	var zi := int(egg.get("zone", -1))
+	if zi >= 0 and zi < GameData.ZONES.size():
+		var z: Dictionary = GameData.ZONES[zi]
+		pool = []
+		for e in z["enemies"]:
+			pool.append(e["name"])
+		for s in z["subs"]:
+			pool.append(s["monster"]["name"])
 	var name := ""
 	var art := ""
 	for _try in 12:
@@ -211,8 +229,7 @@ static func hatch(g: GameState, egg := {}) -> Dictionary:
 		art = Sprites.enemy_key(name, false)
 		if not Sprites.enemy_by_key(art).is_empty():
 			break
-	var roll := randf() * 100.0
-	var tier := roll_tier()
+	var tier := int(egg["tier"]) if egg.has("tier") else roll_tier()
 	var cherished := EggQuests.done(egg)
 	if cherished:
 		tier = mini(5, maxi(tier + 1, Monsters.RARE))  # its quest was done: it hatches stronger (a Legendary can turn Mythic)

@@ -417,10 +417,6 @@ static func spare(g: GameState) -> bool:
 	if g.enemy_people != "":
 		change_rep(g, g.enemy_people, Races.REP_SPARE)
 	g.xp += int(GameData.xp_for_kill(g.floor_num, false) * 0.5)
-	# A spared wild beast sometimes leaves something behind
-	if g.enemy_people == "" and randf() * 100.0 < Menagerie.EGG_SPARE_CHANCE:
-		g.say("[color=#fde68a]Where it stood, half-buried in the dirt: an egg.[/color]")
-		Menagerie.give_egg(g, "spared")
 	_move_on(g)
 	return true
 

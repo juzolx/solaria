@@ -284,10 +284,6 @@ static func _new_contract(g: GameState) -> Dictionary:
 		c["text"] = "WANTED: %s" % boss["name"]
 		var leg: bool = boss == z["boss"]
 		c["reward"] = {"gold": 600 if leg else 300, "item": {"slot": "Weapon", "rarity": GameData.LEGENDARY if leg else EPIC}}
-	# Now and then a contract comes from someone who found a nest: it pays with an egg too
-	if randf() * 100.0 < Menagerie.EGG_BOUNTY_CHANCE:
-		c["reward"]["egg"] = 1
-		c["text"] = String(c["text"]) + " (a nest was found)"
 	if (String(c.get("monster", "")) + String(c["kind"])) in _taken_targets(g):
 		return {}
 	return c
