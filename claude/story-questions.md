@@ -30,3 +30,6 @@ store description. Mechanics stay; only names and text change (unless Juzo asks)
    world players piece together?
 10. Practical: naming style and words to avoid; anything mechanical to change for
     the story.
+
+## Story facts from Juzo
+- Oct 23 2026: the people are trapped in the town; the dungeon is their only belief of a way out. The town is big and walled, a lived-in prison, with the dungeon entrance as the place of hope.
