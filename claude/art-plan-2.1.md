@@ -79,3 +79,10 @@ An artist may make a pixel (8-bit) town. Brief to send them:
   the new town may arrive in an update after the Nov 10 release.
 - Protection: pay per stage after seeing work in progress (PayPal Goods and
   Services); ask for WIP shots or layered files (no-AI check); rights in writing.
+
+## AI art policy update (Oct 22)
+Juzo: **AI art is fine if it's really good.** Idea: Claude tries a few town pieces
+with the SpriteCook plugin (needs Juzo to authorize it via /mcp), then cleans them in
+code (snap to a true pixel grid, remove soft edges, map to the dusk palette). Compare
+side by side with the artist's test before paying for the $120 stage. Spend the art
+budget where AI is weak (Calamities, title art).
