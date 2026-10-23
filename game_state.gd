@@ -2087,6 +2087,7 @@ func _next_floor() -> void:
 		_page("races")
 	if best_floor >= GameData.GAMBLE_UNLOCK_FLOOR:
 		_page("wheel")
+	WheelTables.on_floor(self)  # 2.1: the Legendary table opens at floor 250
 	if best_floor >= 10:  # Heroes and Party pages (all 9 hero slots are open for now)
 		_page("heroes")
 		_page("party")
