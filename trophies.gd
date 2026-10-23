@@ -45,7 +45,9 @@ static func on_find(g: GameState, item: Dictionary) -> void:
 	if not r in [GameData.UNIQUE, GameData.SIGNATURE, GameData.UNIQUE_MYTHIC]:  # plain Mythics come with a Calamity trophy
 		return
 	var key := String(item.get("def", item.get("base_name", "")))
-	if r == GameData.UNIQUE_MYTHIC:
+	if r == GameData.SIGNATURE:
+		key = "sig_" + String(item.get("sig_of", ""))
+	elif r == GameData.UNIQUE_MYTHIC:
 		key = "mythic_%d" % int(item.get("id", 0))
 	record(g, "find:" + key, "find", "Found %s (%s)" % [String(item.get("name", "?")), GameData.RARITY_NAMES[r]])
 

@@ -29,7 +29,7 @@ func _initialize() -> void:
 
 	# ---- Levels and costs
 	for id in Buildings.LIST:
-		check(Buildings.level(id) == 1, "%s starts at level 1" % id)
+		check(Buildings.level(id) == (0 if id in Buildings.BUILT_LATER else 1), "%s starts at level 1 (Church and Cabin: an empty lot)" % id)
 		check(Buildings.benefit(id, 1) != "" and Buildings.benefit(id, 2) != "" and Buildings.benefit(id, 3) != "", "%s says what every level gives" % id)
 		check(Town.BUILDINGS.has(id), "%s has a page on the town map" % id)
 	check(Buildings.id_for_page(1) == "smith" and Buildings.id_for_page(9) == "church" and Buildings.id_for_page(7) == "", "pages map to buildings (the Mailbox has no levels)")
@@ -67,8 +67,10 @@ func _initialize() -> void:
 	check(up1 == 20, "an Epic +1 costs 20 scrap at Blacksmith level 1 (unchanged)")
 	check(Town.max_taken() == 3, "3 contracts at Bounty Board level 1")
 	for id in ["smith", "shop", "tavern", "stash", "bounty", "guild", "clinic", "church", "cabin"]:
-		Buildings.upgrade(g, p, id)
-		Buildings.upgrade(g, p, id)
+		if id in Buildings.BUILT_LATER:
+			check(not Buildings.built(id) and Buildings.next_cost(id) == Economy.BUILDING_COST[1], "%s must be built first, for a level-2 price" % id)
+		while Buildings.level(id) < 3 and Buildings.upgrade(g, p, id):
+			pass
 		check(Buildings.level(id) == 3, "%s reaches level 3" % id)
 	check(GameData.upgrade_cost(epic) == 18, "Blacksmith 3: upgrades 10%% cheaper (got %d)" % GameData.upgrade_cost(epic))
 	check(GameData.gamble_fee(GameData.make_item("Weapon", 2, 40, g._new_id())) < fee1, "Tavern 3: the wheel's fee is lower")
@@ -83,6 +85,10 @@ func _initialize() -> void:
 	var gold1 := g.gold
 	Buildings.on_recruit(g)
 	check(g.potions == pots + 3 and g.gold == gold1 + 300, "Inn 3: new recruits bring 3 potions and 300 gold")
+	for i in 6:
+		Buildings.on_recruit(g)
+	check(g.potions == pots + 3 * Economy.INN_RECRUIT_CAP, "only the town's first %d recruits get the Inn's send-off" % Economy.INN_RECRUIT_CAP)
+	check(FileAccess.get_file_as_string("res://main.gd").contains("if is_new:  # 2.1: a bigger Inn"), "the send-off is only for genuinely new heroes")
 	check(Trophies.slots() == 20, "Trophy Cabin 3: 20 trophies on display")
 	check(int(Buildings.pick("clinic", Economy.CLINIC_HEAL_FLOORS)) == 6, "Clinic 3: hurt pets rest 6 floors")
 
@@ -91,7 +97,7 @@ func _initialize() -> void:
 	p.switch_town(2)
 	check(Buildings.level("smith") == 1 and Buildings.levels == p.buildings, "town 2 starts with level 1 buildings")
 	check(GameData.upgrade_cost(epic) == 20, "town 2's Blacksmith charges full price")
-	check(Trophies.slots() == 6, "town 2's cabin is small")
+	check(Trophies.slots() == 0 and not Buildings.built("cabin") and not Buildings.built("church"), "town 2 has no Church or Cabin yet")
 	Buildings.upgrade(g, p, "shop")
 	check(Buildings.level("shop") == 2, "town 2 builds its own Shop")
 	p.switch_town(1)
@@ -132,6 +138,23 @@ func _initialize() -> void:
 	var src := FileAccess.get_file_as_string("res://game_state.gd")
 	check(src.count("Church.maybe_curse(self") >= 3, "monster and boss drops roll for curses")
 
+	# Rerolls and Wheel wins keep the extra power; the loot filter never eats a Cursed drop
+	var cr := GameData.make_item("Legs", 2, 30, g._new_id())
+	Church.curse(cr)
+	var plain_bonus := maxi(1, int(GameData.base_bonus("Legs", 30) * float(GameData.RARITY_MULTS[2])))
+	cr["bonus"] = plain_bonus
+	Church.reapply_power(cr)
+	check(int(cr["bonus"]) == int(round(plain_bonus * Economy.CURSE_POWER)), "a recomputed Cursed item gets its extra power back")
+	check(src.count("Church.reapply_power(item)") == 2, "reroll and Wheel win both re-apply the curse power")
+	g.auto_salvage = 4
+	check(not g.filter_salvages(cr), "auto-salvage never takes a Cursed drop")
+	check(g.filter_salvages(GameData.make_item("Legs", 2, 30, 0)), "...but still takes a plain one")
+	g.auto_salvage = -1
+	var bag0 := g.bag.size()
+	g._give_item(cr)
+	check(g.bag.size() == bag0 + 1 and not cr.get("locked", false), "a Cursed drop reaches the bag (not auto-locked)")
+	check(src.contains("if not was_calamity:"), "a Calamity kill gives the Calamity trophy only, not a boss one too")
+
 	# ---- Curses work while worn: a real downside, a hidden upside
 	var g2 := _hero()
 	g2.equipped["Weapon"] = GameData.make_item("Weapon", 3, 300, g2._new_id())  # big numbers, so +8% shows
@@ -144,8 +167,10 @@ func _initialize() -> void:
 	check(g2.get_attack() > atk_plain, "the hidden power works before it's known (+8% Attack)")
 
 	# ---- The Church cleanses
-	Buildings.levels["church"] = 1
 	_rich(g2)
+	Buildings.levels["church"] = 0
+	check(Church.cleanse_short(g2, w) == "Build the Church first." and not Church.cleanse(g2, w, 0), "no Church, no cleansing")
+	Buildings.levels["church"] = 1
 	check(Church.cleanse_chance(w) == 70, "Church 1: cleansing works 70% of the time")
 	var cg := Church.cleanse_gold(w)
 	gold0 = g2.gold
@@ -198,6 +223,8 @@ func _initialize() -> void:
 	check(Trophies.has("floor:100") and Trophies.has("floor:250") and not Trophies.has("floor:500"), "depth trophies")
 	Trophies.on_find(g3, uniq)
 	check(Trophies.has("find:" + String(uniq["def"])), "a Unique find is recorded")
+	Trophies.on_find(g3, {"rarity": GameData.SIGNATURE, "sig_of": "kobold", "base_name": "Odd Name", "name": "Odd Name"})
+	check(Trophies.has("find:sig_kobold"), "a Signature trophy is keyed by its monster")
 	before = Trophies.data.size()
 	Trophies.on_find(g3, GameData.make_item("Weapon", 4, 10, 0))
 	check(Trophies.data.size() == before, "plain Legendaries aren't trophies")

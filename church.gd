@@ -115,6 +115,8 @@ static func can_bless(item: Dictionary) -> bool:
 
 ## Why a cleanse can't be paid ("" = it can).
 static func cleanse_short(g: GameState, item: Dictionary) -> String:
+	if Buildings.level("church") <= 0:
+		return "Build the Church first."
 	if not is_cursed(item):
 		return "That item isn't cursed."
 	if g.gold < cleanse_gold(item):
@@ -124,6 +126,8 @@ static func cleanse_short(g: GameState, item: Dictionary) -> String:
 	return ""
 
 static func bless_short(g: GameState, item: Dictionary) -> String:
+	if Buildings.level("church") <= 0:
+		return "Build the Church first."
 	if not can_bless(item):
 		return "That item can't be blessed." if not is_cursed(item) else "Lift the curse first."
 	if g.gold < bless_gold(item):
@@ -181,3 +185,13 @@ static func items_here(g: GameState) -> Array:
 			out.append(g.equipped[slot])
 	out.append_array(g.bag)
 	return out
+
+## Rerolls and Wheel wins recompute an item's stat: a Cursed (or once Cursed) item keeps its extra power.
+static func reapply_power(item: Dictionary) -> void:
+	if was_cursed(item):
+		item["bonus"] = maxi(1, int(round(int(item["bonus"]) * Economy.CURSE_POWER)))
+
+## Loot rules never auto-salvage or sell a Cursed drop: you get to see it first.
+## (game_state.filter_salvages and the bag-overflow rule call this; loot rules should too.)
+static func keep_from_filter(item: Dictionary) -> bool:
+	return is_cursed(item)

@@ -69,8 +69,14 @@ static func id_for_page(page: int) -> String:
 			return id
 	return ""
 
+## Buildings that start as an empty lot you have to build on (Juzo): level 0 until built.
+const BUILT_LATER := ["church", "cabin"]
+
 static func level(id: String) -> int:
-	return clampi(int(levels.get(id, 1)), 1, Economy.BUILDING_MAX)
+	return clampi(int(levels.get(id, 0 if id in BUILT_LATER else 1)), 0, Economy.BUILDING_MAX)
+
+static func built(id: String) -> bool:
+	return level(id) >= 1
 
 ## A number from one of Economy's per-level tables, for this town.
 static func pick(id: String, table: Array) -> Variant:
@@ -130,15 +136,22 @@ static func upgrade(g: GameState, p: Profile, id: String) -> bool:
 	g.scrap -= int(c.get("scrap", 0))
 	g.dust -= int(c.get("dust", 0))
 	levels[id] = level(id) + 1
-	g.say("[color=#e8b14a]The %s is now level %d.[/color] %s" % [name_of(id), level(id), benefit(id, level(id))])
+	if level(id) == 1:
+		g.say("[color=#e8b14a]The %s is built![/color] %s" % [name_of(id), benefit(id, 1)])
+	else:
+		g.say("[color=#e8b14a]The %s is now level %d.[/color] %s" % [name_of(id), level(id), benefit(id, level(id))])
 	if p != null:
 		p.save()
 	g.save_game()
 	return true
 
-## A new hero joins this town (main._start): a well-built Inn sends them off better stocked.
+## A genuinely new hero joins this town (main._start): a well-built Inn sends them off
+## better stocked. Only the town's first INN_RECRUIT_CAP recruits get it (counted in levels).
 static func on_recruit(g: GameState) -> void:
 	var r: Dictionary = pick("inn", Economy.INN_RECRUIT)
+	if r.is_empty() or int(levels.get("_recruits_paid", 0)) >= Economy.INN_RECRUIT_CAP:
+		return
+	levels["_recruits_paid"] = int(levels.get("_recruits_paid", 0)) + 1
 	g.potions += int(r.get("potions", 0))
 	g.gold += int(r.get("gold", 0))
 	if not r.is_empty():

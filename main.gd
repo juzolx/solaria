@@ -346,7 +346,9 @@ func _start(is_new: bool) -> void:
 			_show_save_notices.call_deferred()
 	else:
 		state.new_game()
-		Buildings.on_recruit(state)  # 2.1: a bigger Inn sends recruits off better stocked
+		if is_new:  # 2.1: a bigger Inn sends genuinely new recruits off better stocked (not a save that failed to load)
+			Buildings.on_recruit(state)
+			profile.save()
 		state.say("Your descent begins..." if not state.hardcore else "[color=#f87171]Hardcore: one life. Make it count.[/color]")
 	state.dev_mode = profile.dev_mode
 	state.profile_ref = profile
@@ -1199,6 +1201,9 @@ func _sync_town() -> void:
 	for id in Town.BUILDINGS:
 		notes[id] = Town.BUILDINGS[id][1]
 	notes["gate"] = "Choose your floor"
+	for id in Buildings.BUILT_LATER:  # 2.1: empty lots until you build them
+		if not Buildings.built(id):
+			notes[id] = "Empty lot: build here (%s)" % Buildings.cost_text(Buildings.next_cost(id))
 	var ev := TownEvents.note(state)
 	if not ev.is_empty():
 		notes[ev[0]] = "* %s *" % ev[1]  # what's on in town

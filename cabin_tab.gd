@@ -17,12 +17,15 @@ func setup(m) -> void:
 
 func refresh() -> void:
 	var p: Profile = main.profile
-	var key := "%d|%d|%d" % [Trophies.data.size(), Trophies.slots(), p.max_floor]
+	var key := "%d|%d|%d|%d" % [Trophies.data.size(), Trophies.slots(), p.max_floor, main.state.best_floor]
 	if key == shown:
 		return
 	shown = key
 	OnlineUI.clear(box)
 	box.add_child(UI.heading("Trophy Cabin"))
+	if not Buildings.built("cabin"):
+		box.add_child(UI.wrap("An empty lot. Build the cabin (above) and %s gets a place to hang its trophies. They are already being counted: %d so far." % [p.town_name(p.town), Trophies.data.size()], 13, UI.DIM))
+		return
 	box.add_child(UI.wrap("The pride of %s. Every boss slain, Calamity ended, God class that answered, rare find and great depth goes on the wall. Just for show." % p.town_name(p.town), 12, UI.DIM))
 	box.add_child(UI.label("DEEPEST FLOOR IN THIS TOWN: %d" % maxi(p.max_floor, main.state.best_floor), 12, UI.GOLD))
 	var all := Trophies.all()

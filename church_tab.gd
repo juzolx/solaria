@@ -2,10 +2,12 @@ class_name ChurchTab
 extends ScrollContainer
 ## Town > Church (2.1 G2): lift curses from Cursed gear (it keeps its hidden power)
 ## and bless gear (+3% to its stat while worn). Works on what you wear and carry.
+## A failed cleanse updates its row in place, so the button stays put for another try.
 
 var main
 var box: VBoxContainer
 var shown := ""
+var rows := {}  # item id -> {"text": RichTextLabel, "cost": Label, "button": Button}
 
 func setup(m) -> void:
 	main = m
@@ -15,14 +17,21 @@ func setup(m) -> void:
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_child(box)
 
+func _key(g: GameState) -> String:
+	return "%d|%d|%d|%d|%d" % [g.bag_version, g.gold, g.dust, Buildings.level("church"), g.equipped.size()]
+
 func refresh() -> void:
 	var g: GameState = main.state
-	var key := "%d|%d|%d|%d|%d" % [g.bag_version, g.gold, g.dust, Buildings.level("church"), g.equipped.size()]
+	var key := _key(g)
 	if key == shown:
 		return
 	shown = key
+	rows.clear()
 	OnlineUI.clear(box)
 	box.add_child(UI.heading("Church"))
+	if not Buildings.built("church"):
+		box.add_child(UI.wrap("An empty lot by the graveyard. Build the Church (above) and its priest will lift curses from your gear and bless it.", 13, UI.DIM))
+		return
 	box.add_child(UI.wrap("Some gear comes up from the deep Cursed: stronger than it should be, with a downside and a hidden power. The priest can lift the curse (the power stays) or bless a clean piece.", 12, UI.DIM))
 	var cursed: Array = []
 	var clean: Array = []
@@ -56,30 +65,52 @@ func _row(g: GameState, it: Dictionary, curse: bool) -> void:
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
 	var r := UI.rich(12)
-	r.text = "[color=%s]%s[/color]%s" % [GameData.color_of(int(it["rarity"])), GameData.display_name(it), Church.describe(it)]
 	v.add_child(r)
+	var cost := UI.label("", 11, UI.DIM)
+	v.add_child(cost)
 	var id := int(it["id"])
 	var b: Button
 	if curse:
-		v.add_child(UI.label("Works %d%% of the time  ·  %d gold + %d dust" % [Church.cleanse_chance(it), Church.cleanse_gold(it), Church.cleanse_dust(it)], 11, UI.DIM))
 		b = UI.primary("Lift curse", func(): _act(id, true), Color(Church.COLOR))
-		b.disabled = Church.cleanse_short(g, it) != ""
 	else:
-		v.add_child(UI.label("%d gold + %d dust" % [Church.bless_gold(it), Church.bless_dust()], 11, UI.DIM))
 		b = UI.primary("Bless", func(): _act(id, false), UI.GOLD)
-		b.disabled = Church.bless_short(g, it) != ""
 	b.custom_minimum_size = Vector2(110, UI.TAP)
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(b)
+	rows[id] = {"text": r, "cost": cost, "button": b}
+	_fill(g, it, curse)
+
+## Writes a row's text, price and button state (also after a failed try, in place).
+func _fill(g: GameState, it: Dictionary, curse: bool) -> void:
+	var row: Dictionary = rows.get(int(it["id"]), {})
+	if row.is_empty():
+		return
+	(row["text"] as RichTextLabel).text = "[color=%s]%s[/color]%s" % [GameData.color_of(int(it["rarity"])), GameData.display_name(it), Church.describe(it)]
+	if curse:
+		(row["cost"] as Label).text = "Works %d%% of the time  ·  %d gold + %d dust" % [Church.cleanse_chance(it), Church.cleanse_gold(it), Church.cleanse_dust(it)]
+		(row["button"] as Button).disabled = Church.cleanse_short(g, it) != ""
+	else:
+		(row["cost"] as Label).text = "%d gold + %d dust" % [Church.bless_gold(it), Church.bless_dust()]
+		(row["button"] as Button).disabled = Church.bless_short(g, it) != ""
 
 func _act(id: int, curse: bool) -> void:
 	var g: GameState = main.state
 	for it in Church.items_here(g):
-		if int(it["id"]) == id:
-			if curse:
-				main.sfx.play("heal" if Church.cleanse(g, it) else "click")
-			elif Church.bless(g, it):
-				main.sfx.play("buy")
-			break
-	shown = ""
+		if int(it["id"]) != id:
+			continue
+		if curse:
+			if Church.cleanse(g, it):
+				main.sfx.play("heal")
+				shown = ""  # it's clean now: rebuild the lists
+			else:
+				main.sfx.play("click")
+				# Juzo: the curse held. Keep the button right where it is, ready for another try.
+				for other in Church.items_here(g):
+					if rows.has(int(other["id"])):
+						_fill(g, other, Church.is_cursed(other))
+				shown = _key(g)
+		elif Church.bless(g, it):
+			main.sfx.play("buy")
+			shown = ""
+		break
 	main.refresh()

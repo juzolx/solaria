@@ -348,8 +348,35 @@ func _draw_placeholders() -> void:
 		var f: Array = a["from"]
 		var r: Array = s["rect"]
 		var dst := Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3]))
+		if not Buildings.built(id):
+			_draw_lot(dst)
+			continue
 		people.draw_rect(Rect2(dst.position + Vector2(4, dst.size.y - 10), Vector2(dst.size.x - 4, 10)), Color(0.04, 0.03, 0.08, 0.25))
 		people.draw_texture_rect_region(map.texture, dst, Rect2(float(f[0]), float(f[1]), float(f[2]), float(f[3])), a["tint"])
+
+## An empty building lot (not built yet): bare earth, corner stakes with a rope, a
+## stack of planks and a construction sign.
+func _draw_lot(r: Rect2) -> void:
+	var lot := r.grow(-8.0)
+	lot.position.y += lot.size.y * 0.3
+	lot.size.y *= 0.7
+	var wood := Color("#6b4423")
+	people.draw_rect(lot, Color("#7a5a3a"))
+	people.draw_rect(lot.grow(-4.0), Color("#8a6844"))
+	for c in [lot.position, Vector2(lot.end.x, lot.position.y), lot.end, Vector2(lot.position.x, lot.end.y)]:
+		people.draw_rect(Rect2(c - Vector2(2, 10), Vector2(4, 12)), wood.darkened(0.2))
+	for pair in [[lot.position, Vector2(lot.end.x, lot.position.y)], [Vector2(lot.end.x, lot.position.y), lot.end],
+			[lot.end, Vector2(lot.position.x, lot.end.y)], [Vector2(lot.position.x, lot.end.y), lot.position]]:
+		people.draw_line(pair[0] - Vector2(0, 7), pair[1] - Vector2(0, 7), Color("#d8c9a0"), 1.0)
+	var pl := Vector2(lot.end.x - 30, lot.end.y - 16)
+	for i in 3:
+		people.draw_rect(Rect2(pl + Vector2(0, -i * 4), Vector2(24, 4)), Color("#b0844c").darkened(i * 0.1))
+	var sp := Vector2(lot.position.x + 18, lot.get_center().y)
+	people.draw_rect(Rect2(sp.x - 2, sp.y - 6, 4, 18), wood.darkened(0.3))
+	people.draw_rect(Rect2(sp.x - 14, sp.y - 22, 28, 17), Color("#e8c547"))
+	people.draw_rect(Rect2(sp.x - 14, sp.y - 22, 28, 17), wood, false, 1.0)
+	for k in 3:
+		people.draw_line(Vector2(sp.x - 12 + k * 9, sp.y - 6), Vector2(sp.x - 6 + k * 9, sp.y - 20), Color("#2a2420"), 2.0)
 
 ## The Clinic's pen: a wooden fence around the plots, a little sign, and your pets.
 func _draw_pen() -> void:

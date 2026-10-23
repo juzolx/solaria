@@ -106,9 +106,11 @@ static func reroll_short(g: GameState, item: Dictionary) -> String:
 
 # ---- Town buildings (2.1 G1-G3): levels 1-3, per town (buildings.gd) ----
 const BUILDING_MAX := 3
-## What it costs to reach a level (index = the level you're buying). Level 1 is free.
-const BUILDING_COST := [{}, {}, {"gold": 1500, "scrap": 60, "dust": 0}, {"gold": 8000, "scrap": 200, "dust": 40}]
+## What it costs to reach a level (index = the level you're buying). Level 1 is free, except for
+## buildings that start as an empty lot (Church, Trophy Cabin): building them costs what a level 2 does.
+const BUILDING_COST := [{}, {"gold": 1500, "scrap": 60, "dust": 0}, {"gold": 1500, "scrap": 60, "dust": 0}, {"gold": 8000, "scrap": 200, "dust": 40}]
 const BUILDING_L3_FLOOR := 100          # level 3 needs a hero of this town to have reached this floor
+const INN_RECRUIT_CAP := 5              # only a town's first 5 recruits get the Inn's send-off
 # What each level gives (index = level; index 0 unused). Small, steady steps.
 const INN_REST_MULT := [1.0, 1.0, 0.5, 0.0]          # rest price
 const INN_RECRUIT := [{}, {}, {}, {"potions": 3, "gold": 300}]  # what new recruits bring

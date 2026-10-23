@@ -49,6 +49,16 @@ func refresh(page: int) -> void:
 	if key == shown:
 		return
 	shown = key
+	var why := Buildings.blocked(g, main.profile, id)
+	build.text = "Build"
+	if lvl == 0:  # an empty lot (Church, Trophy Cabin): build it first
+		title.text = "%s  ·  NOT BUILT YET" % Buildings.name_of(id).to_upper()
+		now.text = "An empty lot with a sign: \"Coming soon: a %s.\"" % Buildings.name_of(id)
+		next.text = "Build it: %s\nCost: %s" % [Buildings.benefit(id, 1), Buildings.cost_text(Buildings.next_cost(id))]
+		build.visible = true
+		build.disabled = why != ""
+		build.tooltip_text = why if why != "" else "Build the %s" % Buildings.name_of(id)
+		return
 	title.text = "%s  ·  Level %d / %d" % [Buildings.name_of(id).to_upper(), lvl, Economy.BUILDING_MAX]
 	now.text = "Now: " + Buildings.benefit(id, lvl)
 	if lvl >= Economy.BUILDING_MAX:
@@ -56,9 +66,8 @@ func refresh(page: int) -> void:
 		build.visible = false
 		return
 	build.visible = true
-	var why := Buildings.blocked(g, main.profile, id)
 	next.text = "Level %d: %s\nCost: %s" % [lvl + 1, Buildings.benefit(id, lvl + 1), Buildings.cost_text(Buildings.next_cost(id))]
-	if lvl + 1 >= 3:
+	if lvl + 1 >= 3 and Buildings.deepest(g, main.profile) < Economy.BUILDING_L3_FLOOR:
 		next.text += "  (needs floor %d)" % Economy.BUILDING_L3_FLOOR
 	build.disabled = why != ""
 	build.tooltip_text = why if why != "" else "Build level %d" % (lvl + 1)
