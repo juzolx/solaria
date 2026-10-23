@@ -24,6 +24,10 @@ func garble(p: String) -> void:
 	f.store_string("this is not a save file at all")
 	f.close()
 
+## Backups are spaced by file age: pretend s seconds have passed (0 = real time).
+func later(s: int) -> void:
+	SaveIO.test_now_unix = int(Time.get_unix_time_from_system()) + s if s > 0 else -1
+
 func hero(n: int) -> GameState:
 	var g := GameState.new()
 	g.slot = n
@@ -69,10 +73,17 @@ func _initialize() -> void:
 	# --- Backup rotation keeps the last 3 good copies
 	SaveIO.delete_all(P)
 	for i in range(1, 6):
+		later(61)
 		SaveIO.write(P, {"n": i}, "codex")
+	later(0)
 	check(SaveIO.backup_count(P) == SaveIO.BACKUPS, "exactly %d backups after 5 saves (%d)" % [SaveIO.BACKUPS, SaveIO.backup_count(P)])
 	check(int(raw(P)["n"]) == 5, "main is the newest save")
 	check(int(raw(SaveIO.backup_path(P, 1))["n"]) == 4 and int(raw(SaveIO.backup_path(P, 2))["n"]) == 3 and int(raw(SaveIO.backup_path(P, 3))["n"]) == 2, "backups are newest first")
+	check(int(raw(SaveIO.day_path(P))["n"]) == 1, "the daily copy holds the first good save")
+	# saves within a minute replace the main file but don't move the backups
+	SaveIO.write(P, {"n": 6}, "codex")
+	SaveIO.write(P, {"n": 7}, "codex")
+	check(int(raw(P)["n"]) == 7 and int(raw(SaveIO.backup_path(P, 1))["n"]) == 4 and int(raw(SaveIO.backup_path(P, 2))["n"]) == 3, "saves within a minute don't push out the backups")
 
 	# --- A damaged main file: the newest good backup is restored, with a notice
 	garble(P)
@@ -84,12 +95,16 @@ func _initialize() -> void:
 	check(raw(P) is Dictionary and int(raw(P)["n"]) == 4, "the main file is repaired")
 	# a damaged file is never rotated into the backups
 	garble(P)
+	later(61)
 	SaveIO.write(P, {"n": 6}, "codex")
+	later(0)
 	check(int(raw(SaveIO.backup_path(P, 1))["n"]) == 4, "a damaged main file is not kept as a backup")
 	# main and newer backups gone: older ones still work
 	SaveIO.delete_all(P)
 	for i in range(1, 5):
+		later(61)
 		SaveIO.write(P, {"n": i}, "codex")
+	later(0)
 	garble(P)
 	garble(SaveIO.backup_path(P, 1))
 	check(int(SaveIO.read(P, "codex")["n"]) == 2, "falls back past a damaged backup to an older one")
@@ -99,7 +114,9 @@ func _initialize() -> void:
 	h.gold = 500
 	h.save_game()
 	h.gold = 900
+	later(61)
 	h.save_game()
+	later(0)
 	garble(GameState.slot_paths(2)[0])
 	var h2 := GameState.new()
 	h2.slot = 2
@@ -149,6 +166,52 @@ func _initialize() -> void:
 	prof.save()
 	garble(Profile.PATH)
 	check(is_equal_approx(Profile.load_profile().volume, 0.42), "damaged profile -> backup settings")
+
+	# --- The daily copy: a run of bad saves can't overwrite all history
+	SaveIO.delete_all(P)
+	SaveIO.write(P, {"n": 1}, "codex")
+	SaveIO.write(P, {"n": 2}, "codex")
+	for i in range(3, 9):
+		later(61 * i)
+		SaveIO.write(P, {"n": i}, "codex")
+	check(int(raw(SaveIO.backup_path(P, 3))["n"]) >= 5 and int(raw(SaveIO.day_path(P))["n"]) == 1, "the .bak chain moved on but the daily copy kept the old save")
+	later(SaveIO.DAY_EVERY_S + 10)
+	SaveIO.write(P, {"n": 9}, "codex")
+	later(0)
+	check(int(raw(SaveIO.day_path(P))["n"]) == 8, "the daily copy refreshes after a day from the last good main")
+	garble(P)
+	for i in range(1, SaveIO.BACKUPS + 1):
+		garble(SaveIO.backup_path(P, i))
+	check(int(SaveIO.read(P, "codex")["n"]) == 8, "the daily copy is the last fallback")
+
+	# --- A failed hero write stays pending and is retried; a deleted hero isn't brought back
+	var rt := hero(5)
+	rt.gold = 10
+	rt.save_game()
+	SaveIO.test_truncate = true
+	rt.gold = 20
+	rt.save_game()
+	SaveIO.test_truncate = false
+	check(rt.save_pending and int(raw(GameState.slot_paths(5)[0])["gold"]) == 10, "a failed write stays pending (old save intact)")
+	rt.flush_save()
+	check(not rt.save_pending and int(raw(GameState.slot_paths(5)[0])["gold"]) == 20, "the retry writes it")
+	rt.save_pending = true
+	GameState.delete_slot(5)
+	rt.flush_save()
+	check(not GameState.has_slot(5), "a pending save for a deleted hero (companion) is dropped")
+
+	# --- Cloud restore: a bad bundle never deletes local heroes
+	var pf := Profile.load_profile()
+	var h2raw: Dictionary = raw(GameState.slot_paths(2)[0])
+	check(GameState.has_slot(1) and GameState.has_slot(2), "setup: two local heroes")
+	check(not Online.unpack_local(pf, {"heroes": {}}), "a bundle with no heroes is refused")
+	check(not Online.unpack_local(pf, {"heroes": {2: {"floor": 3}, 3: "junk"}}), "a bundle with a broken hero is refused")
+	check(not Online.unpack_local(pf, {"heroes": {99: {"floor": 3}}}), "a bundle with a bad slot is refused")
+	check(not Online.unpack_local(pf, {"heroes": {2: {"floor": 3}}, "codex": "junk"}), "a bundle with a broken codex is refused")
+	check(GameState.has_slot(1) and GameState.has_slot(2) and int(raw(GameState.slot_paths(2)[0])["gold"]) == int(h2raw["gold"]), "refused bundles changed nothing")
+	h2raw["gold"] = 4242
+	check(Online.unpack_local(pf, {"heroes": {2: h2raw}}), "a good bundle restores")
+	check(int(raw(GameState.slot_paths(2)[0])["gold"]) == 4242 and not GameState.has_slot(1), "bundle heroes written, the others removed")
 
 	# --- Migration hook
 	SaveIO.MIGRATIONS["codex"][0] = func(d: Dictionary) -> Dictionary:

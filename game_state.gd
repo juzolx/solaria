@@ -127,6 +127,7 @@ var fullscreen := false
 var restored_backup := false  # true if the main save was damaged and the backup was used
 var save_pending := false     # R4: a save is waiting for the throttle (save_io.gd)
 var _last_write_ms := -1000000
+var _on_disk := false         # this hero has been saved or loaded (so a missing file means deleted)
 var _upgrade_key := ""
 var _upgrade_cache := {}
 
@@ -3315,10 +3316,15 @@ func save_game(force := false) -> void:
 		codex.save()
 	if run_over:
 		return
-	SaveIO.write(save_paths()[0], data, "hero")
+	if SaveIO.write(save_paths()[0], data, "hero"):
+		_on_disk = true
+	else:
+		save_pending = true  # retried by the next flush (main, every second)
 
 ## Writes a save the throttle held back (main calls this every second and on pause).
 func flush_save() -> void:
+	if save_pending and _on_disk and not has_slot(slot):
+		save_pending = false  # the hero was deleted meanwhile (e.g. a companion from Heroes): don't bring it back
 	if save_pending:
 		save_game(true)
 	if party != null:
@@ -3453,6 +3459,7 @@ func load_game() -> bool:
 	restored_backup = bool(res["restored"])
 	if data == null:
 		return false
+	_on_disk = true
 	# Choices waiting on screen belong to whoever was playing before
 	path_offer = []
 	path_wait = 0

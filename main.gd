@@ -130,6 +130,7 @@ func _ready() -> void:
 	SaveIO.coalesce = get_tree().get_script() == null
 	var flush := Timer.new()
 	flush.wait_time = 1.0
+	flush.process_mode = Node.PROCESS_MODE_ALWAYS  # keeps flushing while the game is paused
 	flush.timeout.connect(_flush_saves)
 	add_child(flush)
 	flush.start()

@@ -342,16 +342,41 @@ static func pack_local(p: Profile) -> Dictionary:
 	return {"version": 1, "heroes": heroes, "codex": codex, "stash": p.stash, "stash_level": p.stash_level, "max_floor": p.max_floor,
 		"hc_best": p.hc_best, "hc_runs": p.hc_runs, "active_slot": p.active_slot}
 
-## Writes a packed backup over the files on this device.
-static func unpack_local(p: Profile, bundle: Dictionary) -> void:
-	for n in range(1, GameData.MAX_HEROES + 1):
-		GameState.delete_slot(n)
-	var heroes: Dictionary = bundle.get("heroes", {})
+## True if a cloud bundle is whole: at least one hero, every hero a real hero save
+## in a valid slot, and the other parts the right types.
+static func bundle_ok(bundle: Dictionary) -> bool:
+	if typeof(bundle.get("heroes")) != TYPE_DICTIONARY or (bundle["heroes"] as Dictionary).is_empty():
+		return false
+	var heroes: Dictionary = bundle["heroes"]
 	for n in heroes:
-		if typeof(heroes[n]) == TYPE_DICTIONARY:
-			SaveIO.write(GameState.slot_paths(int(n))[0], heroes[n], "hero")
+		if not (typeof(n) == TYPE_INT or (typeof(n) == TYPE_STRING and String(n).is_valid_int())) or int(n) < 1 or int(n) > GameData.MAX_HEROES:
+			return false
+		if typeof(heroes[n]) != TYPE_DICTIONARY or not (heroes[n] as Dictionary).has("floor"):
+			return false
+	if bundle.get("codex") != null and typeof(bundle["codex"]) != TYPE_DICTIONARY:
+		return false
+	for k in ["stash", "hc_runs"]:
+		if bundle.has(k) and typeof(bundle[k]) != TYPE_ARRAY:
+			return false
+	return true
+
+## Writes a packed backup over the files on this device. A bad bundle changes
+## nothing: every bundle hero is written first, and only then are the local
+## heroes the bundle doesn't have removed. Returns false if nothing was restored.
+static func unpack_local(p: Profile, bundle: Dictionary) -> bool:
+	if not bundle_ok(bundle):
+		return false
+	var heroes: Dictionary = bundle["heroes"]
+	var written := {}
+	for n in heroes:
+		if not SaveIO.write(GameState.slot_paths(int(n))[0], (heroes[n] as Dictionary).duplicate(true), "hero"):
+			return false
+		written[int(n)] = true
+	for n in range(1, GameData.MAX_HEROES + 1):
+		if not written.has(n):
+			GameState.delete_slot(n)
 	if typeof(bundle.get("codex")) == TYPE_DICTIONARY:
-		SaveIO.write(Codex.PATH, bundle["codex"], "codex")
+		SaveIO.write(Codex.PATH, (bundle["codex"] as Dictionary).duplicate(true), "codex")
 	p.stash = bundle.get("stash", [])
 	p.stash_level = int(bundle.get("stash_level", 0))
 	p.max_floor = maxi(p.max_floor, int(bundle.get("max_floor", 0)))
@@ -359,6 +384,7 @@ static func unpack_local(p: Profile, bundle: Dictionary) -> void:
 	p.hc_runs = bundle.get("hc_runs", p.hc_runs)
 	p.active_slot = int(bundle.get("active_slot", 1))
 	p.save()
+	return true
 
 func cloud_backup() -> Dictionary:
 	var blob := Marshalls.variant_to_base64(pack_local(profile))
@@ -380,7 +406,8 @@ func cloud_restore(code := "") -> Dictionary:
 	var bundle = Marshalls.base64_to_variant(str(r["data"]))
 	if typeof(bundle) != TYPE_DICTIONARY:
 		return {"ok": false, "error": "That backup couldn't be read."}
-	unpack_local(profile, bundle)
+	if not unpack_local(profile, bundle):
+		return {"ok": false, "error": "That backup is incomplete, so nothing was changed."}
 	profile.online["cloud_code"] = code.strip_edges().to_upper()
 	profile.save()
 	return {"ok": true}

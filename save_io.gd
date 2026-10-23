@@ -4,12 +4,13 @@ extends RefCounted
 ##
 ## Writing (write): the new data goes to <name>.tmp, is read back to prove it
 ## parses, the last good main file is copied into the rolling backups
-## (<name>.bak, .bak2, .bak3: newest first), and only then is the .tmp renamed
-## over the main file. A crash or a full disk at any point leaves the old main
-## file, the verified .tmp or a backup intact.
+## (<name>.bak, .bak2, .bak3: newest first; the chain moves at most once a
+## minute) and a daily copy (<name>.day, at most once a day), and only then is
+## the .tmp renamed over the main file. A crash or a full disk at any point
+## leaves the old main file, the verified .tmp or a backup intact.
 ##
 ## Reading (load): main file, then a verified .tmp (a crash between write and
-## rename), then the backups newest first. A damaged main file is kept as
+## rename), then the backups newest first, then .day. A damaged main file is kept as
 ## <name>.corrupt, repaired from the backup, and the player gets a gentle notice
 ## (main shows `notices`). Nothing ever crashes or silently starts over.
 ##
@@ -29,17 +30,24 @@ extends RefCounted
 const VERSIONS := {"hero": 1, "profile": 1, "codex": 1}
 const BACKUPS := 3
 const MIN_INTERVAL_MS := 3000
+const BAK_EVERY_S := 60        # the .bak chain moves at most once a minute
+const DAY_EVERY_S := 86400     # .day: one copy a day from a known-good main file
 
 ## kind -> {from_version: Callable(d: Dictionary) -> Dictionary}
 static var MIGRATIONS := {"hero": {}, "profile": {}, "codex": {}}
 static var coalesce := false
 static var test_now_ms := -1     # tests set this to drive the throttle clock
+static var test_now_unix := -1   # tests set this to age the backups
 static var test_truncate := false  # tests: simulate a write cut short (disk full, crash)
 static var notices: Array[String] = []
 static var _noticed := {}
 
 static func now_ms() -> int:
 	return test_now_ms if test_now_ms >= 0 else Time.get_ticks_msec()
+
+## Only used to space out backups, never for game progress.
+static func now_unix() -> int:
+	return test_now_unix if test_now_unix >= 0 else int(Time.get_unix_time_from_system())
 
 # ---------------------------------------------------------------------
 # Paths
@@ -52,11 +60,15 @@ static func tmp_path(path: String) -> String:
 static func backup_path(path: String, i: int) -> String:
 	return path.get_basename() + (".bak" if i == 1 else ".bak%d" % i)
 
+## One copy a day, the last fallback.
+static func day_path(path: String) -> String:
+	return path.get_basename() + ".day"
+
 static func corrupt_path(path: String) -> String:
 	return path.get_basename() + ".corrupt"
 
 static func all_paths(path: String) -> Array:
-	var out := [path, tmp_path(path), corrupt_path(path)]
+	var out := [path, tmp_path(path), corrupt_path(path), day_path(path)]
 	for i in range(1, BACKUPS + 1):
 		out.append(backup_path(path, i))
 	return out
@@ -95,15 +107,27 @@ static func write(path: String, data: Dictionary, kind: String) -> bool:
 		push_warning("SaveIO: %s did not read back, the old save is kept" % tmp)
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
 		return false
-	# Keep the last good main file as the newest backup (a damaged one is dropped).
+	# Keep the last good main file as a backup (a damaged one is dropped). The
+	# .bak chain only moves once a minute and .day once a day, so a run of bad
+	# saves can't push every good copy out.
 	if FileAccess.file_exists(path) and _parse(path, kind) != null:
-		for i in range(BACKUPS, 1, -1):
-			var older := backup_path(path, i - 1)
-			if FileAccess.file_exists(older):
-				_move(older, backup_path(path, i))
-		DirAccess.copy_absolute(ProjectSettings.globalize_path(path), ProjectSettings.globalize_path(backup_path(path, 1)))
+		var main_abs := ProjectSettings.globalize_path(path)
+		if _age(backup_path(path, 1)) >= BAK_EVERY_S:
+			for i in range(BACKUPS, 1, -1):
+				var older := backup_path(path, i - 1)
+				if FileAccess.file_exists(older):
+					_move(older, backup_path(path, i))
+			DirAccess.copy_absolute(main_abs, ProjectSettings.globalize_path(backup_path(path, 1)))
+		if _age(day_path(path)) >= DAY_EVERY_S:
+			DirAccess.copy_absolute(main_abs, ProjectSettings.globalize_path(day_path(path)))
 	_move(tmp, path)
 	return true
+
+## Seconds since a file was last written (huge if it doesn't exist).
+static func _age(p: String) -> int:
+	if not FileAccess.file_exists(p):
+		return 1 << 40
+	return now_unix() - int(FileAccess.get_modified_time(p))
 
 static func _move(from: String, to: String) -> void:
 	var a := ProjectSettings.globalize_path(from)
@@ -145,6 +169,7 @@ static func load_file(path: String, kind: String) -> Dictionary:
 	var order := [tmp_path(path)]
 	for i in range(1, BACKUPS + 1):
 		order.append(backup_path(path, i))
+	order.append(day_path(path))
 	for p in order:
 		if p != order[0] and FileAccess.file_exists(p):
 			tried_backup = true
@@ -155,7 +180,7 @@ static func load_file(path: String, kind: String) -> Dictionary:
 		res["from"] = p
 		res["restored"] = p != order[0]
 		# Repair the main file so this only happens once
-		write(path, (d as Dictionary).duplicate(true), kind)
+		write(path, (res["data"] as Dictionary).duplicate(true), kind)  # the migrated data
 		if res["restored"]:
 			_notice(path, "A %s file was damaged (maybe the phone shut down mid-save), so your most recent backup was restored. You may have lost a few moments of progress." % _label(kind))
 		return res
