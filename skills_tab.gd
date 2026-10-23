@@ -347,41 +347,18 @@ static func _fill_auto(m, o: Overlay, st: GameState) -> void:
 			_fill_auto(m, o, st))
 		b.custom_minimum_size = Vector2(0, UI.TAP)
 		o.content.add_child(b)
-	UI.section(o.content, "Pause Auto when...", "Autoplay stops and tells you why, once per thing. Tap Auto to carry on.")
-	for rid in AutoRules.RULES:
-		var r_id: String = rid
-		var rb := UI.button("%s: %s" % [AutoRules.RULES[r_id], "ON" if AutoRules.on(st, r_id) else "OFF"], func():
-			AutoRules.toggle(st, r_id)
-			st.save_game()
-			_fill_auto(m, o, st))
-		rb.custom_minimum_size = Vector2(0, UI.TAP)
-		rb.add_theme_color_override("font_color", UI.TEAL if AutoRules.on(st, r_id) else UI.DIM)
-		o.content.add_child(rb)
-	UI.section(o.content, "Potions", "Auto-potion drinks one when your HP drops below this.")
-	var prow := UI.hbox(8)
-	o.content.add_child(prow)
-	var pl := UI.label("", 15, UI.PINK)
-	pl.custom_minimum_size = Vector2(70, 0)
-	var slider := HSlider.new()
-	slider.min_value = 10
-	slider.max_value = 70
-	slider.step = 5
-	slider.value = st.auto_potion_at * 100.0
-	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	slider.custom_minimum_size = Vector2(0, UI.TAP)
-	pl.text = "%d%%" % int(slider.value)
-	slider.value_changed.connect(func(v: float):
-		st.auto_potion_at = v / 100.0
-		pl.text = "%d%%" % int(v)
-		st.save_game())
-	prow.add_child(slider)
-	prow.add_child(pl)
-	var ap := UI.button("Auto-potion: %s" % ("ON" if st.auto_potion else "OFF"), func():
-		st.auto_potion = not st.auto_potion
-		st.save_game()
-		_fill_auto(m, o, st))
-	ap.custom_minimum_size = Vector2(0, UI.TAP)
-	o.content.add_child(ap)
+	# 2.1: going home, stopping, potions and the loot filter live in one panel
+	UI.section(o.content, "Auto-dive", "When Auto heads home or stops, potions and elixirs, and the loot filter.")
+	var dive := UI.primary("Auto-dive settings", func():
+		o.close()
+		AutoDivePanel.new().show_for(m), UI.TEAL)
+	dive.custom_minimum_size = Vector2(0, UI.TAP)
+	o.content.add_child(dive)
+	var lfb := UI.button("Loot filter: %s" % LootRules.summary(st), func():
+		o.close()
+		LootFilter.new().show_for(m))
+	lfb.custom_minimum_size = Vector2(0, UI.TAP)
+	o.content.add_child(lfb)
 	UI.section(o.content, "Skill order", "Auto tries your skills top to bottom and uses the first one that makes sense right now (it won't heal you at full HP, or waste a big hit on a monster that resists it). Turn a skill off to only use it yourself.")
 	var order := st.auto_order()
 	if order.is_empty():
