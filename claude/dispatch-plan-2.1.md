@@ -65,6 +65,11 @@ D9: Apple account about Nov 6 (after payday). Release date is FLEXIBLE (Juzo):
    tested before then so the first build goes out the same day.
 D10: floor 100 in 4-6 hours (sim now 5.7 h median; smooth the 51-100 wall).
 
+Buildings (Juzo, Oct 23): Mailbox no levels; cleanse CAN fail (keep); Church and
+Cabin must be BUILT first (not there from the start); costs flat is fine.
+Loot: upgrades always kept; "stop at floor N" pauses Auto; team line-ups from any hero.
+Workflow: claude/experts.md (10-round Fable research loops -> expert agents -> Fable checker loop).
+
 ## Decisions (original options)
 D1 LPC share-alike art: publish modified art under CC-BY-SA / replace 42 parts / replace all incl. town.
 D2 Wheel Legendary table: unlock at a floor (e.g. 250) / one-off gold fee / extra row; spins never for money.
