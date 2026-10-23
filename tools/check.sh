@@ -4,6 +4,8 @@
 #   tools/check.sh shots    ...plus every screen at phone size (shots/tour)
 #   tools/check.sh perf     ...plus a 60 s Auto-play frame-time report (shots/perf)
 #   tools/check.sh parse    parse check only
+#   tools/check.sh sim      balance simulator only (quick: ~1 min), writes claude/balance-report.md. Not part of the normal check.
+#                           Full run: godot --headless --path . -s tools/balance_sim.gd -- [heroes] [hours]
 cd "$(dirname "$0")/.."
 G=${GODOT:-/root/godot/Godot_v4.7.2-stable_linux.x86_64}
 [ -f override.cfg ] || { echo "No override.cfg: tests delete saves, so they only run against the test folder. See CLAUDE.md."; exit 1; }
@@ -13,6 +15,11 @@ errs=$(for f in *.gd; do $G --headless --path . --check-only --script $f 2>&1 | 
 if [ -n "$errs" ]; then echo "PARSE ERRORS:"; echo "$errs"; exit 1; fi
 echo "parse: ok"
 [ "$1" = "parse" ] && exit 0
+if [ "$1" = "sim" ]; then
+  out=$(timeout 900 $G --headless --path . -s tools/balance_sim.gd -- quick 2>&1)
+  echo "$out" | grep -E "^BALANCE SIM DONE|SCRIPT ERROR" -A1 | head -5
+  echo "$out" | grep -q "BALANCE SIM DONE" && exit 0 || exit 1
+fi
 run() {  # name, command
   out=$(eval "$2" 2>&1)
   sum=$(echo "$out" | grep -E "DONE, failures|TESTS DONE" | tail -1)
