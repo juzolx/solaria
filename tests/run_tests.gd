@@ -247,7 +247,7 @@ func _initialize() -> void:
 				(main.shop_tab.quick_sell[r] as Button).pressed.emit()
 			# Craft
 			gs.scrap += 500
-			gs.materials = [5, 5, 5, 5, 5, 0, 0, 0, 0, 0]
+			gs.dust += 500
 			main.craft_tab.refresh()
 			main.craft_tab.potion_button.pressed.emit()
 			main.craft_tab.bag_button.pressed.emit()
@@ -278,7 +278,7 @@ func _initialize() -> void:
 			check(main.state.floor_num == 1, "floor picker travels")
 			var menu := SettingsMenu.new()
 			menu.show_for(main)
-			for kind in ["level", "gold", "scrap", "materials", "floor_up", "floor_down", "legendary", "unique", "heal", "signature", "rare", "event", "merchant"]:
+			for kind in ["level", "gold", "scrap", "dust", "floor_up", "floor_down", "legendary", "unique", "heal", "signature", "rare", "event", "merchant"]:
 				main.state.dev_grant(kind)
 			for k in menu.a11y_buttons:
 				(menu.a11y_buttons[k] as Button).pressed.emit()
@@ -493,13 +493,13 @@ func _initialize() -> void:
 	z.use_scroll("key")
 	check(z.boss_cooldown(25) == 0 and z.go_to_floor(25), "boss key resets the rest")
 	z.enemy_hp = 0
-	var mats_before := z.material_total()
+	var dust_before := z.dust
 	z._enemy_defeated()
 	check(z.door_pending() and z.doors.size() == 3 and "camp" in z.doors, "boss beaten: three blank doors, one leads to a camp (Snik is there)")
 	check(Town.floor_clear(z), "a cleared room counts as between floors")
 	z.doors[0] = "fight"
 	z.choose_path("door_l")
-	check(z.floor_num == 26 and z.material_total() >= mats_before + 5 and z.doors.is_empty(), "through a door: next floor, 5-8 materials")
+	check(z.floor_num == 26 and z.dust >= dust_before + 5 and z.doors.is_empty(), "through a door: next floor, 5-8 dust from the boss")
 	check(z.codex.kills("black_annis") == 1 and z.codex.value("mids") == 1, "boss in the bestiary")
 	# Signature drop
 	z._give_signature("kobold")
@@ -1076,19 +1076,19 @@ func _initialize() -> void:
 	GameState.delete_slot(1)
 	e.autosave = true
 	e.slot = 1
-	# Materials, sets and bag crafting
-	e.materials = [25, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+	# Sets and bag crafting (dust and scrap)
+	e.dust = 25
 	e.scrap = 500
 	e.bag.clear()
 	e.craft_set_piece("grendels_kin", "Weapon")
 	e.craft_set_piece("grendels_kin", "Chest")
-	check(e.bag.size() == 2 and e.materials[0] == 25 - 2 * GameData.SET_PIECE_MATERIALS, "crafted 2 set pieces")
+	check(e.bag.size() == 2 and e.dust == 25 - 2 * Economy.set_piece_dust("grendels_kin"), "crafted 2 set pieces")
 	var hp_before := e.get_max_hp()
 	for item in e.bag.duplicate():
 		e.equip(int(item["id"]))
 	check(e.set_counts().get("grendels_kin", 0) == 2, "wearing 2 set pieces")
 	var bag_before := e.bag_capacity()
-	e.materials = [5, 5, 0, 0, 0, 0, 0, 0, 0, 0]
+	e.scrap = 500
 	e.craft_bag()
 	check(e.bag_capacity() == bag_before + GameData.BAG_STEP, "crafted a bigger bag")
 	# Crit cap
@@ -1099,7 +1099,7 @@ func _initialize() -> void:
 	var e2 := GameState.new()
 	e2.slot = 1
 	e2.load_game()
-	check(e2.materials == e.materials and e2.skill_book == e.skill_book and e2.title() == e.title(), "new fields saved (%s vs %s)" % [e2.title(), e.title()])
+	check(e2.dust == e.dust and e2.scrap == e.scrap and e2.skill_book == e.skill_book and e2.title() == e.title(), "new fields saved (%s vs %s)" % [e2.title(), e.title()])
 	# ---- Town: no fighting inside, contracts, deeds, the inn
 	var tg := GameState.new()
 	tg.slot = 1

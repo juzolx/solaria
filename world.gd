@@ -134,7 +134,7 @@ static func champion_reward(g: GameState) -> void:
 	g._add_gold(gold)
 	var r := maxi(3, g._rarity(30 + g._loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS * 1.5))
 	g._give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, g.floor_num, g._new_id()))
-	g._give_materials(randi_range(2, 3))
+	Economy.give_dust(g, randi_range(Economy.CHAMPION_DUST[0], Economy.CHAMPION_DUST[1]))
 	g.potions += 1
 	g.checkpoint = maxi(g.checkpoint, g.floor_num)
 	g.codex.add("champions")

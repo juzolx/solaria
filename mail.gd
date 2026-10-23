@@ -12,7 +12,7 @@ const MAX_LETTERS := 60
 
 ## Letters from the maker, shipped with updates (later: pulled from the server).
 ## Each one reaches every account once. Give each a new, unique id.
-## "reward" uses the same keys as bounties: gold, potions, scrap, mats, scroll,
+## "reward" uses the same keys as bounties: gold, potions, scrap, dust, scroll,
 ## look, and "item": {"slot", "rarity"} (the item is made for whoever opens it).
 const NEWS := [
 	{"id": "news-0.12-mailbox", "from": "Juzo", "title": "The Mailbox is open!",
@@ -95,8 +95,8 @@ static func summary(l: Dictionary) -> String:
 		parts.append("%d scrap" % int(l["scrap"]))
 	for k in l["extra"]:
 		match String(k):
-			"mats":
-				parts.append("%d materials" % int(l["extra"][k]))
+			"dust", "mats":  # "mats": a 2.0 letter, paid as dust
+				parts.append("%d dust" % int(l["extra"][k]))
 			"scroll":
 				parts.append("a scroll")
 			"look":
