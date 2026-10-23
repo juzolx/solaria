@@ -10,7 +10,7 @@ const DEFAULTS := {
 	"bag_pct": 0,          # head home when the bag is this full (%), 0 = off
 	"potions_at": -1,      # head home when you're down to this many potions, -1 = off
 	"hp_pct": 0,           # head home when HP is below this % (0 = off)
-	"stop_floor": 0,       # head home once you've cleared this floor (0 = off)
+	"stop_floor": 0,       # pause Auto when you reach this floor (0 = off)
 	"downs": 0,            # head home when this many of your team are down at once (0 = off)
 	"elixir_boss": false,  # drink a carried elixir when a boss fight starts
 	"filter_in_auto": true,  # the loot filter also runs while Auto plays
@@ -56,25 +56,55 @@ static func team_down(g: GameState) -> int:
 				n += 1
 	return n
 
-## Why Auto should head home ("" = keep going). Pure check: tick() acts on it.
-static func home_reason(g: GameState) -> String:
+## Every go-home rule that holds right now, as [key, why], in order.
+static func conditions(g: GameState) -> Array:
 	var s := settings(g)
+	var out: Array = []
 	var bag_pct := int(s["bag_pct"])
 	if bag_pct > 0 and g.bag.size() * 100 >= g.bag_capacity() * bag_pct:
-		return "your bag is full" if bag_pct >= 100 else "your bag is %d%% full" % bag_pct
+		out.append(["bag", "your bag is full" if bag_pct >= 100 else "your bag is %d%% full" % bag_pct])
 	var pot := int(s["potions_at"])
 	if pot >= 0 and g.potions <= pot:
-		return "you're out of potions" if g.potions <= 0 else "you're down to %d potion%s" % [g.potions, "" if g.potions == 1 else "s"]
+		out.append(["potions", "you're out of potions" if g.potions <= 0 else "you're down to %d potion%s" % [g.potions, "" if g.potions == 1 else "s"]])
 	var hp := int(s["hp_pct"])
 	if hp > 0 and g.hero_hp * 100 < g.get_max_hp() * hp:
-		return "your HP is below %d%%" % hp
-	var fl := int(s["stop_floor"])
-	if fl > 0 and g.floor_num >= fl:
-		return "you reached floor %d" % fl
+		out.append(["hp", "your HP is below %d%%" % hp])
 	var downs := int(s["downs"])
 	if downs > 0 and team_down(g) >= downs:
-		return "%d of your team %s down" % [downs, "is" if downs == 1 else "are"]
+		out.append(["downs", "%d of your team %s down" % [downs, "is" if downs == 1 else "are"]])
+	return out
+
+## Rules that already fired and wait to re-arm (key -> true). Saved with the settings.
+static func _fired(g: GameState) -> Dictionary:
+	var s := settings(g)
+	if not (s.get("fired") is Dictionary):
+		s["fired"] = {}
+	return s["fired"]
+
+## Why Auto should head home ("" = keep going): the first rule that holds and
+## hasn't fired yet. A rule fires once, then re-arms only after its condition clears.
+static func home_reason(g: GameState) -> String:
+	var fired := _fired(g)
+	for c in conditions(g):
+		if not fired.has(c[0]):
+			return String(c[1])
 	return ""
+
+## Floor N: Auto pauses there once ("" = keep going). It holds only on floor N
+## itself, so resuming (or a later dive started past it) doesn't pause again;
+## it re-arms when you're on another floor.
+static func pause_reason(g: GameState) -> String:
+	if not g.autoplay or g.in_town:
+		return ""
+	var fired := _fired(g)
+	var fl := int(value(g, "stop_floor"))
+	if fl <= 0 or g.floor_num != fl:
+		fired.erase("floor")
+		return ""
+	if fired.has("floor"):
+		return ""
+	fired["floor"] = true
+	return "you reached floor %d" % fl
 
 ## The first carried elixir that isn't already working ("" = none).
 static func elixir_to_drink(g: GameState) -> String:
@@ -93,14 +123,36 @@ static func tick(g: GameState) -> void:
 		var id := elixir_to_drink(g)
 		if id != "" and g.drink_elixir(id):
 			g.events.append({"type": "toast", "text": "Auto drank %s before the boss." % GameData.ELIXIRS[id]["name"]})
+	# re-arm rules whose condition has cleared
+	var fired := _fired(g)
+	var holding := {}
+	for c in conditions(g):
+		holding[c[0]] = true
+	for k in fired.keys():
+		if k != "floor" and not holding.has(k):
+			fired.erase(k)
 	if g.go_home_after:
 		return
-	var why := home_reason(g)
-	if why == "":
+	var key := ""
+	var why := ""
+	for c in conditions(g):
+		if not fired.has(c[0]):
+			key = c[0]
+			why = c[1]
+			break
+	if key == "":
+		return
+	fired[key] = true
+	var blocked := Town.blocked(g, true)
+	if blocked != "":
+		g.say("[color=#fca5a5]Auto can't go home: %s[/color]" % blocked)
+		g.events.append({"type": "toast", "text": "Auto can't go home: %s" % blocked})
+		g.save_game()
 		return
 	g.go_home_after = true
 	g.say("[color=#5eead4]Auto heads home after this floor: %s.[/color]" % why)
 	g.events.append({"type": "toast", "text": "Heading home after this floor: %s." % why})
+	g.save_game()
 
 ## Short words for the panel buttons.
 static func label_for(key: String, v: int) -> String:

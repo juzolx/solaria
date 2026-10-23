@@ -35,7 +35,6 @@ static func rules(g: GameState) -> Dictionary:
 		lf["slots"] = old.get("slots", {})
 		lf["weaker"] = bool(old.get("weaker", false))
 		lf["below_gs"] = bool(old.get("below_gs", false))
-		lf["keep_better"] = false  # the old rarity rule salvaged upgrades too: keep that
 	for k in defaults():
 		if not lf.has(k):
 			lf[k] = defaults()[k]

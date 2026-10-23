@@ -97,7 +97,8 @@ func _filter() -> void:
 	g.loot_filter = {"slots": {"Chest": true}, "weaker": true, "below_gs": true}
 	var lf := LootRules.rules(g)
 	check(int(lf["v"]) == LootRules.VERSION and bool(lf["slots"]["Chest"]) and bool(lf["weaker"]) and bool(lf["below_gs"]), "old filter rules carry over")
-	check(not bool(lf["keep_better"]) and bool(lf["keep_sets"]) and String(lf["action"]) == "salvage", "old saves keep their old behaviour")
+	check(bool(lf["keep_better"]) and bool(lf["keep_sets"]) and String(lf["action"]) == "salvage", "old saves get the new keep rules")
+	LootRules.set_rule(g, "keep_better", false)
 	check(g.filter_salvages(GameData.make_item("Chest", 1, 5, g._new_id())), "filter_salvages still answers for old callers")
 	check(LootRules.summary(g) != "", "summary line")
 
@@ -107,6 +108,7 @@ func _auto_dive() -> void:
 	g.in_town = false
 	g.autoplay = true
 	g.floor_num = 12
+	g.best_floor = 60  # the town is open, so Auto may head home
 	g.spawn_enemy()
 	g.potions = 5
 	g.hero_hp = g.get_max_hp()
@@ -119,8 +121,26 @@ func _auto_dive() -> void:
 	check(AutoDive.home_reason(g).contains("bag"), "bag full: head home")
 	AutoDive.tick(g)
 	check(g.go_home_after, "tick starts the trip home")
-	g.go_home_after = false
+	g.go_home_after = false  # (home and back, bag still full)
+	check(AutoDive.home_reason(g) == "", "bag rule fired once: doesn't fire again while the bag stays full")
+	AutoDive.tick(g)
+	check(not g.go_home_after, "...so the next dive isn't sent straight home")
 	g.bag.clear()
+	AutoDive.tick(g)
+	while g.bag.size() < g.bag_capacity():
+		g.bag.append(GameData.make_item("Legs", 0, 5, g._new_id()))
+	check(AutoDive.home_reason(g).contains("bag"), "bag emptied then full again: the rule is back")
+	# the trip home is refused: one clear note, once
+	g.portal = {"kind": "test"}
+	var said := g.messages.size()
+	AutoDive.tick(g)
+	check(not g.go_home_after and g.messages.size() == said + 1 and String(g.messages[-1]).contains("can't go home"), "blocked trip: one note why")
+	AutoDive.tick(g)
+	AutoDive.tick(g)
+	check(g.messages.size() == said + 1, "...and only once")
+	g.portal = {}
+	g.bag.clear()
+	AutoDive.tick(g)
 	AutoDive.set_value(g, "bag_pct", 0)
 	# potions
 	AutoDive.set_value(g, "potions_at", 1)
@@ -135,11 +155,17 @@ func _auto_dive() -> void:
 	g.hero_hp = g.get_max_hp()
 	check(AutoDive.home_reason(g) == "", "full HP: keep going")
 	AutoDive.set_value(g, "hp_pct", 0)
-	# floor
+	# floor N pauses Auto, once
 	AutoDive.set_value(g, "stop_floor", 25)
-	check(AutoDive.home_reason(g) == "", "floor 12 of 25: keep going")
+	check(AutoDive.pause_reason(g) == "", "floor 12 of 25: keep going")
 	g.floor_num = 25
-	check(AutoDive.home_reason(g).contains("25"), "reached floor 25: head home")
+	check(AutoRules.check(g).contains("25"), "reached floor 25: Auto pauses")
+	check(AutoDive.pause_reason(g) == "", "resume on floor 25: no second pause")
+	check(AutoDive.home_reason(g) == "", "floor rule never sends you home")
+	g.floor_num = 26
+	check(AutoDive.pause_reason(g) == "", "past it: keep going")
+	g.floor_num = 25
+	check(AutoDive.pause_reason(g).contains("25"), "back on floor 25 another dive: pauses again")
 	AutoDive.set_value(g, "stop_floor", 0)
 	AutoDive.step(g, "stop_floor", AutoDive.FLOOR_STEPS)
 	check(int(AutoDive.value(g, "stop_floor")) == 25, "steps move to the next value")
@@ -221,6 +247,24 @@ func _presets() -> void:
 	check(all.contains("skill book") and String(g.active_slots[2]) == "", "missing skill skipped with a note")
 	check(all.contains("hero is gone") and g.party_slots.is_empty(), "missing team member skipped with a note")
 	check(g.potions == 1 and all.contains("Only 1"), "short on supplies: takes what's home and says so")
+	# vault, can't wear, doubles, supplies in the dungeon
+	var c := GameData.make_item("Weapon", 2, 30, 9200)
+	g.builds[1] = {"name": "V", "gear": {"Weapon": 9200}, "gear_names": {"Weapon": "Vault Blade"}, "party": [99, 99]}
+	notes = Presets.apply(g, 1, [c])
+	all = "\n".join(notes)
+	check(all.contains("Vault Blade") and all.contains("vault") and not all.contains("Vault Blade: it's gone"), "gear in the vault says so")
+	check(notes.count("Skipped a team member: that hero is gone.") == 1, "doubles in a team are dropped")
+	var elf := GameData.make_item("Weapon", 2, 30, 9300)
+	elf["race_only"] = "nobody"
+	g.bag.append(elf)
+	g.builds[1] = {"name": "E", "gear": {"Weapon": 9300}, "gear_names": {"Weapon": "Odd Blade"}}
+	notes = Presets.apply(g, 1)
+	check("\n".join(notes).contains("can't wear") and int(g.equipped["Weapon"]["id"]) == 9101, "gear this hero can't wear: skipped with a note")
+	g.in_town = false
+	g.builds[1] = {"name": "S", "supplies": {"potion": 4}}
+	notes = Presets.apply(g, 1)
+	check("\n".join(notes).contains("Supplies skipped"), "supplies in the dungeon: skipped with a note")
+	g.in_town = true
 	# old loadouts move into presets
 	var h := _hero()
 	h.loadouts[1] = {"Weapon": 1234}
@@ -232,6 +276,46 @@ func _presets() -> void:
 	check(Presets.name_of(h, 0) == "Farming", "rename")
 	Presets.clear(h, 0)
 	check(not Presets.is_saved(h, 0), "clear")
+	# a full set of presets: old loadouts wait, nothing is dropped
+	for k in Presets.SLOTS:
+		h.builds[k] = {"name": "P%d" % k}
+	h.loadouts[2] = {"Weapon": 555}
+	Presets.migrate(h)
+	check(h.loadouts[2].size() == 1, "presets full: the old gear set waits")
+	Presets.clear(h, 3)
+	Presets.migrate(h)
+	check(h.loadouts[2].is_empty() and Presets.name_of(h, 3) == "Gear set 3", "...and moves over once a slot is free")
+	_teams()
+
+# ---------------------------------------------------------------- team line-ups (any hero)
+func _teams() -> void:
+	for n in [9, 10]:
+		var s := _hero()
+		s.autosave = true
+		s.slot = n
+		s.hero_name = "T%d" % n
+		s.save_game(true)
+	var g := _hero()
+	g.slot = 9
+	g.in_town = true
+	var p := Profile.new()
+	p.presets = [{"slots": [10, 9, 9, 77]}, {"slots": [9, 77]}, {}]
+	var plan := Presets.team_plan(p, 0)
+	check(int(plan["leader"]) == 10 and plan["comps"] == [9] and (plan["notes"] as Array).size() == 1, "team plan: leader, no doubles, gone hero noted")
+	var out := Presets.apply_team(g, p, 0)
+	check(int(out["switch"]) == 10 and out["comps"] == [9], "another leader: switch to that hero with the team")
+	g.in_town = false
+	out = Presets.apply_team(g, p, 0)
+	check(int(out["switch"]) == -1 and "\n".join(out["notes"]).contains("in town"), "away from town: no switch, says why")
+	g.in_town = true
+	out = Presets.apply_team(g, p, 1)
+	check(int(out["switch"]) == -1 and g.party_slots.is_empty() and "\n".join(out["notes"]).contains("gone"), "same leader: team set here, gone hero skipped")
+	p.presets[2] = {"slots": [77, 9]}
+	out = Presets.apply_team(g, p, 2)
+	check(int(out["switch"]) == -1 and "\n".join(out["notes"]).contains("leader"), "leader gone: nothing happens, says why")
+	check(Presets.team_label(p, 2).contains("(gone)"), "line-up names show a gone hero")
+	GameState.delete_slot(9)
+	GameState.delete_slot(10)
 
 # ---------------------------------------------------------------- save and load
 func _save_load() -> void:

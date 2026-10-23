@@ -276,7 +276,7 @@ static func _fill_curses(mm, o: Overlay, st: GameState) -> void:
 
 ## 2.1: one button per saved preset, plus the Presets screen.
 func _fill_presets() -> void:
-	Presets.migrate(state, m.profile)
+	Presets.migrate(state)
 	OnlineUI.clear(preset_box)
 	for i in Presets.SLOTS:
 		if not Presets.is_saved(state, i):
@@ -295,7 +295,7 @@ func _fill_presets() -> void:
 	preset_box.add_child(edit)
 
 func _use_preset(i: int) -> void:
-	var notes := Presets.apply(state, i)
+	var notes := Presets.apply(state, i, m.profile.stash)
 	m.sfx.play("equip")
 	preset_note.visible = true
 	preset_note.text = "Now using %s." % Presets.name_of(state, i) + ("" if notes.is_empty() else "\n" + "\n".join(notes))

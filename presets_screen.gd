@@ -14,7 +14,7 @@ func show_for(main_node, changed := Callable()) -> void:
 	m = main_node
 	state = m.state
 	on_change = changed
-	Presets.migrate(state, m.profile)
+	Presets.migrate(state)
 	open(m, "Presets", 560.0)
 	content.add_child(UI.wrap("Save what you're running now (stats, skills, gear, team and rows, supplies) and switch back in one tap. Anything you no longer have is skipped.", 13, UI.DIM))
 	note = UI.wrap("", 13, UI.GOLD)
@@ -26,6 +26,7 @@ func show_for(main_node, changed := Callable()) -> void:
 
 func _fill() -> void:
 	OnlineUI.clear(body)
+	UI.section(body, "This hero", "Stats, skills, gear, team and rows, supplies.")
 	for i in Presets.SLOTS:
 		var saved := Presets.is_saved(state, i)
 		var c := UI.card(UI.TEAL if saved else UI.BORDER)
@@ -41,13 +42,68 @@ func _fill() -> void:
 		var save := UI.button("Save here", func(): _save(idx))
 		var ren := UI.button("Rename", func(): _rename(idx))
 		ren.disabled = not saved
-		for b in [use, save, ren]:
+		var clr := UI.button("Clear", func(): _clear(idx))
+		clr.disabled = not saved
+		for b in [use, save, ren, clr]:
+			b.custom_minimum_size = Vector2(0, UI.TAP)
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.add_child(b)
+	_fill_teams()
+
+## Team line-ups: town-wide, usable from any hero (another leader = switch heroes, in town).
+func _fill_teams() -> void:
+	if state.hardcore:
+		return
+	UI.section(body, "Team line-ups", "Shared by every hero in this town. A different leader switches you to that hero (in town). Each hero keeps their own gear and skills.")
+	for i in Presets.TEAM_SLOTS:
+		var saved := Presets.team_saved(m.profile, i)
+		var c := UI.card(UI.GOLD if saved else UI.BORDER)
+		body.add_child(c[0])
+		var inner: VBoxContainer = c[1]
+		var lbl := UI.label(Presets.team_label(m.profile, i) if saved else "Empty team %d" % (i + 1), 16, UI.TEXT if saved else UI.DIM)
+		lbl.clip_text = true
+		inner.add_child(lbl)
+		var row := UI.hbox(8)
+		inner.add_child(row)
+		var idx := i
+		var use := UI.primary("Use", func(): _use_team(idx), UI.GOLD)
+		use.disabled = not saved
+		var save := UI.button("Save team here", func(): _save_team(idx))
+		var clr := UI.button("Clear", func():
+			Presets.clear_team(m.profile, idx)
+			_changed())
+		clr.disabled = not saved
+		for b in [use, save, clr]:
 			b.custom_minimum_size = Vector2(0, UI.TAP)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			row.add_child(b)
 
+func _use_team(i: int) -> void:
+	var out := Presets.apply_team(state, m.profile, i)
+	var notes: Array = out["notes"]
+	if int(out["switch"]) >= 0:
+		if state.party != null:
+			state.party.save_all()
+		TitleScreen.pending = {"play": int(out["switch"]), "party": out["comps"]}
+		m.sfx.play("equip")
+		m.back_to_title()
+		return
+	m.sfx.play("equip")
+	note.visible = true
+	note.text = ("Team ready: %s." % Presets.team_label(m.profile, i)) + ("" if notes.is_empty() else "\n" + "\n".join(notes))
+	_changed()
+
+func _save_team(i: int) -> void:
+	if Presets.team_saved(m.profile, i):
+		m.confirm("Replace this team?", "This saves your current team over it.", "Save", func():
+			Presets.save_team(state, m.profile, i)
+			_changed())
+		return
+	Presets.save_team(state, m.profile, i)
+	_changed()
+
 func _use(i: int) -> void:
-	var notes := Presets.apply(state, i)
+	var notes := Presets.apply(state, i, m.profile.stash)
 	m.sfx.play("equip")
 	note.visible = true
 	note.text = "Switched to %s." % Presets.name_of(state, i) + ("" if notes.is_empty() else "\n" + "\n".join(notes))
@@ -61,6 +117,12 @@ func _save(i: int) -> void:
 		return
 	Presets.save(state, i)
 	_changed()
+
+func _clear(i: int) -> void:
+	m.confirm("Clear %s?" % Presets.name_of(state, i), "This empties the slot. Your gear and skills stay as they are.", "Clear", func():
+		Presets.clear(state, i)
+		Presets.migrate(state)
+		_changed())
 
 func _rename(i: int) -> void:
 	var o := Overlay.new().open(m, "Name this preset", 420.0)

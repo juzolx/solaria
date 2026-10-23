@@ -545,6 +545,7 @@ func _initialize() -> void:
 		z.buy_merchant(i)
 	# Loot filter
 	z.loot_filter = {"slots": {"Helmet": true}, "weaker": false}
+	LootRules.set_rule(z, "keep_better", false)  # 2.1: upgrades are kept by default; test the slot rule alone
 	check(z.filter_salvages(GameData.make_item("Helmet", 1, 30, 9001)) and not z.filter_salvages(GameData.make_item("Helmet", 4, 30, 9002)), "loot filter by slot, keeps Legendary")
 	# Loadouts
 	z.bag.append(GameData.make_item("Weapon", 2, 30, 9100))

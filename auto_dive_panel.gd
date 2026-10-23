@@ -40,11 +40,11 @@ func _fill() -> void:
 	_stepper("Bag is", "bag_pct", AutoDive.BAG_STEPS)
 	_stepper("Potions", "potions_at", AutoDive.POTION_STEPS)
 	_stepper("HP", "hp_pct", AutoDive.HP_STEPS)
-	_stepper("Reached", "stop_floor", AutoDive.FLOOR_STEPS)
 	if not state.hardcore:
 		_stepper("Team", "downs", AutoDive.DOWN_STEPS)
 
 	UI.section(body, "Stop Auto when...", "Auto pauses and tells you why, once per thing. Tap Auto to carry on.")
+	_stepper("You reach", "stop_floor", AutoDive.FLOOR_STEPS)
 	for rid in AutoRules.RULES:
 		var r_id: String = rid
 		_btn("%s: %s" % [AutoRules.RULES[r_id], "ON" if AutoRules.on(state, r_id) else "OFF"], AutoRules.on(state, r_id), func():

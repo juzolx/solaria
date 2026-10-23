@@ -22,6 +22,9 @@ static func check(g: GameState) -> String:
 	if not g.autoplay or g.in_town:
 		return ""
 	AutoDive.tick(g)  # 2.1: auto-dive settings (head home, elixirs before bosses)
+	var floor_stop := AutoDive.pause_reason(g)
+	if floor_stop != "":
+		return floor_stop
 	var why := ""
 	var key := ""
 	if on(g, "stop_boss") and g.enemy_is_boss and g.enemy_hp > 0:
