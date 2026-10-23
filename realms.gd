@@ -55,95 +55,95 @@ const INFO := {
 
 # The fighting content, in the same format as GameData.ZONES.
 const ZONES := [
-	{"name": "The Hushwood", "realm": "elf", "color": "#5b8a72", "enemies": [
-		{"name": "Hollow Sentinel", "shape": "humanoid", "color": "#9fd8c4", "people": true},
-		{"name": "Grief Wisp", "shape": "spirit", "color": "#c8f2ee"},
-		{"name": "Barkhusk", "shape": "brute", "color": "#6b5a4a"},
-		{"name": "Pale Stag", "shape": "beast", "color": "#dfe6f0"},
-		{"name": "Rootstrangler", "shape": "serpent", "color": "#5d7a3a"},
+	{"id": "elf", "name": "The Hushwood", "realm": "elf", "color": "#5b8a72", "enemies": [
+		{"id": "hollow_sentinel", "name": "Hollow Sentinel", "shape": "humanoid", "color": "#9fd8c4", "people": true},
+		{"id": "grief_wisp", "name": "Grief Wisp", "shape": "spirit", "color": "#c8f2ee"},
+		{"id": "barkhusk", "name": "Barkhusk", "shape": "brute", "color": "#6b5a4a"},
+		{"id": "pale_stag", "name": "Pale Stag", "shape": "beast", "color": "#dfe6f0"},
+		{"id": "rootstrangler", "name": "Rootstrangler", "shape": "serpent", "color": "#5d7a3a"},
 	], "subs": [
-		{"name": "Ashen Glade", "monster": {"name": "Mourning Dryad", "shape": "humanoid", "color": "#8aa878"}},
-		{"name": "Silent Boughs", "monster": {"name": "Owlwraith", "shape": "beast", "color": "#a9b3c6"}},
-		{"name": "Lantern Graves", "monster": {"name": "Lantern Keeper", "shape": "humanoid", "color": "#fee761", "people": true}},
-		{"name": "Rootless Hall", "monster": {"name": "Blightcap", "shape": "brute", "color": "#8a5a9a"}},
-		{"name": "The Withered Heart", "monster": {"name": "Heartrot Treant", "shape": "brute", "color": "#4a3a2a"}},
-	], "mid": {"name": "The Weeping Warden", "art": "boss_weeping_warden", "shape": "humanoid", "color": "#9fd8c4", "people": true, "uniques": [
-		{"name": "Warden's Last Arrow", "flavor": "She kept one arrow for the day the Tree died. She never fired it.", "slot": "Weapon", "effect": "crit", "value": 18},
-	]}, "boss": {"name": "The Withered Queen", "art": "boss_withered_queen", "shape": "humanoid", "color": "#c8f2ee", "people": true, "uniques": [
-		{"name": "Crown of Fallen Leaves", "flavor": "Every leaf is a name. She remembers all of them.", "slot": "Helmet", "effect": "regen", "value": 3},
-		{"name": "Rootwoven Mantle", "flavor": "Woven from the Tree's last living roots.", "slot": "Chest", "effect": "dodge", "value": 12},
+		{"id": "ashen_glade", "name": "Ashen Glade", "monster": {"id": "mourning_dryad", "name": "Mourning Dryad", "shape": "humanoid", "color": "#8aa878"}},
+		{"id": "silent_boughs", "name": "Silent Boughs", "monster": {"id": "owlwraith", "name": "Owlwraith", "shape": "beast", "color": "#a9b3c6"}},
+		{"id": "lantern_graves", "name": "Lantern Graves", "monster": {"id": "lantern_keeper", "name": "Lantern Keeper", "shape": "humanoid", "color": "#fee761", "people": true}},
+		{"id": "rootless_hall", "name": "Rootless Hall", "monster": {"id": "blightcap", "name": "Blightcap", "shape": "brute", "color": "#8a5a9a"}},
+		{"id": "the_withered_heart", "name": "The Withered Heart", "monster": {"id": "heartrot_treant", "name": "Heartrot Treant", "shape": "brute", "color": "#4a3a2a"}},
+	], "mid": {"id": "weeping_warden", "name": "The Weeping Warden", "art": "boss_weeping_warden", "shape": "humanoid", "color": "#9fd8c4", "people": true, "uniques": [
+		{"id": "wardens_last_arrow", "name": "Warden's Last Arrow", "flavor": "She kept one arrow for the day the Tree died. She never fired it.", "slot": "Weapon", "effect": "crit", "value": 18},
+	]}, "boss": {"id": "withered_queen", "name": "The Withered Queen", "art": "boss_withered_queen", "shape": "humanoid", "color": "#c8f2ee", "people": true, "uniques": [
+		{"id": "crown_of_fallen_leaves", "name": "Crown of Fallen Leaves", "flavor": "Every leaf is a name. She remembers all of them.", "slot": "Helmet", "effect": "regen", "value": 3},
+		{"id": "rootwoven_mantle", "name": "Rootwoven Mantle", "flavor": "Woven from the Tree's last living roots.", "slot": "Chest", "effect": "dodge", "value": 12},
 	]}},
-	{"name": "The Glimmer Court", "realm": "fairy", "color": "#d870ac", "enemies": [
-		{"name": "Pixie Swarm", "shape": "spirit", "color": "#ffc6de"},
-		{"name": "Thornling", "shape": "humanoid", "color": "#75a743", "people": true},
-		{"name": "Mushroom Knight", "shape": "humanoid", "color": "#e43b44", "people": true},
-		{"name": "Glimmermoth", "shape": "beast", "color": "#c4b5fd"},
-		{"name": "Changeling", "shape": "humanoid", "color": "#a9c6ee", "people": true},
+	{"id": "fairy", "name": "The Glimmer Court", "realm": "fairy", "color": "#d870ac", "enemies": [
+		{"id": "pixie_swarm", "name": "Pixie Swarm", "shape": "spirit", "color": "#ffc6de"},
+		{"id": "thornling", "name": "Thornling", "shape": "humanoid", "color": "#75a743", "people": true},
+		{"id": "mushroom_knight", "name": "Mushroom Knight", "shape": "humanoid", "color": "#e43b44", "people": true},
+		{"id": "glimmermoth", "name": "Glimmermoth", "shape": "beast", "color": "#c4b5fd"},
+		{"id": "changeling", "name": "Changeling", "shape": "humanoid", "color": "#a9c6ee", "people": true},
 	], "subs": [
-		{"name": "Moonpetal Fields", "monster": {"name": "Moonhare", "shape": "beast", "color": "#eef2f8"}},
-		{"name": "The Mirror Pond", "monster": {"name": "Mirror Nymph", "shape": "spirit", "color": "#a4dddb"}},
-		{"name": "Mushroom Hollow", "monster": {"name": "Bogle", "shape": "humanoid", "color": "#5a6b3a"}},
-		{"name": "Thorn Labyrinth", "monster": {"name": "Briar Knight", "shape": "humanoid", "color": "#468232", "people": true}},
-		{"name": "The Queen's Bower", "monster": {"name": "Gilded Fae", "shape": "spirit", "color": "#fee761", "people": true}},
-	], "mid": {"name": "The Jester of Thorns", "art": "boss_jester_of_thorns", "shape": "humanoid", "color": "#d870ac", "people": true, "uniques": [
-		{"name": "The Jester's Last Joke", "flavor": "Nobody laughed. Then nobody was left.", "slot": "Weapon", "effect": "double_strike", "value": 18},
-	]}, "boss": {"name": "The Fairy Queen", "art": "boss_fairy_queen", "shape": "spirit", "color": "#f9a8d4", "people": true, "uniques": [
-		{"name": "Gossamer Crown", "flavor": "Light as a promise. Just as easy to break.", "slot": "Helmet", "effect": "dodge", "value": 12},
-		{"name": "Queen's Favor", "flavor": "A token from the Queen. It means she owes you. Or you owe her.", "slot": "Off Hand", "effect": "gold_find", "value": 30},
+		{"id": "moonpetal_fields", "name": "Moonpetal Fields", "monster": {"id": "moonhare", "name": "Moonhare", "shape": "beast", "color": "#eef2f8"}},
+		{"id": "the_mirror_pond", "name": "The Mirror Pond", "monster": {"id": "mirror_nymph", "name": "Mirror Nymph", "shape": "spirit", "color": "#a4dddb"}},
+		{"id": "mushroom_hollow", "name": "Mushroom Hollow", "monster": {"id": "bogle", "name": "Bogle", "shape": "humanoid", "color": "#5a6b3a"}},
+		{"id": "thorn_labyrinth", "name": "Thorn Labyrinth", "monster": {"id": "briar_knight", "name": "Briar Knight", "shape": "humanoid", "color": "#468232", "people": true}},
+		{"id": "the_queens_bower", "name": "The Queen's Bower", "monster": {"id": "gilded_fae", "name": "Gilded Fae", "shape": "spirit", "color": "#fee761", "people": true}},
+	], "mid": {"id": "jester_of_thorns", "name": "The Jester of Thorns", "art": "boss_jester_of_thorns", "shape": "humanoid", "color": "#d870ac", "people": true, "uniques": [
+		{"id": "the_jesters_last_joke", "name": "The Jester's Last Joke", "flavor": "Nobody laughed. Then nobody was left.", "slot": "Weapon", "effect": "double_strike", "value": 18},
+	]}, "boss": {"id": "fairy_queen", "name": "The Fairy Queen", "art": "boss_fairy_queen", "shape": "spirit", "color": "#f9a8d4", "people": true, "uniques": [
+		{"id": "gossamer_crown", "name": "Gossamer Crown", "flavor": "Light as a promise. Just as easy to break.", "slot": "Helmet", "effect": "dodge", "value": 12},
+		{"id": "queens_favor", "name": "Queen's Favor", "flavor": "A token from the Queen. It means she owes you. Or you owe her.", "slot": "Off Hand", "effect": "gold_find", "value": 30},
 	]}},
-	{"name": "The Ironroot Deeps", "realm": "dwarf", "color": "#b45309", "enemies": [
-		{"name": "Forge Sentry", "shape": "humanoid", "color": "#c0cbdc", "people": true},
-		{"name": "Slag Golem", "shape": "brute", "color": "#5a4a3e"},
-		{"name": "Rune Hound", "shape": "beast", "color": "#7fd0f0"},
-		{"name": "Cinder Miner", "shape": "humanoid", "color": "#c28569", "people": true},
-		{"name": "Steamcrawler", "shape": "serpent", "color": "#8b9bb4"},
+	{"id": "dwarf", "name": "The Ironroot Deeps", "realm": "dwarf", "color": "#b45309", "enemies": [
+		{"id": "forge_sentry", "name": "Forge Sentry", "shape": "humanoid", "color": "#c0cbdc", "people": true},
+		{"id": "slag_golem", "name": "Slag Golem", "shape": "brute", "color": "#5a4a3e"},
+		{"id": "rune_hound", "name": "Rune Hound", "shape": "beast", "color": "#7fd0f0"},
+		{"id": "cinder_miner", "name": "Cinder Miner", "shape": "humanoid", "color": "#c28569", "people": true},
+		{"id": "steamcrawler", "name": "Steamcrawler", "shape": "serpent", "color": "#8b9bb4"},
 	], "subs": [
-		{"name": "Slag Gate", "monster": {"name": "Ash Raider", "shape": "humanoid", "color": "#8a5444", "people": true}},
-		{"name": "The Rune Halls", "monster": {"name": "Rune Wraith", "shape": "spirit", "color": "#73bed3"}},
-		{"name": "The Great Anvil", "monster": {"name": "Anvil Brute", "shape": "brute", "color": "#3a4466"}},
-		{"name": "The Gem Vaults", "monster": {"name": "Gem Crawler", "shape": "beast", "color": "#c27ad8"}},
-		{"name": "Throne of Stone", "monster": {"name": "Stoneguard", "shape": "humanoid", "color": "#8b9bb4", "people": true}},
-	], "mid": {"name": "Forgemaster Brann", "art": "boss_forgemaster_brann", "shape": "humanoid", "color": "#f59e0b", "people": true, "uniques": [
-		{"name": "Brann's Hammer", "flavor": "It made a thousand blades. Now it breaks them.", "slot": "Weapon", "effect": "double_strike", "value": 18},
-	]}, "boss": {"name": "High King Thrandor", "art": "boss_high_king_thrandor", "shape": "humanoid", "color": "#e8b14a", "people": true, "uniques": [
-		{"name": "The Undermountain Crown", "flavor": "Forged from the first gold ever mined.", "slot": "Helmet", "effect": "thorns", "value": 25},
-		{"name": "Runewall", "flavor": "Every rune says 'no'. In a different way.", "slot": "Off Hand", "effect": "thorns", "value": 25},
+		{"id": "slag_gate", "name": "Slag Gate", "monster": {"id": "ash_raider", "name": "Ash Raider", "shape": "humanoid", "color": "#8a5444", "people": true}},
+		{"id": "the_rune_halls", "name": "The Rune Halls", "monster": {"id": "rune_wraith", "name": "Rune Wraith", "shape": "spirit", "color": "#73bed3"}},
+		{"id": "the_great_anvil", "name": "The Great Anvil", "monster": {"id": "anvil_brute", "name": "Anvil Brute", "shape": "brute", "color": "#3a4466"}},
+		{"id": "the_gem_vaults", "name": "The Gem Vaults", "monster": {"id": "gem_crawler", "name": "Gem Crawler", "shape": "beast", "color": "#c27ad8"}},
+		{"id": "throne_of_stone", "name": "Throne of Stone", "monster": {"id": "stoneguard", "name": "Stoneguard", "shape": "humanoid", "color": "#8b9bb4", "people": true}},
+	], "mid": {"id": "forgemaster_brann", "name": "Forgemaster Brann", "art": "boss_forgemaster_brann", "shape": "humanoid", "color": "#f59e0b", "people": true, "uniques": [
+		{"id": "branns_hammer", "name": "Brann's Hammer", "flavor": "It made a thousand blades. Now it breaks them.", "slot": "Weapon", "effect": "double_strike", "value": 18},
+	]}, "boss": {"id": "high_king_thrandor", "name": "High King Thrandor", "art": "boss_high_king_thrandor", "shape": "humanoid", "color": "#e8b14a", "people": true, "uniques": [
+		{"id": "the_undermountain_crown", "name": "The Undermountain Crown", "flavor": "Forged from the first gold ever mined.", "slot": "Helmet", "effect": "thorns", "value": 25},
+		{"id": "runewall", "name": "Runewall", "flavor": "Every rune says 'no'. In a different way.", "slot": "Off Hand", "effect": "thorns", "value": 25},
 	]}},
-	{"name": "The Gilded Spire", "realm": "angel", "color": "#e8b14a", "enemies": [
-		{"name": "Choir Sentinel", "shape": "humanoid", "color": "#fde68a", "people": true},
-		{"name": "Halo Wisp", "shape": "spirit", "color": "#fff4a3"},
-		{"name": "Gilded Lion", "shape": "beast", "color": "#feae34"},
-		{"name": "Eye of Judgement", "shape": "spirit", "color": "#ffffff"},
-		{"name": "Sky Serpent", "shape": "serpent", "color": "#a9c6ee"},
+	{"id": "angel", "name": "The Gilded Spire", "realm": "angel", "color": "#e8b14a", "enemies": [
+		{"id": "choir_sentinel", "name": "Choir Sentinel", "shape": "humanoid", "color": "#fde68a", "people": true},
+		{"id": "halo_wisp", "name": "Halo Wisp", "shape": "spirit", "color": "#fff4a3"},
+		{"id": "gilded_lion", "name": "Gilded Lion", "shape": "beast", "color": "#feae34"},
+		{"id": "eye_of_judgement", "name": "Eye of Judgement", "shape": "spirit", "color": "#ffffff"},
+		{"id": "sky_serpent", "name": "Sky Serpent", "shape": "serpent", "color": "#a9c6ee"},
 	], "subs": [
-		{"name": "The Cloudstair", "monster": {"name": "Cherub", "shape": "spirit", "color": "#ffc6de", "people": true}},
-		{"name": "Choir Gardens", "monster": {"name": "Hymnbird", "shape": "beast", "color": "#7fb2e0"}},
-		{"name": "Halls of Judgement", "monster": {"name": "Executor", "shape": "humanoid", "color": "#c0cbdc", "people": true}},
-		{"name": "The Sunforge", "monster": {"name": "Sun Golem", "shape": "brute", "color": "#fee761"}},
-		{"name": "The Empyrean Gate", "monster": {"name": "Throne Warden", "shape": "humanoid", "color": "#e8b14a", "people": true}},
-	], "mid": {"name": "Archon Valeth", "art": "boss_archon_valeth", "shape": "humanoid", "color": "#fde68a", "people": true, "uniques": [
-		{"name": "Valeth's Verdict", "flavor": "A sword that has never once been wrong.", "slot": "Weapon", "effect": "crit", "value": 18},
-	]}, "boss": {"name": "Seraphiel, the First Light", "art": "boss_seraphiel", "shape": "spirit", "color": "#fff4a3", "people": true, "uniques": [
-		{"name": "Wings of the First Light", "flavor": "Not real wings. Real enough.", "slot": "Chest", "effect": "regen", "value": 3},
-		{"name": "Dawnbreaker", "flavor": "The first sunrise, hammered into a blade.", "slot": "Weapon", "effect": "lifesteal", "value": 12},
+		{"id": "the_cloudstair", "name": "The Cloudstair", "monster": {"id": "cherub", "name": "Cherub", "shape": "spirit", "color": "#ffc6de", "people": true}},
+		{"id": "choir_gardens", "name": "Choir Gardens", "monster": {"id": "hymnbird", "name": "Hymnbird", "shape": "beast", "color": "#7fb2e0"}},
+		{"id": "halls_of_judgement", "name": "Halls of Judgement", "monster": {"id": "executor", "name": "Executor", "shape": "humanoid", "color": "#c0cbdc", "people": true}},
+		{"id": "the_sunforge", "name": "The Sunforge", "monster": {"id": "sun_golem", "name": "Sun Golem", "shape": "brute", "color": "#fee761"}},
+		{"id": "the_empyrean_gate", "name": "The Empyrean Gate", "monster": {"id": "throne_warden", "name": "Throne Warden", "shape": "humanoid", "color": "#e8b14a", "people": true}},
+	], "mid": {"id": "archon_valeth", "name": "Archon Valeth", "art": "boss_archon_valeth", "shape": "humanoid", "color": "#fde68a", "people": true, "uniques": [
+		{"id": "valeths_verdict", "name": "Valeth's Verdict", "flavor": "A sword that has never once been wrong.", "slot": "Weapon", "effect": "crit", "value": 18},
+	]}, "boss": {"id": "seraphiel", "name": "Seraphiel, the First Light", "art": "boss_seraphiel", "shape": "spirit", "color": "#fff4a3", "people": true, "uniques": [
+		{"id": "wings_of_the_first_light", "name": "Wings of the First Light", "flavor": "Not real wings. Real enough.", "slot": "Chest", "effect": "regen", "value": 3},
+		{"id": "dawnbreaker", "name": "Dawnbreaker", "flavor": "The first sunrise, hammered into a blade.", "slot": "Weapon", "effect": "lifesteal", "value": 12},
 	]}},
-	{"name": "The Cinder Abyss", "realm": "demon", "color": "#be123c", "enemies": [
-		{"name": "Imp", "shape": "humanoid", "color": "#e43b44", "people": true},
-		{"name": "Hellmaw", "shape": "beast", "color": "#8e2e38"},
-		{"name": "Chainwraith", "shape": "spirit", "color": "#8b9bb4"},
-		{"name": "Brimstone Brute", "shape": "brute", "color": "#be4a2f", "people": true},
-		{"name": "Abyssal Worm", "shape": "serpent", "color": "#68386c"},
+	{"id": "demon", "name": "The Cinder Abyss", "realm": "demon", "color": "#be123c", "enemies": [
+		{"id": "imp", "name": "Imp", "shape": "humanoid", "color": "#e43b44", "people": true},
+		{"id": "hellmaw", "name": "Hellmaw", "shape": "beast", "color": "#8e2e38"},
+		{"id": "chainwraith", "name": "Chainwraith", "shape": "spirit", "color": "#8b9bb4"},
+		{"id": "brimstone_brute", "name": "Brimstone Brute", "shape": "brute", "color": "#be4a2f", "people": true},
+		{"id": "abyssal_worm", "name": "Abyssal Worm", "shape": "serpent", "color": "#68386c"},
 	], "subs": [
-		{"name": "Brimstone Wastes", "monster": {"name": "Ash Fiend", "shape": "spirit", "color": "#5a4a3e"}},
-		{"name": "The Chain Bridges", "monster": {"name": "Chain Warden", "shape": "humanoid", "color": "#5a6988", "people": true}},
-		{"name": "The Soul Market", "monster": {"name": "Soul Broker", "shape": "humanoid", "color": "#9a4fc0", "people": true}},
-		{"name": "Obsidian Citadel", "monster": {"name": "Obsidian Knight", "shape": "humanoid", "color": "#262b44", "people": true}},
-		{"name": "The Throne Pit", "monster": {"name": "Hellborn Duke", "shape": "brute", "color": "#a22633", "people": true}},
-	], "mid": {"name": "Duke Malgrath", "art": "boss_duke_malgrath", "shape": "brute", "color": "#a22633", "people": true, "uniques": [
-		{"name": "Malgrath's Contract", "flavor": "Signed in blood. Not yours. Yet.", "slot": "Off Hand", "effect": "lifesteal", "value": 12},
-	]}, "boss": {"name": "Azgaroth, Lord of the Abyss", "art": "boss_azgaroth", "shape": "brute", "color": "#e43b44", "people": true, "uniques": [
-		{"name": "Hellbrand", "flavor": "It has burned since before the first sunrise.", "slot": "Weapon", "effect": "double_strike", "value": 25},
-		{"name": "Throne-Iron Greaves", "flavor": "Cut from the legs of his throne. He had spares.", "slot": "Legs", "effect": "thorns", "value": 25},
+		{"id": "brimstone_wastes", "name": "Brimstone Wastes", "monster": {"id": "ash_fiend", "name": "Ash Fiend", "shape": "spirit", "color": "#5a4a3e"}},
+		{"id": "the_chain_bridges", "name": "The Chain Bridges", "monster": {"id": "chain_warden", "name": "Chain Warden", "shape": "humanoid", "color": "#5a6988", "people": true}},
+		{"id": "the_soul_market", "name": "The Soul Market", "monster": {"id": "soul_broker", "name": "Soul Broker", "shape": "humanoid", "color": "#9a4fc0", "people": true}},
+		{"id": "obsidian_citadel", "name": "Obsidian Citadel", "monster": {"id": "obsidian_knight", "name": "Obsidian Knight", "shape": "humanoid", "color": "#262b44", "people": true}},
+		{"id": "the_throne_pit", "name": "The Throne Pit", "monster": {"id": "hellborn_duke", "name": "Hellborn Duke", "shape": "brute", "color": "#a22633", "people": true}},
+	], "mid": {"id": "duke_malgrath", "name": "Duke Malgrath", "art": "boss_duke_malgrath", "shape": "brute", "color": "#a22633", "people": true, "uniques": [
+		{"id": "malgraths_contract", "name": "Malgrath's Contract", "flavor": "Signed in blood. Not yours. Yet.", "slot": "Off Hand", "effect": "lifesteal", "value": 12},
+	]}, "boss": {"id": "azgaroth", "name": "Azgaroth, Lord of the Abyss", "art": "boss_azgaroth", "shape": "brute", "color": "#e43b44", "people": true, "uniques": [
+		{"id": "hellbrand", "name": "Hellbrand", "flavor": "It has burned since before the first sunrise.", "slot": "Weapon", "effect": "double_strike", "value": 25},
+		{"id": "throne_iron_greaves", "name": "Throne-Iron Greaves", "flavor": "Cut from the legs of his throne. He had spares.", "slot": "Legs", "effect": "thorns", "value": 25},
 	]}},
 ]
 
@@ -245,121 +245,121 @@ static func roll_illusion(g: GameState) -> bool:
 # =====================================================================
 const MONSTER_INFO := {
 	# ---------- The Hushwood (elves' ghost forest) ----------
-	"Hollow Sentinel": {"lore": "An elven archer who never left her post. She doesn't know the forest is dead. Don't tell her.", "drops": ["Weapon", "Helmet"],
+	"hollow_sentinel": {"lore": "An elven archer who never left her post. She doesn't know the forest is dead. Don't tell her.", "drops": ["Weapon", "Helmet"],
 		"sig": {"name": "The Sentinel's Vigil", "slot": "Weapon", "type": "bow", "effect": "crit", "value": 20, "mat": "pale", "trim": "#9fd8c4", "flavor": "Strung with a hair from the last elf who ever laughed."}},
-	"Grief Wisp": {"lore": "When an elf died, a little light was left behind. Thousands of them now, drifting and sad.", "drops": ["Off Hand", "Helmet"],
+	"grief_wisp": {"lore": "When an elf died, a little light was left behind. Thousands of them now, drifting and sad.", "drops": ["Off Hand", "Helmet"],
 		"sig": {"name": "Jar of Last Lights", "slot": "Off Hand", "type": "orb", "effect": "regen", "value": 3, "mat": "crystal", "trim": "#c8f2ee", "flavor": "They're warmer than you'd think."}},
-	"Barkhusk": {"lore": "A tree that died standing up, then decided to keep walking.", "drops": ["Chest", "Legs"],
+	"barkhusk": {"lore": "A tree that died standing up, then decided to keep walking.", "drops": ["Chest", "Legs"],
 		"sig": {"name": "Barkhusk Shell", "slot": "Chest", "type": "plate", "effect": "thorns", "value": 25, "mat": "wood", "trim": "#5d7a3a", "flavor": "Splinters included at no extra charge."}},
-	"Pale Stag": {"lore": "The elves' sacred deer, still running the old hunting paths with no one left to hunt them.", "drops": ["Feet", "Helmet"],
+	"pale_stag": {"lore": "The elves' sacred deer, still running the old hunting paths with no one left to hunt them.", "drops": ["Feet", "Helmet"],
 		"sig": {"name": "Crown of the Pale Stag", "slot": "Helmet", "type": "crown", "effect": "dodge", "value": 12, "mat": "bone", "trim": "#dfe6f0", "flavor": "Antlers that never shed."}},
-	"Rootstrangler": {"lore": "Roots of the dying World Tree, grown hungry. They squeeze anything warm.", "drops": ["Legs", "Weapon"],
+	"rootstrangler": {"lore": "Roots of the dying World Tree, grown hungry. They squeeze anything warm.", "drops": ["Legs", "Weapon"],
 		"sig": {"name": "Strangleroot Whip", "slot": "Weapon", "type": "spear", "effect": "lifesteal", "value": 12, "mat": "hide", "trim": "#5d7a3a", "flavor": "It squeezes back."}},
-	"Mourning Dryad": {"lore": "The spirit of a tree that watched its elves die. She has been crying for a hundred years.", "drops": ["Chest", "Off Hand"],
+	"mourning_dryad": {"lore": "The spirit of a tree that watched its elves die. She has been crying for a hundred years.", "drops": ["Chest", "Off Hand"],
 		"sig": {"name": "Dryad's Tear", "slot": "Off Hand", "type": "orb", "effect": "regen", "value": 3, "mat": "sea", "trim": "#8aa878", "flavor": "One drop, a hundred years old. Still falling."}},
-	"Owlwraith": {"lore": "An owl that died in the Hushwood and kept watching. It sees you even with its eyes closed.", "drops": ["Helmet", "Feet"],
+	"owlwraith": {"lore": "An owl that died in the Hushwood and kept watching. It sees you even with its eyes closed.", "drops": ["Helmet", "Feet"],
 		"sig": {"name": "Hood of the Owlwraith", "slot": "Helmet", "type": "hood", "effect": "crit", "value": 18, "mat": "linen", "trim": "#a9b3c6", "flavor": "Turn your head all the way around. Go on."}},
-	"Lantern Keeper": {"lore": "An elf ghost who tends lanterns on the graves of her people, so they can find their way home.", "drops": ["Off Hand", "Chest"],
+	"lantern_keeper": {"lore": "An elf ghost who tends lanterns on the graves of her people, so they can find their way home.", "drops": ["Off Hand", "Chest"],
 		"sig": {"name": "The Keeper's Lantern", "slot": "Off Hand", "type": "orb", "effect": "gold_find", "value": 30, "mat": "gold", "trim": "#fee761", "flavor": "The flame never goes out. She made sure."}},
-	"Blightcap": {"lore": "A mushroom the size of a bear, grown fat on the Tree's rot. Its spores make you sad for no reason.", "drops": ["Helmet", "Legs"],
+	"blightcap": {"lore": "A mushroom the size of a bear, grown fat on the Tree's rot. Its spores make you sad for no reason.", "drops": ["Helmet", "Legs"],
 		"sig": {"name": "Blightcap Helm", "slot": "Helmet", "type": "cap", "effect": "thorns", "value": 25, "mat": "scale", "trim": "#8a5a9a", "flavor": "Smells like a wet funeral."}},
-	"Heartrot Treant": {"lore": "The oldest trees near the Withered Heart. The rot reached them first, and it made them angry.", "drops": ["Weapon", "Chest"],
+	"heartrot_treant": {"lore": "The oldest trees near the Withered Heart. The rot reached them first, and it made them angry.", "drops": ["Weapon", "Chest"],
 		"sig": {"name": "Heartwood Maul", "slot": "Weapon", "type": "mace", "effect": "double_strike", "value": 20, "mat": "wood", "trim": "#4a3a2a", "flavor": "Cut from the Tree's heart. It still has a pulse."}},
 	# ---------- The Glimmer Court (the fae) ----------
-	"Pixie Swarm": {"lore": "A hundred tiny fairies who think biting you is the funniest thing in the world.", "drops": ["Helmet", "Feet"],
+	"pixie_swarm": {"lore": "A hundred tiny fairies who think biting you is the funniest thing in the world.", "drops": ["Helmet", "Feet"],
 		"sig": {"name": "Pixie-Spun Slippers", "slot": "Feet", "type": "sandals", "effect": "dodge", "value": 12, "mat": "cloth", "trim": "#ffc6de", "flavor": "Woven from moonlight and spite."}},
-	"Thornling": {"lore": "Fae foot soldiers grown on rose bushes. They're polite right up until they stab you.", "drops": ["Weapon", "Legs"],
+	"thornling": {"lore": "Fae foot soldiers grown on rose bushes. They're polite right up until they stab you.", "drops": ["Weapon", "Legs"],
 		"sig": {"name": "Rosethorn Rapier", "slot": "Weapon", "type": "sword", "effect": "crit", "value": 20, "mat": "hide", "trim": "#e43b44", "flavor": "Smells lovely. Cuts deep."}},
-	"Mushroom Knight": {"lore": "Very small, very proud and very sure he's the hero of this story.", "drops": ["Helmet", "Off Hand"],
+	"mushroom_knight": {"lore": "Very small, very proud and very sure he's the hero of this story.", "drops": ["Helmet", "Off Hand"],
 		"sig": {"name": "The Toadstool Helm", "slot": "Helmet", "type": "helm", "effect": "thorns", "value": 25, "mat": "coral", "trim": "#fbf3dc", "flavor": "Spotted. Dashing. Slightly poisonous."}},
-	"Glimmermoth": {"lore": "A moth with wings like stained glass. Look at them too long and you forget why you're here.", "drops": ["Chest", "Off Hand"],
+	"glimmermoth": {"lore": "A moth with wings like stained glass. Look at them too long and you forget why you're here.", "drops": ["Chest", "Off Hand"],
 		"sig": {"name": "Glimmerwing Cloak", "slot": "Chest", "type": "robe", "effect": "dodge", "value": 12, "mat": "scale", "trim": "#c4b5fd", "flavor": "The pattern moves when you aren't looking."}},
-	"Changeling": {"lore": "A fae child left in a human cradle, grown up and come home. It can wear any face, including yours.", "drops": ["Helmet", "Chest"],
+	"changeling": {"lore": "A fae child left in a human cradle, grown up and come home. It can wear any face, including yours.", "drops": ["Helmet", "Chest"],
 		"sig": {"name": "The Borrowed Face", "slot": "Helmet", "type": "hood", "effect": "double_strike", "value": 18, "mat": "linen", "trim": "#a9c6ee", "flavor": "Give it back when you're done."}},
-	"Moonhare": {"lore": "A white hare that only runs by moonlight. Fairies race it. They always lose.", "drops": ["Feet", "Legs"],
+	"moonhare": {"lore": "A white hare that only runs by moonlight. Fairies race it. They always lose.", "drops": ["Feet", "Legs"],
 		"sig": {"name": "Moonhare Boots", "slot": "Feet", "type": "boots", "effect": "dodge", "value": 12, "mat": "pale", "trim": "#eef2f8", "flavor": "You can't catch it. Now nobody can catch you."}},
-	"Mirror Nymph": {"lore": "She lives in the Mirror Pond and shows you who you'd be if you'd never come down here.", "drops": ["Off Hand", "Helmet"],
+	"mirror_nymph": {"lore": "She lives in the Mirror Pond and shows you who you'd be if you'd never come down here.", "drops": ["Off Hand", "Helmet"],
 		"sig": {"name": "The Truthful Mirror", "slot": "Off Hand", "type": "orb", "effect": "crit", "value": 18, "mat": "crystal", "trim": "#a4dddb", "flavor": "It's never lied. That's the problem."}},
-	"Bogle": {"lore": "A sour little fae who lives under toadstools and hates everyone, especially other bogles.", "drops": ["Legs", "Weapon"],
+	"bogle": {"lore": "A sour little fae who lives under toadstools and hates everyone, especially other bogles.", "drops": ["Legs", "Weapon"],
 		"sig": {"name": "Bogle's Grudge-Knife", "slot": "Weapon", "type": "dagger", "effect": "lifesteal", "value": 12, "mat": "iron", "trim": "#5a6b3a", "flavor": "Every notch is somebody he didn't like."}},
-	"Briar Knight": {"lore": "Guardians of the Thorn Labyrinth. Their armor grows back when you cut it.", "drops": ["Chest", "Off Hand"],
+	"briar_knight": {"lore": "Guardians of the Thorn Labyrinth. Their armor grows back when you cut it.", "drops": ["Chest", "Off Hand"],
 		"sig": {"name": "Briarwall", "slot": "Off Hand", "type": "tower", "effect": "thorns", "value": 25, "mat": "hide", "trim": "#468232", "flavor": "Hiding behind it is a prickly decision."}},
-	"Gilded Fae": {"lore": "The Queen's own courtiers, dusted in gold. They don't fight you. They make you fight yourself.", "drops": ["Helmet", "Chest"],
+	"gilded_fae": {"lore": "The Queen's own courtiers, dusted in gold. They don't fight you. They make you fight yourself.", "drops": ["Helmet", "Chest"],
 		"sig": {"name": "Courtier's Gilded Mask", "slot": "Helmet", "type": "crown", "effect": "gold_find", "value": 30, "mat": "gold", "trim": "#fee761", "flavor": "Smile. Everyone's watching."}},
 	# ---------- The Ironroot Deeps (the dwarves) ----------
-	"Forge Sentry": {"lore": "A dwarf guard in full plate. Thirty years at the same door and he's never let anyone in.", "drops": ["Off Hand", "Chest"],
+	"forge_sentry": {"lore": "A dwarf guard in full plate. Thirty years at the same door and he's never let anyone in.", "drops": ["Off Hand", "Chest"],
 		"sig": {"name": "Doorwarden's Bulwark", "slot": "Off Hand", "type": "tower", "effect": "thorns", "value": 25, "mat": "steel", "trim": "#c0cbdc", "flavor": "'None shall pass.' He meant it."}},
-	"Slag Golem": {"lore": "Leftover slag from ten thousand forgings, poured into a mold and told to stand guard.", "drops": ["Chest", "Legs"],
+	"slag_golem": {"lore": "Leftover slag from ten thousand forgings, poured into a mold and told to stand guard.", "drops": ["Chest", "Legs"],
 		"sig": {"name": "Slagplate", "slot": "Chest", "type": "plate", "effect": "regen", "value": 3, "mat": "dark", "trim": "#f77622", "flavor": "Still warm from the furnace."}},
-	"Rune Hound": {"lore": "Clockwork hunting dogs with a rune for a heart. They can smell gold through stone.", "drops": ["Feet", "Weapon"],
+	"rune_hound": {"lore": "Clockwork hunting dogs with a rune for a heart. They can smell gold through stone.", "drops": ["Feet", "Weapon"],
 		"sig": {"name": "Runehound Treads", "slot": "Feet", "type": "sabatons", "effect": "gold_find", "value": 30, "mat": "iron", "trim": "#7fd0f0", "flavor": "Your feet start pointing at treasure."}},
-	"Cinder Miner": {"lore": "Dwarves who dug too deep and got stuck in the heat. They're still digging.", "drops": ["Helmet", "Weapon"],
+	"cinder_miner": {"lore": "Dwarves who dug too deep and got stuck in the heat. They're still digging.", "drops": ["Helmet", "Weapon"],
 		"sig": {"name": "Deepdelver's Pick", "slot": "Weapon", "type": "axe", "effect": "double_strike", "value": 20, "mat": "ember", "trim": "#c28569", "flavor": "It's broken through four mountains."}},
-	"Steamcrawler": {"lore": "A mining machine shaped like a centipede. Nobody remembers how to turn it off.", "drops": ["Legs", "Feet"],
+	"steamcrawler": {"lore": "A mining machine shaped like a centipede. Nobody remembers how to turn it off.", "drops": ["Legs", "Feet"],
 		"sig": {"name": "Pistonleg Greaves", "slot": "Legs", "type": "greaves", "effect": "dodge", "value": 12, "mat": "steel", "trim": "#8b9bb4", "flavor": "Hiss. Clank. Hiss."}},
-	"Ash Raider": {"lore": "Exiled dwarves who raid their own kin's forges. The dwarves don't talk about them.", "drops": ["Weapon", "Helmet"],
+	"ash_raider": {"lore": "Exiled dwarves who raid their own kin's forges. The dwarves don't talk about them.", "drops": ["Weapon", "Helmet"],
 		"sig": {"name": "Exile's Axe", "slot": "Weapon", "type": "axe", "effect": "lifesteal", "value": 12, "mat": "dark", "trim": "#8a5444", "flavor": "Forged in a stolen furnace."}},
-	"Rune Wraith": {"lore": "The ghost of a rune-carver, still carving. Every rune it writes is a curse.", "drops": ["Off Hand", "Chest"],
+	"rune_wraith": {"lore": "The ghost of a rune-carver, still carving. Every rune it writes is a curse.", "drops": ["Off Hand", "Chest"],
 		"sig": {"name": "Wraith-Carved Tome", "slot": "Off Hand", "type": "tome", "effect": "crit", "value": 18, "mat": "crystal", "trim": "#73bed3", "flavor": "The runes rearrange themselves at night."}},
-	"Anvil Brute": {"lore": "A dwarf so big and so stubborn that the smiths started using him as an anvil. He didn't mind.", "drops": ["Chest", "Legs"],
+	"anvil_brute": {"lore": "A dwarf so big and so stubborn that the smiths started using him as an anvil. He didn't mind.", "drops": ["Chest", "Legs"],
 		"sig": {"name": "Anvilback Plate", "slot": "Chest", "type": "plate", "effect": "thorns", "value": 25, "mat": "iron", "trim": "#3a4466", "flavor": "Hit it with a hammer. It likes that."}},
-	"Gem Crawler": {"lore": "A beetle that eats gemstones and grows them on its back. Dwarves hunt it for the crown jewels.", "drops": ["Helmet", "Off Hand"],
+	"gem_crawler": {"lore": "A beetle that eats gemstones and grows them on its back. Dwarves hunt it for the crown jewels.", "drops": ["Helmet", "Off Hand"],
 		"sig": {"name": "Gembeetle Crown", "slot": "Helmet", "type": "crown", "effect": "gold_find", "value": 30, "mat": "scale", "trim": "#c27ad8", "flavor": "Worth a kingdom. Itches a lot."}},
-	"Stoneguard": {"lore": "The High King's honor guard, carved partly from the mountain itself.", "drops": ["Off Hand", "Legs"],
+	"stoneguard": {"lore": "The High King's honor guard, carved partly from the mountain itself.", "drops": ["Off Hand", "Legs"],
 		"sig": {"name": "Mountainheart Shield", "slot": "Off Hand", "type": "shield", "effect": "regen", "value": 3, "mat": "steel", "trim": "#e8b14a", "flavor": "A slice of the mountain's heart."}},
 	# ---------- The Gilded Spire (the angels) ----------
-	"Choir Sentinel": {"lore": "An angel soldier who sings while she fights. The song judges you. The spear does the rest.", "drops": ["Weapon", "Helmet"],
+	"choir_sentinel": {"lore": "An angel soldier who sings while she fights. The song judges you. The spear does the rest.", "drops": ["Weapon", "Helmet"],
 		"sig": {"name": "Hymnspear", "slot": "Weapon", "type": "spear", "effect": "crit", "value": 20, "mat": "gold", "trim": "#fde68a", "flavor": "It hums a note no throat could sing."}},
-	"Halo Wisp": {"lore": "A halo with nobody under it. It's looking for someone worthy. It hasn't found anyone yet.", "drops": ["Helmet", "Off Hand"],
+	"halo_wisp": {"lore": "A halo with nobody under it. It's looking for someone worthy. It hasn't found anyone yet.", "drops": ["Helmet", "Off Hand"],
 		"sig": {"name": "The Wandering Halo", "slot": "Helmet", "type": "crown", "effect": "regen", "value": 3, "mat": "gold", "trim": "#fff4a3", "flavor": "It picked you. Try not to disappoint it."}},
-	"Gilded Lion": {"lore": "The Spire's guardian beasts, made of living gold. Their roar sounds like a trumpet.", "drops": ["Chest", "Feet"],
+	"gilded_lion": {"lore": "The Spire's guardian beasts, made of living gold. Their roar sounds like a trumpet.", "drops": ["Chest", "Feet"],
 		"sig": {"name": "Lionmane Mantle", "slot": "Chest", "type": "plate", "effect": "thorns", "value": 25, "mat": "gold", "trim": "#feae34", "flavor": "Heavy. Shiny. Roars when it's angry."}},
-	"Eye of Judgement": {"lore": "A floating eye ringed with wings. It sees every sin you've ever done and writes them down.", "drops": ["Off Hand", "Helmet"],
+	"eye_of_judgement": {"lore": "A floating eye ringed with wings. It sees every sin you've ever done and writes them down.", "drops": ["Off Hand", "Helmet"],
 		"sig": {"name": "The Ledger of Sins", "slot": "Off Hand", "type": "tome", "effect": "crit", "value": 18, "mat": "pale", "trim": "#ffffff", "flavor": "Your page is longer than you'd like."}},
-	"Sky Serpent": {"lore": "A feathered snake that swims through clouds and eats storms.", "drops": ["Legs", "Weapon"],
+	"sky_serpent": {"lore": "A feathered snake that swims through clouds and eats storms.", "drops": ["Legs", "Weapon"],
 		"sig": {"name": "Cloudscale Leggings", "slot": "Legs", "type": "leggings", "effect": "dodge", "value": 12, "mat": "sea", "trim": "#a9c6ee", "flavor": "Light as a cloud. Wet like one too."}},
-	"Cherub": {"lore": "Small, chubby and armed with a bow. The arrows don't make you fall in love. They make you fall.", "drops": ["Weapon", "Feet"],
+	"cherub": {"lore": "Small, chubby and armed with a bow. The arrows don't make you fall in love. They make you fall.", "drops": ["Weapon", "Feet"],
 		"sig": {"name": "Cherub's Bow", "slot": "Weapon", "type": "bow", "effect": "double_strike", "value": 18, "mat": "gold", "trim": "#ffc6de", "flavor": "Adorable. Lethal."}},
-	"Hymnbird": {"lore": "Birds that sing the Spire's hymns forever. Some say the song is holding the tower up.", "drops": ["Helmet", "Off Hand"],
+	"hymnbird": {"lore": "Birds that sing the Spire's hymns forever. Some say the song is holding the tower up.", "drops": ["Helmet", "Off Hand"],
 		"sig": {"name": "Hymnbird Feather Cap", "slot": "Helmet", "type": "cap", "effect": "regen", "value": 3, "mat": "cloth", "trim": "#7fb2e0", "flavor": "It hums when you're happy."}},
-	"Executor": {"lore": "The angels' executioners. They don't hate you. They just think you're wrong.", "drops": ["Weapon", "Chest"],
+	"executor": {"lore": "The angels' executioners. They don't hate you. They just think you're wrong.", "drops": ["Weapon", "Chest"],
 		"sig": {"name": "The Executor's Verdict", "slot": "Weapon", "type": "axe", "effect": "crit", "value": 20, "mat": "steel", "trim": "#c0cbdc", "flavor": "Guilty. Next."}},
-	"Sun Golem": {"lore": "A walking piece of the Sunforge. It glows so bright that looking at it hurts.", "drops": ["Chest", "Legs"],
+	"sun_golem": {"lore": "A walking piece of the Sunforge. It glows so bright that looking at it hurts.", "drops": ["Chest", "Legs"],
 		"sig": {"name": "Sunforged Plate", "slot": "Chest", "type": "plate", "effect": "regen", "value": 3, "mat": "gold", "trim": "#fee761", "flavor": "Warm as a summer noon."}},
-	"Throne Warden": {"lore": "The last guards before the Empyrean Gate. They've never had to fight. They're very excited.", "drops": ["Off Hand", "Helmet"],
+	"throne_warden": {"lore": "The last guards before the Empyrean Gate. They've never had to fight. They're very excited.", "drops": ["Off Hand", "Helmet"],
 		"sig": {"name": "Gatewarden's Aegis", "slot": "Off Hand", "type": "shield", "effect": "thorns", "value": 25, "mat": "gold", "trim": "#e8b14a", "flavor": "Polished every morning for a thousand years."}},
 	# ---------- The Cinder Abyss (the demons) ----------
-	"Imp": {"lore": "A small, giggling demon. It works for whoever paid it last, which is never you.", "drops": ["Weapon", "Feet"],
+	"imp": {"lore": "A small, giggling demon. It works for whoever paid it last, which is never you.", "drops": ["Weapon", "Feet"],
 		"sig": {"name": "Imp's Pitchfork", "slot": "Weapon", "type": "spear", "effect": "double_strike", "value": 18, "mat": "ember", "trim": "#e43b44", "flavor": "Comes with a tiny invoice."}},
-	"Hellmaw": {"lore": "A demon dog that's mostly mouth. It eats anything, then eats the thing that was eating it.", "drops": ["Legs", "Helmet"],
+	"hellmaw": {"lore": "A demon dog that's mostly mouth. It eats anything, then eats the thing that was eating it.", "drops": ["Legs", "Helmet"],
 		"sig": {"name": "Hellmaw Jaw Helm", "slot": "Helmet", "type": "helm", "effect": "lifesteal", "value": 12, "mat": "bone", "trim": "#8e2e38", "flavor": "It still bites sometimes."}},
-	"Chainwraith": {"lore": "Souls who sold themselves to demons, wrapped in the chains of their own contracts.", "drops": ["Chest", "Off Hand"],
+	"chainwraith": {"lore": "Souls who sold themselves to demons, wrapped in the chains of their own contracts.", "drops": ["Chest", "Off Hand"],
 		"sig": {"name": "Shackles of the Bargain", "slot": "Off Hand", "type": "tome", "effect": "crit", "value": 18, "mat": "dark", "trim": "#8b9bb4", "flavor": "Read the fine print. All of it."}},
-	"Brimstone Brute": {"lore": "A demon foot soldier made of stone and hate. It's not clever, but it doesn't need to be.", "drops": ["Weapon", "Chest"],
+	"brimstone_brute": {"lore": "A demon foot soldier made of stone and hate. It's not clever, but it doesn't need to be.", "drops": ["Weapon", "Chest"],
 		"sig": {"name": "Brimstone Knuckles", "slot": "Weapon", "type": "mace", "effect": "double_strike", "value": 20, "mat": "ember", "trim": "#be4a2f", "flavor": "Smells like a struck match, forever."}},
-	"Abyssal Worm": {"lore": "A worm big enough to tunnel through the Abyss's floors. Some say the realm is just the inside of one.", "drops": ["Legs", "Feet"],
+	"abyssal_worm": {"lore": "A worm big enough to tunnel through the Abyss's floors. Some say the realm is just the inside of one.", "drops": ["Legs", "Feet"],
 		"sig": {"name": "Wormhide Leggings", "slot": "Legs", "type": "leggings", "effect": "regen", "value": 3, "mat": "scale", "trim": "#68386c", "flavor": "Squishy. Unkillable."}},
-	"Ash Fiend": {"lore": "A demon made of smoke from the Brimstone Wastes. Breathe in and it's inside you.", "drops": ["Helmet", "Chest"],
+	"ash_fiend": {"lore": "A demon made of smoke from the Brimstone Wastes. Breathe in and it's inside you.", "drops": ["Helmet", "Chest"],
 		"sig": {"name": "Ashen Shroud", "slot": "Chest", "type": "robe", "effect": "dodge", "value": 12, "mat": "dark", "trim": "#5a4a3e", "flavor": "It drifts even when there's no wind."}},
-	"Chain Warden": {"lore": "Demon jailers who guard the bridges over the pit. They collect toll in teeth.", "drops": ["Off Hand", "Legs"],
+	"chain_warden": {"lore": "Demon jailers who guard the bridges over the pit. They collect toll in teeth.", "drops": ["Off Hand", "Legs"],
 		"sig": {"name": "Warden's Chainmail", "slot": "Legs", "type": "greaves", "effect": "thorns", "value": 25, "mat": "iron", "trim": "#5a6988", "flavor": "Rattles to warn you it's coming."}},
-	"Soul Broker": {"lore": "A demon merchant who buys souls, sells souls and rents souls by the hour.", "drops": ["Off Hand", "Helmet"],
+	"soul_broker": {"lore": "A demon merchant who buys souls, sells souls and rents souls by the hour.", "drops": ["Off Hand", "Helmet"],
 		"sig": {"name": "The Broker's Ledger", "slot": "Off Hand", "type": "tome", "effect": "gold_find", "value": 30, "mat": "scale", "trim": "#9a4fc0", "flavor": "Your name's in here already."}},
-	"Obsidian Knight": {"lore": "The Abyss's knights, armored in volcanic glass. They shatter loudly and come back together slowly.", "drops": ["Chest", "Off Hand"],
+	"obsidian_knight": {"lore": "The Abyss's knights, armored in volcanic glass. They shatter loudly and come back together slowly.", "drops": ["Chest", "Off Hand"],
 		"sig": {"name": "Obsidian Carapace", "slot": "Chest", "type": "plate", "effect": "thorns", "value": 25, "mat": "dark", "trim": "#262b44", "flavor": "Black glass. Sharp edges. No mirrors."}},
-	"Hellborn Duke": {"lore": "A demon noble with a court of a hundred lesser demons and the manners of none of them.", "drops": ["Weapon", "Helmet"],
+	"hellborn_duke": {"lore": "A demon noble with a court of a hundred lesser demons and the manners of none of them.", "drops": ["Weapon", "Helmet"],
 		"sig": {"name": "Duke's Burning Circlet", "slot": "Helmet", "type": "crown", "effect": "lifesteal", "value": 12, "mat": "ember", "trim": "#a22633", "flavor": "Rank has its privileges. And its fires."}},
 	# ---------- Realm bosses ----------
-	"The Weeping Warden": {"lore": "The elves' last guardian. She failed to save them, and she has never stopped grieving.", "drops": [], "boss": true},
-	"The Withered Queen": {"lore": "The last ruler of the elves, more ghost than woman now, still sitting on her throne of roots.", "drops": [], "boss": true},
-	"The Jester of Thorns": {"lore": "The Fairy Queen's favorite fool. His jokes are terrible. His knives aren't.", "drops": [], "boss": true},
-	"The Fairy Queen": {"lore": "The ruler of the Glimmer Court. She is beautiful, ancient, and bored, and you look like fun.", "drops": [], "boss": true},
-	"Forgemaster Brann": {"lore": "The greatest smith the dwarves ever had. He's been forging one blade for a hundred years.", "drops": [], "boss": true},
-	"High King Thrandor": {"lore": "King under the mountain. He has outlived three wives, six sons and every one of his enemies.", "drops": [], "boss": true},
-	"Archon Valeth": {"lore": "The Spire's judge. She has weighed every soul that ever climbed the tower, and found most of them wanting.", "drops": [], "boss": true},
-	"Seraphiel, the First Light": {"lore": "The oldest angel, made from the first sunrise. She remembers when the World Tree was a seed.", "drops": [], "boss": true},
-	"Duke Malgrath": {"lore": "A demon duke who signs every deal in someone else's blood. He's never lost a bargain.", "drops": [], "boss": true},
-	"Azgaroth, Lord of the Abyss": {"lore": "The demons' lord, sitting on a throne made of broken promises. He'd like yours too.", "drops": [], "boss": true},
+	"weeping_warden": {"lore": "The elves' last guardian. She failed to save them, and she has never stopped grieving.", "drops": [], "boss": true},
+	"withered_queen": {"lore": "The last ruler of the elves, more ghost than woman now, still sitting on her throne of roots.", "drops": [], "boss": true},
+	"jester_of_thorns": {"lore": "The Fairy Queen's favorite fool. His jokes are terrible. His knives aren't.", "drops": [], "boss": true},
+	"fairy_queen": {"lore": "The ruler of the Glimmer Court. She is beautiful, ancient, and bored, and you look like fun.", "drops": [], "boss": true},
+	"forgemaster_brann": {"lore": "The greatest smith the dwarves ever had. He's been forging one blade for a hundred years.", "drops": [], "boss": true},
+	"high_king_thrandor": {"lore": "King under the mountain. He has outlived three wives, six sons and every one of his enemies.", "drops": [], "boss": true},
+	"archon_valeth": {"lore": "The Spire's judge. She has weighed every soul that ever climbed the tower, and found most of them wanting.", "drops": [], "boss": true},
+	"seraphiel": {"lore": "The oldest angel, made from the first sunrise. She remembers when the World Tree was a seed.", "drops": [], "boss": true},
+	"duke_malgrath": {"lore": "A demon duke who signs every deal in someone else's blood. He's never lost a bargain.", "drops": [], "boss": true},
+	"azgaroth": {"lore": "The demons' lord, sitting on a throne made of broken promises. He'd like yours too.", "drops": [], "boss": true},
 }
 
 # =====================================================================
@@ -616,11 +616,11 @@ static func _ambush(g: GameState, race: String, rival: String) -> void:
 			if r["name"] == rival:
 				g.enemy_art = r["art"]
 		g.enemy_name = rival
-		g.enemy_species = def["name"]
+		g.enemy_species = def["id"]
 	else:
-		g.enemy_species = def["name"]
+		g.enemy_species = def["id"]
 		g.enemy_name = GameData.rank_prefix(g.floor_num) + def["name"]
-		g.enemy_art = GameData.art_key(def["name"])
+		g.enemy_art = def.get("art", def["id"])
 	g.enemy_people = race
 	g.enemy_illusion = false
 	g._apply_tier(Monsters.EPIC if rival == "" else Monsters.LEGENDARY)
@@ -839,9 +839,9 @@ static func completion(g: GameState, id: String) -> int:
 	var z: Dictionary = GameData.ZONES[zone_for_id(id)]
 	var mons: Array = []
 	for e in z["enemies"]:
-		mons.append(e["name"])
+		mons.append(e["id"])
 	for s in z["subs"]:
-		mons.append(s["monster"]["name"])
+		mons.append(s["monster"]["id"])
 	var seen := 0
 	for m in mons:
 		if g.codex.seen(m):
@@ -853,10 +853,10 @@ static func completion(g: GameState, id: String) -> int:
 	var uniq := 0
 	var all_u: Array = GameData.zone_uniques(zone_for_id(id))
 	for u in all_u:
-		if g.codex.collection.has(u["name"]):
+		if g.codex.collection.has(u["id"]):
 			uniq += 1
 	parts += float(uniq) / maxf(1.0, all_u.size()) * 15.0
-	parts += (7.5 if g.codex.kills(z["mid"]["name"]) > 0 else 0.0) + (7.5 if g.codex.kills(z["boss"]["name"]) > 0 else 0.0)
+	parts += (7.5 if g.codex.kills(z["mid"]["id"]) > 0 else 0.0) + (7.5 if g.codex.kills(z["boss"]["id"]) > 0 else 0.0)
 	return int(round(parts))
 
 ## The first time you set foot in a realm (however you got there): its entrance scene.

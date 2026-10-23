@@ -1147,7 +1147,7 @@ func _sync_town() -> void:
 	var mw := Mail.waiting(state)
 	town_mail.text = "✉ Mail (%d)" % mw if mw > 0 else "✉ Mail"
 	town_mail.add_theme_color_override("font_color", UI.GOLD if Mail.unread(state) > 0 else UI.TEXT)
-	town_status.text = "HP %d / %d   ·   %s" % [state.hero_hp, state.get_max_hp(), Town.look(state)["name"]]
+	town_status.text = "HP %d / %d   ·   %s" % [state.hero_hp, state.get_max_hp(), String(GameData.zone_for_floor(maxi(1, state.floor_num))["name"])]
 	if state.town_event != "":
 		town_status.text += "   ·   " + String(TownEvents.EVENTS[state.town_event]["name"])
 	var notes := {}
@@ -1515,7 +1515,7 @@ func _handle_events() -> void:
 					moment_queue.append(["first", String(e["name"]), ("Your first piece of this set. Wear more of it for its bonuses." if e["kind"] == "set" else "A Unique item. There's only one like it, and now it's in your collection."), Color(GameData.color_of(int(fi["rarity"]))), "", Sprites.item_icon(fi)])
 			"forge_moment":
 				var fit: Dictionary = e["item"]
-				moment_queue.append(["forge", String(fit["name"]), "+%d %s  -  part of the %s set" % [GameData.item_power(fit), fit["stat"], String(e.get("set", "?"))], Color(GameData.color_of(GameData.SET_RARITY)), "", Sprites.item_icon(fit)])
+				moment_queue.append(["forge", String(fit["name"]), "+%d %s  -  part of the %s set" % [GameData.item_power(fit), fit["stat"], GameData.set_name_of(String(e.get("set", "?")))], Color(GameData.color_of(GameData.SET_RARITY)), "", Sprites.item_icon(fit)])
 			"milestone_moment":
 				moment_queue.append(["milestone", e["title"], e["sub"], Color(e["color"]), "", Sprites.portrait(state.appearance, state.hero_looks())])
 			"awaken":

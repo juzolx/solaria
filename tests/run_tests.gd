@@ -368,7 +368,7 @@ func _initialize() -> void:
 	check(hero_pic["body"] != null, "hero picture builds")
 	check(ItemPool.count() == 300, "300 hand-made items (got %d)" % ItemPool.count())
 	for mname in Monsters.all_monsters():
-		check(not Sprites.enemy_by_key(GameData.art_key(mname)).is_empty(), "art for " + mname)
+		check(not Sprites.enemy_by_key(String(Monsters.by_id(mname).get("art", mname))).is_empty(), "art for " + mname)
 	for zi in GameData.ZONES.size():
 		check(not Sprites.enemy_by_key(GameData.ZONES[zi]["boss"]["art"]).is_empty(), "boss art zone %d" % zi)
 		check(not Sprites.enemy_by_key(GameData.ZONES[zi]["mid"]["art"]).is_empty(), "mid boss art zone %d" % zi)
@@ -460,7 +460,7 @@ func _initialize() -> void:
 	# Losing to a boss sends you back to the area start; travel needs the boss rested
 	z.best_floor = 60
 	z.go_to_floor(25)
-	check(z.enemy_is_boss and z.enemy_boss_kind == "mid" and z.enemy_species == "Black Annis", "mid boss on 25")
+	check(z.enemy_is_boss and z.enemy_boss_kind == "mid" and z.enemy_species == "black_annis", "mid boss on 25")
 	z.hero_hp = 1
 	z.gold = 500
 	z.bank = 2000
@@ -500,10 +500,10 @@ func _initialize() -> void:
 	z.doors[0] = "fight"
 	z.choose_path("door_l")
 	check(z.floor_num == 26 and z.material_total() >= mats_before + 5 and z.doors.is_empty(), "through a door: next floor, 5-8 materials")
-	check(z.codex.kills("Black Annis") == 1 and z.codex.value("mids") == 1, "boss in the bestiary")
+	check(z.codex.kills("black_annis") == 1 and z.codex.value("mids") == 1, "boss in the bestiary")
 	# Signature drop
-	z._give_signature("Kobold")
-	check(z.codex.value("signatures") == 1 and z.codex.collection.has("Kobold's Candlehelm"), "signature collected")
+	z._give_signature("kobold")
+	check(z.codex.value("signatures") == 1 and z.codex.collection.has("sig_kobold"), "signature collected")
 	# Events
 	z.path_offer = []
 	z.bag.clear()
@@ -1080,13 +1080,13 @@ func _initialize() -> void:
 	e.materials = [25, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 	e.scrap = 500
 	e.bag.clear()
-	e.craft_set_piece("Grendel's Kin", "Weapon")
-	e.craft_set_piece("Grendel's Kin", "Chest")
+	e.craft_set_piece("grendels_kin", "Weapon")
+	e.craft_set_piece("grendels_kin", "Chest")
 	check(e.bag.size() == 2 and e.materials[0] == 25 - 2 * GameData.SET_PIECE_MATERIALS, "crafted 2 set pieces")
 	var hp_before := e.get_max_hp()
 	for item in e.bag.duplicate():
 		e.equip(int(item["id"]))
-	check(e.set_counts().get("Grendel's Kin", 0) == 2, "wearing 2 set pieces")
+	check(e.set_counts().get("grendels_kin", 0) == 2, "wearing 2 set pieces")
 	var bag_before := e.bag_capacity()
 	e.materials = [5, 5, 0, 0, 0, 0, 0, 0, 0, 0]
 	e.craft_bag()
@@ -1122,13 +1122,13 @@ func _initialize() -> void:
 	var t_c0: Dictionary = tg.contracts[0]
 	check(Town.take(tg, int(t_c0["id"])), "take a contract")
 	t_c0["kind"] = "hunt"
-	t_c0["monster"] = "Kobold"
+	t_c0["monster"] = "kobold"
 	t_c0["need"] = 2
 	t_c0["reward"] = {"gold": 100, "item": {"slot": "Weapon", "rarity": 3}}
-	Town.on_kill(tg, "Kobold", 0, false, 0)
+	Town.on_kill(tg, "kobold", 0, false, 0)
 	check(not t_c0["done"] and tg.contracts.has(t_c0), "contract not done after 1 of 2")
 	var t_mail0 := tg.mail.size()
-	Town.on_kill(tg, "Kobold", 0, false, 0)
+	Town.on_kill(tg, "kobold", 0, false, 0)
 	check(not tg.contracts.has(t_c0) and tg.mail.size() > t_mail0 and tg.mail[t_mail0]["from"] == "The Bounty Board", "finished contract pays into the Mailbox")
 	var t_letter: Dictionary = tg.mail[t_mail0]
 	check(int(t_letter["gold"]) > 0 and (t_letter["items"] as Array).size() == 1, "bounty letter holds gold and a weapon")

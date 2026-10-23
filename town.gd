@@ -18,16 +18,16 @@ const REST_COST := 4            # gold per level for a full night's rest (free u
 ## How the town looks in each zone: art season, color grade and weather.
 ## tint multiplies colors, sat 0..1+ is saturation, dark 0..1 is how close to night it is.
 const LOOKS := [
-	{"season": "summer", "tint": Color(1.0, 1.0, 0.96), "sat": 1.0, "dark": 0.0, "weather": "motes", "name": "Mossy Hollows"},
-	{"season": "autumn", "tint": Color(0.84, 0.9, 0.86), "sat": 0.55, "dark": 0.45, "weather": "fog", "name": "Sunken Catacombs"},
-	{"season": "spring", "tint": Color(0.82, 0.92, 1.0), "sat": 0.85, "dark": 0.3, "weather": "rain", "name": "Flooded Depths"},
-	{"season": "autumn", "tint": Color(1.0, 0.78, 0.62), "sat": 1.0, "dark": 0.55, "weather": "embers", "name": "Ember Halls"},
-	{"season": "summer", "tint": Color(0.7, 0.66, 0.95), "sat": 0.7, "dark": 0.75, "weather": "wisps", "name": "The Shadow Deep"},
-	{"season": "autumn", "tint": Color(0.86, 0.86, 0.84), "sat": 0.35, "dark": 0.4, "weather": "leaves", "name": "The Hushwood"},
-	{"season": "spring", "tint": Color(1.0, 0.86, 1.0), "sat": 1.1, "dark": 0.35, "weather": "sparkles", "name": "The Glimmer Court"},
-	{"season": "summer", "tint": Color(1.0, 0.86, 0.7), "sat": 0.75, "dark": 0.5, "weather": "smoke", "name": "The Ironroot Deeps"},
-	{"season": "spring", "tint": Color(1.08, 1.0, 0.82), "sat": 1.0, "dark": 0.0, "weather": "motes", "name": "The Gilded Spire"},
-	{"season": "winter", "tint": Color(0.9, 0.72, 0.68), "sat": 0.45, "dark": 0.6, "weather": "ash", "name": "The Cinder Abyss"},
+	{"season": "summer", "tint": Color(1.0, 1.0, 0.96), "sat": 1.0, "dark": 0.0, "weather": "motes", "zone": "mossy_hollows"},
+	{"season": "autumn", "tint": Color(0.84, 0.9, 0.86), "sat": 0.55, "dark": 0.45, "weather": "fog", "zone": "sunken_catacombs"},
+	{"season": "spring", "tint": Color(0.82, 0.92, 1.0), "sat": 0.85, "dark": 0.3, "weather": "rain", "zone": "flooded_depths"},
+	{"season": "autumn", "tint": Color(1.0, 0.78, 0.62), "sat": 1.0, "dark": 0.55, "weather": "embers", "zone": "ember_halls"},
+	{"season": "summer", "tint": Color(0.7, 0.66, 0.95), "sat": 0.7, "dark": 0.75, "weather": "wisps", "zone": "the_shadow_deep"},
+	{"season": "autumn", "tint": Color(0.86, 0.86, 0.84), "sat": 0.35, "dark": 0.4, "weather": "leaves", "zone": "elf"},
+	{"season": "spring", "tint": Color(1.0, 0.86, 1.0), "sat": 1.1, "dark": 0.35, "weather": "sparkles", "zone": "fairy"},
+	{"season": "summer", "tint": Color(1.0, 0.86, 0.7), "sat": 0.75, "dark": 0.5, "weather": "smoke", "zone": "dwarf"},
+	{"season": "spring", "tint": Color(1.08, 1.0, 0.82), "sat": 1.0, "dark": 0.0, "weather": "motes", "zone": "angel"},
+	{"season": "winter", "tint": Color(0.9, 0.72, 0.68), "sat": 0.45, "dark": 0.6, "weather": "ash", "zone": "demon"},
 ]
 
 ## Building id -> [Town page index, short line shown when you tap it]
@@ -239,7 +239,7 @@ static func _monsters_here(g: GameState) -> Array:
 	var seen: Array = []
 	var all: Array = []
 	for m in GameData.floor_monsters(maxi(1, g.floor_num)):
-		var n: String = m[0]["name"]
+		var n: String = m[0]["id"]
 		if n in all:
 			continue
 		all.append(n)
@@ -265,7 +265,7 @@ static func _new_contract(g: GameState) -> Dictionary:
 		c["kind"] = "hunt"
 		c["monster"] = pool.pick_random()
 		c["need"] = [10, 15, 20, 25].pick_random()
-		c["text"] = "Hunt %d %s" % [c["need"], c["monster"]]
+		c["text"] = "Hunt %d %s" % [c["need"], Monsters.name_of(c["monster"])]
 		if randf() < 0.35:
 			c["reward"] = {"item": {"slot": GameData.SLOT_ORDER.pick_random(), "rarity": RARE + (1 if c["need"] >= 20 else 0)}}
 		else:
@@ -279,7 +279,7 @@ static func _new_contract(g: GameState) -> Dictionary:
 	else:
 		var boss: Dictionary = z["mid"] if randf() < 0.6 else z["boss"]
 		c["kind"] = "wanted"
-		c["monster"] = boss["name"]
+		c["monster"] = boss["id"]
 		c["need"] = 1
 		c["text"] = "WANTED: %s" % boss["name"]
 		var leg: bool = boss == z["boss"]

@@ -155,10 +155,10 @@ static func on_hit(g: GameState) -> void:
 		if g.race() in fd["from"] and g.enemy_species in fd["biters"] and randf() * 100.0 < float(fd["bite_chance"]):
 			if f == "Vampire":
 				transform(g, "Vampire")
-				g.say("[color=#b8263a]The %s's teeth sink into your neck. Your blood runs cold... and then it hungers. You are a Vampire.[/color]" % g.enemy_species)
+				g.say("[color=#b8263a]The %s's teeth sink into your neck. Your blood runs cold... and then it hungers. You are a Vampire.[/color]" % Monsters.name_of(g.enemy_species))
 			else:
 				g.lycan_pending = true
-				g.say("[color=#8b9bb4]The %s's bite burns. Something in your blood is waiting for the full moon...[/color]" % g.enemy_species)
+				g.say("[color=#8b9bb4]The %s's bite burns. Something in your blood is waiting for the full moon...[/color]" % Monsters.name_of(g.enemy_species))
 				g.events.append({"type": "bitten"})
 			return
 

@@ -231,7 +231,7 @@ static func interact(g: GameState, i: int) -> String:
 			if p.get("mimic", false):
 				g.doors = []
 				g.path_offer = []
-				_monster(g, "Mimic", "mimic", "[color=#f87171]The chest snaps open... it's a Mimic![/color]")
+				_monster(g, "mimic", "mimic", "[color=#f87171]The chest snaps open... it's a Mimic![/color]")
 				return "The chest grows teeth!"
 			var gold := (5 + g.floor_num * 6) * 3
 			g._add_gold(gold)
@@ -286,17 +286,17 @@ static func interact(g: GameState, i: int) -> String:
 	g.save_game()
 	return out
 
-## Something in the room fights back: an Epic monster (better loot). name "" = this floor's own kind.
-static func _monster(g: GameState, name: String, art: String, line: String) -> void:
+## Something in the room fights back: an Epic monster (better loot). id "" = this floor's own kind.
+static func _monster(g: GameState, id: String, art: String, line: String) -> void:
 	g.exploring = false
 	g.spawn_enemy()
 	# A room's own monster (a mimic) comes alone: spawn_enemy can
 	# roll a pack, which left ordinary monsters stepping out of a treasure room after it
 	g.horde_left = 0
 	g.horde_pack = false
-	if name != "":
-		g.enemy_name = name
-		g.enemy_species = name
+	if id != "":
+		g.enemy_name = Monsters.name_of(id)
+		g.enemy_species = id
 		g.enemy_art = art
 		g.enemy_people = ""
 	g._apply_tier(Monsters.EPIC)

@@ -31,13 +31,13 @@ func _initialize() -> void:
 	var c0: Dictionary = tg.contracts[0]
 	check(Town.take(tg, int(c0["id"])), "take a contract")
 	c0["kind"] = "hunt"
-	c0["monster"] = "Kobold"
+	c0["monster"] = "kobold"
 	c0["need"] = 2
 	c0["reward"] = {"gold": 100, "item": {"slot": "Weapon", "rarity": 3}}
-	Town.on_kill(tg, "Kobold", 0, false, 0)
+	Town.on_kill(tg, "kobold", 0, false, 0)
 	check(not c0["done"] and tg.contracts.has(c0), "contract not done after 1 of 2")
 	var mail0 := tg.mail.size()
-	Town.on_kill(tg, "Kobold", 0, false, 0)
+	Town.on_kill(tg, "kobold", 0, false, 0)
 	check(not tg.contracts.has(c0) and tg.mail.size() > mail0 and tg.mail[mail0]["from"] == "The Bounty Board", "finished contract pays into the Mailbox")
 	var letter: Dictionary = tg.mail[mail0]
 	check(int(letter["gold"]) > 0 and (letter["items"] as Array).size() == 1, "bounty letter holds gold and a weapon")

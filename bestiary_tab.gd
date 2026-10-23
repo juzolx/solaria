@@ -78,17 +78,17 @@ func refresh() -> void:
 		list.set_item_selectable(h, false)
 		list.set_item_custom_fg_color(h, Color(z["color"]).lightened(0.4))
 		keys.append("")
-		var names: Array = []
+		var ids: Array = []  # monster ids (names are only shown)
 		for e in z["enemies"]:
-			names.append(e["name"])
+			ids.append(e["id"])
 		for s in z["subs"]:
-			names.append(s["monster"]["name"])
-		names.append(z["mid"]["name"])
-		names.append(z["boss"]["name"])
-		for n in names:
+			ids.append(s["monster"]["id"])
+		ids.append(z["mid"]["id"])
+		ids.append(z["boss"]["id"])
+		for n in ids:
 			var met := codex.seen(n)
 			var boss: bool = Monsters.info(n).get("boss", false)
-			var label := ("  %s%s  (%d)" % ["[Boss] " if boss else "", n, codex.kills(n)]) if met else "  ???"
+			var label := ("  %s%s  (%d)" % ["[Boss] " if boss else "", Monsters.name_of(n), codex.kills(n)]) if met else "  ???"
 			if met and bool(codex.bestiary[n].get("sig", false)):
 				label += "  *"
 			var i := list.add_item(label)
@@ -128,7 +128,7 @@ func _show() -> void:
 	var kills := int(e["kills"])
 	var dim := UI.hex(UI.DIM)
 	var lines: Array = []
-	lines.append("[font_size=18][color=#e8b14a]%s[/color][/font_size]" % selected)
+	lines.append("[font_size=18][color=#e8b14a]%s[/color][/font_size]" % Monsters.name_of(selected))
 	if not home.is_empty():
 		var z: Dictionary = GameData.ZONES[int(home["zone"])]
 		var first := int(home["zone"]) * GameData.ZONE_FLOORS + 1
@@ -158,12 +158,12 @@ func _show() -> void:
 		var zn := ""
 		for z in GameData.ZONES:
 			for en in z["enemies"]:
-				if en["name"] == selected:
-					zn = String(z.get("realm", z["name"]))
+				if en["id"] == selected:
+					zn = String(z["id"])
 					prof["shape"] = en["shape"]
 			for sb in z["subs"]:
-				if sb["monster"]["name"] == selected:
-					zn = String(z.get("realm", z["name"]))
+				if sb["monster"]["id"] == selected:
+					zn = String(z["id"])
 					prof["shape"] = sb["monster"]["shape"]
 		var ze: Dictionary = Combat.ZONE_ELEMENTS.get(zn, {})
 		var se: Dictionary = Combat.SHAPE_ELEMENTS.get(String(prof.get("shape", "")), {})
@@ -197,7 +197,7 @@ func _show() -> void:
 		lines.append(_odds_line("Each item", GameData.rarity_odds(GameData.BOSS_RARITY_BONUS, GameData.LEGENDARY_CHANCE_BOSS)))
 		var def: Dictionary = GameData.boss_for_floor(_boss_floor(home))
 		for u in def.get("uniques", []):
-			var have: bool = codex.collection.has(u["name"])
+			var have: bool = codex.collection.has(u["id"])
 			lines.append(("[color=#fbbf24]%s[/color] - %s" % [u["name"], GameData.effect_text(u["effect"], int(u["value"]))]) if have else "[color=#fbbf24]???[/color] [color=%s](a Unique %s)[/color]" % [dim, str(u["slot"]).to_lower()])
 	text.text = "\n".join(lines)
 
@@ -205,7 +205,7 @@ func _art_key(n: String, home: Dictionary) -> String:
 	if home.has("boss"):
 		var z: Dictionary = GameData.ZONES[int(home["zone"])]
 		return z["mid"]["art"] if home["boss"] == "mid" else z["boss"]["art"]
-	return GameData.art_key(n)
+	return String(Monsters.by_id(n).get("art", n))
 
 func _boss_floor(home: Dictionary) -> int:
 	return int(home["zone"]) * GameData.ZONE_FLOORS + (GameData.MID_BOSS_FLOOR if home["boss"] == "mid" else GameData.ZONE_FLOORS)

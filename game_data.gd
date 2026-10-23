@@ -255,117 +255,124 @@ static func diminishing(points: int, curve: Array) -> float:
 # ---------- Boss materials and crafting sets ----------
 # Every boss drops its zone's material. Materials craft Set items (strong,
 # with bonuses for wearing 2 or 3 pieces of the same set) and bigger bags.
+# Sets are keyed by a permanent id (items store it in "set"); "name" is for showing.
+# A piece's id is the set id plus its slot (piece_id()).
 const BOSS_MATERIAL_DROP := [5, 8]  # min, max per boss kill
 const SALVAGE_MATERIALS := {3: 1, 4: 2}  # salvaging Epic / Legendary gear gives its zone's material
 const SET_PIECE_MATERIALS := 10
 const SET_PIECE_SCRAP := 40
 const MATERIALS := ["Grendel's Claw", "Grave Silk", "Charybdis Pearl", "Surtr's Ember", "Typhon Scale"] + Realms.MATERIALS
 const SETS := {
-	"Grendel's Kin": {"material": 0, "pieces": {"Weapon": "Mere-Hag Cleaver", "Chest": "Hall-Breaker Hide", "Legs": "Moor Stalker Greaves"},
+	"grendels_kin": {"name": "Grendel's Kin", "material": 0, "pieces": {"Weapon": "Mere-Hag Cleaver", "Chest": "Hall-Breaker Hide", "Legs": "Moor Stalker Greaves"},
+		"types": {"Weapon": "axe", "Chest": "tunic", "Legs": "greaves"},
 		"bonus2": {"hp": 1.1}, "bonus3": {"lifesteal": 6},
 		"text": "2 pieces: +10% HP. 3 pieces: +6% lifesteal."},
-	"Hel's Shroud": {"material": 1, "pieces": {"Helmet": "Shroud Veil", "Chest": "Deathless Mantle", "Feet": "Helroad Boots"},
+	"hels_shroud": {"name": "Hel's Shroud", "material": 1, "pieces": {"Helmet": "Shroud Veil", "Chest": "Deathless Mantle", "Feet": "Helroad Boots"},
+		"types": {"Helmet": "hood", "Chest": "robe", "Feet": "boots"},
 		"bonus2": {"regen": 1}, "bonus3": {"dodge": 8},
 		"text": "2 pieces: 1% regen. 3 pieces: +8% dodge."},
-	"Tidecaller": {"material": 2, "pieces": {"Weapon": "Maelstrom Trident", "Off Hand": "Tide Ward", "Feet": "Seafoam Treads"},
+	"tidecaller": {"name": "Tidecaller", "material": 2, "pieces": {"Weapon": "Maelstrom Trident", "Off Hand": "Tide Ward", "Feet": "Seafoam Treads"},
+		"types": {"Weapon": "spear", "Off Hand": "shield", "Feet": "sandals"},
 		"bonus2": {"gold_find": 15}, "bonus3": {"double_strike": 10},
 		"text": "2 pieces: +15% gold. 3 pieces: +10% double strike."},
-	"Muspel Forge": {"material": 3, "pieces": {"Weapon": "Ember Greatsword", "Helmet": "Forgeborn Helm", "Legs": "Cinder Greaves"},
+	"muspel_forge": {"name": "Muspel Forge", "material": 3, "pieces": {"Weapon": "Ember Greatsword", "Helmet": "Forgeborn Helm", "Legs": "Cinder Greaves"},
+		"types": {"Weapon": "sword", "Helmet": "helm", "Legs": "greaves"},
 		"bonus2": {"crit": 6}, "bonus3": {"atk": 1.15},
 		"text": "2 pieces: +6% crit. 3 pieces: +15% Attack."},
-	"Titanborn": {"material": 4, "pieces": {"Off Hand": "Scaled Bulwark", "Chest": "Serpentcoil Plate", "Helmet": "Hundred-Eye Circlet"},
+	"titanborn": {"name": "Titanborn", "material": 4, "pieces": {"Off Hand": "Scaled Bulwark", "Chest": "Serpentcoil Plate", "Helmet": "Hundred-Eye Circlet"},
+		"types": {"Off Hand": "tower", "Chest": "plate", "Helmet": "crown"},
 		"bonus2": {"thorns": 15}, "bonus3": {"def": 1.2},
 		"text": "2 pieces: reflect 15%. 3 pieces: +20% Defense."},
 	# The realms (floors 251-500)
-	"Last Light of the Elves": {"material": 5, "pieces": {"Weapon": "Lastlight Bow", "Helmet": "Leafcrown of the Wardens", "Feet": "Hushstep Boots"},
+	"last_light_of_the_elves": {"name": "Last Light of the Elves", "material": 5, "pieces": {"Weapon": "Lastlight Bow", "Helmet": "Leafcrown of the Wardens", "Feet": "Hushstep Boots"},
+		"types": {"Weapon": "bow", "Helmet": "crown", "Feet": "boots"},
 		"bonus2": {"dodge": 8}, "bonus3": {"crit": 10},
 		"text": "2 pieces: +8% dodge. 3 pieces: +10% crit."},
-	"Court of Glamour": {"material": 6, "pieces": {"Off Hand": "Mirror of the Court", "Chest": "Glamourweave Gown", "Legs": "Revelry Leggings"},
+	"court_of_glamour": {"name": "Court of Glamour", "material": 6, "pieces": {"Off Hand": "Mirror of the Court", "Chest": "Glamourweave Gown", "Legs": "Revelry Leggings"},
+		"types": {"Off Hand": "orb", "Chest": "robe", "Legs": "leggings"},
 		"bonus2": {"gold_find": 20}, "bonus3": {"skill": 1.15},
 		"text": "2 pieces: +20% gold. 3 pieces: +15% skill damage."},
-	"Undermountain Oath": {"material": 7, "pieces": {"Off Hand": "Oathstone Bulwark", "Chest": "Kingsguard Runeplate", "Feet": "Deepforge Sabatons"},
+	"undermountain_oath": {"name": "Undermountain Oath", "material": 7, "pieces": {"Off Hand": "Oathstone Bulwark", "Chest": "Kingsguard Runeplate", "Feet": "Deepforge Sabatons"},
+		"types": {"Off Hand": "tower", "Chest": "plate", "Feet": "sabatons"},
 		"bonus2": {"thorns": 15}, "bonus3": {"def": 1.2},
 		"text": "2 pieces: reflect 15%. 3 pieces: +20% Defense."},
-	"Choir of Dawn": {"material": 8, "pieces": {"Weapon": "Dawnchoir Spear", "Helmet": "Halo of the Choir", "Chest": "Seraph-Feather Mantle"},
+	"choir_of_dawn": {"name": "Choir of Dawn", "material": 8, "pieces": {"Weapon": "Dawnchoir Spear", "Helmet": "Halo of the Choir", "Chest": "Seraph-Feather Mantle"},
+		"types": {"Weapon": "spear", "Helmet": "crown", "Chest": "robe"},
 		"bonus2": {"regen": 1}, "bonus3": {"hp": 1.2},
 		"text": "2 pieces: 1% regen. 3 pieces: +20% HP."},
-	"Pact of the Abyss": {"material": 9, "pieces": {"Weapon": "Pactbound Cleaver", "Helmet": "Hornhelm of the Pact", "Legs": "Cinderchain Greaves"},
+	"pact_of_the_abyss": {"name": "Pact of the Abyss", "material": 9, "pieces": {"Weapon": "Pactbound Cleaver", "Helmet": "Hornhelm of the Pact", "Legs": "Cinderchain Greaves"},
+		"types": {"Weapon": "axe", "Helmet": "helm", "Legs": "greaves"},
 		"bonus2": {"lifesteal": 6}, "bonus3": {"atk": 1.15},
 		"text": "2 pieces: +6% lifesteal. 3 pieces: +15% Attack."},
 }
-## Which look each set piece uses
-const SET_TYPES := {
-	"Mere-Hag Cleaver": "axe", "Hall-Breaker Hide": "tunic", "Moor Stalker Greaves": "greaves",
-	"Shroud Veil": "hood", "Deathless Mantle": "robe", "Helroad Boots": "boots",
-	"Maelstrom Trident": "spear", "Tide Ward": "shield", "Seafoam Treads": "sandals",
-	"Ember Greatsword": "sword", "Forgeborn Helm": "helm", "Cinder Greaves": "greaves",
-	"Scaled Bulwark": "tower", "Serpentcoil Plate": "plate", "Hundred-Eye Circlet": "crown",
-	"Lastlight Bow": "bow", "Leafcrown of the Wardens": "crown", "Hushstep Boots": "boots",
-	"Mirror of the Court": "orb", "Glamourweave Gown": "robe", "Revelry Leggings": "leggings",
-	"Oathstone Bulwark": "tower", "Kingsguard Runeplate": "plate", "Deepforge Sabatons": "sabatons",
-	"Dawnchoir Spear": "spear", "Halo of the Choir": "crown", "Seraph-Feather Mantle": "robe",
-	"Pactbound Cleaver": "axe", "Hornhelm of the Pact": "helm", "Cinderchain Greaves": "greaves",
-}
-const SET_ORDER := ["Grendel's Kin", "Hel's Shroud", "Tidecaller", "Muspel Forge", "Titanborn",
-	"Last Light of the Elves", "Court of Glamour", "Undermountain Oath", "Choir of Dawn", "Pact of the Abyss"]
+const SET_ORDER := ["grendels_kin", "hels_shroud", "tidecaller", "muspel_forge", "titanborn",
+	"last_light_of_the_elves", "court_of_glamour", "undermountain_oath", "choir_of_dawn", "pact_of_the_abyss"]
 # ---------- Evolution sets (v0.11) ----------
 # One set for each family of classes. They drop from bosses and elite
 # monsters (more often the ones that fit your class), never from crafting.
 # "tag" bonuses make skills of those tags stronger.
 const EVO_SETS := {
-	"Crimson Covenant": {"tags": ["Blood"], "pieces": {"Weapon": "Covenant Bloodblade", "Chest": "Covenant Hauberk", "Legs": "Covenant Greaves"},
+	"crimson_covenant": {"name": "Crimson Covenant", "tags": ["Blood"], "pieces": {"Weapon": "Covenant Bloodblade", "Chest": "Covenant Hauberk", "Legs": "Covenant Greaves"},
 		"types": {"Weapon": "axe", "Chest": "plate", "Legs": "greaves"}, "mat": "dark", "trim": "#e43b44",
 		"bonus2": {"lifesteal": 6}, "bonus3": {"tag": {"Blood": 0.2}, "rage": 15},
 		"text": "2 pieces: +6% lifesteal. 3 pieces: Blood skills +20%, up to +15% damage when hurt."},
-	"Dawnward Vestments": {"tags": ["Holy"], "pieces": {"Helmet": "Dawnward Circlet", "Chest": "Dawnward Robe", "Off Hand": "Dawnward Aegis"},
+	"dawnward_vestments": {"name": "Dawnward Vestments", "tags": ["Holy"], "pieces": {"Helmet": "Dawnward Circlet", "Chest": "Dawnward Robe", "Off Hand": "Dawnward Aegis"},
 		"types": {"Helmet": "crown", "Chest": "robe", "Off Hand": "shield"}, "mat": "gold", "trim": "#fde68a",
 		"bonus2": {"regen": 1}, "bonus3": {"tag": {"Holy": 0.2}, "heal": 15},
 		"text": "2 pieces: +1% regen. 3 pieces: Holy skills +20%, heals +15%."},
-	"Umbral Regalia": {"tags": ["Shadow"], "pieces": {"Helmet": "Umbral Cowl", "Legs": "Umbral Leggings", "Feet": "Umbral Treads"},
+	"umbral_regalia": {"name": "Umbral Regalia", "tags": ["Shadow"], "pieces": {"Helmet": "Umbral Cowl", "Legs": "Umbral Leggings", "Feet": "Umbral Treads"},
 		"types": {"Helmet": "hood", "Legs": "leggings", "Feet": "boots"}, "mat": "dark", "trim": "#8b5cf6",
 		"bonus2": {"dodge": 6}, "bonus3": {"tag": {"Shadow": 0.2}, "execute": 20},
 		"text": "2 pieces: +6% dodge. 3 pieces: Shadow skills +20%, +20% damage to monsters under 30% HP."},
-	"Elemental Concord": {"tags": ["Fire", "Frost", "Storm", "Arcane"], "pieces": {"Weapon": "Concord Staff", "Off Hand": "Concord Orb", "Helmet": "Concord Hood"},
+	"elemental_concord": {"name": "Elemental Concord", "tags": ["Fire", "Frost", "Storm", "Arcane"], "pieces": {"Weapon": "Concord Staff", "Off Hand": "Concord Orb", "Helmet": "Concord Hood"},
 		"types": {"Weapon": "staff", "Off Hand": "orb", "Helmet": "hood"}, "mat": "crystal", "trim": "#c084fc",
 		"bonus2": {"skill": 1.08}, "bonus3": {"weakness": 25, "tag": {"Fire": 0.1, "Frost": 0.1, "Storm": 0.1, "Arcane": 0.1}},
 		"text": "2 pieces: +8% skill damage. 3 pieces: hits on a weakness do 25% more, elemental skills +10%."},
-	"Wildheart Garb": {"tags": ["Nature"], "pieces": {"Weapon": "Wildheart Bow", "Chest": "Wildheart Tunic", "Feet": "Wildheart Boots"},
+	"wildheart_garb": {"name": "Wildheart Garb", "tags": ["Nature"], "pieces": {"Weapon": "Wildheart Bow", "Chest": "Wildheart Tunic", "Feet": "Wildheart Boots"},
 		"types": {"Weapon": "bow", "Chest": "tunic", "Feet": "boots"}, "mat": "leather", "trim": "#63c74d",
 		"bonus2": {"hp": 1.1}, "bonus3": {"tag": {"Nature": 0.2}, "regen": 1},
 		"text": "2 pieces: +10% HP. 3 pieces: Nature skills +20%, +1% regen."},
-	"Bladesworn Steel": {"tags": ["Blade", "Fist"], "pieces": {"Weapon": "Bladesworn Edge", "Helmet": "Bladesworn Helm", "Legs": "Bladesworn Greaves"},
+	"bladesworn_steel": {"name": "Bladesworn Steel", "tags": ["Blade", "Fist"], "pieces": {"Weapon": "Bladesworn Edge", "Helmet": "Bladesworn Helm", "Legs": "Bladesworn Greaves"},
 		"types": {"Weapon": "sword", "Helmet": "helm", "Legs": "greaves"}, "mat": "steel", "trim": "#c0cbdc",
 		"bonus2": {"crit": 6}, "bonus3": {"crit_dmg": 25, "tag": {"Blade": 0.15, "Fist": 0.15}},
 		"text": "2 pieces: +6% crit. 3 pieces: +25% crit damage, Blade and Fist skills +15%."},
-	"Minstrel's Finery": {"tags": ["Song", "Trick"], "pieces": {"Off Hand": "Finery Songbook", "Chest": "Finery Doublet", "Helmet": "Finery Cap"},
+	"minstrels_finery": {"name": "Minstrel's Finery", "tags": ["Song", "Trick"], "pieces": {"Off Hand": "Finery Songbook", "Chest": "Finery Doublet", "Helmet": "Finery Cap"},
 		"types": {"Off Hand": "tome", "Chest": "tunic", "Helmet": "cap"}, "mat": "cloth", "trim": "#f472b6",
 		"bonus2": {"gold_find": 15}, "bonus3": {"tag": {"Song": 0.2, "Trick": 0.2}, "charm": 5},
 		"text": "2 pieces: +15% gold. 3 pieces: Song and Trick skills +20%, +5% charm."},
-	"Bulwark of Ages": {"tags": ["Holy", "Blade"], "pieces": {"Off Hand": "Ageless Bulwark", "Chest": "Ageless Plate", "Feet": "Ageless Sabatons"},
+	"bulwark_of_ages": {"name": "Bulwark of Ages", "tags": ["Holy", "Blade"], "pieces": {"Off Hand": "Ageless Bulwark", "Chest": "Ageless Plate", "Feet": "Ageless Sabatons"},
 		"types": {"Off Hand": "tower", "Chest": "plate", "Feet": "sabatons"}, "mat": "iron", "trim": "#94a3b8",
 		"bonus2": {"def": 1.1}, "bonus3": {"thorns": 15, "hp": 1.1},
 		"text": "2 pieces: +10% Defense. 3 pieces: reflect 15% of damage, +10% HP."},
 }
-const EVO_SET_ORDER := ["Crimson Covenant", "Dawnward Vestments", "Umbral Regalia", "Elemental Concord", "Wildheart Garb", "Bladesworn Steel", "Minstrel's Finery", "Bulwark of Ages"]
+const EVO_SET_ORDER := ["crimson_covenant", "dawnward_vestments", "umbral_regalia", "elemental_concord", "wildheart_garb", "bladesworn_steel", "minstrels_finery", "bulwark_of_ages"]
 const EVO_SET_BOSS_CHANCE := 25.0   # % a boss drops an evolution set piece
 const EVO_SET_ELITE_CHANCE := 4.0   # % an Epic-or-better monster does
 const EVO_SET_FIT := 0.7            # how often it's a set that fits your class's tags
 
-## Set info for any set (crafted or evolution).
-static func set_info(set_name: String) -> Dictionary:
-	if SETS.has(set_name):
-		return SETS[set_name]
-	return EVO_SETS.get(set_name, {})
+## Set info for any set id (crafted or evolution).
+static func set_info(set_id: String) -> Dictionary:
+	if SETS.has(set_id):
+		return SETS[set_id]
+	return EVO_SETS.get(set_id, {})
+
+## A set's name to show (the id itself if it's unknown).
+static func set_name_of(set_id: String) -> String:
+	return String(set_info(set_id).get("name", set_id))
+
+## The permanent id of one set piece: "grendels_kin_weapon", "titanborn_off_hand".
+static func piece_id(set_id: String, slot: String) -> String:
+	return set_id + "_" + slot.to_lower().replace(" ", "_")
 
 ## Makes an evolution set piece.
-static func make_evo_piece(set_name: String, slot: String, floor_num: int, id: int) -> Dictionary:
-	var info: Dictionary = EVO_SETS[set_name]
+static func make_evo_piece(set_id: String, slot: String, floor_num: int, id: int) -> Dictionary:
+	var info: Dictionary = EVO_SETS[set_id]
 	var piece: String = info["pieces"][slot]
 	return {
-		"id": id, "base_name": piece, "name": piece, "type": info["types"][slot], "slot": slot, "stat": SLOT_INFO[slot]["stat"],
+		"id": id, "def": piece_id(set_id, slot), "base_name": piece, "name": piece, "type": info["types"][slot], "slot": slot, "stat": SLOT_INFO[slot]["stat"],
 		"rarity": SET_RARITY, "bonus": maxi(1, int(base_bonus(slot, floor_num) * float(RARITY_MULTS[SET_RARITY]) * 1.05)),
-		"level": 0, "floor": floor_num, "effect": "", "effect_value": 0, "set": set_name,
-		"flavor": "Part of the %s. %s" % [set_name, info["text"]],
+		"level": 0, "floor": floor_num, "effect": "", "effect_value": 0, "set": set_id,
+		"flavor": "Part of the %s. %s" % [info["name"], info["text"]],
 	}
 
 # ---------- Living items (v0.11) ----------
@@ -438,105 +445,105 @@ const BOSS_COOLDOWN := {"mid": 15, "zone": 30}  # seconds before you can travel 
 const LOCAL_MONSTER_WEIGHT := 10.0  # the sub-area's own creature is a bit rarer than the zone's 5 (18 each)
 const BASE_MONSTER_WEIGHT := 18.0
 const ROOT_ZONES := [
-	{"name": "Mossy Hollows", "color": "#4d7c0f", "enemies": [
-		{"name": "Kobold", "shape": "humanoid", "color": "#b45309"},       # German folklore
-		{"name": "Redcap", "shape": "humanoid", "color": "#dc2626"},       # Scottish border folklore
-		{"name": "Boggart", "shape": "brute", "color": "#8a7f72"},         # English folklore
-		{"name": "Will-o'-Wisp", "shape": "spirit", "color": "#7dd3fc"},   # European folklore
-		{"name": "Barghest", "shape": "beast", "color": "#57534e"},        # Yorkshire black dog
-		{"name": "Hobyah", "shape": "humanoid", "color": "#a16207"},        # Scottish folk tale (0.13+)
-		{"name": "Jack-in-Irons", "shape": "brute", "color": "#6b7280"},   # Yorkshire chained giant
+	{"id": "mossy_hollows", "name": "Mossy Hollows", "color": "#4d7c0f", "enemies": [
+		{"id": "kobold", "name": "Kobold", "shape": "humanoid", "color": "#b45309"},       # German folklore
+		{"id": "redcap", "name": "Redcap", "shape": "humanoid", "color": "#dc2626"},       # Scottish border folklore
+		{"id": "boggart", "name": "Boggart", "shape": "brute", "color": "#8a7f72"},         # English folklore
+		{"id": "will_o_wisp", "name": "Will-o'-Wisp", "shape": "spirit", "color": "#7dd3fc"},   # European folklore
+		{"id": "barghest", "name": "Barghest", "shape": "beast", "color": "#57534e"},        # Yorkshire black dog
+		{"id": "hobyah", "name": "Hobyah", "shape": "humanoid", "color": "#a16207"},        # Scottish folk tale (0.13+)
+		{"id": "jack_in_irons", "name": "Jack-in-Irons", "shape": "brute", "color": "#6b7280"},   # Yorkshire chained giant
 	], "subs": [
-		{"name": "Fernlight Glade", "monster": {"name": "Spriggan", "shape": "brute", "color": "#6b8e3a"}},        # Cornish
-		{"name": "Toadstool Ring", "monster": {"name": "Pooka", "shape": "beast", "color": "#2b2b3a"}},            # Irish
-		{"name": "Bramble Warren", "monster": {"name": "Wolpertinger", "shape": "beast", "color": "#b08a5a"}},     # Bavarian
-		{"name": "Hollow Oak", "monster": {"name": "Leshy", "shape": "humanoid", "color": "#4a6b3a"}},            # Slavic
-		{"name": "Wychwood Heart", "monster": {"name": "Woodwose", "shape": "brute", "color": "#7a5a3a"}},         # English
-	], "mid": {"name": "Black Annis", "art": "boss_black_annis", "shape": "humanoid", "color": "#4a6fa5", "uniques": [  # English
-		{"name": "Annis's Skinning Claw", "flavor": "Her iron nail, as long as a knife.", "slot": "Weapon", "effect": "lifesteal", "value": 12},
-	]}, "boss": {"name": "Grendel", "art": "boss_grendel", "shape": "brute", "color": "#65a30d", "uniques": [  # Beowulf
-		{"name": "Hrunting", "flavor": "Beowulf's borrowed blade. It failed him once. It won't fail you.", "slot": "Weapon", "effect": "lifesteal", "value": 10},
-		{"name": "Grendel's Hide", "flavor": "Grendel's skin. No blade could cut it, and now none can cut you.", "slot": "Chest", "effect": "thorns", "value": 20},
+		{"id": "fernlight_glade", "name": "Fernlight Glade", "monster": {"id": "spriggan", "name": "Spriggan", "shape": "brute", "color": "#6b8e3a"}},        # Cornish
+		{"id": "toadstool_ring", "name": "Toadstool Ring", "monster": {"id": "pooka", "name": "Pooka", "shape": "beast", "color": "#2b2b3a"}},            # Irish
+		{"id": "bramble_warren", "name": "Bramble Warren", "monster": {"id": "wolpertinger", "name": "Wolpertinger", "shape": "beast", "color": "#b08a5a"}},     # Bavarian
+		{"id": "hollow_oak", "name": "Hollow Oak", "monster": {"id": "leshy", "name": "Leshy", "shape": "humanoid", "color": "#4a6b3a"}},            # Slavic
+		{"id": "wychwood_heart", "name": "Wychwood Heart", "monster": {"id": "woodwose", "name": "Woodwose", "shape": "brute", "color": "#7a5a3a"}},         # English
+	], "mid": {"id": "black_annis", "name": "Black Annis", "art": "boss_black_annis", "shape": "humanoid", "color": "#4a6fa5", "uniques": [  # English
+		{"id": "anniss_skinning_claw", "name": "Annis's Skinning Claw", "flavor": "Her iron nail, as long as a knife.", "slot": "Weapon", "effect": "lifesteal", "value": 12},
+	]}, "boss": {"id": "grendel", "name": "Grendel", "art": "boss_grendel", "shape": "brute", "color": "#65a30d", "uniques": [  # Beowulf
+		{"id": "hrunting", "name": "Hrunting", "flavor": "Beowulf's borrowed blade. It failed him once. It won't fail you.", "slot": "Weapon", "effect": "lifesteal", "value": 10},
+		{"id": "grendels_hide", "name": "Grendel's Hide", "flavor": "Grendel's skin. No blade could cut it, and now none can cut you.", "slot": "Chest", "effect": "thorns", "value": 20},
 	]}},
-	{"name": "Sunken Catacombs", "color": "#475569", "enemies": [
-		{"name": "Ghoul", "shape": "humanoid", "color": "#a3a3a3"},        # Arabian folklore
-		{"name": "Draugr", "shape": "brute", "color": "#64748b"},          # Norse undead
-		{"name": "Barrow-Wight", "shape": "spirit", "color": "#cbd5e1"},   # Norse / English
-		{"name": "Banshee", "shape": "spirit", "color": "#e9d5ff"},        # Irish folklore
-		{"name": "Strigoi", "shape": "humanoid", "color": "#9f1239"},      # Romanian folklore
-		{"name": "Ankou", "shape": "spirit", "color": "#e5e7eb"},          # Breton reaper
-		{"name": "Bog Body", "shape": "humanoid", "color": "#78716c"},     # Northern European bog dead
+	{"id": "sunken_catacombs", "name": "Sunken Catacombs", "color": "#475569", "enemies": [
+		{"id": "ghoul", "name": "Ghoul", "shape": "humanoid", "color": "#a3a3a3"},        # Arabian folklore
+		{"id": "draugr", "name": "Draugr", "shape": "brute", "color": "#64748b"},          # Norse undead
+		{"id": "barrow_wight", "name": "Barrow-Wight", "shape": "spirit", "color": "#cbd5e1"},   # Norse / English
+		{"id": "banshee", "name": "Banshee", "shape": "spirit", "color": "#e9d5ff"},        # Irish folklore
+		{"id": "strigoi", "name": "Strigoi", "shape": "humanoid", "color": "#9f1239"},      # Romanian folklore
+		{"id": "ankou", "name": "Ankou", "shape": "spirit", "color": "#e5e7eb"},          # Breton reaper
+		{"id": "bog_body", "name": "Bog Body", "shape": "humanoid", "color": "#78716c"},     # Northern European bog dead
 	], "subs": [
-		{"name": "Bone Stair", "monster": {"name": "Revenant", "shape": "humanoid", "color": "#8a8f7a"}},          # European
-		{"name": "The Ossuary", "monster": {"name": "Gashadokuro", "shape": "brute", "color": "#e8e4d8"}},        # Japanese
-		{"name": "Crypt of Candles", "monster": {"name": "Vetala", "shape": "spirit", "color": "#9a7fb0"}},       # Hindu
-		{"name": "Weeping Halls", "monster": {"name": "Moroi", "shape": "spirit", "color": "#c0cbdc"}},          # Romanian
-		{"name": "Hel's Gate", "monster": {"name": "Garmr", "shape": "beast", "color": "#6a2a2a"}},              # Norse
-	], "mid": {"name": "The Dullahan", "art": "boss_dullahan", "shape": "humanoid", "color": "#2a2a3a", "uniques": [  # Irish
-		{"name": "The Hollow Helm", "flavor": "There was never a head inside it. There never needed to be.", "slot": "Helmet", "effect": "dodge", "value": 10},
-	]}, "boss": {"name": "Hel, Queen of the Dead", "art": "boss_hel", "shape": "spirit", "color": "#94a3b8", "uniques": [  # Norse
-		{"name": "Helskor", "flavor": "Hel's own shoes. Death walks lightly.", "slot": "Feet", "effect": "dodge", "value": 10},
-		{"name": "Mask of Half-Death", "flavor": "Half of Hel's face was living, half was dead. So is this mask.", "slot": "Helmet", "effect": "regen", "value": 3},
+		{"id": "bone_stair", "name": "Bone Stair", "monster": {"id": "revenant", "name": "Revenant", "shape": "humanoid", "color": "#8a8f7a"}},          # European
+		{"id": "the_ossuary", "name": "The Ossuary", "monster": {"id": "gashadokuro", "name": "Gashadokuro", "shape": "brute", "color": "#e8e4d8"}},        # Japanese
+		{"id": "crypt_of_candles", "name": "Crypt of Candles", "monster": {"id": "vetala", "name": "Vetala", "shape": "spirit", "color": "#9a7fb0"}},       # Hindu
+		{"id": "weeping_halls", "name": "Weeping Halls", "monster": {"id": "moroi", "name": "Moroi", "shape": "spirit", "color": "#c0cbdc"}},          # Romanian
+		{"id": "hels_gate", "name": "Hel's Gate", "monster": {"id": "garmr", "name": "Garmr", "shape": "beast", "color": "#6a2a2a"}},              # Norse
+	], "mid": {"id": "dullahan", "name": "The Dullahan", "art": "boss_dullahan", "shape": "humanoid", "color": "#2a2a3a", "uniques": [  # Irish
+		{"id": "the_hollow_helm", "name": "The Hollow Helm", "flavor": "There was never a head inside it. There never needed to be.", "slot": "Helmet", "effect": "dodge", "value": 10},
+	]}, "boss": {"id": "hel", "name": "Hel, Queen of the Dead", "art": "boss_hel", "shape": "spirit", "color": "#94a3b8", "uniques": [  # Norse
+		{"id": "helskor", "name": "Helskor", "flavor": "Hel's own shoes. Death walks lightly.", "slot": "Feet", "effect": "dodge", "value": 10},
+		{"id": "mask_of_half_death", "name": "Mask of Half-Death", "flavor": "Half of Hel's face was living, half was dead. So is this mask.", "slot": "Helmet", "effect": "regen", "value": 3},
 	]}},
-	{"name": "Flooded Depths", "color": "#0e7490", "enemies": [
-		{"name": "Kappa", "shape": "humanoid", "color": "#16a34a"},        # Japanese folklore
-		{"name": "Kelpie", "shape": "beast", "color": "#0891b2"},          # Scottish water horse
-		{"name": "Nuckelavee", "shape": "brute", "color": "#be123c"},      # Orkney folklore
-		{"name": "Bunyip", "shape": "beast", "color": "#a16207"},          # Aboriginal Australian
-		{"name": "Umibozu", "shape": "spirit", "color": "#4c6ef5"},        # Japanese sea spirit
-		{"name": "Ningyo", "shape": "serpent", "color": "#5eead4"},        # Japanese fish-woman
-		{"name": "Afanc", "shape": "beast", "color": "#365314"},          # Welsh lake monster
+	{"id": "flooded_depths", "name": "Flooded Depths", "color": "#0e7490", "enemies": [
+		{"id": "kappa", "name": "Kappa", "shape": "humanoid", "color": "#16a34a"},        # Japanese folklore
+		{"id": "kelpie", "name": "Kelpie", "shape": "beast", "color": "#0891b2"},          # Scottish water horse
+		{"id": "nuckelavee", "name": "Nuckelavee", "shape": "brute", "color": "#be123c"},      # Orkney folklore
+		{"id": "bunyip", "name": "Bunyip", "shape": "beast", "color": "#a16207"},          # Aboriginal Australian
+		{"id": "umibozu", "name": "Umibozu", "shape": "spirit", "color": "#4c6ef5"},        # Japanese sea spirit
+		{"id": "ningyo", "name": "Ningyo", "shape": "serpent", "color": "#5eead4"},        # Japanese fish-woman
+		{"id": "afanc", "name": "Afanc", "shape": "beast", "color": "#365314"},          # Welsh lake monster
 	], "subs": [
-		{"name": "Tidepools", "monster": {"name": "Selkie", "shape": "beast", "color": "#7a8a9a"}},                # Scottish / Irish
-		{"name": "Drowned Village", "monster": {"name": "Vodyanoy", "shape": "humanoid", "color": "#5a7a4a"}},    # Slavic
-		{"name": "Coral Maze", "monster": {"name": "Merrow", "shape": "humanoid", "color": "#3fa29a"}},           # Irish
-		{"name": "Kelp Abyss", "monster": {"name": "Grindylow", "shape": "spirit", "color": "#4a7a5a"}},          # English
-		{"name": "Whirlpool's Edge", "monster": {"name": "Ahuizotl", "shape": "beast", "color": "#2a4a6a"}},      # Aztec
-	], "mid": {"name": "Scylla", "art": "boss_scylla", "shape": "serpent", "color": "#4a8a8a", "uniques": [  # Greek
-		{"name": "Sailor's Bane", "flavor": "Six heads, six bites, one spear.", "slot": "Weapon", "effect": "double_strike", "value": 18},
-	]}, "boss": {"name": "Charybdis", "art": "boss_charybdis", "shape": "serpent", "color": "#06b6d4", "uniques": [  # Greek
-		{"name": "Scylla's Fang", "flavor": "Pulled from the six-headed monster across the strait.", "slot": "Weapon", "effect": "crit", "value": 20},
-		{"name": "Drowned Captain's Boots", "flavor": "Every captain Charybdis swallowed left treasure behind. He left his boots.", "slot": "Feet", "effect": "gold_find", "value": 25},
+		{"id": "tidepools", "name": "Tidepools", "monster": {"id": "selkie", "name": "Selkie", "shape": "beast", "color": "#7a8a9a"}},                # Scottish / Irish
+		{"id": "drowned_village", "name": "Drowned Village", "monster": {"id": "vodyanoy", "name": "Vodyanoy", "shape": "humanoid", "color": "#5a7a4a"}},    # Slavic
+		{"id": "coral_maze", "name": "Coral Maze", "monster": {"id": "merrow", "name": "Merrow", "shape": "humanoid", "color": "#3fa29a"}},           # Irish
+		{"id": "kelp_abyss", "name": "Kelp Abyss", "monster": {"id": "grindylow", "name": "Grindylow", "shape": "spirit", "color": "#4a7a5a"}},          # English
+		{"id": "whirlpools_edge", "name": "Whirlpool's Edge", "monster": {"id": "ahuizotl", "name": "Ahuizotl", "shape": "beast", "color": "#2a4a6a"}},      # Aztec
+	], "mid": {"id": "scylla", "name": "Scylla", "art": "boss_scylla", "shape": "serpent", "color": "#4a8a8a", "uniques": [  # Greek
+		{"id": "sailors_bane", "name": "Sailor's Bane", "flavor": "Six heads, six bites, one spear.", "slot": "Weapon", "effect": "double_strike", "value": 18},
+	]}, "boss": {"id": "charybdis", "name": "Charybdis", "art": "boss_charybdis", "shape": "serpent", "color": "#06b6d4", "uniques": [  # Greek
+		{"id": "scyllas_fang", "name": "Scylla's Fang", "flavor": "Pulled from the six-headed monster across the strait.", "slot": "Weapon", "effect": "crit", "value": 20},
+		{"id": "drowned_captains_boots", "name": "Drowned Captain's Boots", "flavor": "Every captain Charybdis swallowed left treasure behind. He left his boots.", "slot": "Feet", "effect": "gold_find", "value": 25},
 	]}},
-	{"name": "Ember Halls", "color": "#c2410c", "enemies": [
-		{"name": "Salamander", "shape": "serpent", "color": "#ea580c"},    # alchemy / European
-		{"name": "Ifrit", "shape": "spirit", "color": "#f97316"},          # Arabian djinn
-		{"name": "Hellhound", "shape": "beast", "color": "#b91c1c"},       # many mythologies
-		{"name": "Chimera", "shape": "beast", "color": "#ca8a04"},         # Greek
-		{"name": "Manticore", "shape": "beast", "color": "#d9480f"},       # Persian
-		{"name": "Gullinbursti", "shape": "beast", "color": "#f59e0b"},   # Norse golden boar
-		{"name": "Div", "shape": "spirit", "color": "#9ca3af"},           # Persian demon of smoke
+	{"id": "ember_halls", "name": "Ember Halls", "color": "#c2410c", "enemies": [
+		{"id": "salamander", "name": "Salamander", "shape": "serpent", "color": "#ea580c"},    # alchemy / European
+		{"id": "ifrit", "name": "Ifrit", "shape": "spirit", "color": "#f97316"},          # Arabian djinn
+		{"id": "hellhound", "name": "Hellhound", "shape": "beast", "color": "#b91c1c"},       # many mythologies
+		{"id": "chimera", "name": "Chimera", "shape": "beast", "color": "#ca8a04"},         # Greek
+		{"id": "manticore", "name": "Manticore", "shape": "beast", "color": "#d9480f"},       # Persian
+		{"id": "gullinbursti", "name": "Gullinbursti", "shape": "beast", "color": "#f59e0b"},   # Norse golden boar
+		{"id": "div", "name": "Div", "shape": "spirit", "color": "#9ca3af"},           # Persian demon of smoke
 	], "subs": [
-		{"name": "Cinder Steps", "monster": {"name": "Cherufe", "shape": "brute", "color": "#6a3a2a"}},           # Mapuche (Chile)
-		{"name": "Forge of Ash", "monster": {"name": "Cyclops", "shape": "brute", "color": "#8a7a6a"}},           # Greek
-		{"name": "Magma Galleries", "monster": {"name": "Firebird", "shape": "beast", "color": "#feae34"}},       # Slavic
-		{"name": "Brimstone Vault", "monster": {"name": "Tatzelwurm", "shape": "serpent", "color": "#a87a4a"}},   # Alpine
-		{"name": "Muspel Gate", "monster": {"name": "Basilisk", "shape": "serpent", "color": "#5a8a3a"}},         # European
-	], "mid": {"name": "Fafnir", "art": "boss_fafnir", "shape": "serpent", "color": "#3e7a4a", "uniques": [  # Norse
-		{"name": "Dragonblood Plate", "flavor": "Bathe in a dragon's blood and no blade can touch you. Almost.", "slot": "Chest", "effect": "regen", "value": 2},
-	]}, "boss": {"name": "Surtr the Fire Giant", "art": "boss_surtr", "shape": "brute", "color": "#ef4444", "uniques": [  # Norse
-		{"name": "Flame of Muspelheim", "flavor": "Surtr's sword, meant to set the world on fire at the end of days.", "slot": "Weapon", "effect": "double_strike", "value": 25},
-		{"name": "Emberforged Greaves", "flavor": "Hammered on the anvil of the fire giants.", "slot": "Legs", "effect": "regen", "value": 2},
+		{"id": "cinder_steps", "name": "Cinder Steps", "monster": {"id": "cherufe", "name": "Cherufe", "shape": "brute", "color": "#6a3a2a"}},           # Mapuche (Chile)
+		{"id": "forge_of_ash", "name": "Forge of Ash", "monster": {"id": "cyclops", "name": "Cyclops", "shape": "brute", "color": "#8a7a6a"}},           # Greek
+		{"id": "magma_galleries", "name": "Magma Galleries", "monster": {"id": "firebird", "name": "Firebird", "shape": "beast", "color": "#feae34"}},       # Slavic
+		{"id": "brimstone_vault", "name": "Brimstone Vault", "monster": {"id": "tatzelwurm", "name": "Tatzelwurm", "shape": "serpent", "color": "#a87a4a"}},   # Alpine
+		{"id": "muspel_gate", "name": "Muspel Gate", "monster": {"id": "basilisk", "name": "Basilisk", "shape": "serpent", "color": "#5a8a3a"}},         # European
+	], "mid": {"id": "fafnir", "name": "Fafnir", "art": "boss_fafnir", "shape": "serpent", "color": "#3e7a4a", "uniques": [  # Norse
+		{"id": "dragonblood_plate", "name": "Dragonblood Plate", "flavor": "Bathe in a dragon's blood and no blade can touch you. Almost.", "slot": "Chest", "effect": "regen", "value": 2},
+	]}, "boss": {"id": "surtr", "name": "Surtr the Fire Giant", "art": "boss_surtr", "shape": "brute", "color": "#ef4444", "uniques": [  # Norse
+		{"id": "flame_of_muspelheim", "name": "Flame of Muspelheim", "flavor": "Surtr's sword, meant to set the world on fire at the end of days.", "slot": "Weapon", "effect": "double_strike", "value": 25},
+		{"id": "emberforged_greaves", "name": "Emberforged Greaves", "flavor": "Hammered on the anvil of the fire giants.", "slot": "Legs", "effect": "regen", "value": 2},
 	]}},
-	{"name": "The Shadow Deep", "color": "#6d28d9", "enemies": [
-		{"name": "Wendigo", "shape": "brute", "color": "#d6d3d1"},         # Algonquian folklore
-		{"name": "Jorogumo", "shape": "humanoid", "color": "#8b5cf6"},     # Japanese spider-woman
-		{"name": "Rakshasa", "shape": "humanoid", "color": "#f59e0b"},     # Hindu mythology
-		{"name": "Lamia", "shape": "serpent", "color": "#65a30d"},         # Greek
-		{"name": "Gorgon", "shape": "serpent", "color": "#4d7c0f"},        # Greek
-		{"name": "Mare", "shape": "spirit", "color": "#4c1d95"},          # Germanic nightmare-rider
-		{"name": "Baku", "shape": "beast", "color": "#334155"},           # Japanese dream-eater
+	{"id": "the_shadow_deep", "name": "The Shadow Deep", "color": "#6d28d9", "enemies": [
+		{"id": "wendigo", "name": "Wendigo", "shape": "brute", "color": "#d6d3d1"},         # Algonquian folklore
+		{"id": "jorogumo", "name": "Jorogumo", "shape": "humanoid", "color": "#8b5cf6"},     # Japanese spider-woman
+		{"id": "rakshasa", "name": "Rakshasa", "shape": "humanoid", "color": "#f59e0b"},     # Hindu mythology
+		{"id": "lamia", "name": "Lamia", "shape": "serpent", "color": "#65a30d"},         # Greek
+		{"id": "gorgon", "name": "Gorgon", "shape": "serpent", "color": "#4d7c0f"},        # Greek
+		{"id": "mare", "name": "Mare", "shape": "spirit", "color": "#4c1d95"},          # Germanic nightmare-rider
+		{"id": "baku", "name": "Baku", "shape": "beast", "color": "#334155"},           # Japanese dream-eater
 	], "subs": [
-		{"name": "Gloamwood Edge", "monster": {"name": "Kitsune", "shape": "beast", "color": "#e07a3a"}},         # Japanese
-		{"name": "Weeping Stars", "monster": {"name": "Tikbalang", "shape": "humanoid", "color": "#5a3a2a"}},     # Filipino
-		{"name": "Mirror Hollow", "monster": {"name": "Doppelganger", "shape": "humanoid", "color": "#3a3a5a"}},  # German
-		{"name": "Void Spire", "monster": {"name": "Krampus", "shape": "brute", "color": "#3a2a2a"}},             # Alpine
-		{"name": "Abyssal Throne", "monster": {"name": "Bakunawa", "shape": "serpent", "color": "#3a5a8a"}},      # Filipino
-	], "mid": {"name": "Echidna", "art": "boss_echidna", "shape": "serpent", "color": "#8a5a9a", "uniques": [  # Greek
-		{"name": "Book of Every Monster", "flavor": "Echidna's list of her children. You've met most of them.", "slot": "Off Hand", "effect": "gold_find", "value": 25},
-	]}, "boss": {"name": "Typhon, Father of Monsters", "art": "boss_typhon", "shape": "serpent", "color": "#7c3aed", "uniques": [  # Greek
-		{"name": "Aegis Fragment", "flavor": "A shard of Zeus's shield, with Medusa's gaze still in it.", "slot": "Off Hand", "effect": "dodge", "value": 12},
-		{"name": "Crown of a Hundred Heads", "flavor": "Typhon had a hundred dragon heads. This crown remembers all of them.", "slot": "Helmet", "effect": "thorns", "value": 30},
+		{"id": "gloamwood_edge", "name": "Gloamwood Edge", "monster": {"id": "kitsune", "name": "Kitsune", "shape": "beast", "color": "#e07a3a"}},         # Japanese
+		{"id": "weeping_stars", "name": "Weeping Stars", "monster": {"id": "tikbalang", "name": "Tikbalang", "shape": "humanoid", "color": "#5a3a2a"}},     # Filipino
+		{"id": "mirror_hollow", "name": "Mirror Hollow", "monster": {"id": "doppelganger", "name": "Doppelganger", "shape": "humanoid", "color": "#3a3a5a"}},  # German
+		{"id": "void_spire", "name": "Void Spire", "monster": {"id": "krampus", "name": "Krampus", "shape": "brute", "color": "#3a2a2a"}},             # Alpine
+		{"id": "abyssal_throne", "name": "Abyssal Throne", "monster": {"id": "bakunawa", "name": "Bakunawa", "shape": "serpent", "color": "#3a5a8a"}},      # Filipino
+	], "mid": {"id": "echidna", "name": "Echidna", "art": "boss_echidna", "shape": "serpent", "color": "#8a5a9a", "uniques": [  # Greek
+		{"id": "book_of_every_monster", "name": "Book of Every Monster", "flavor": "Echidna's list of her children. You've met most of them.", "slot": "Off Hand", "effect": "gold_find", "value": 25},
+	]}, "boss": {"id": "typhon", "name": "Typhon, Father of Monsters", "art": "boss_typhon", "shape": "serpent", "color": "#7c3aed", "uniques": [  # Greek
+		{"id": "aegis_fragment", "name": "Aegis Fragment", "flavor": "A shard of Zeus's shield, with Medusa's gaze still in it.", "slot": "Off Hand", "effect": "dodge", "value": 12},
+		{"id": "crown_of_a_hundred_heads", "name": "Crown of a Hundred Heads", "flavor": "Typhon had a hundred dragon heads. This crown remembers all of them.", "slot": "Helmet", "effect": "thorns", "value": 30},
 	]}},
 ]
 ## Floors 1-250 are the roots (above), 251-500 the race realms (realms.gd).
@@ -637,10 +644,6 @@ static func item_type(item: Dictionary) -> String:
 	var base: String = item.get("base_name", "")
 	if ItemPool.OLD_NAMES.has(base):
 		return ItemPool.OLD_NAMES[base]
-	if ItemPool.SPECIAL_TYPES.has(base):
-		return ItemPool.SPECIAL_TYPES[base]
-	if SET_TYPES.has(base):
-		return SET_TYPES[base]
 	return ItemPool.TYPES[item["slot"]][0]
 
 ## Gives a Legendary a random special effect and a title like "of Fury".
@@ -656,10 +659,11 @@ static func make_unique(def: Dictionary, floor_num: int, id: int) -> Dictionary:
 	var info: Dictionary = SLOT_INFO[slot]
 	return {
 		"id": id,
+		"def": def["id"],
 		"base_name": def["name"],
 		"name": def["name"],
-		"type": ItemPool.SPECIAL_TYPES.get(def["name"], ItemPool.TYPES[slot][0]),
-		"art": "u_" + str(def["name"]).to_lower().replace("'", "").replace(" ", "_"),
+		"type": ItemPool.SPECIAL_TYPES.get(def["id"], ItemPool.TYPES[slot][0]),
+		"art": "u_" + str(def["id"]),
 		"flavor": def.get("flavor", ""),
 		"slot": slot,
 		"stat": info["stat"],
@@ -671,6 +675,10 @@ static func make_unique(def: Dictionary, floor_num: int, id: int) -> Dictionary:
 		"effect_value": def["value"],
 	}
 
+## The permanent id of a monster's Signature item: "sig_" + the monster's id.
+static func sig_id(monster: String) -> String:
+	return "sig_" + monster
+
 ## A monster's Signature item (1 in 1,000 kills). Stronger than a unique.
 static func make_signature(monster: String, floor_num: int, id: int) -> Dictionary:
 	var def: Dictionary = Monsters.signature_def(monster)
@@ -678,10 +686,11 @@ static func make_signature(monster: String, floor_num: int, id: int) -> Dictiona
 	var info: Dictionary = SLOT_INFO[slot]
 	return {
 		"id": id,
+		"def": sig_id(monster),
 		"base_name": def["name"],
 		"name": def["name"],
 		"type": def["type"],
-		"art": "s_" + art_key(def["name"]),
+		"art": "s_" + monster,
 		"sig_of": monster,
 		"flavor": def.get("flavor", ""),
 		"slot": slot,
@@ -863,19 +872,19 @@ static func pick_monster(floor_num: int) -> Dictionary:
 			return e[0]
 	return list[0][0]
 
-## Which zone and sub-area a monster lives in: {"zone": i, "sub": i or -1}
+## Which zone and sub-area a monster (id) lives in: {"zone": i, "sub": i or -1}
 static func monster_home(monster: String) -> Dictionary:
 	for zi in ZONES.size():
 		var z: Dictionary = ZONES[zi]
 		for e in z["enemies"]:
-			if e["name"] == monster:
+			if e["id"] == monster:
 				return {"zone": zi, "sub": -1}
 		for si in z["subs"].size():
-			if z["subs"][si]["monster"]["name"] == monster:
+			if z["subs"][si]["monster"]["id"] == monster:
 				return {"zone": zi, "sub": si}
-		if z["mid"]["name"] == monster:
+		if z["mid"]["id"] == monster:
 			return {"zone": zi, "sub": 2, "boss": "mid"}
-		if z["boss"]["name"] == monster:
+		if z["boss"]["id"] == monster:
 			return {"zone": zi, "sub": 4, "boss": "zone"}
 	return {}
 
@@ -929,14 +938,15 @@ static func xp_to_next(level: int) -> int:
 static func xp_for_kill(floor_num: int, boss: bool) -> int:
 	return (4 + floor_num * 2) * (8 if boss else 1)
 
-static func make_set_item(set_name: String, slot: String, floor_num: int, id: int) -> Dictionary:
+static func make_set_item(set_id: String, slot: String, floor_num: int, id: int) -> Dictionary:
 	var info: Dictionary = SLOT_INFO[slot]
-	var piece: String = SETS[set_name]["pieces"][slot]
+	var piece: String = SETS[set_id]["pieces"][slot]
 	return {
 		"id": id,
+		"def": piece_id(set_id, slot),
 		"base_name": piece,
 		"name": piece,
-		"type": SET_TYPES.get(piece, ItemPool.TYPES[slot][0]),
+		"type": SETS[set_id]["types"].get(slot, ItemPool.TYPES[slot][0]),
 		"slot": slot,
 		"stat": info["stat"],
 		"rarity": SET_RARITY,
@@ -945,7 +955,7 @@ static func make_set_item(set_name: String, slot: String, floor_num: int, id: in
 		"floor": floor_num,
 		"effect": "",
 		"effect_value": 0,
-		"set": set_name,
+		"set": set_id,
 	}
 
 ## Materials needed to craft the next bag size.

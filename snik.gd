@@ -68,14 +68,14 @@ static func thanks(g: GameState) -> String:
 # 0.13+ (Juzo's notes): Snik is rarer now, and only he sells these curios
 # =====================================================================
 
-## Snik's exclusive unique items: one of these in every stock.
+## Snik's exclusive unique items: one of these in every stock. ids are permanent.
 const CURIOS := [
-	{"name": "Snik's Lucky Spoon", "slot": "Weapon", "effect": "gold_find", "value": 40, "flavor": "He swears it was a sword once. It still finds gold."},
-	{"name": "Pocket Full of Teeth", "slot": "Off Hand", "effect": "crit", "value": 22, "flavor": "Nobody asks whose. Snik doesn't say."},
-	{"name": "The Haggler's Hat", "slot": "Helmet", "effect": "gold_find", "value": 35, "flavor": "Wear it and prices look worried."},
-	{"name": "Coat of Many Pockets", "slot": "Chest", "effect": "dodge", "value": 14, "flavor": "Some pockets are bigger on the inside. One of them bites."},
-	{"name": "Second-Hand Greaves", "slot": "Legs", "effect": "thorns", "value": 28, "flavor": "The first owner left the spikes in."},
-	{"name": "Boots of Quick Exits", "slot": "Feet", "effect": "dodge", "value": 15, "flavor": "Snik's own design. Mostly used for leaving."},
+	{"id": "sniks_lucky_spoon", "name": "Snik's Lucky Spoon", "slot": "Weapon", "effect": "gold_find", "value": 40, "flavor": "He swears it was a sword once. It still finds gold."},
+	{"id": "pocket_full_of_teeth", "name": "Pocket Full of Teeth", "slot": "Off Hand", "effect": "crit", "value": 22, "flavor": "Nobody asks whose. Snik doesn't say."},
+	{"id": "the_hagglers_hat", "name": "The Haggler's Hat", "slot": "Helmet", "effect": "gold_find", "value": 35, "flavor": "Wear it and prices look worried."},
+	{"id": "coat_of_many_pockets", "name": "Coat of Many Pockets", "slot": "Chest", "effect": "dodge", "value": 14, "flavor": "Some pockets are bigger on the inside. One of them bites."},
+	{"id": "second_hand_greaves", "name": "Second-Hand Greaves", "slot": "Legs", "effect": "thorns", "value": 28, "flavor": "The first owner left the spikes in."},
+	{"id": "boots_of_quick_exits", "name": "Boots of Quick Exits", "slot": "Feet", "effect": "dodge", "value": 15, "flavor": "Snik's own design. Mostly used for leaving."},
 ]
 
 ## A curio made for your depth (never below your average Gear Score).

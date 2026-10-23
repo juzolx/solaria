@@ -25,6 +25,7 @@ const POWER_POINT := 0.06  # a stat point put into racial power is worth this mu
 # bonus: per point of power (atk/hp/def/skill are +x per point, the rest add).
 # tag_power: extra power for skills with that tag.
 # ranks: awakening. key = {"item": name, "from": {...}} or {"trial": {...}} or {}.
+# "from": {"boss": <monster id>} / {"realm", "kind"} / {"goblin"}. Form "biters" are monster ids.
 const ORDER := ["Human", "Elf", "Fairy", "Angel", "Demon", "Dwarf", "Beastkin", "Dragonkin", "Undead", "Orc", "Goblin", "Golem"]
 const INFO := {
 	"Human": {"text": "Balanced and quick to learn. +2 CHA, +2 LUK, +10% XP.", "stats": {"CHA": 2, "LUK": 2}, "passive": {}, "xp": 1.1,
@@ -120,7 +121,7 @@ const INFO := {
 			{"name": "Drakeblood", "level": 25, "power": 20, "key": {}, "bonus": {"hp": 1.06}, "text": "+6% HP."},
 			{"name": "Wyrmkin", "level": 60, "power": 80, "key": {"trial": {"name": "Fafnir's Shade", "art": "boss_fafnir", "lore": "The dragon's ghost wants its blood back."}},
 				"bonus": {"atk": 1.06, "hp": 1.06}, "text": "Dragon wings. +6% Attack and HP.", "look": "dragon_wings"},
-			{"name": "Elder Wyrmkin", "level": 100, "power": 180, "key": {"item": "Dragon Heart", "from": {"boss": "Fafnir", "chance": 25}},
+			{"name": "Elder Wyrmkin", "level": 100, "power": 180, "key": {"item": "Dragon Heart", "from": {"boss": "fafnir", "chance": 25}},
 				"bonus": {"def": 1.1, "regen": 1}, "text": "+10% Defense, +1% regen.", "look": "dragon_wings"},
 			{"name": "Dragon Lord", "level": 150, "power": 400, "key": {"trial": {"name": "The Elder Wyrm", "art": "boss_charybdis", "lore": "The last true dragon. It remembers your ancestors."}},
 				"bonus": {"atk": 1.12, "hp": 1.12}, "text": "+12% Attack and HP.", "look": "dragon_wings"},
@@ -133,7 +134,7 @@ const INFO := {
 			{"name": "Revenant", "level": 30, "power": 25, "key": {}, "bonus": {"lifesteal": 3}, "text": "+3% lifesteal.", "look": "glow"},
 			{"name": "Wight Lord", "level": 75, "power": 100, "key": {"trial": {"name": "The Barrow King", "art": "boss_dullahan", "lore": "He has ruled the dead for a thousand years. He would like a successor."}},
 				"bonus": {"hp": 1.1, "lifesteal": 3}, "text": "+10% HP, +3% lifesteal.", "look": "glow"},
-			{"name": "Undying King", "level": 125, "power": 280, "key": {"item": "Hel's Crown", "from": {"boss": "Hel, Queen of the Dead", "chance": 20}},
+			{"name": "Undying King", "level": 125, "power": 280, "key": {"item": "Hel's Crown", "from": {"boss": "hel", "chance": 20}},
 				"bonus": {"hp": 1.12, "atk": 1.08, "regen": 1}, "text": "+12% HP, +8% Attack, +1% regen.", "look": "crown"},
 		]},
 	"Orc": {"text": "Brutal strength. +8 STR, +2 VIT, up to +15% damage when hurt, but -5% skill damage.", "stats": {"STR": 8, "VIT": 2}, "passive": {"rage": 15, "skill": 0.95},
@@ -165,7 +166,7 @@ const INFO := {
 			"bonus": {"def": 0.00075, "thorns": 0.02}, "how": "Grows every time you're hit, and from beating bosses."},
 		"ranks": [
 			{"name": "Awakened Golem", "level": 30, "power": 25, "key": {}, "bonus": {"def": 1.06, "atk": 1.04}, "text": "+6% Defense, +4% Attack.", "look": "glow"},
-			{"name": "Colossus", "level": 75, "power": 100, "key": {"item": "Living Core", "from": {"boss": "Surtr the Fire Giant", "chance": 25}},
+			{"name": "Colossus", "level": 75, "power": 100, "key": {"item": "Living Core", "from": {"boss": "surtr", "chance": 25}},
 				"bonus": {"def": 1.1, "hp": 1.1}, "text": "+10% Defense and HP.", "look": "glow"},
 			{"name": "Titan", "level": 125, "power": 260, "key": {"trial": {"name": "The First Titan", "art": "boss_surtr", "lore": "It made the first golems. It wants to see what they became."}},
 				"bonus": {"def": 1.12, "atk": 1.1, "thorns": 10}, "text": "+12% Defense, +10% Attack, reflect 10% more.", "look": "crown"},
@@ -179,13 +180,13 @@ const FORMS := {
 	"Vampire": {"from": ["Human"], "color": "#b8263a", "curable": true,
 		"text": "Bitten. You drink the life of what you kill. +8% lifesteal, +6% Attack, +5 STR, +3 AGI, but no more natural healing.",
 		"stats": {"STR": 5, "AGI": 3}, "passive": {"lifesteal": 8, "atk": 1.06}, "no_regen": true,
-		"biters": ["Strigoi", "Moroi", "Vetala"], "bite_chance": 0.05,
+		"biters": ["strigoi", "moroi", "vetala"], "bite_chance": 0.05,
 		"cure": {"kills": 100, "text": "Hunt %d of the bloodline (Strigoi, Moroi, Vetala), then face the Elder Vampire.",
 			"trial": {"name": "The Elder Vampire", "art": "boss_hel", "lore": "The one whose blood runs in you. Kill it and the thirst dies too."}}},
 	"Werewolf": {"from": ["Human", "Beastkin"], "color": "#8b9bb4", "curable": true,
 		"text": "Cursed by the moon. +6% crit, +6% double strike, +8% Attack, but -6% Defense. Even stronger on full-moon floors.",
 		"stats": {"STR": 3, "DEX": 4}, "passive": {"crit": 6, "double_strike": 6, "atk": 1.08, "def": 0.94},
-		"biters": ["Barghest", "Garmr", "Hellhound"], "bite_chance": 0.04, "moon": 30,
+		"biters": ["barghest", "garmr", "hellhound"], "bite_chance": 0.04, "moon": 30,
 		"cure": {"kills": 100, "text": "Hunt %d of the cursed hounds (Barghest, Garmr, Hellhound), then find a Silver Moonbloom in the elven forest.",
 			"item": "Silver Moonbloom", "from": {"realm": "elf", "kind": "any", "chance": 2}}},
 	"Fallen Angel": {"from": ["Angel"], "color": "#5a6988", "curable": false,
@@ -195,7 +196,7 @@ const FORMS := {
 		"text": "You traded your soul for power. +18% skill damage, -10% HP, and once per floor you survive a killing blow.",
 		"stats": {"INT": 7}, "passive": {"skill": 1.18, "hp": 0.9}, "phylactery": true,
 		"need": {"level": 60, "classes": ["Mage", "Acolyte", "Cleric", "Bard"], "tag": "Shadow", "item": "Phylactery"},
-		"item_from": {"boss": "Hel, Queen of the Dead", "chance": 30}},
+		"item_from": {"boss": "hel", "chance": 30}},
 }
 
 # ---------- Reputation ----------
@@ -282,7 +283,7 @@ static func source_text(src: Dictionary) -> String:
 	if src.get("goblin", false):
 		return "treasure goblins"
 	if src.has("boss"):
-		return "dropped by %s" % src["boss"]
+		return "dropped by %s" % Monsters.name_of(String(src["boss"]))
 	if src.has("realm"):
 		var rname := Realms.realm_name(String(src["realm"]))
 		match String(src.get("kind", "any")):
@@ -300,23 +301,23 @@ static func bonus_text(b: Dictionary) -> String:
 # Only heroes of that race can wear these. Sold by a race's merchant to its
 # Honored friends; very rarely dropped by bosses for heroes of that race.
 const RACE_GEAR := {
-	"Human": [{"name": "Banner-Knight's Longsword", "slot": "Weapon", "type": "sword", "effect": "crit", "value": 16, "mat": "steel", "trim": "#e8b14a", "flavor": "Humans don't have magic. They have stubbornness."}],
-	"Elf": [{"name": "Elven Longbow of the Last Light", "slot": "Weapon", "type": "bow", "effect": "crit", "value": 20, "mat": "pale", "trim": "#4ade80", "flavor": "Only an elf can draw it. The string remembers."},
-		{"name": "Leafsilver Circlet", "slot": "Helmet", "type": "crown", "effect": "dodge", "value": 10, "mat": "pale", "trim": "#9fd8c4", "flavor": "Worn by elven wardens for a thousand years."}],
-	"Fairy": [{"name": "Dewdrop Wand", "slot": "Weapon", "type": "staff", "effect": "double_strike", "value": 18, "mat": "crystal", "trim": "#f9a8d4", "flavor": "Too small for anyone else's hand."},
-		{"name": "Petalweave Dress", "slot": "Chest", "type": "robe", "effect": "dodge", "value": 12, "mat": "coral", "trim": "#f9a8d4", "flavor": "Fairy-sized. Fairy-magic. Fairy-only."}],
-	"Angel": [{"name": "Halo of the Faithful", "slot": "Helmet", "type": "crown", "effect": "regen", "value": 3, "mat": "gold", "trim": "#fde68a", "flavor": "A real halo. It only floats over an angel."},
-		{"name": "Wingguard Plate", "slot": "Chest", "type": "plate", "effect": "thorns", "value": 20, "mat": "gold", "trim": "#fde68a", "flavor": "Cut to fit around wings."}],
-	"Demon": [{"name": "Hornbreaker Axe", "slot": "Weapon", "type": "axe", "effect": "lifesteal", "value": 12, "mat": "ember", "trim": "#e43b44", "flavor": "Only demon blood can hold its grip."},
-		{"name": "Infernal Crown", "slot": "Helmet", "type": "crown", "effect": "lifesteal", "value": 10, "mat": "dark", "trim": "#e43b44", "flavor": "Burns anyone who isn't a demon."}],
-	"Dwarf": [{"name": "Dwarven Runeplate", "slot": "Chest", "type": "plate", "effect": "thorns", "value": 25, "mat": "iron", "trim": "#f59e0b", "flavor": "Made for dwarven shoulders. Nobody else's."},
-		{"name": "Clan Warhammer", "slot": "Weapon", "type": "mace", "effect": "double_strike", "value": 18, "mat": "iron", "trim": "#f59e0b", "flavor": "Every dwarf clan has one. Yours does now."}],
-	"Beastkin": [{"name": "Fang-and-Claw Gauntlets", "slot": "Off Hand", "type": "buckler", "effect": "crit", "value": 16, "mat": "hide", "trim": "#d9a066", "flavor": "Fit only hands that are half paw."}],
-	"Dragonkin": [{"name": "Wyrmscale Mail", "slot": "Chest", "type": "plate", "effect": "regen", "value": 3, "mat": "scale", "trim": "#f77622", "flavor": "Shed by a dragon. Only its kin can wear it."}],
-	"Undead": [{"name": "Gravecloth Shroud", "slot": "Chest", "type": "robe", "effect": "lifesteal", "value": 12, "mat": "dark", "trim": "#86c06c", "flavor": "The living get cold just touching it."}],
-	"Orc": [{"name": "Skullsplitter", "slot": "Weapon", "type": "axe", "effect": "double_strike", "value": 20, "mat": "iron", "trim": "#75a743", "flavor": "Too heavy for anyone but an orc."}],
-	"Goblin": [{"name": "Goblin King's Purse", "slot": "Off Hand", "type": "orb", "effect": "gold_find", "value": 35, "mat": "gold", "trim": "#facc15", "flavor": "It only opens for goblin fingers."}],
-	"Golem": [{"name": "Core Bulwark", "slot": "Off Hand", "type": "tower", "effect": "thorns", "value": 25, "mat": "steel", "trim": "#7fd0f0", "flavor": "Slots right into a golem's arm."}],
+	"Human": [{"id": "banner_knights_longsword", "name": "Banner-Knight's Longsword", "slot": "Weapon", "type": "sword", "effect": "crit", "value": 16, "mat": "steel", "trim": "#e8b14a", "flavor": "Humans don't have magic. They have stubbornness."}],
+	"Elf": [{"id": "elven_longbow_of_the_last_light", "name": "Elven Longbow of the Last Light", "slot": "Weapon", "type": "bow", "effect": "crit", "value": 20, "mat": "pale", "trim": "#4ade80", "flavor": "Only an elf can draw it. The string remembers."},
+		{"id": "leafsilver_circlet", "name": "Leafsilver Circlet", "slot": "Helmet", "type": "crown", "effect": "dodge", "value": 10, "mat": "pale", "trim": "#9fd8c4", "flavor": "Worn by elven wardens for a thousand years."}],
+	"Fairy": [{"id": "dewdrop_wand", "name": "Dewdrop Wand", "slot": "Weapon", "type": "staff", "effect": "double_strike", "value": 18, "mat": "crystal", "trim": "#f9a8d4", "flavor": "Too small for anyone else's hand."},
+		{"id": "petalweave_dress", "name": "Petalweave Dress", "slot": "Chest", "type": "robe", "effect": "dodge", "value": 12, "mat": "coral", "trim": "#f9a8d4", "flavor": "Fairy-sized. Fairy-magic. Fairy-only."}],
+	"Angel": [{"id": "halo_of_the_faithful", "name": "Halo of the Faithful", "slot": "Helmet", "type": "crown", "effect": "regen", "value": 3, "mat": "gold", "trim": "#fde68a", "flavor": "A real halo. It only floats over an angel."},
+		{"id": "wingguard_plate", "name": "Wingguard Plate", "slot": "Chest", "type": "plate", "effect": "thorns", "value": 20, "mat": "gold", "trim": "#fde68a", "flavor": "Cut to fit around wings."}],
+	"Demon": [{"id": "hornbreaker_axe", "name": "Hornbreaker Axe", "slot": "Weapon", "type": "axe", "effect": "lifesteal", "value": 12, "mat": "ember", "trim": "#e43b44", "flavor": "Only demon blood can hold its grip."},
+		{"id": "infernal_crown", "name": "Infernal Crown", "slot": "Helmet", "type": "crown", "effect": "lifesteal", "value": 10, "mat": "dark", "trim": "#e43b44", "flavor": "Burns anyone who isn't a demon."}],
+	"Dwarf": [{"id": "dwarven_runeplate", "name": "Dwarven Runeplate", "slot": "Chest", "type": "plate", "effect": "thorns", "value": 25, "mat": "iron", "trim": "#f59e0b", "flavor": "Made for dwarven shoulders. Nobody else's."},
+		{"id": "clan_warhammer", "name": "Clan Warhammer", "slot": "Weapon", "type": "mace", "effect": "double_strike", "value": 18, "mat": "iron", "trim": "#f59e0b", "flavor": "Every dwarf clan has one. Yours does now."}],
+	"Beastkin": [{"id": "fang_and_claw_gauntlets", "name": "Fang-and-Claw Gauntlets", "slot": "Off Hand", "type": "buckler", "effect": "crit", "value": 16, "mat": "hide", "trim": "#d9a066", "flavor": "Fit only hands that are half paw."}],
+	"Dragonkin": [{"id": "wyrmscale_mail", "name": "Wyrmscale Mail", "slot": "Chest", "type": "plate", "effect": "regen", "value": 3, "mat": "scale", "trim": "#f77622", "flavor": "Shed by a dragon. Only its kin can wear it."}],
+	"Undead": [{"id": "gravecloth_shroud", "name": "Gravecloth Shroud", "slot": "Chest", "type": "robe", "effect": "lifesteal", "value": 12, "mat": "dark", "trim": "#86c06c", "flavor": "The living get cold just touching it."}],
+	"Orc": [{"id": "skullsplitter", "name": "Skullsplitter", "slot": "Weapon", "type": "axe", "effect": "double_strike", "value": 20, "mat": "iron", "trim": "#75a743", "flavor": "Too heavy for anyone but an orc."}],
+	"Goblin": [{"id": "goblin_kings_purse", "name": "Goblin King's Purse", "slot": "Off Hand", "type": "orb", "effect": "gold_find", "value": 35, "mat": "gold", "trim": "#facc15", "flavor": "It only opens for goblin fingers."}],
+	"Golem": [{"id": "core_bulwark", "name": "Core Bulwark", "slot": "Off Hand", "type": "tower", "effect": "thorns", "value": 25, "mat": "steel", "trim": "#7fd0f0", "flavor": "Slots right into a golem's arm."}],
 }
 const RACE_GEAR_BOSS_CHANCE := 1.0  # % per boss kill for a hero of that race
 
@@ -325,23 +326,24 @@ static func gear_for(race: String) -> Array:
 
 static func make_race_gear(def: Dictionary, floor_num: int, id: int) -> Dictionary:
 	var info: Dictionary = GameData.SLOT_INFO[def["slot"]]
-	return {"id": id, "base_name": def["name"], "name": def["name"], "type": def["type"], "flavor": def["flavor"],
+	return {"id": id, "def": def["id"], "base_name": def["name"], "name": def["name"], "type": def["type"], "flavor": def["flavor"],
 		"slot": def["slot"], "stat": info["stat"], "rarity": GameData.UNIQUE,
 		"bonus": maxi(1, int(GameData.base_bonus(def["slot"], floor_num) * float(GameData.RARITY_MULTS[GameData.UNIQUE]) * 1.1)),
-		"level": 0, "floor": floor_num, "effect": def["effect"], "effect_value": def["value"], "race_only": def_race(def["name"]),
-		"art": "r_" + GameData.art_key(def["name"])}
+		"level": 0, "floor": floor_num, "effect": def["effect"], "effect_value": def["value"], "race_only": def_race(def["id"]),
+		"art": "r_" + String(def["id"])}
 
 static func gear_by_art(art: String) -> Dictionary:
 	for r in RACE_GEAR:
 		for d in RACE_GEAR[r]:
-			if "r_" + GameData.art_key(d["name"]) == art:
+			if "r_" + String(d["id"]) == art:
 				return d
 	return {}
 
-static func def_race(item_name: String) -> String:
+## Which race a piece of race gear (by id) belongs to.
+static func def_race(gear_id: String) -> String:
 	for r in RACE_GEAR:
 		for d in RACE_GEAR[r]:
-			if d["name"] == item_name:
+			if d["id"] == gear_id:
 				return r
 	return ""
 

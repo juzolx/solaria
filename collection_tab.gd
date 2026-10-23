@@ -32,17 +32,17 @@ func refresh() -> void:
 		box.add_child(flow)
 		for u in GameData.zone_uniques(zi):
 			var item := GameData.make_unique(u, 1, 0)
-			var boss_name: String = z["mid"]["name"] if u in z["mid"]["uniques"] else z["boss"]["name"]
-			flow.add_child(_trophy(item, codex.collection.has(u["name"]), "Unique from " + boss_name if codex.seen(boss_name) else "A Unique from a boss"))
+			var boss: Dictionary = z["mid"] if u in z["mid"]["uniques"] else z["boss"]
+			flow.add_child(_trophy(item, codex.collection.has(u["id"]), "Unique from " + String(boss["name"]) if codex.seen(boss["id"]) else "A Unique from a boss"))
 		var mons: Array = []
 		for e in z["enemies"]:
-			mons.append(e["name"])
+			mons.append(e["id"])
 		for s in z["subs"]:
-			mons.append(s["monster"]["name"])
-		for mname in mons:
-			var item := GameData.make_signature(mname, 1, 0)
-			var have := bool(codex.bestiary.get(mname, {}).get("sig", false))
-			flow.add_child(_trophy(item, have, ("Signature of the " + mname) if codex.seen(mname) else "A monster's Signature"))
+			mons.append(s["monster"]["id"])
+		for mid in mons:
+			var item := GameData.make_signature(mid, 1, 0)
+			var have := bool(codex.bestiary.get(mid, {}).get("sig", false))
+			flow.add_child(_trophy(item, have, ("Signature of the " + Monsters.name_of(mid)) if codex.seen(mid) else "A monster's Signature"))
 
 func _trophy(item: Dictionary, have: bool, source: String) -> PanelContainer:
 	var r := int(item["rarity"])

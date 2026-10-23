@@ -10,46 +10,47 @@ extends RefCounted
 
 const POWER := 2.4   # Attack, HP and Defense, on top of the class's own focus (a hidden class tops out at about x2.1)
 
-## id -> the class (name, base class, the level-35 class it grows from, side, focus,
+## id (permanent, also its class node id) -> the class (name, base class, the level-35
+## class node id it grows from, side, focus,
 ## tags, role text; optional role / util / extra like a tree final), its reveal art
 ## and lore, whether it needs the main route, and its secret deeds [label, key, amount]
 ## (keys as Hidden._have understands them).
 const LIST := {
-	"god_titan": {"name": "Titan", "cls": "Warrior", "from": "Weaponmaster", "side": "N", "focus": "atk:.5 hp:.5", "tags": "",
+	"god_titan": {"name": "Titan", "cls": "Warrior", "from": "weaponmaster", "side": "N", "focus": "atk:.5 hp:.5", "tags": "",
 		"role_text": "Raw strength and endless health", "art": "boss_typhon", "main_route": true,
 		"lore": "The first giant lifted the sky so the world could breathe. Now you carry it.",
-		"deeds": [["A Warrior", "class:Warrior", 1], ["Walked the Weaponmaster's road", "path:Weaponmaster", 1], ["Reach level 75", "level", 75],
+		"deeds": [["A Warrior", "class:Warrior", 1], ["Walked the Weaponmaster's road", "path:weaponmaster", 1], ["Reach level 75", "level", 75],
 			["25,000 monsters slain", "kills_total", 25000], ["Beat 20 champions", "codex:champions", 20], ["2,000 fights in a row, clean", "clean_best", 2000]]},
-	"god_sky_dragoon": {"name": "Sky Dragoon", "cls": "Knight", "from": "Dragoon", "side": "N", "focus": "atk:.5 crit:.5", "tags": "",
+	"god_sky_dragoon": {"name": "Sky Dragoon", "cls": "Knight", "from": "dragoon", "side": "N", "focus": "atk:.5 crit:.5", "tags": "",
 		"role_text": "Diving strikes that ignore defense", "art": "boss_fafnir", "main_route": true,
 		"lore": "The dragon's hoard was never gold. It was the sky, and now it answers to you.",
-		"deeds": [["A Knight", "class:Knight", 1], ["Walked the Dragoon's road", "path:Dragoon", 1], ["Reach level 75", "level", 75],
+		"deeds": [["A Knight", "class:Knight", 1], ["Walked the Dragoon's road", "path:dragoon", 1], ["Reach level 75", "level", 75],
 			["Reach floor 500", "floor", 500], ["Clear 15 Deep Rifts", "codex:deep_rifts", 15], ["Finish 150 Legendary or Mythic monsters with a skill", "skill_kills_elite", 150]]},
-	"god_sword_god": {"name": "Sword God", "cls": "Wanderer", "from": "Sword Saint", "side": "N", "focus": "atk:.4 crit:.3 double_strike:.3", "tags": "Blade",
+	"god_sword_god": {"name": "Sword God", "cls": "Wanderer", "from": "sword_saint", "side": "N", "focus": "atk:.4 crit:.3 double_strike:.3", "tags": "Blade",
 		"role_text": "The peak of the blade", "art": "boss_sword_spirit", "main_route": true,
 		"lore": "The first sword ever forged finally found a worthy hand.",
-		"deeds": [["A Wanderer", "class:Wanderer", 1], ["Walked the Sword Saint's road", "path:Sword Saint", 1], ["Reach level 75", "level", 75],
+		"deeds": [["A Wanderer", "class:Wanderer", 1], ["Walked the Sword Saint's road", "path:sword_saint", 1], ["Reach level 75", "level", 75],
 			["3,000 fights in a row, clean", "clean_best", 3000], ["20,000 monsters finished with a skill", "skill_kills", 20000], ["Beat 30 champions", "codex:champions", 30]]},
-	"god_heavenly_demon": {"name": "Heavenly Demon", "cls": "Wanderer", "from": "Demon Saint", "side": "N", "focus": "atk:.4 lifesteal:.3 hp:.3", "tags": "Fist Blood Shadow",
+	"god_heavenly_demon": {"name": "Heavenly Demon", "cls": "Wanderer", "from": "demon_saint", "side": "N", "focus": "atk:.4 lifesteal:.3 hp:.3", "tags": "Fist Blood Shadow",
 		"role_text": "Ruler of the demonic path", "art": "boss_demon_ancestor", "main_route": true,
 		"lore": "The demon cult's ancestor is dead. Someone has to sit on his throne.",
-		"deeds": [["A Wanderer", "class:Wanderer", 1], ["Walked the Demon Saint's road", "path:Demon Saint", 1], ["Reach level 75", "level", 75],
+		"deeds": [["A Wanderer", "class:Wanderer", 1], ["Walked the Demon Saint's road", "path:demon_saint", 1], ["Reach level 75", "level", 75],
 			["Evil faith of 90 or more", "evil", 90], ["30,000 monsters slain", "kills_total", 30000], ["Recover 20 graves", "codex:graves", 20]]},
-	"god_archdruid": {"name": "Archdruid", "cls": "Cleric", "from": "Grove Keeper", "side": "N", "focus": "regen:.5 skill:.5", "tags": "Nature",
+	"god_archdruid": {"name": "Archdruid", "cls": "Cleric", "from": "grove_keeper", "side": "N", "focus": "regen:.5 skill:.5", "tags": "Nature",
 		"role_text": "Potions and gear no one else can make", "art": "boss_withered_queen", "main_route": true,
 		"role": "crafting", "util": "potion:.4 scrap:.3 stone_find:.3",
 		"lore": "You healed the forest's sick heart. It grows through you now.",
-		"deeds": [["A Cleric", "class:Cleric", 1], ["Walked the Grove Keeper's road", "path:Grove Keeper", 1], ["Reach level 75", "level", 75],
+		"deeds": [["A Cleric", "class:Cleric", 1], ["Walked the Grove Keeper's road", "path:grove_keeper", 1], ["Reach level 75", "level", 75],
 			["400 ability stones found", "codex:stones", 400], ["Forge 20 set pieces", "codex:sets_crafted", 20], ["Own 10 pets", "codex:pets", 10]]},
-	"god_saint_militant": {"name": "Saint Militant", "cls": "Acolyte", "from": "Templar", "side": "G", "focus": "atk:.4 regen:.3 def:.3", "tags": "Holy",
+	"god_saint_militant": {"name": "Saint Militant", "cls": "Acolyte", "from": "templar", "side": "G", "focus": "atk:.4 regen:.3 def:.3", "tags": "Holy",
 		"role_text": "Holy damage and healing in battle", "art": "boss_seraphiel", "main_route": true,
 		"lore": "The highest angel asked one question, with a sword. You answered.",
-		"deeds": [["An Acolyte", "class:Acolyte", 1], ["Walked the Templar's road", "path:Templar", 1], ["Reach level 75", "level", 75],
+		"deeds": [["An Acolyte", "class:Acolyte", 1], ["Walked the Templar's road", "path:templar", 1], ["Reach level 75", "level", 75],
 			["Good faith of 95 or more", "good", 95], ["Help 20 pilgrims", "codex:pilgrims_helped", 20], ["Spare 300 monsters", "codex:spared", 300]]},
-	"god_chronomancer": {"name": "Chronomancer", "cls": "Mage", "from": "Lightbinder", "side": "N", "focus": "skill:.5 double_strike:.5", "tags": "Arcane",
+	"god_chronomancer": {"name": "Chronomancer", "cls": "Mage", "from": "lightbinder", "side": "N", "focus": "skill:.5 double_strike:.5", "tags": "Arcane",
 		"role_text": "Extra turns and slowed enemies", "art": "boss_archon_valeth", "main_route": true, "extra": {"cdr": 1},
 		"lore": "The Keeper of Hours gave you one second. You made it last forever.",
-		"deeds": [["A Mage", "class:Mage", 1], ["Walked the Lightbinder's road", "path:Lightbinder", 1], ["Reach level 75", "level", 75],
+		"deeds": [["A Mage", "class:Mage", 1], ["Walked the Lightbinder's road", "path:lightbinder", 1], ["Reach level 75", "level", 75],
 			["25,000 monsters finished with a skill", "skill_kills", 25000], ["Clear 25 Deep Rifts", "codex:deep_rifts", 25], ["Sell 30 skills", "codex:skills_sold", 30]]},
 	"god_phantom": {"name": "Phantom", "cls": "Trickster", "from": "", "side": "N", "focus": "dodge:.5 crit:.5", "tags": "Shadow Trick",
 		"role_text": "Can't be pinned down; strikes from the shadows", "art": "boss_weeping_warden", "main_route": false,
@@ -99,7 +100,7 @@ static func check(g: GameState) -> void:
 			continue
 		g.god_offers.append(id)
 		var c := info(id)
-		g.discovered[c["name"]] = true
+		g.discovered[id] = true
 		g.events.append({"type": "god_offer", "id": id, "name": c["name"]})
 		g.say("[color=#fde047]*** A GOD CLASS ANSWERS YOU: %s ***[/color] %s You can swap into it now." % [c["name"], c["lore"]])
 

@@ -43,9 +43,9 @@ func refresh() -> void:
 		var z: Dictionary = GameData.ZONES[zi]
 		var mons: Array = []
 		for e in z["enemies"]:
-			mons.append(e["name"])
+			mons.append(e["id"])
 		for s in z["subs"]:
-			mons.append(s["monster"]["name"])
+			mons.append(s["monster"]["id"])
 		box.add_child(UI.heading(str(z["name"])))
 		var flow := HFlowContainer.new()
 		flow.add_theme_constant_override("h_separation", 6)
@@ -63,7 +63,7 @@ func _cell(n: String) -> Control:
 	var v := UI.vbox(2)
 	c.add_child(v)
 	var pic := TextureRect.new()
-	pic.texture = Sprites.enemy_by_key(Sprites.enemy_key(n, false)).get("tex", null)
+	pic.texture = Sprites.enemy_by_key(String(Monsters.by_id(n).get("art", n))).get("tex", null)
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	pic.custom_minimum_size = Vector2(56, 56)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -71,7 +71,7 @@ func _cell(n: String) -> Control:
 	if not have:
 		pic.modulate = Color(0.12, 0.12, 0.16, 0.9) if met else Color(0.05, 0.05, 0.07, 0.6)
 	v.add_child(pic)
-	var l := UI.label(n if met else "???", 10, Color(Menagerie.TIER_COLORS[tier]) if have else UI.DIM)
+	var l := UI.label(Monsters.name_of(n) if met else "???", 10, Color(Menagerie.TIER_COLORS[tier]) if have else UI.DIM)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.custom_minimum_size = Vector2(68, 0)

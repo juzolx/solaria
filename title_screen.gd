@@ -52,10 +52,10 @@ func _bg(zi: int) -> Texture2D:
 
 func _pick_monster() -> void:
 	var z: Dictionary = GameData.ZONES[bg_keys[bg_index]]
-	var names: Array = []
+	var arts: Array = []
 	for e in z["enemies"]:
-		names.append(e["name"])
-	monster = Sprites.enemy_by_key(GameData.art_key(names.pick_random()))
+		arts.append(e.get("art", e["id"]))
+	monster = Sprites.enemy_by_key(String(arts.pick_random()))
 
 func _new_mote(anywhere := false) -> Dictionary:
 	var vs := get_viewport().get_visible_rect().size

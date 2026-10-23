@@ -128,9 +128,9 @@ func _build() -> void:
 		name_box.custom_minimum_size = Vector2(0 if narrow else 160, 0)
 		row.add_child(name_box)
 		var floors_box: Container = row
-		var local: String = area["monster"]["name"]
+		var local: String = area["monster"]["id"]
 		var lbls := [UI.label(str(area["name"]), 13, Color(GameData.zone_for_floor(start)["color"]).lightened(0.45)),
-			UI.label("Home of: " + (local if state.codex.seen(local) else "???"), 11, UI.DIM)]
+			UI.label("Home of: " + (Monsters.name_of(local) if state.codex.seen(local) else "???"), 11, UI.DIM)]
 		for lbl in lbls:
 			lbl.clip_text = true
 			lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS

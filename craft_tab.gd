@@ -11,7 +11,7 @@ var potion_button: Button
 var bag_info: RichTextLabel
 var bag_cost: RichTextLabel
 var bag_button: Button
-var set_info := {}     # set -> [header label, cost label, wearing label]
+var set_info := {}     # set id -> [header label, cost label, wearing label]
 var set_buttons := {}  # set -> Array of buttons
 var piece_rows: Array = []  # one row of set-piece buttons per set (stacked on phones)
 var gear_buttons := {}
@@ -91,7 +91,7 @@ func setup(m) -> void:
 		card.add_child(cv)
 		var head := UI.hbox(8)
 		cv.add_child(head)
-		var title := UI.label(set_name, 15, UI.TEAL)
+		var title := UI.label(String(info["name"]), 15, UI.TEAL)
 		head.add_child(title)
 		head.add_child(UI.spacer())
 		var wearing := UI.label("", 12, UI.DIM)

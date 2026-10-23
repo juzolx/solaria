@@ -38,7 +38,7 @@ const UNIQUE_STYLES := {
 	"u_hrunting": {"mat": "steel", "trim": "#f87171", "glow": true},
 	"u_grendels_hide": {"mat": "hide", "trim": "#fbbf24", "glow": false},
 	"u_helskor": {"mat": "dark", "trim": "#7dd3fc", "glow": true},
-	"u_mask_of_half-death": {"mat": "pale", "trim": "#3a4466", "glow": false},
+	"u_mask_of_half_death": {"mat": "pale", "trim": "#3a4466", "glow": false},
 	"u_scyllas_fang": {"mat": "bone", "trim": "#22d3ee", "glow": true},
 	"u_drowned_captains_boots": {"mat": "sea", "trim": "#fbbf24", "glow": false},
 	"u_flame_of_muspelheim": {"mat": "ember", "trim": "#fde047", "glow": true},
@@ -53,8 +53,8 @@ const UNIQUE_STYLES := {
 }
 ## Set pieces share a look per set.
 const SET_STYLES := {
-	"Grendel's Kin": "hide", "Hel's Shroud": "dark", "Tidecaller": "sea", "Muspel Forge": "ember", "Titanborn": "scale",
-	"Last Light of the Elves": "pale", "Court of Glamour": "coral", "Undermountain Oath": "iron", "Choir of Dawn": "gold", "Pact of the Abyss": "dark",
+	"grendels_kin": "hide", "hels_shroud": "dark", "tidecaller": "sea", "muspel_forge": "ember", "titanborn": "scale",
+	"last_light_of_the_elves": "pale", "court_of_glamour": "coral", "undermountain_oath": "iron", "choir_of_dawn": "gold", "pact_of_the_abyss": "dark",
 }
 
 static var _images := {}

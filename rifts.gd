@@ -46,7 +46,7 @@ static func _next(g: GameState) -> void:
 	g.enemy_wanderer = false
 	g.enemy_grave = false
 	g.hazard = ""
-	g.enemy_name = ("Vault Keeper " if last else "Rift-touched ") + g.enemy_species
+	g.enemy_name = ("Vault Keeper " if last else "Rift-touched ") + Monsters.name_of(g.enemy_species)
 	g._apply_tier(Monsters.LEGENDARY if last else Monsters.EPIC)
 	g.enemy_max_hp = int(g.enemy_max_hp * (HP_MULT + DEEP_HP_STEP * (int(g.portal.get("floor", 1)) - 1)))
 	g.enemy_hp = g.enemy_max_hp

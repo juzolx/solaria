@@ -19,6 +19,8 @@ const ATK_MULT := 12.0
 const ITEM_FLOOR := 2000       # its gear is made as if from this floor
 
 ## [name, art, color, lore, title, pet, unique item slot, unique item name]
+## The art key (calamity_0...) is also the calamity's permanent id; its pet's id is
+## that plus "_pet" (pet_id()). Names are only for showing.
 const LIST := [
 	["The Hollow Saint", "calamity_0", "#e2e8f0", "It walked out of a church that was never built, wearing the bones of everyone who prayed there.", "Saintbreaker", "Hollow Acolyte", "Weapon", "The Last Rite"],
 	["Ashmaw, the Burning Hunger", "calamity_1", "#f97316", "It has eaten seven kingdoms. It is still hungry.", "Ashwalker", "Ember Whelp", "Chest", "Heart of the Hunger"],
@@ -31,6 +33,10 @@ const LIST := [
 	["Vhal'gor, Eater of Stars", "calamity_8", "#c084fc", "There were more stars once.", "Starkeeper", "Star Wyrmling", "Weapon", "Vhal'gor's Fang"],
 	["The Last Night", "calamity_9", "#1e1b4b", "Every night is shorter than the one before it. This one is not.", "Dawnbringer", "Nightling", "Chest", "The Final Dawn"],
 ]
+
+## The permanent species id of a calamity's pet.
+static func pet_id(c: Array) -> String:
+	return String(c[1]) + "_pet"
 
 static func region_index(f: int) -> int:
 	return clampi(GameData.region_of(f) - 1, 0, LIST.size() - 1)
@@ -69,7 +75,7 @@ static func appear(g: GameState, i: int) -> void:
 	g.enemy_calamity = i + 1
 	g.calamity_pending = true
 	g.enemy_name = String(c[0])
-	g.enemy_species = String(c[0])
+	g.enemy_species = String(c[1])
 	g.enemy_art = String(c[1])
 	g.enemy_color = String(c[2])
 	g.enemy_people = ""
@@ -87,7 +93,7 @@ static func appear(g: GameState, i: int) -> void:
 	g.enemy_base_atk = g.enemy_attack
 	g.events.append({"type": "calamity", "id": i, "name": String(c[0]), "lore": String(c[3]), "color": String(c[2])})
 	g.say("[color=#e43b44]*** A CALAMITY APPROACHES ***[/color] %s." % c[0])
-	g.codex.meet(String(c[0]))
+	g.codex.meet(String(c[1]))
 
 ## You chose to fight: the fight goes on.
 static func fight(g: GameState) -> void:
@@ -159,7 +165,7 @@ static func on_slain(g: GameState, p: Profile) -> void:
 			it["registered"] = who
 		items.append(it)
 	Mail.post(g, String(c[0]), "You slew %s" % c[0], "It is gone, forever. What was left of it is yours: a piece for every slot, made from the beast itself. They can never be lost. One of them holds your place in the Hall of Fame.", {"items": items})
-	Menagerie.make_pet(g, String(c[5]), String(c[1]), 5, "calamity")
+	Menagerie.make_pet(g, pet_id(c), String(c[1]), 5, "calamity")
 	if not String(c[4]) in g.codex.extra_titles:
 		g.codex.extra_titles.append(String(c[4]))
 	g.codex.title = String(c[4])

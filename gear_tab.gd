@@ -217,7 +217,7 @@ func refresh() -> void:
 	var counts := state.set_counts()
 	for set_name in counts:
 		if int(counts[set_name]) >= 2:
-			text += "\n[color=#2dd4bf]%s set: %d pieces active[/color]" % [set_name, counts[set_name]]
+			text += "\n[color=#2dd4bf]%s set: %d pieces active[/color]" % [GameData.set_name_of(set_name), counts[set_name]]
 	stats_label.text = text
 
 	var key := "%s|%d" % [slot, state.bag_version]

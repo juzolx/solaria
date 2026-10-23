@@ -88,7 +88,7 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 	v.add_child(UI.label(String(p["name"]), 15, UI.GOLD if going else UI.TEXT))
 	var tier := int(p["tier"])
 	var tc := Color(GameData.color_of(mini(tier, 5)))
-	v.add_child(UI.label("%s %s  ·  Lv %d" % [Menagerie.TIER_NAMES[tier], p["species"], int(p["level"])], 12, tc))
+	v.add_child(UI.label("%s %s  ·  Lv %d" % [Menagerie.TIER_NAMES[tier], Monsters.name_of(str(p["species"])), int(p["level"])], 12, tc))
 	v.add_child(UI.label(("Hurt: rests %d more floor%s" % [int(p["hurt"]), "" if int(p["hurt"]) == 1 else "s"]) if hurt else
 		"Hits for %d%% of your Attack" % int(Menagerie.power(p) * 100), 11, UI.RED if hurt else UI.DIM))
 	var right := UI.vbox(4)

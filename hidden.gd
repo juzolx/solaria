@@ -89,7 +89,7 @@ const CLASSES := {
 	"demon_king": {"name": "Demon King", "tier": 3, "stat": "Dominion", "color": "#e43b44", "one_per_account": true,
 		"lore": "The Abyss has had many lords. It has only ever had one king at a time.",
 		"rumor": "A demon lord who takes the Abyss's throne with a heart of pure evil...",
-		"need": [["A Demon at the top Demonic rank", "demon_top", 1], ["Defeat the ruler of the Cinder Abyss", "boss:Azgaroth, Lord of the Abyss", 1],
+		"need": [["A Demon at the top Demonic rank", "demon_top", 1], ["Defeat the ruler of the Cinder Abyss", "boss:azgaroth", 1],
 			["Evil faith of 95 or more", "evil", 95]],
 		"stages": ["Demon King", "Abyssal Sovereign", "The Demon God"],
 		"stage_bonus": [{"atk": 1.1, "lifesteal": 4}, {"atk": 1.08, "hp": 1.08}, {"atk": 1.1, "hp": 1.1, "lifesteal": 3}],
@@ -186,13 +186,13 @@ const CLASSES := {
 	"quiet_death": {"name": "Quiet Death", "tier": 2, "stat": "Silence", "color": "#475569",
 		"lore": "The last thing they hear is nothing at all.",
 		"rumor": "An assassin who ends the great ones without a breath of noise may no longer be seen at all...",
-		"need": [["Take the Assassin path", "path:Assassin", 1], ["Reach level 35", "level", 35], ["Finish 40 Legendary or Mythic monsters with a skill", "skill_kills_elite", 40], ["Win 150 fights in a row without escaping, dying or a potion", "clean_best", 150]],
+		"need": [["Take the Assassin path", "path:assassin", 1], ["Reach level 35", "level", 35], ["Finish 40 Legendary or Mythic monsters with a skill", "skill_kills_elite", 40], ["Win 150 fights in a row without escaping, dying or a potion", "clean_best", 150]],
 		"stages": ["Quiet Death", "Hush Incarnate", "The Last Silence"], "stage_bonus": [{"execute": 15, "crit": 6, "dodge": 3}, {"execute": 18, "crit": 6, "dodge": 4}, {"execute": 25, "crit": 8, "dodge": 5}],
 		"grow": {"rare_kill": 0.2, "low_hp_kill": 0.2}, "per_point": {"execute": 0.15, "crit": 0.03}},
 	"grail_warden": {"name": "Grail Warden", "tier": 2, "stat": "Vow", "color": "#fde047",
 		"lore": "You were handed a cup and told never to spill it. You have walked a thousand miles with it.",
 		"rumor": "A paladin who is good to the bone and helps every pilgrim may be given something to carry...",
-		"need": [["Take the Paladin path", "path:Paladin", 1], ["Reach level 35", "level", 35], ["Good faith of 90 or more", "good", 90], ["Help 5 pilgrims", "codex:pilgrims_helped", 5]],
+		"need": [["Take the Paladin path", "path:paladin", 1], ["Reach level 35", "level", 35], ["Good faith of 90 or more", "good", 90], ["Help 5 pilgrims", "codex:pilgrims_helped", 5]],
 		"stages": ["Grail Warden", "Keeper of the Cup", "The Holy Vessel"], "stage_bonus": [{"def": 1.06, "regen": 2, "thorns": 8}, {"def": 1.08, "regen": 2, "thorns": 12, "hp": 1.06}, {"def": 1.1, "regen": 3, "thorns": 16, "hp": 1.08}],
 		"grow": {"good": 0.1, "hit": 0.002, "boss": 1.0}, "per_point": {"def": 0.001, "regen": 0.008}},
 
@@ -271,7 +271,8 @@ static func _have(g: GameState, key: String) -> int:
 			return int((g.feats.get("class_kills", {}) as Dictionary).get(g.hidden_class, 0))
 	if key.begins_with("boss:"):
 		return g.codex.kills(key.substr(5))
-	# race:Elf, class:Knight (your base class), path:Paladin (any evolution you took),
+	# boss:<monster id> (account kills of that boss), race:Elf, class:Knight (your base class),
+	# path:<class node id> (any evolution you took, e.g. path:paladin),
 	# codex:<stat> (an account counter that the game really adds to)
 	if key.begins_with("race:"):
 		return 1 if g.race() == key.substr(5) else 0
@@ -279,7 +280,7 @@ static func _have(g: GameState, key: String) -> int:
 		return 1 if g.hero_class == key.substr(6) else 0
 	if key.begins_with("path:"):
 		for n in ClassTree.path_nodes(g):
-			if String((n as Dictionary).get("name", "")) == key.substr(5):
+			if String((n as Dictionary).get("id", "")) == key.substr(5):
 				return 1
 		return 0
 	if key.begins_with("codex:"):
@@ -374,7 +375,6 @@ static func on_level(g: GameState) -> void:
 			var c := info(g.hidden_class)
 			var nm: String = c["stages"][stage(g) - 1]
 			g.hidden_stage[g.hidden_class] = stage(g)
-			g.discovered[nm] = true
 			g.events.append({"type": "hidden_class", "id": g.hidden_class, "name": nm, "tier": int(c["tier"]), "color": c["color"],
 				"lore": "Your %s grows stronger: you are now %s." % [c["name"], nm]})
 			g.say("[color=%s]Your hidden class grows: %s![/color]" % [c["color"], nm])
@@ -414,8 +414,7 @@ static func _take(g: GameState, id: String) -> void:
 	g.hidden_offer = []
 	g.hidden_stage[id] = stage(g)
 	var nm := title(g)
-	g.discovered[c["name"]] = true
-	g.discovered[nm] = true
+	g.discovered[id] = true
 	g._page("hidden")
 	g.events.append({"type": "hidden_class", "id": id, "name": nm, "tier": int(c["tier"]), "color": c["color"], "lore": c["lore"]})
 	g.say("[color=%s]*** HIDDEN CLASS: %s ***[/color] %s This is your class now." % [c["color"], nm, c["lore"]])

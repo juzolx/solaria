@@ -26,7 +26,7 @@ func _initialize() -> void:
 	g.horde_left = 0
 	Wanderers.make(g, Wanderers.LIST[0])
 	check(g.enemy_wanderer and g.enemy_tier == Monsters.LEGENDARY and g.enemy_name == "Black Shuck", "Black Shuck, Legendary")
-	check(Monsters.info("Black Shuck").get("lore", "") != "", "it has a bestiary entry")
+	check(Monsters.info("black_shuck").get("lore", "") != "", "it has a bestiary entry")
 	g.cfight["turns"] = 4
 	check(Wanderers.turns_left(g) == Wanderers.STAY_TURNS - 4, "the countdown")
 	check(not Wanderers.wander_off(g), "it stays while there's time")
