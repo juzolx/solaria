@@ -148,7 +148,7 @@ func _initialize() -> void:
 	check(gg.shield_hp <= int(mx * PetAbilities.SHIELD_CAP), "pet shields stop at half your max HP (%d of %d)" % [gg.shield_hp, mx])
 	check(PetAbilities.pet_shield(gg) == gg.shield_hp, "the game knows the shield is the pet's")
 	ClassTree.on_fight_start(gg)
-	PetAbilities.on_pet_turn(gg, gs[1], 10)
+	PetAbilities._fight_start(gg)  # the clear itself; a pet turn could roll a fresh Guard
 	check(gg.shield_hp == 0, "pet shields don't carry into the next fight (%d)" % gg.shield_hp)
 	var tm := hero()
 	tm.hidden_class = "beast_tamer"
