@@ -307,6 +307,7 @@ func _step_folk(delta: float) -> void:
 
 func _draw_people() -> void:
 	people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
+	_draw_placeholders()
 	if not hidden_spots.has("clinic"):
 		_draw_pen()
 	var sorted := folk.duplicate()
@@ -332,6 +333,23 @@ func _draw_people() -> void:
 			people.draw_colored_polygon(PackedVector2Array([top + Vector2(-7, -9), top + Vector2(7, -9), top + Vector2(0, 1)]), Color(0.05, 0.03, 0.08, 0.85))
 			people.draw_colored_polygon(PackedVector2Array([top + Vector2(-5, -8), top + Vector2(5, -8), top + Vector2(0, -1)]), col)
 	people.draw_set_transform(Vector2.ZERO)
+
+## 2.1: buildings the town picture doesn't have yet (Church, Trophy Cabin) borrow an
+## existing building, scaled into their spot and recoloured (Buildings.ART: swap
+## that table when the new town art arrives).
+func _draw_placeholders() -> void:
+	if map.texture == null:
+		return
+	for s in _spots():
+		var id := String(s["id"])
+		if not Buildings.ART.has(id):
+			continue
+		var a: Dictionary = Buildings.ART[id]
+		var f: Array = a["from"]
+		var r: Array = s["rect"]
+		var dst := Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3]))
+		people.draw_rect(Rect2(dst.position + Vector2(4, dst.size.y - 10), Vector2(dst.size.x - 4, 10)), Color(0.04, 0.03, 0.08, 0.25))
+		people.draw_texture_rect_region(map.texture, dst, Rect2(float(f[0]), float(f[1]), float(f[2]), float(f[3])), a["tint"])
 
 ## The Clinic's pen: a wooden fence around the plots, a little sign, and your pets.
 func _draw_pen() -> void:

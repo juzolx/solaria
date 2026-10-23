@@ -153,3 +153,27 @@ sinks all game long.
 
 Tests: `tests/stage6_currency.gd` (only three currencies in state, every old cost payable,
 conversion, sinks, old saves load).
+
+## Town buildings, Church, Trophy Cabin (2.1 G1-G3, `economy.gd` bottom)
+
+Every building has levels 1-3 per town (`buildings.gd`, saved in the town record). The hero
+you're playing pays. Level 2: 1,500 gold + 60 scrap. Level 3: 8,000 gold + 200 scrap + 40 dust,
+and a hero of this town must have reached floor 100.
+
+| Building | L1 | L2 | L3 |
+|---|---|---|---|
+| Inn | room 4 gold x level | half price | free; recruits bring 3 potions + 300 gold |
+| Blacksmith | upgrade scrap x1 | x0.95 | x0.9 |
+| Shop | shelf gear x1 | x0.95 | x0.9 |
+| Tavern | wheel fee x1 | x0.9 | x0.8 |
+| Vault | - | +5 spaces | +10 spaces |
+| Bounty Board | carry 3 | 4 | 5 |
+| Guild Hall | deed gold x1 | x1.1 | x1.2 |
+| Clinic | pets rest 10 floors | 8, heal x0.75 | 6, heal x0.5 |
+| Church | cleanse 70% | 80%, price x0.85, bless 12 dust | 90%, x0.7, bless 10 dust |
+| Trophy Cabin | 6 on display | 12 | 20 |
+
+Cursed loot: 2% of Rare/Epic/Legendary monster and boss drops; stat x1.2, one downside
+(-12% HP, -12% Defense or -8% Attack) and one hidden upside on another stat. Cleanse:
+(60 + 6 x item floor) gold x Church step + 3 dust; each failed try +15%. Bless: (100 + 10 x
+item floor) gold + 15/12/10 dust, +3% to the item's stat while worn, once per item.

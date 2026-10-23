@@ -42,6 +42,8 @@ const BUILDINGS := {
 	"guild": [6, "Your deeds"],
 	"mail": [7, "Your letters and rewards"],
 	"clinic": [8, "Heal and keep your pets"],
+	"church": [9, "Lift curses, bless your gear"],
+	"cabin": [10, "Your town's trophies"],
 }
 
 static func look(g: GameState) -> Dictionary:
@@ -192,7 +194,7 @@ static func local_goods(g: GameState, item: Dictionary) -> Dictionary:
 # =====================================================================
 
 static func rest_cost(g: GameState) -> int:
-	return 0 if g.level < 6 else REST_COST * g.level
+	return 0 if g.level < 6 else int(round(REST_COST * g.level * Buildings.mult("inn", Economy.INN_REST_MULT)))  # 2.1: the Inn building
 
 static func rest(g: GameState) -> bool:
 	if g.hero_hp >= g.get_max_hp():
@@ -288,6 +290,10 @@ static func _new_contract(g: GameState) -> Dictionary:
 		return {}
 	return c
 
+## How many contracts you can carry (2.1: more with a bigger Bounty Board).
+static func max_taken() -> int:
+	return int(Buildings.pick("bounty", Economy.BOUNTY_TAKEN))
+
 static func taken_count(g: GameState) -> int:
 	var n := 0
 	for c in g.contracts:
@@ -303,8 +309,8 @@ static func ready_count(g: GameState) -> int:
 	return n
 
 static func take(g: GameState, id: int) -> bool:
-	if taken_count(g) >= MAX_TAKEN:
-		g.say("You can carry %d contracts at once. Finish one first." % MAX_TAKEN)
+	if taken_count(g) >= max_taken():
+		g.say("You can carry %d contracts at once. Finish one first." % max_taken())
 		return false
 	for c in g.contracts:
 		if int(c["id"]) == id and not c.get("taken", false):
@@ -414,6 +420,8 @@ static func reward_item(g: GameState, slot: String, rarity: int) -> Dictionary:
 static func deed_reward(a: Dictionary) -> Dictionary:
 	var r: Dictionary = (a["reward"] as Dictionary).duplicate()
 	var gold := int(r.get("gold", 0))
+	if gold > 0:  # 2.1: a bigger Guild Hall pays more
+		r["gold"] = int(round(gold * Buildings.mult("guild", Economy.GUILD_GOLD_MULT)))
 	var rarity := RARE
 	if a.has("title") or gold >= 4000:
 		rarity = GameData.LEGENDARY

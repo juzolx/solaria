@@ -489,6 +489,7 @@ func _bonus_sources() -> Array:
 	out.append_array(set_bonuses())
 	out.append_array(_passive_sources())
 	out.append_array(PetAbilities.bonus_sources(self))  # 2.1: pets' passives, by rank
+	out.append_array(Church.bonus_sources(self))  # 2.1: cursed, cleansed and blessed gear
 	var mb := Mastery.bonus(self)
 	if not mb.is_empty():
 		out.append(mb)
@@ -1868,10 +1869,11 @@ func _enemy_defeated() -> void:
 
 	if was_boss:
 		say("[color=#fbbf24]You defeated %s![/color] +%d gold" % [enemy_name, gold_gain])
+		Trophies.on_boss(self, species)  # 2.1: the Trophy Cabin
 		Economy.give_dust(self, randi_range(Economy.BOSS_DUST[0], Economy.BOSS_DUST[1]))
 		for _i in GameData.BOSS_LOOT_DROPS:
 			var slot: String = GameData.SLOT_ORDER.pick_random()
-			_give_item(GameData.make_item(slot, _rarity(GameData.BOSS_RARITY_BONUS + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS), floor_num, _new_id()))
+			_give_item(Church.maybe_curse(self, GameData.make_item(slot, _rarity(GameData.BOSS_RARITY_BONUS + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS), floor_num, _new_id())))
 		if randf() * 100.0 < unique_chance():
 			var uniques: Array = GameData.boss_for_floor(floor_num)["uniques"]
 			var def: Dictionary = uniques.pick_random()
@@ -1906,11 +1908,11 @@ func _enemy_defeated() -> void:
 			var r := _rarity(int(t["loot"]) + _loot_bonus(), leg)
 			if i > 0:
 				r = maxi(r, 1)
-			_give_item(GameData.make_item(_drop_slot(species), r, floor_num, _new_id()))
+			_give_item(Church.maybe_curse(self, GameData.make_item(_drop_slot(species), r, floor_num, _new_id())))
 		if party != null:
 			for _m in party.size():
 				if randf() < Party.LOOT_PER_MEMBER:
-					_give_item(GameData.make_item(_drop_slot(species), _rarity(int(t["loot"]) + _loot_bonus(), leg), floor_num, _new_id()))
+					_give_item(Church.maybe_curse(self, GameData.make_item(_drop_slot(species), _rarity(int(t["loot"]) + _loot_bonus(), leg), floor_num, _new_id())))
 		var td: Array = t["dust"]
 		if int(td[1]) > 0:
 			Economy.give_dust(self, randi_range(int(td[0]), int(td[1])))
@@ -2082,6 +2084,7 @@ func _next_floor() -> void:
 	if best_floor >= GameData.GAMBLE_UNLOCK_FLOOR:
 		_page("wheel")
 	WheelTables.on_floor(self)  # 2.1: the Legendary table opens at floor 250
+	Trophies.on_floor(self)  # 2.1: depth trophies for the cabin
 	if best_floor >= 10:  # Heroes and Party pages (all 9 hero slots are open for now)
 		_page("heroes")
 		_page("party")
@@ -2402,6 +2405,7 @@ func filter_salvages(item: Dictionary) -> bool:
 
 func _give_item(item: Dictionary) -> void:
 	Milestones.on_item(self, item)
+	Trophies.on_find(self, item)  # 2.1: rare finds for the cabin
 	add_to_wardrobe(item)
 	_note_find(item)
 	var r := int(item["rarity"])
@@ -2715,7 +2719,7 @@ func elixir_cost(id: String) -> int:
 	return price(int(GameData.ELIXIRS[id]["gold"]))
 
 func shop_cost(item: Dictionary) -> int:
-	return price(GameData.shop_price(item))
+	return price(int(round(GameData.shop_price(item) * Buildings.mult("shop", Economy.SHOP_PRICE_MULT))))  # 2.1: the Shop building
 
 func buy_potion() -> void:
 	if gold < potion_cost():

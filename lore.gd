@@ -53,6 +53,8 @@ const KEEPERS := {
 	6: ["Guildmaster Aldous", ["Deeds, not words. Though the words get written down too.", "The guild remembers every descender. Make it a story worth keeping.", "Titles are earned. Then they're worn. Then they're lived up to."]],
 	7: ["Tobin, the courier", ["Letter for you! Probably. Let me check. Yes. Probably.", "I don't go down there. The mail goes down there. I just wave.", "Rewards come by post. Nobody knows who sends half of them. Don't ask."]],
 	8: ["Sister Fen, at the clinic", ["Pets heal faster than people. They complain less, too.", "Bring them back hurt, never lost. That's the deal with the deep.", "Every egg is a promise. Keep it warm."]],
+	9: ["Father Aubrey, the priest", ["Cursed steel still cuts. It just cuts you a little too.", "A curse is a lock. Every lock has a price, and I take gold.", "Kneel if you like. The blessing works standing up."]],
+	10: ["Old Gus, the cabin-keeper", ["Every trophy on this wall has a story. Most of them end with screaming.", "Dust them weekly. The Calamity ones bite.", "Hang another and the kids will never shut up about you."]],
 }
 
 ## What the keeper of a town page says right now (steady until you next come home).

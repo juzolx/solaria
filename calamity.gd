@@ -144,6 +144,7 @@ static func on_slain(g: GameState, p: Profile) -> void:
 	g.enemy_calamity = 0
 	var who := g.hero_name if g.hero_name != "" else g.hero_class
 	var today := Time.get_date_string_from_system()
+	Trophies.on_calamity(g, i, String(c[0]))  # 2.1: the Trophy Cabin (before the profile saves)
 	if p != null:
 		p.calamities[str(i)] = {"hero": who, "slot": g.slot, "date": today}
 		p.save()

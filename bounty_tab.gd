@@ -41,7 +41,7 @@ func refresh() -> void:
 	var posted: Array = []
 	for c in g.contracts:
 		(taken if c.get("taken", false) else posted).append(c)
-	box.add_child(UI.label("YOUR CONTRACTS  (%d / %d)" % [taken.size(), Town.MAX_TAKEN], 11, UI.DIM))
+	box.add_child(UI.label("YOUR CONTRACTS  (%d / %d)" % [taken.size(), Town.max_taken()], 11, UI.DIM))
 	if taken.is_empty():
 		box.add_child(UI.label("No contracts yet. Take one from the board below.", 12, UI.DIM))
 	for c in taken:
@@ -109,6 +109,6 @@ func _card(c: Dictionary, taken: bool) -> PanelContainer:
 			shown = ""
 			main.refresh(), accent)
 		take.custom_minimum_size = Vector2(100, UI.TAP)
-		take.disabled = Town.taken_count(g) >= Town.MAX_TAKEN
+		take.disabled = Town.taken_count(g) >= Town.max_taken()
 		right.add_child(take)
 	return card

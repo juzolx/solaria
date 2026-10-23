@@ -139,7 +139,7 @@ const GAMBLE_CHANCES := [55, 40, 25, 10]  # % to win, by rarity Common..Epic
 const GAMBLE_FEE := 0.5                   # gold fee = this x the item's sell value
 const GAMBLE_UNLOCK_FLOOR := 10
 static func gamble_fee(item: Dictionary) -> int:
-	return maxi(1, int(sell_value(item) * GAMBLE_FEE))
+	return maxi(1, int(sell_value(item) * GAMBLE_FEE * Buildings.mult("tavern", Economy.TAVERN_FEE_MULT)))
 static func can_gamble(item: Dictionary) -> bool:
 	return int(item["rarity"]) < LEGENDARY and not item.get("locked", false)
 # ---------- Loot ----------
@@ -709,6 +709,7 @@ static func item_power(item: Dictionary) -> int:
 static func display_name(item: Dictionary) -> String:
 	var lvl := int(item["level"])
 	var n: String = item["name"]
+	n = Church.name_tag(item) + n  # 2.1: "Cursed" / "Blessed" in front
 	if lvl > 0:
 		n = "%s +%d" % [n, lvl]
 	var sl := soul_level(item)
@@ -729,7 +730,8 @@ static func scrap_value(item: Dictionary) -> int:
 	return int(SCRAP_VALUES[int(item["rarity"])]) + int(item["level"]) * 2
 
 static func upgrade_cost(item: Dictionary) -> int:
-	return 5 * (int(item["level"]) + 1) * (mini(int(item["rarity"]), LEGENDARY) + 1)
+	var base := 5 * (int(item["level"]) + 1) * (mini(int(item["rarity"]), LEGENDARY) + 1)
+	return maxi(1, int(round(base * Buildings.mult("smith", Economy.SMITH_UPGRADE_MULT))))  # 2.1: the Blacksmith building
 
 static func can_reroll(item: Dictionary) -> bool:
 	return int(item["rarity"]) < LEGENDARY

@@ -62,6 +62,9 @@ var escape_button: Button
 var catch_button: Button
 var spare_button: Button
 var wheel_tab: WheelTab
+var church_tab: ChurchTab      # 2.1 G2
+var cabin_tab: CabinTab        # 2.1 G3
+var building_bar: BuildingBar  # 2.1 G1: level, next level and cost over every building page
 
 # Top bar
 var class_label: Label
@@ -111,7 +114,7 @@ var nav_bar: PanelContainer   # phone layout: the bottom navigation (Fight, Hero
 var nav_buttons: Array[Button] = []
 var nav_page := 0              # 0 = the fight, 1.. = a tab group (1 + its index)
 var is_tall := false
-const TOWN_PAGES := ["Shop", "Blacksmith", "Tavern", "Inn", "Vault", "Bounty Board", "Guild Hall", "Mailbox", "Clinic"]
+const TOWN_PAGES := ["Shop", "Blacksmith", "Tavern", "Inn", "Vault", "Bounty Board", "Guild Hall", "Mailbox", "Clinic", "Church", "Trophy Cabin"]
 const NAV := [["Fight", "sword"], ["Hero", "person"], ["Items", "bag"], ["Town", "house"], ["Codex", "book"], ["Online", "globe"]]
 var left_panel: VBoxContainer
 var title_label: Label
@@ -343,6 +346,7 @@ func _start(is_new: bool) -> void:
 			_show_save_notices.call_deferred()
 	else:
 		state.new_game()
+		Buildings.on_recruit(state)  # 2.1: a bigger Inn sends recruits off better stocked
 		state.say("Your descent begins..." if not state.hardcore else "[color=#f87171]Hardcore: one life. Make it count.[/color]")
 	state.dev_mode = profile.dev_mode
 	state.profile_ref = profile
@@ -717,6 +721,9 @@ func _build_ui() -> void:
 	town_talk = UI.label("", 12, Color("#d8c9a8"))
 	town_talk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	town_page.add_child(town_talk)
+	building_bar = BuildingBar.new()
+	building_bar.setup(self)
+	town_page.add_child(building_bar)
 	town_tabs = TabContainer.new()
 	town_tabs.name = "TownPages"
 	town_tabs.theme_type_variation = "SubTabs"
@@ -750,12 +757,14 @@ func _build_ui() -> void:
 	bounty_tab = BountyTab.new()
 	inn_tab = InnTab.new()
 	mail_tab = MailTab.new()
+	church_tab = ChurchTab.new()
+	cabin_tab = CabinTab.new()
 	guide_tab = GuideTab.new()
 	lore_tab = LoreTab.new()
 	for pair in [[char_tabs, hero_tab], [char_tabs, class_tab], [char_tabs, race_tab], [char_tabs, skills_tab], [char_tabs, party_tab], [char_tabs, pet_tab],
 			[item_tabs, gear_tab], [item_tabs, bag_tab],
 			[town_tabs, shop_tab], [town_tabs, craft_tab], [town_tabs, wheel_tab], [town_tabs, inn_tab], [town_tabs, stash_tab],
-			[town_tabs, bounty_tab], [town_tabs, achievements_tab], [town_tabs, mail_tab], [town_tabs, clinic_tab],
+			[town_tabs, bounty_tab], [town_tabs, achievements_tab], [town_tabs, mail_tab], [town_tabs, clinic_tab], [town_tabs, church_tab], [town_tabs, cabin_tab],
 			[codex_tabs, bestiary_tab], [codex_tabs, collection_tab],
 			[codex_tabs, stats_tab], [codex_tabs, guide_tab], [codex_tabs, lore_tab], [codex_tabs, pet_book_tab],
 			[online_tabs, leaderboard_tab], [online_tabs, guild_tab], [online_tabs, raid_tab]]:
@@ -1176,6 +1185,7 @@ func _sync_town() -> void:
 	if not inside:
 		return
 	town_talk.text = Lore.talk(state, town_tabs.current_tab)
+	building_bar.refresh(town_tabs.current_tab)
 	town_view.set_look(Town.look(state))
 	_town_heroes()
 	town_leave.text = "Into the dungeon"
