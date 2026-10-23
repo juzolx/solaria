@@ -2,6 +2,7 @@ extends SceneTree
 ## Art audit: renders contact sheets of every kind of art into shots/audit/ so the
 ## owner can mark each asset keep / fix / replace. Needs a real window:
 ##   godot --path . --resolution 1400x1000 -s tests/_art_audit.gd
+## Another folder (for before/after sets):  ... -s tests/_art_audit.gd -- --out=res://shots/art_after/after/
 ## Also writes shots/audit/stats.txt (per-file pixel stats used for the notes in
 ## claude/art-audit.md). Every picture is scaled nearest-neighbor, same scale
 ## for a whole sheet, so mixed pixel sizes show up as mixed sizes.
@@ -13,16 +14,20 @@ const IMG_BG := Color("#23233a")
 const TXT := Color("#e8e6f0")
 const DIM := Color("#8a8aa0")
 const WARN := Color("#ff7a59")
-const GOOD_SIZE := {"enemy": 66, "boss": 66}
+const GOOD_SIZE := {"enemy": 68, "boss": 68}  # ArtStyle.MONSTER_SIZE (two-tile giants 68x132)
 
 var _root: Control
 var _w := 0
 var _y := 0
 var _made: Array = []
 var _used_keys := {}
+var _out := OUT
 
 func _initialize() -> void:
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--out="):
+			_out = a.substr(6).trim_suffix("/") + "/"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(_out))
 	await process_frame
 	await _stats()
 	await _monsters()
@@ -36,6 +41,7 @@ func _initialize() -> void:
 	await _fx()
 	await _pets()
 	await _ui()
+	await _density()
 	print("AUDIT sheets: ", _made.size())
 	for m in _made:
 		print("  ", m)
@@ -147,7 +153,7 @@ func _finish(file_name: String) -> void:
 	await process_frame
 	await RenderingServer.frame_post_draw
 	var img := vp.get_texture().get_image()
-	var path := ProjectSettings.globalize_path(OUT + file_name)
+	var path := ProjectSettings.globalize_path(_out + file_name)
 	img.save_png(path)
 	_made.append("%s  (%dx%d)" % [path, _w, h])
 	vp.queue_free()
@@ -184,7 +190,7 @@ func _monster_entry(m: Dictionary, boss: bool, used: Dictionary) -> Dictionary:
 	var raw := _load_img("res://art/enemies/%s.png" % key)
 	var graded: Image = DarkGrade.image(raw) if raw != null else null
 	var want: int = GOOD_SIZE["boss"] if boss else GOOD_SIZE["enemy"]
-	var odd := raw != null and (raw.get_width() != want or (raw.get_height() != want and not (boss and raw.get_height() == 130)))
+	var odd := raw != null and (raw.get_width() != want or (raw.get_height() != want and not (boss and raw.get_height() == ArtStyle.TALL_SIZE.y)))
 	var src := "png" if raw != null else ("LPC-built" if Lpc.MONSTERS.has(key) else "MISSING")
 	return {"imgs": [_tex(raw), _tex(graded)], "label": "%s%s" % [m["name"], "  [BOSS]" if boss else ""],
 		"sub": "%s  %s  %s%s" % [key, _sz(_tex(raw)), src, "   << off-size (standard %d)" % want if odd else ""],
@@ -206,7 +212,7 @@ func _monsters() -> void:
 			normal.append(en)
 		bosses.append(_monster_entry(z["mid"], true, used))
 		bosses.append(_monster_entry(z["boss"], true, used))
-		_begin(1500, "Monsters: zone %d, %s" % [zi, z["name"]], "Each tile: RAW png | DARK-GRADED (what the game shows). Scale 2x for every tile, so a smaller sprite looks smaller. Orange = off the 66px standard or missing.")
+		_begin(1500, "Monsters: zone %d, %s" % [zi, z["name"]], "Each tile: RAW png | DARK-GRADED (what the game shows). Scale 2x for every tile, so a smaller sprite looks smaller. Orange = off the 68px standard or missing.")
 		_section("Regular monsters (5 roots + 5 sub-area)")
 		_grid(normal, 2.0, 3)
 		_section("Mid boss and zone boss")
@@ -222,7 +228,7 @@ func _calamities_orphans() -> void:
 		used[k] = true
 		var raw := _load_img("res://art/enemies/%s.png" % k)
 		cal.append({"imgs": [_tex(raw), _tex(DarkGrade.image(raw) if raw != null else null)], "label": k,
-			"sub": _sz(_tex(raw)), "flag": raw == null or raw.get_width() != 96})
+			"sub": _sz(_tex(raw)), "flag": raw == null or raw.get_width() != ArtStyle.MONSTER_SIZE.x})
 	var orphans: Array = []
 	var orphan_names: Array = []
 	for k in _png_names("res://art/enemies"):
@@ -316,7 +322,7 @@ func _heroes() -> void:
 
 func _items() -> void:
 	var rarities := [0, 1, 2, 3, 4, 8]
-	_begin(1500, "Item icons by slot and rarity", "Sprites.item_icon (hero gear layer recolored). Columns: Common, Uncommon, Rare, Epic, Legendary, Mythic. Scale 3x. Each icon is cropped to its used pixels, so sizes vary by item.")
+	_begin(1500, "Item icons by slot and rarity", "Sprites.item_icon (hero gear layer recolored). Columns: Common, Uncommon, Rare, Epic, Legendary, Mythic. Scale 3x. Every icon sits centered in one %dx%d frame at the gear art's own pixel size." % [ArtStyle.ICON_FRAME, ArtStyle.ICON_FRAME] + "")
 	var types: Dictionary = ItemPool.TYPES
 	for slot in types:
 		_section("%s: %s" % [slot, ", ".join(PackedStringArray(types[slot]))])
@@ -463,8 +469,8 @@ func _pets() -> void:
 	var items: Array = []
 	for n in _png_names("res://art/pets"):
 		var raw := _load_img("res://art/pets/%s.png" % n)
-		items.append({"imgs": [_tex(raw), _tex(DarkGrade.image(raw))], "label": n, "sub": _sz(_tex(raw)), "flag": raw.get_size() != Vector2i(64, 64)})
-	_begin(1500, "Companions (art/pets)", "RAW | GRADED, four growth stages per class. Scale 2x. Orange = not 64x64.")
+		items.append({"imgs": [_tex(raw), _tex(DarkGrade.image(raw))], "label": n, "sub": _sz(_tex(raw)), "flag": raw.get_size() != ArtStyle.MONSTER_SIZE})
+	_begin(1500, "Companions (art/pets)", "RAW | GRADED, four growth stages per class. Scale 2x. Orange = not 68x68.")
 	_grid(items, 2.0, 4)
 	await _finish("pets.png")
 
@@ -528,6 +534,35 @@ func _ui() -> void:
 	_grid(items, 2.0, 8, 120)
 	await _finish("ui_pieces.png")
 
+# ---------------------------------------------------------------- pixel density (decision D4)
+
+## One monster and one hero at the battle's sizes: the hero as today (1x pixels, drawn a size
+## bigger) and with Sprites.HERO_PIXEL = 2 (snapped to the monsters' 2x grid, same unit).
+func _density() -> void:
+	var u := 4
+	var looks := _looks({"Chest": "plate", "Legs": "greaves", "Feet": "sabatons", "Helmet": "helm", "Weapon": "sword", "Off Hand": "shield"})
+	var app := _app("Human", 0)
+	var hero: Image = Sprites.hero(app, looks)["body_img"]
+	var mon := _load_img("res://art/enemies/redcap.png")
+	var boss := _load_img("res://art/enemies/boss_grendel.png")
+	_begin(1500, "Pixel density: heroes vs monsters (decision D4)", "Battle sizes with a unit of %d screen px per file pixel. Monster files are 2x art. Left: hero today (1x art, unit x4/3). Right: Sprites.HERO_PIXEL = 2." % u)
+	var x := 16.0
+	var y := float(_y)
+	var s := _pic(_tex(mon), Vector2(x, y), u)
+	_lab("redcap (2x art) at %dx" % u, Vector2(x, y + s.y + 4), 13, TXT)
+	x += s.x + 24
+	s = _pic(_tex(hero), Vector2(x, y), roundf(u * 4.0 / 3.0))
+	_lab("hero today: 1x art at %dx" % int(roundf(u * 4.0 / 3.0)), Vector2(x, y + s.y + 4), 13, TXT)
+	x += s.x + 24
+	s = _pic(_tex(Sprites.chunky(hero, 2)), Vector2(x, y), u)
+	_lab("HERO_PIXEL = 2: 2x art at %dx" % u, Vector2(x, y + s.y + 4), 13, TXT)
+	x += s.x + 24
+	s = _pic(_tex(boss), Vector2(x, y), u)
+	_lab("boss_grendel at %dx" % u, Vector2(x, y + s.y + 4), 13, TXT)
+	_w = maxi(_w, int(x + s.x + 16))
+	_y = int(y + Sprites.CANVAS * roundf(u * 4.0 / 3.0) + 40)
+	await _finish("density_heroes.png")
+
 # ---------------------------------------------------------------- stats
 
 ## Per-file numbers for the written notes: size, palette depth, partial-alpha share
@@ -541,7 +576,7 @@ func _stats() -> void:
 			if im == null:
 				continue
 			lines.append("%s\t%s\t%s" % [d, n, _measure(im)])
-	var f := FileAccess.open(ProjectSettings.globalize_path(OUT + "stats.txt"), FileAccess.WRITE)
+	var f := FileAccess.open(ProjectSettings.globalize_path(_out + "stats.txt"), FileAccess.WRITE)
 	f.store_string("\n".join(PackedStringArray(lines)) + "\n")
 	f.close()
 	print("AUDIT stats lines: ", lines.size())

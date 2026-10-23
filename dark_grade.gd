@@ -32,7 +32,10 @@ static func image(src: Image, strength := SPRITE, rim := true) -> Image:
 			var i := (y * w + x) * 4
 			if data[i + 3] == 0:
 				continue
-			var c := _grade(Color8(data[i], data[i + 1], data[i + 2]), strength, rim)
+			var raw := Color8(data[i], data[i + 1], data[i + 2])
+			if ArtStyle.is_outline(raw):
+				continue  # the baked outline stays the same dark everywhere
+			var c := _grade(raw, strength, rim)
 			if rim:
 				c = _rim(data, w, h, x, y, c, strength)
 			out[i] = clampi(int(c.r * 255.0 + 0.5), 0, 255)

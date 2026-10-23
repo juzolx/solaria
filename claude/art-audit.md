@@ -90,3 +90,17 @@ See findings 8 and the skill icon note. Frame counts are 8 to 16 per effect, 64p
 
 ### UI (ui_pieces)
 Frames, bevel buttons and backdrop are code-drawn, in a single iron/soot/torch palette: the most consistent part of the game. The backdrop is a 168x300 brick pattern stretched to the screen. Suggest: keep.
+
+## 2.1 "A1 unify art in code" (done on wt/art)
+
+- Rules in `art_style.gd` (palette of 74 colors, outline #0e0812, sizes); `art/palette.gpl` for artists.
+- `tools/bake_art.gd` bakes them into the PNGs: monsters/bosses/Calamities/pets on one 2x grid,
+  68x68 (giants 68x132), one art-pixel outline, shadows stripped, hard alpha; props and consumables
+  palette + 1 px outline; effects palette + 5 hard alpha steps; pillar and boulder redrawn; flame/frost
+  trap art swapped; art_info.gd "enemies" sizes and feet rewritten from the files. Re-runnable (a second
+  run changes nothing). To bake with a changed palette, restore the originals first
+  (`git checkout 87b37477 -- art/enemies art/pets art/dungeon art/consumables art/fx`), then rerun.
+- Monsters now stand on their real feet (`Sprites.enemy_by_key` measures the picture; the old table
+  put e.g. Azgaroth's feet 37 rows too high, sinking bosses below the ground line).
+- Gear icons: one 44x44 frame, no scaling. Hero pixel switch: `Sprites.HERO_PIXEL` (1 today, 2 = 2x grid).
+- `tests/stage6_art_rules.gd` guards all of it. Before/after sheets: `shots/art_after/before|after/`.

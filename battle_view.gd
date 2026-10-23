@@ -1259,6 +1259,9 @@ func _hero_canvas() -> Rect2:
 
 ## With companions around, everyone is drawn a size smaller so the group fits.
 func _hero_unit() -> int:
+	# Sprites.HERO_PIXEL 2: hero pixels are 2x2 blocks like the monsters', so they share one unit
+	if Sprites.HERO_PIXEL > 1 and hero_art.has("lpc"):
+		return _unit()
 	var un := maxi(1, _unit() - (1 if _party_members().size() > 0 and _unit() > 2 else 0))
 	# LPC heroes are drawn smaller (about 48 of 64 pixels tall): one size up
 	# keeps them as big as the monsters while staying on whole pixels
