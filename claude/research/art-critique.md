@@ -38,3 +38,9 @@ Zone 1 set (ghoul, draugr, barrow_wight, banshee, strigoi, ankou, moroi, garmr, 
 
 ## Hero redraw notes
 New 2x base in palette with #0e0812 outline, darker desaturated skin, muted cloth; each race its own head (not hue swaps); wings/tails/heads same outline and light; back views get the most care (that's what the player sees in fights); 2px minimum weapon lines with highlights; hair ramps from palette.gpl.
+
+## Juzo's critique of art round 2 (Oct 23 2026)
+- Hero: take the HEAD from look C and the ARMOUR from look B (slimmer). Dark chibi, three-quarter from behind.
+- The dungeon (current zone backgrounds/tiles in the mockup) does not look good.
+- The current monsters do not look good either (so monster redraws are needed, not just cleanup).
+- The town concept looks "hella flat": it needs depth (3/4 view buildings with visible walls and roofs, cast shadows, height/elevation, layered trees and props), like his reference.
