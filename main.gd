@@ -758,15 +758,8 @@ func _build_ui() -> void:
 	town_page = UI.vbox(6)
 	town_page.name = "Town"
 	tabs.add_child(town_page)
-	town_back = UI.hbox(8)
-	town_page.add_child(town_back)
-	var back_btn := UI.button("◀  Town map", func():
-		nav_page = 0
-		_apply_nav()
-		refresh())
-	back_btn.custom_minimum_size = Vector2(0, UI.TAP)
-	town_back.add_child(back_btn)
-	# The keeper of whichever building you're in has something to say (lore.gd)
+	# The keeper of whichever building you're in has something to say (lore.gd).
+	# Phone fit: the way back to the map sits beside the keeper, above their line, not on a row of its own.
 	var talk_row := UI.hbox(8)
 	town_page.add_child(talk_row)
 	town_keeper = TextureRect.new()
@@ -775,11 +768,22 @@ func _build_ui() -> void:
 	town_keeper.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	town_keeper.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	talk_row.add_child(town_keeper)
+	var talk_col := UI.vbox(6)
+	talk_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	talk_col.alignment = BoxContainer.ALIGNMENT_CENTER
+	talk_row.add_child(talk_col)
+	town_back = UI.hbox(8)
+	talk_col.add_child(town_back)
+	var back_btn := UI.button("◀  Town map", func():
+		nav_page = 0
+		_apply_nav()
+		refresh())
+	back_btn.custom_minimum_size = Vector2(0, UI.TAP)
+	town_back.add_child(back_btn)
 	town_talk = UI.label("", UI.FONT_CAPTION, Color("#d8c9a8"))
 	town_talk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	town_talk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	town_talk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	talk_row.add_child(town_talk)
+	talk_col.add_child(town_talk)
 	building_bar = BuildingBar.new()
 	building_bar.setup(self)
 	town_page.add_child(building_bar)
@@ -1825,7 +1829,7 @@ func _refresh_fight() -> void:
 ## fight or the chosen section fills the screen. Wide screens keep both side by side.
 func _build_nav(parent: Control) -> void:
 	nav_bar = PanelContainer.new()
-	nav_bar.add_theme_stylebox_override("panel", UiSkin.frame(UI.PANEL, UiSkin.IRON, 6))
+	nav_bar.add_theme_stylebox_override("panel", UiSkin.frame(UI.PANEL, UiSkin.IRON, 4))
 	parent.add_child(nav_bar)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
@@ -1837,7 +1841,7 @@ func _build_nav(parent: Control) -> void:
 		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 		b.expand_icon = false
-		b.custom_minimum_size = Vector2(0, 72)
+		b.custom_minimum_size = Vector2(0, 64)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.add_theme_font_size_override("font_size", UI.MIN_FONT)
 		for st in ["normal", "hover", "pressed", "focus"]:

@@ -98,7 +98,7 @@ func setup(m) -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	left.add_child(scroll)
-	scroll.custom_minimum_size = Vector2(0, 120)  # phones stack the wheel under this: it was squeezed to nothing
+	scroll.custom_minimum_size = Vector2(0, 96)  # phones stack the wheel under this: it was squeezed to nothing (96: two rows of items, still fits the phone)
 	var sv := UI.vbox(4)
 	sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(sv)

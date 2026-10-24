@@ -331,6 +331,7 @@ static func make_theme() -> Theme:
 	var t := Theme.new()
 	t.default_font = game_font()
 	t.default_font_size = FONT_BODY
+	t.set_constant("line_spacing", "Label", 1)   # the pixel font needs less air between lines than the old one (phone fit)
 	t.set_color("font_color", "Label", TEXT)
 	t.set_color("default_color", "RichTextLabel", TEXT)
 	t.set_stylebox("panel", "PanelContainer", UiSkin.frame(PANEL, UiSkin.IRON, 12))  # next update: iron frames on stone
