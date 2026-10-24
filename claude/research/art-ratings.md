@@ -81,3 +81,4 @@ Every rating Juzo gives goes here, so all sessions learn what he thinks is reall
 | 2026-10-24 | town dev 2 | town mockup set 4 (22 images, after 3 Fable passes) | ok | "its okay some things dont look like they fit the path" | every door needs a visible path to a street and nothing may stand in a doorway; check door-to-street links before sending |
 | 2026-10-24 | dungeon dev | people in game 1-18 (stranger, travelers, keepers) | 7-9 | "I like the in games now" | keep them; this is the bar for people |
 | 2026-10-24 | dungeon dev | people alternates 19-32 | 6-8 | "maybe some of the alternates can be used later, specifically Mirella" | keep alternates on file; Mirella alternate wanted later |
+| 2026-10-24 | town dev 2 | town after path fixes | better | "the town looks better... certain areas need to not clash and buildings must face the right directions; no door on the opposite side of the street" | doors always face their street; distinct tidy areas |
