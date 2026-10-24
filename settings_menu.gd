@@ -336,6 +336,7 @@ func _update() -> void:
 	path_toggle.text = "Choose-your-path rooms: %s" % ("ON" if profile.path_choice == "ask" else "OFF")
 	tips_toggle.text = "Beginner tips: %s" % ("ON" if Onboarding.active(profile) else "OFF")
 	dev_toggle.text = "Dev Mode: %s" % ("ON" if profile.dev_mode else "OFF")
+	_style_toggles()
 	dev_toggle.add_theme_color_override("font_color", UI.PINK if profile.dev_mode else UI.TEXT)
 	dev_box.visible = profile.dev_mode
 	if dev_info and main.started:
@@ -345,3 +346,18 @@ func _update() -> void:
 			parts.append("%s %.1f%%" % [Monsters.tier_name(t), w[t]])
 		dev_info.text = "Now: floor %d (%s), monster tier %s %s, wheel always wins: %s\nSpawn odds: %s" % [state.floor_num, GameData.sub_name(state.floor_num),
 			Monsters.tier_name(state.enemy_tier), str(state.enemy_mods), "ON" if state.dev_always_win else "OFF", ", ".join(parts)]
+
+## Interface pass (approved mockup 16): a toggle shows its state at a glance. "...: ON" is a
+## slate block with a green edge and bright text, "...: OFF" a dim block; choices stay plain.
+func _style_toggles() -> void:
+	var all: Array = a11y_buttons.values() + [sound_toggle, fullscreen_toggle, dark_toggle, battery_toggle, path_toggle, tips_toggle, dev_toggle]
+	for b in all:
+		var btn := b as Button
+		if btn == null:
+			continue
+		var t := btn.text
+		if not (t.ends_with(": ON") or t.ends_with(": OFF")):
+			continue
+		var on := t.ends_with(": ON")
+		btn.add_theme_stylebox_override("normal", UiSkin.bevel(UiSkin.SLATE if on else UI.PANEL, UI.GREEN if on else UI.EMPTY, 6))
+		btn.add_theme_color_override("font_color", Color("#f4e6c4") if on else UI.DIM)
