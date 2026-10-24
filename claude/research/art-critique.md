@@ -49,3 +49,10 @@ New 2x base in palette with #0e0812 outline, darker desaturated skin, muted clot
 - TOWN = "dark fantasy Stardew Valley": the same 3/4 top-down depth and richness (raised cliffs and terraces, layered trees, detailed varied buildings with walls and roofs, fences, props, crops, paths, lively small villagers) but in a dark-fantasy palette and mood (dusk, stone and old wood, lanterns, the walled prison town).
 - DUNGEON and MONSTERS = "old 2D Pokemon sprites (Gen 2-3, GBC/GBA era), heavily fantasy-themed": bold dark outlines, few colours per sprite, dithering for texture, dynamic expressive poses, strong readable silhouettes, big personality; monsters are mythic fantasy creatures, not cute pocket animals. Dungeon rooms in that crisp handheld style with fantasy architecture.
 - STYLE ONLY: never copy Pokemon or Stardew designs, characters or layouts (Nintendo/ConcernedApe IP). Original creatures and places only.
+
+## Juzo's decision (Oct 23 2026): ONE GREAT HERO FIRST
+No other art work (town, monsters, dungeon, icons) until one base hero looks good AND is fully customizable.
+Base: Human, dark chibi, three-quarter from behind for battle + front portrait, 48-64 px.
+Customization to prove on that one base: skin tones, hair styles + colours, faces, outfits (cloth/leather/plate),
+weapons, rarity looks. Loop: Art Director makes it -> Fable art critique -> fix -> Juzo critiques -> repeat.
+Fewer forced rules (style from Juzo's refs via IP-Adapter), quality over coverage.
