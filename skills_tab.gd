@@ -115,8 +115,9 @@ func _slot_button(id: String, open: bool, need: int, active: bool, index := -1) 
 			shown = ""
 			refresh())
 	if id == "":
-		b.text = "(empty)"
+		b.text = "+"   # interface pass: an empty slot is a dim slate block with a +
 		b.add_theme_color_override("font_color", UI.DIM)
+		_face(b, UI.PANEL, UI.EMPTY)
 		b.pressed.connect(func():
 			filter_pick.select(1 if active else 2)
 			shown = ""
@@ -127,15 +128,17 @@ func _slot_button(id: String, open: bool, need: int, active: bool, index := -1) 
 Rank %d" % [s["name"], state.skill_rank(id)]
 	b.icon = SkillIcons.for_tag(String(s["tags"][0]))  # 0.13+: slots show the skill's icon
 	b.add_theme_constant_override("icon_max_width", 32)   # native size: crisp pixels
-	b.custom_minimum_size = Vector2(0, 46)
-	if not active:   # five passive slots share a phone row: icon on top, just the name under it
+	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+	if active:   # interface pass (approved mockup 04): the three active slots are big, icon at 2x on top
+		b.icon = UiIcons.big(b.icon, 64)
+		b.add_theme_constant_override("icon_max_width", 64)
+		b.custom_minimum_size = Vector2(0, 104)
+	else:   # five passive slots share a phone row: icon on top, just the name under it
 		b.text = String(s["name"])
-		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 		b.custom_minimum_size = Vector2(0, 62)
-	var c := Color(Classes.tag_color(s["tags"][0]))
-	b.add_theme_stylebox_override("normal", UI.style(c.darkened(0.7), c.darkened(0.2), 6, 4, 1))
-	b.add_theme_color_override("font_color", c.lightened(0.4))
+	_face(b, UiSkin.SLATE, UI.GOLD_DULL if id == selected else UI.EDGE)
+	b.add_theme_color_override("font_color", Color("#f4e6c4"))
 	b.tooltip_text = SkillData.describe(id, state.skill_rank(id))
 	b.pressed.connect(func():
 		selected = id
@@ -172,10 +175,10 @@ func refresh() -> void:
 		sb.custom_minimum_size = Vector2(0, 34)
 		sb.clip_text = true
 		sb.add_theme_font_size_override("font_size", UI.MIN_FONT)
-		var sc := Color(Signatures.COLOR)
 		sb.text = "Signature: %s" % (SkillData.skill_name(state.sig_slot) if state.sig_slot != "" else "(none)")
-		sb.add_theme_stylebox_override("normal", UI.style(sc.darkened(0.75), sc.darkened(0.2), 6, 4, 1))
-		sb.add_theme_color_override("font_color", sc.lightened(0.3))
+		sb.custom_minimum_size = Vector2(0, UI.TAP)
+		_face(sb, UiSkin.SLATE, UI.GOLD_DULL)   # interface pass: the signature slot is gold-edged
+		sb.add_theme_color_override("font_color", UI.GOLD)
 		sb.pressed.connect(func(): main.show_tab(0, 1))
 		sig_row.add_child(sb)
 	for i in 3:
@@ -219,8 +222,8 @@ func _card(id: String) -> Button:
 	var rc := Color(SkillData.RARITY_COLORS[int(s["rarity"])])
 	var eq := state.is_skill_equipped(id)
 	var sel := id == selected
-	b.add_theme_stylebox_override("normal", UI.style(rc.darkened(0.78), UI.GREEN if eq else rc.darkened(0.15), 6, 4, 3 if sel else (2 if eq else 1)))
-	b.add_theme_stylebox_override("hover", UI.style(rc.darkened(0.65), UI.GREEN if eq else rc, 6, 4, 3 if sel else 2))
+	# interface pass: a slate card; its edge says rarity, green = equipped, gold = picked
+	_face(b, UiSkin.SLATE if sel else UI.PANEL, UI.GOLD_DULL if sel else (UI.GREEN if eq else rc))
 	b.add_theme_color_override("font_color", rc.lightened(0.35))
 	b.tooltip_text = SkillData.describe(id, maxi(1, r))
 	Drag.wire(b, {"kind": "skill", "id": id}, SkillIcons.for_tag(String(s["tags"][0])),
@@ -393,3 +396,10 @@ static func _fill_auto(m, o: Overlay, st: GameState) -> void:
 		_fill_auto(m, o, st))
 	reset.custom_minimum_size = Vector2(0, UI.TAP)
 	o.content.add_child(reset)
+
+## Interface pass: a skill button wears the slate block look (normal, hover, pressed, disabled).
+func _face(b: Button, fill: Color, edge: Color) -> void:
+	b.add_theme_stylebox_override("normal", UiSkin.bevel(fill, edge, 4))
+	b.add_theme_stylebox_override("hover", UiSkin.bevel(UiSkin.SLATE, UI.GOLD_DULL, 4))
+	b.add_theme_stylebox_override("pressed", UiSkin.bevel(fill, edge, 4, true))
+	b.add_theme_stylebox_override("disabled", UiSkin.bevel(UI.PANEL, UI.EMPTY, 4))
