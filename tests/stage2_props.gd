@@ -22,6 +22,7 @@ func room(kind: String) -> GameState:
 	var g := hero()
 	g._room_cleared()
 	g.doors = [kind, kind, kind]
+	g.door_traps = [false, false, false]  # a random trap on the door would change what happens inside
 	g.choose_path("door_m")
 	return g
 
