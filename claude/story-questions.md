@@ -33,3 +33,4 @@ store description. Mechanics stay; only names and text change (unless Juzo asks)
 
 ## Story facts from Juzo
 - Oct 23 2026: the people are trapped in the town; the dungeon is their only belief of a way out. The town is big and walled, a lived-in prison, with the dungeon entrance as the place of hope.
+- Oct 24 2026: nobody knows WHY they are trapped ("for god knows what reason"); the mystery is part of the story. They BELIEVE the dungeon is the way out (a belief, not a certainty).
