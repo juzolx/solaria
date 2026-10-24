@@ -22,6 +22,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTLINE = (14, 8, 18)
 DARK = 0.16  # OKLab lightness below this (near-black) becomes the outline colour
 MIN_L = 0.42  # a monster's average OKLab lightness (outline excluded) is lifted to at least this
+# Monsters that still blend into their own zone's hall at MIN_L get a stronger lift
+LIFT = {"mare": 0.52, "wendigo": 0.5, "calamity_2": 0.5}
 PICKS = os.path.join(ROOT, "tools", "monsters_native", "picks.txt")
 
 
@@ -40,7 +42,7 @@ def oklab(c):
             0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s)
 
 
-def convert(src):
+def convert(src, key=""):
     im = Image.open(src).convert("RGBA")
     im = im.crop(im.getbbox())
     out = Image.new("RGBA", (im.width + 2, im.height + 2))
@@ -68,7 +70,7 @@ def convert(src):
                     break
     for x, y in add:
         op[x, y] = OUTLINE + (255,)
-    lift(out)
+    lift(out, LIFT.get(key, MIN_L))
     # Grown at the border? pad again so the outline never touches the canvas edge
     bb = out.getbbox()
     out = out.crop(bb)
@@ -77,9 +79,10 @@ def convert(src):
     return final
 
 
-def lift(im):
+def lift(im, target=MIN_L):
     """Brightens a dark monster (a gamma on its colours, darkest tones lifted most) until its
-    average lightness reaches MIN_L. Same number of colours; outline and glow stay put."""
+    average lightness reaches target (MIN_L unless LIFT says more). Same number of colours;
+    outline and glow stay put."""
     px = im.load()
     body = [px[x, y][:3] for y in range(im.height) for x in range(im.width)
             if px[x, y][3] and px[x, y][:3] != OUTLINE]
@@ -89,12 +92,12 @@ def lift(im):
     def mean_l(g):
         return sum(oklab(tuple(int(255 * (v / 255) ** g) for v in c))[0] for c in body) / len(body)
 
-    if mean_l(1.0) >= MIN_L:
+    if mean_l(1.0) >= target:
         return
     good, bad = 0.4, 1.0  # gamma 0.4 is the strongest lift allowed; 1.0 is too dark
     for _ in range(14):
         mid = (good + bad) / 2
-        if mean_l(mid) >= MIN_L:
+        if mean_l(mid) >= target:
             good = mid
         else:
             bad = mid
@@ -138,7 +141,7 @@ def main(args):
         if rel.startswith(".."):
             raise SystemExit("%s: copy the source into claude/art_test/monsters/raw first" % src)
         picks[key] = rel
-        im = convert(src)
+        im = convert(src, key)
         im.save(os.path.join(ROOT, "art", "enemies", key + ".png"))
         im.save(os.path.join(ROOT, "tools", "monsters_native", key + ".png"))
         done.append((key, im))
