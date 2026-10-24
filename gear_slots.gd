@@ -24,8 +24,8 @@ const LOOK_SLOTS := ["Weapon", "Off Hand", "Helmet", "Chest", "Legs", "Feet"]
 
 ## [effect, [Uncommon, Rare, Epic] value]; 0 = can't roll at that rarity.
 const CHARMS := {
-	"Ring": [["crit", [2, 3, 5]], ["gold_find", [5, 8, 12]], ["stone_find", [8, 12, 18]], ["double_strike", [2, 3, 4]]],
-	"Necklace": [["regen", [0, 0, 1]], ["lifesteal", [1, 2, 3]], ["xp", [3, 5, 8]], ["potion", [8, 12, 18]]],
+	"Ring": [["crit", [2, 3, 4]], ["gold_find", [5, 8, 12]], ["stone_find", [8, 12, 15]], ["double_strike", [2, 3, 4]]],
+	"Necklace": [["regen", [0, 0, 1]], ["lifesteal", [1, 2, 3]], ["xp", [3, 5, 8]], ["potion", [8, 12, 15]]],
 }
 ## Which Legendary effects (GameData.LEGENDARY_EFFECTS) a piece of jewelry can roll.
 const LEGENDARY_POOL := {
