@@ -409,7 +409,7 @@ func _draw_pen() -> void:
 	for p in sorted:
 		var tx: Texture2D = p["tex"]
 		var sz := Vector2(tx.get_size())
-		var k := 34.0 / maxf(sz.x, sz.y)
+		var k := minf(1.0, 34.0 / maxf(sz.x, sz.y))  # Pets 2 art (32 px) stays 1:1, old 68 px art halves
 		var hop := absf(sin(float(p["t"]) * 6.0)) * 2.0 if float(p["wait"]) <= 0.0 else 0.0
 		var dst := Vector2(sz.x * k, sz.y * k)
 		var pos := Vector2(float(p["x"]) - dst.x / 2.0, float(p["y"]) - dst.y - hop)

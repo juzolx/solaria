@@ -213,7 +213,7 @@ func _draw_team() -> void:
 func _draw_pet(leader_feet: Vector2, leader_sz: float) -> void:
 	if not state.pet_on or World.pet_stage(state) < 0:
 		return
-	var tex := Pets.portrait(state)
+	var tex := Pets.portrait_frame(state, t)
 	if tex == null:
 		return
 	var s := leader_sz * 0.5

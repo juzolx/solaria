@@ -44,7 +44,8 @@ func _owned() -> void:
 		var h := UI.hbox(10)
 		c[1].add_child(h)
 		var pic := TextureRect.new()
-		pic.texture = Sprites.consumable_icon("egg")
+		var ez := Menagerie.egg_zone(e)
+		pic.texture = Pets.egg(String(GameData.ZONES[ez]["id"]) if ez >= 0 else "")  # Pets 2: each region its own egg
 		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		pic.custom_minimum_size = Vector2(48, 48)
 		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
