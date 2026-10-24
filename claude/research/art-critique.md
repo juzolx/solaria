@@ -56,3 +56,9 @@ Base: Human, dark chibi, three-quarter from behind for battle + front portrait, 
 Customization to prove on that one base: skin tones, hair styles + colours, faces, outfits (cloth/leather/plate),
 weapons, rarity looks. Loop: Art Director makes it -> Fable art critique -> fix -> Juzo critiques -> repeat.
 Fewer forced rules (style from Juzo's refs via IP-Adapter), quality over coverage.
+
+## Juzo on hero pass 1 (Oct 23 2026)
+- Weapons good.
+- Not chibi enough: look like the OLD in-game heroes (LPC body shapes and proportions, seen from behind) but more personalized and polished.
+- Front portrait: chisel the male cheekbones a little.
+- Downloads allowed if they help (commercial-OK licences only, sources recorded).
