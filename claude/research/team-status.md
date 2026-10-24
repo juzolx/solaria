@@ -5,7 +5,7 @@
 | session | status (latest) | branch / commit | next | needs from |
 |---|---|---|---|---|
 | lead | Merged into big-update: ui (design system, readable battle names), pets2 (150 pets), slots (Ring/Necklace), onboarding/hints, juice, tune (Elite/scrap). Full suite ALL GOOD before pets merge. | big-update 95d04bf1 | merge halls + monsters when committed; run one-scale pass after hero lands | sessions: commit and ping when ready to merge |
-| hero dev | Class outfit plan approved (1 per base class + small add-ons per tier + bigger change at the top tier); sample of 1-2 classes base>15>35>75 next | wt/newart | class tier sample | interface/town: hero walker size for town |
+| hero dev | Warrior tier sample done (base > 15 pauldrons > 35 cape > 75 ornate, 9 frames, consistent size), sent to Juzo; class sample (Warrior + Cleric, both bodies, real mace) rated good; ~280 gens used | wt/newart 74edb744 | Juzo rating; then batch 11 base outfits (~198) + level 75 versions (~234) | lead: one-scale battle switch (hero 60 px at 3x); town2: walker size (mini hero 24-32 px later); halls: 7 room people after outfits |
 | dungeon dev (3D rooms) | All 10 zones' halls committed (2732388d); room props/traps + Juzo's 3 placement fixes coded, not yet committed | wt/halls | commit props, then merge review | monsters: matching palettes (zone-palettes.md) |
 | monsters dev | Zones 0-1 + bosses in worktree with readability fixes; Sheet D (zone 2 + 4 bosses) awaits Juzo's ratings | wt/monsters (uncommitted) | ratings, zones 3-9, Calamities | lead: one integer battle scale decision |
 | pets dev | DONE and merged (150 pets) | merged 95d04bf1 | idle | - |
