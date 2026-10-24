@@ -26,6 +26,10 @@ const OUTLINE := Color8(14, 8, 18)
 const ART_PX := 2
 const MONSTER_SIZE := Vector2i(68, 68)
 const TALL_SIZE := Vector2i(68, 132)
+## Redrawn monsters (art_info "hd": 1): native pixels, any size up to this (Calamities up to ~160 px)
+const NATIVE_MAX := Vector2i(168, 168)
+## ...with at most this many colours each (outline included)
+const NATIVE_COLORS := 24
 ## Dungeon props and consumable icons: 32x32 files, 1x art (Dungeon Crawl tiles).
 const PROP_SIZE := Vector2i(32, 32)
 ## Gear item icons: every icon sits centered in one square frame, at the gear art's own pixel size.

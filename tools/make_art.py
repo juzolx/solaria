@@ -18,6 +18,7 @@ How the art works
 import json
 import os
 import sys
+from PIL import Image  # noqa: E402  (native monsters are copied as images)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -210,11 +211,16 @@ def main():
         info["offhands"][kind] = {"pivot": [(piv[0] + 1) * HD, (piv[1] + 1) * HD], "size": [im.width, im.height]}
 
     # ---- enemies and bosses (final colors, drawn facing left)
+    # Redrawn monsters (tools/monster_import.py) are native art: copy them, don't draw over them
+    native = os.path.join(ROOT, "tools", "monsters_native")
     for key, d in art_enemies.ENEMIES.items():
-        im = art_enemies.render(key)
+        src = os.path.join(native, "%s.png" % key)
+        im = Image.open(src).convert("RGBA") if os.path.exists(src) else art_enemies.render(key)
         save(im, "enemies", "%s.png" % key)
         bbox = im.getbbox()
         info["enemies"][key] = {"size": [im.width, im.height], "foot": (bbox[3] - 1) if bbox else im.height - 1}
+        if os.path.exists(src):
+            info["enemies"][key]["hd"] = 1
 
     with open(os.path.join(ROOT, "art_info.gd"), "w") as f:
         f.write("class_name ArtInfo\n## Made by tools/make_art.py - sprite pivots, sizes and color ramps. Don't edit by hand.\n\n")
