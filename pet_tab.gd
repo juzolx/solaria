@@ -47,7 +47,7 @@ func _owned() -> void:
 		var ez := Menagerie.egg_zone(e)
 		pic.texture = Pets.egg(String(GameData.ZONES[ez]["id"]) if ez >= 0 else "")  # Pets 2: each region its own egg
 		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		pic.custom_minimum_size = Vector2(48, 48)
+		pic.custom_minimum_size = Vector2(64, 64)  # 32 px art at a clean 2x
 		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		h.add_child(pic)
@@ -77,7 +77,7 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 	var pic := TextureRect.new()
 	pic.texture = Menagerie.texture(p)
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(56, 56)
+	pic.custom_minimum_size = Vector2(64, 64)  # 32 px art at a clean 2x
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	if hurt:

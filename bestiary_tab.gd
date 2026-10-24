@@ -29,6 +29,7 @@ func setup(m) -> void:
 	list.custom_minimum_size = Vector2(200, 0)
 	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	list.add_theme_font_size_override("font_size", UI.MIN_FONT)
+	list.add_theme_constant_override("v_separation", UI.TAP - 20)  # rows about 44 px tall: a comfortable tap (15 px text is ~20 px a line)
 	list.item_selected.connect(func(i: int):
 		if i >= 0 and i < keys.size() and keys[i] != "":
 			selected = keys[i]

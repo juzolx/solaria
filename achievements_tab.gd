@@ -133,7 +133,7 @@ func _row(a: Dictionary) -> PanelContainer:
 		bar.max_value = int(a["target"])
 		bar.value = val
 		right.add_child(bar)
-		right.add_child(UI.label("%d / %d" % [val, int(a["target"])], 11, UI.DIM))
+		right.add_child(UI.label("%d / %d" % [val, int(a["target"])], UI.FONT_CAPTION, UI.DIM))
 	return card
 
 func _claim_row(a: Dictionary) -> PanelContainer:
