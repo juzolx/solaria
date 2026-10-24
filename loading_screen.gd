@@ -10,7 +10,7 @@ const TIPS := [
 	"Heroes left at home find gold and scrap while you dive.",
 	"Lock your favorite items so you never sell them by accident.",
 	"Pets are a real find. Look after the eggs you get.",
-	"A shimmer in the air might be a rift. Some go very deep.",
+	"A shimmer in the air might be a rift. Its depth tells you how far down it goes.",
 	"Travelers in the dungeon have things to offer, if you can pay.",
 	"Drag gear onto your hero to wear it.",
 	"Each town keeps its own heroes, stash and skill book.",

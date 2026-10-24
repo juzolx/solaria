@@ -437,10 +437,7 @@ static func offer_portals(g: GameState) -> void:
 		if opts.size() == 1:
 			enter(g, opts[0])
 		return
-	g.path_offer.assign(opts.map(func(id): return "portal:" + id))
-	g.path_wait = 0
-	g.events.append({"type": "portals"})
-	g.say("[color=#e8b14a]The roots split open. Portals to other realms shimmer in front of you.[/color]")
+	Portals.offer(g, opts, "The roots split open. Realm gates shimmer in front of you.")
 	g._page("realms")
 
 static func enter(g: GameState, id: String) -> void:
@@ -465,10 +462,7 @@ static func enter(g: GameState, id: String) -> void:
 ## Name, text and color for path choices that aren't in GameData.PATHS.
 static func path_info(g: GameState, kind: String) -> Dictionary:
 	if kind.begins_with("portal:"):
-		var id := kind.substr(7)
-		var inf := info(id)
-		var lv := Races.rep_level(Lineage.rep(g, inf["race"]))
-		return {"name": inf["name"], "text": "%s. The %s: %s.\n%s" % [inf["mechanic"]["name"], Lineage.race_plural(inf["race"]), lv[0], danger_text(g)], "color": inf["color"]}
+		return Portals.card(g, kind)  # 2.1 F3: every portal card has one shape
 	match kind:
 		"talk":
 			return {"name": "Talk", "text": "Friendly folk might help you. Hostile ones won't.", "color": "#4ade80"}
@@ -488,22 +482,6 @@ static func path_info(g: GameState, kind: String) -> Dictionary:
 			return {"name": inf.get("camp", "Camp"), "text": "Rest, trade with %s, and check the quest board." % inf.get("merchant", "the locals"), "color": "#4ade80"}
 	return {"name": kind.capitalize(), "text": "", "color": "#cbd5e1"}
 
-## How hard the next realm's monsters hit you, compared to your health.
-static func danger_text(g: GameState) -> String:
-	var f := g.floor_num
-	var atk := float(3 + f * 2) * pow(GameData.ENEMY_GROWTH, f - 1)
-	var hit := atk * atk / (atk + g.get_defense())
-	var pct := hit / maxf(1.0, g.get_max_hp()) * 100.0
-	if pct < 4.0:
-		return "Danger: low"
-	if pct < 10.0:
-		return "Danger: fair (hits ~%d%% of your HP)" % int(pct)
-	if pct < 25.0:
-		return "Danger: high (hits ~%d%% of your HP)" % int(pct)
-	if pct < 100.0:
-		return "Danger: deadly (hits ~%d%% of your HP)" % int(pct)
-	return "Danger: deadly (one hit can kill you)"
-
 const REALM_EVENT_YES := {"elf": "Kneel and pray", "fairy": "Answer the riddle", "dwarf": "Use the anvil", "angel": "Face the choir", "demon": "Hear the offer"}
 
 ## The panel title for the current choice.
@@ -512,7 +490,7 @@ static func path_title(g: GameState) -> String:
 		return ""
 	var k: String = g.path_offer[0]
 	if k.begins_with("portal:"):
-		return "Choose a realm"
+		return Portals.title(g)
 	if k == "talk":
 		return g.encounter.get("title", "Someone on the road")
 	if k == "revent_yes":

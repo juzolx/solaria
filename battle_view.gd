@@ -349,7 +349,7 @@ func play(events: Array[Dictionary]) -> void:
 				_sfx({"milestone": "milestone", "pet": "pet", "chest": "curse"}.get(String(e["kind"]), "event"))
 				banner_text = str(e["title"])
 				banner_sub = str(e["sub"])
-				banner_color = Color("#c084fc") if e["kind"] == "shrine" else Color("#fbbf24")
+				banner_color = Color("#c084fc") if e["kind"] == "shrine" else (Color(Portals.COLOR) if e["kind"] in ["rift", "trial"] else Color("#fbbf24"))
 				banner_alpha = 2.0
 			"party_attack":
 				_later(delay + 0.12, _party_anim.bind(e, "attack"))

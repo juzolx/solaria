@@ -158,6 +158,8 @@ static func enter_event_room(g: GameState, kind: String) -> void:
 			g.say("[color=#fbbf24]Something about that chest isn't right...[/color]")
 	if kind == "traveler":
 		p["who"] = Travelers.pick()  # next update: someone else is down here
+	if kind == "rift":
+		p["depth"] = Rifts.roll_depth(g)  # 2.1 F3: one rift type, its depth shown on its card
 	g.room_props = [p]
 	g.exploring = true
 	g.explore_wait = 0
@@ -254,9 +256,8 @@ static func interact(g: GameState, i: int) -> String:
 			g._faith(3)
 			g.events.append({"type": "buff", "name": "Shrine"})
 		"rift":
-			p["used"] = true
-			Rifts.enter(g)
-			return "You step through the rift!"
+			Portals.offer_rift(g)  # the portal card: step through, or walk on
+			return "A rift hangs in the air."
 		"nest":
 			p["used"] = true
 			Menagerie.give_egg(g, "nest")
@@ -302,15 +303,3 @@ static func _monster(g: GameState, id: String, art: String, line: String) -> voi
 	g._apply_tier(Monsters.EPIC)
 	g.events.append({"type": "rare_monster", "tier": Monsters.EPIC, "name": g.enemy_name, "mods": g.enemy_mods.duplicate()})
 	g.say(line)
-
-# =====================================================================
-# Hidden dungeon portals (part 9, in progress)
-# =====================================================================
-
-## Leave the portal (cleared = reached the end).
-static func leave_portal(g: GameState, cleared: bool) -> void:
-	if g.portal.is_empty():
-		return
-	g.portal = {}
-	if not cleared:
-		g.say("[color=#c4b5fd]The portal snaps shut behind you.[/color]")

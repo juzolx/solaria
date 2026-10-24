@@ -1,5 +1,5 @@
 extends SceneTree
-## Next update: travelers in the dungeon, and Deep Rifts (multi-floor portals).
+## Next update: travelers in the dungeon, and rift depth (multi-floor rifts).
 var fails := 0
 func check(c: bool, m: String) -> void:
 	if not c:
@@ -58,16 +58,16 @@ func _initialize() -> void:
 	var lv := int(g.equipped["Weapon"]["level"])
 	Travelers.choose(g, s, 0)
 	check(int(g.equipped["Weapon"]["level"]) == lv + 1, "the dwarf hones your weapon")
-	# Deep Rifts
+	# Rift depth (2.1 F3: Deep Rifts are depth 3 rifts)
 	var d := hero(60)
 	var deep_found := false
 	for i in 200:
 		Rifts.enter(d)
-		if int(d.portal.get("floors", 1)) > 1:
+		if Rifts.depth(d) > 1:
 			deep_found = true
 			break
 		d.portal = {}
-	check(deep_found, "deep rifts happen from floor 30")
+	check(deep_found, "depth 3 rifts happen from floor 30")
 	var bag0 := d.bag.size()
 	var kills := 0
 	while not d.portal.is_empty() and kills < 20:
@@ -75,10 +75,10 @@ func _initialize() -> void:
 		d.enemy_hp = 0
 		d._enemy_defeated()
 		kills += 1
-	check(kills == Rifts.FIGHTS * Rifts.DEEP_FLOORS, "three floors of three fights (%d)" % kills)
-	check(d.bag.size() >= bag0 + 2 + (Rifts.DEEP_FLOORS - 1) * 2 or d.scrap > 0, "a big vault at the bottom")
+	check(kills == Rifts.FIGHTS * Rifts.MAX_DEPTH, "three floors of three fights (%d)" % kills)
+	check(d.bag.size() >= bag0 + 2 + (Rifts.MAX_DEPTH - 1) * 2 or d.scrap > 0, "a big vault at the bottom")
 	var shallow := hero(20)
 	Rifts.enter(shallow)
-	check(int(shallow.portal.get("floors", 1)) == 1, "shallow floors: ordinary rifts")
+	check(Rifts.depth(shallow) == 1, "shallow floors: depth 1 rifts")
 	print("STAGE5 WORLD TESTS DONE, failures: ", fails)
 	quit()
