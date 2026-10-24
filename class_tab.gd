@@ -319,6 +319,15 @@ func _hidden_classes() -> void:
 		box.add_child(UI.heading("A hidden path"))
 		hidden_offer_cards(main, box, func(): shown = ""; main.refresh())
 		return
+	var whispers := ClassHints.riddles(state)  # 2.1 G7: riddles, never names; more open as you go deeper
+	if not whispers.is_empty():
+		box.add_child(UI.heading("Whispers"))
+		var wl := UI.rich(13)
+		var quoted: Array = []
+		for w in whispers:
+			quoted.append("[i]\"%s\"[/i]" % w)
+		wl.text = "[color=%s]Things people say about secret classes. Nobody knows if they're true.[/color]\n%s" % [UI.hex(UI.DIM), "\n".join(quoted)]
+		box.add_child(wl)
 	if not state.dev_mode:
 		return
 	box.add_child(UI.heading("Hidden classes (Dev Mode)"))

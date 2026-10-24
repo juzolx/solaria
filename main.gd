@@ -140,6 +140,7 @@ func _ready() -> void:
 	flush.timeout.connect(_flush_saves)
 	add_child(flush)
 	flush.start()
+	first_run = not SaveIO.exists(Profile.PATH)  # 2.1 G9: a brand-new player (no What's New for them)
 	profile = Profile.load_profile()
 	codex = Codex.load_codex()
 	state.codex = codex
@@ -171,6 +172,7 @@ func _ready() -> void:
 	_show_save_notices.call_deferred()
 
 var fresh_start_notice := false
+var first_run := false
 
 ## A new save epoch (0.12): every hero is wiped once. Settings and the online login stay.
 func _fresh_start_check() -> void:
@@ -204,13 +206,21 @@ func _has_current_heroes() -> bool:
 				return true
 	return false
 
-func _show_fresh_start() -> void:
+## 2.1 G9: after an update, What's New once (it also says when saves were reset);
+## then, for a player with no hero anywhere, the first-time welcome (onboarding.gd).
+func _title_popups() -> void:
+	if started or not is_inside_tree() or is_queued_for_deletion():
+		return
+	var fresh := fresh_start_notice
 	fresh_start_notice = false
-	var o := Overlay.new().open(self, "A fresh start", 440.0, UI.GOLD)
-	o.content.add_child(UI.wrap("Solaria %s brings new class rules, towns that grow and much more. Every town and hero has been reset so everyone starts fresh. Your settings are kept." % PatchNotes.VERSION, 14, UI.TEXT))
-	var b := UI.primary("Begin", o.close, UI.GOLD)
-	b.custom_minimum_size = Vector2(0, 44)
-	o.content.add_child(b)
+	if fresh or WhatsNew.due(profile, first_run):
+		WhatsNew.new().show_for(self, fresh, _maybe_welcome)
+	else:
+		_maybe_welcome()
+
+func _maybe_welcome() -> void:
+	if is_inside_tree() and not is_queued_for_deletion() and not started and Onboarding.should_welcome(profile):
+		Onboarding.show_welcome(self)
 
 ## Next update (Juzo): saves are towns. Each old hero becomes the first hero of
 ## their own town (GameState.migrate_to_towns). Every town gets a copy of the old
@@ -239,8 +249,7 @@ func _migrate_old_saves() -> void:
 func show_title() -> void:
 	timer.stop()
 	TitleScreen.new().show_for(self)
-	if fresh_start_notice:
-		_show_fresh_start.call_deferred()
+	_title_popups.call_deferred()
 
 ## You got home alive: show what this dive brought back. Getting home is the win
 ## in an extraction game, so it gets its own moment.
@@ -383,6 +392,7 @@ func _start(is_new: bool) -> void:
 	for pet in state.pets:  # next update: pets owned before the Codex kept a pet book
 		if not codex.pet_book.has(str(pet["species"])) or int(codex.pet_book[str(pet["species"])]) < int(pet["tier"]):
 			codex.pet_book[str(pet["species"])] = int(pet["tier"])
+	Onboarding.on_start(profile, state)  # 2.1 G9: the coach cards replace a few first-time tips
 	state.tip("tap", "Your hero fights on their own. Tap the enemy to hit it yourself for bonus damage!")
 	battle.state = state
 	battle.sfx = sfx
@@ -465,6 +475,8 @@ func _show_creator(new_hero: bool) -> void:
 		else:
 			timer.start()
 		refresh(), title, false, {}, new_hero or state.hero_name == "")
+	if new_hero:
+		Onboarding.coach(self, Onboarding.menu_tip(profile, "hero"))
 
 ## A fork in the dungeon: pick the next room (shown over the fight).
 ## Room view: walk up to the waiting monster.
@@ -1533,6 +1545,20 @@ func refresh() -> void:
 	_refresh_tabs()
 	_sync_town()
 	sfx.update_music(state)
+	_coach_pump()
+
+## 2.1: a hidden-class whisper after a milestone floor (class_hints.gd), and the
+## next first-time coach card (onboarding.gd), one at a time and never over a popup.
+func _coach_pump() -> void:
+	if not started or state == null:
+		return
+	if ClassHints.on_progress(state) != "":
+		_pull_messages()
+	if _popup_open():
+		return
+	var c := Onboarding.pump(profile, state)
+	if c != "":
+		Onboarding.coach(self, c)
 
 ## Events that open popups: new guide pages, the merchant. Also keeps records.
 func _handle_events() -> void:
@@ -1544,7 +1570,7 @@ func _handle_events() -> void:
 			"trap":
 				sfx.play("trap")
 			"guide":
-				if codex.stat("guide_skip") == 0 and not _popup_open():
+				if codex.stat("guide_skip") == 0 and not _popup_open() and not Onboarding.holds_page(profile, String(e["id"])):
 					GuideBook.open_book(self, e["id"], true)
 			"merchant":
 				MerchantPopup.new().show_for(self)

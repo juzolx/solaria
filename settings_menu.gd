@@ -13,6 +13,7 @@ var dark_toggle: Button
 var battery_toggle: Button
 var graphics_toggle: Button
 var path_toggle: Button
+var tips_toggle: Button
 var a11y_buttons := {}
 var cloud_label: Label
 var dev_info: Label
@@ -105,6 +106,19 @@ func show_for(m) -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		arow.add_child(b)
 		a11y_buttons[key] = b
+
+	content.add_child(UI.heading("Help"))  # 2.1 G9
+	var help_row := UI.hbox(8)
+	content.add_child(help_row)
+	var wn := UI.button("What's new", func(): WhatsNew.new().show_for(main))
+	tips_toggle = UI.button("", func():
+		Onboarding.set_on(profile, not Onboarding.active(profile))
+		_update())
+	tips_toggle.tooltip_text = "Short first-time tips as you play. Turning them on starts them again from the beginning."
+	for b in [wn, tips_toggle]:
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size = Vector2(0, UI.TAP)
+		help_row.add_child(b)
 
 	content.add_child(UI.heading("Credits"))
 	var cr := UI.button("Credits and licenses", func(): CreditsScreen.new().show_for(main))
@@ -319,6 +333,7 @@ func _update() -> void:
 	battery_toggle.text = "Battery saver: %s" % ("ON" if profile.battery_saver else "OFF")
 	graphics_toggle.text = "Graphics: %s" % ("Low" if profile.low_graphics else "Normal")
 	path_toggle.text = "Choose-your-path rooms: %s" % ("ON" if profile.path_choice == "ask" else "OFF")
+	tips_toggle.text = "Beginner tips: %s" % ("ON" if Onboarding.active(profile) else "OFF")
 	dev_toggle.text = "Dev Mode: %s" % ("ON" if profile.dev_mode else "OFF")
 	dev_toggle.add_theme_color_override("font_color", UI.PINK if profile.dev_mode else UI.TEXT)
 	dev_box.visible = profile.dev_mode

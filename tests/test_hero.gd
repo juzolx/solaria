@@ -33,6 +33,8 @@ static func make(floor_num := 30, hero_class := "Warrior") -> void:
 	prof.max_floor = floor_num
 	prof.active_slot = 1
 	prof.notes_seen = PatchNotes.VERSION
+	prof.whats_new_seen = PatchNotes.VERSION  # 2.1 G9: no What's New or first-time tips over the screens
+	prof.onboard = {"on": false, "seen": {}}
 	prof.towns_v1 = true
 	LoadingScreen.enabled = false  # screenshots shouldn't catch the loading screen
 	prof.save()
