@@ -1,4 +1,5 @@
 extends SceneTree
+const TestHero := preload("res://tests/test_hero.gd")
 ## The one-time save reset for saves from before 0.12 (2.0 saves are moved instead:
 ## tests/stage6_migrate.gd): old saves are wiped once, settings are kept,
 ## and saves made after the reset are left alone.
@@ -11,6 +12,9 @@ func check(cond: bool, msg: String) -> void:
 		print("FAIL: ", msg)
 
 func _initialize() -> void:
+	if not TestHero.safe():  # this file deletes every save: only ever in the test folder
+		quit(1)
+		return
 	GameState.delete_saves()
 	Profile.delete()
 	Codex.delete()

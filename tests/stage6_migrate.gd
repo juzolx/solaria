@@ -48,6 +48,21 @@ func _initialize() -> void:
 	var old_codex := _raw(SRC + "codex.dat")
 	check(int(_raw(SRC + "profile.dat").get("save_epoch", 0)) == 12, "setup: the files are from 2.0 (epoch 12)")
 
+	# --- A failed safety copy or a failed write changes nothing (it retries next launch) ---
+	for mode in ["backup", "write"]:
+		SaveMigrate.test_fail_backup = mode == "backup"
+		SaveIO.test_truncate = mode == "write"
+		var fp := Profile.load_profile()
+		var fc := Codex.load_codex()
+		var fr := SaveMigrate.run(fp, fc)
+		SaveMigrate.test_fail_backup = false
+		SaveIO.test_truncate = false
+		check(not bool(fr.get("ok", true)), "%s failure: the run reports it failed" % mode)
+		check(fp.save_epoch == 12 and int(_raw(user.path_join("profile.dat")).get("save_epoch", 0)) == 12, "%s failure: epoch stays 12" % mode)
+		for f in FILES:
+			check(FileAccess.get_file_as_bytes(user.path_join(f)) == FileAccess.get_file_as_bytes(SRC + f), "%s failure: %s is untouched" % [mode, f])
+	check(not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(SaveMigrate.BACKUP_DIR)) or DirAccess.get_files_at(ProjectSettings.globalize_path(SaveMigrate.BACKUP_DIR)).size() >= FILES.size(), "the safety copy holds every file")
+
 	# --- First launch: the migration runs instead of the wipe ---
 	var main = load("res://main.tscn").instantiate()
 	root.add_child(main)
@@ -186,6 +201,21 @@ func _initialize() -> void:
 		await process_frame
 	check(main3.state.hero_hp > 0 or main3.state.in_town or main3.state.floor_num >= 1, "the moved hero plays")
 	main3.queue_free()
+	await process_frame
+	# --- A 2.0 hero not yet moved into a town (hero_1.dat) is converted, then moved ---
+	_wipe()
+	DirAccess.copy_absolute(SRC + "town2_hero_1.dat", user.path_join("hero_1.dat"))
+	var op := Profile.new()
+	op.save_epoch = 12
+	op.towns_v1 = false
+	op.save()
+	var main4 = load("res://main.tscn").instantiate()
+	root.add_child(main4)
+	await process_frame
+	var moved := _raw(user.path_join("town1_hero_1.dat"))
+	check(not moved.is_empty() and not moved.has("materials") and int(moved.get("dust", 0)) == int(expected_dust[2]), "a pre-towns 2.0 hero is converted and moved into a town")
+	check(main4.profile.save_epoch == Profile.SAVE_EPOCH, "pre-towns: epoch 13")
+	main4.queue_free()
 	await process_frame
 	_synthetic()
 	_wipe()

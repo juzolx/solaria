@@ -45,56 +45,99 @@ static func due(p: Profile, no_profile: bool) -> bool:
 	return false
 
 static func _has_old_town_heroes() -> bool:
-	for t in range(1, GameData.MAX_TOWNS + 1):
-		for n in range(1, GameData.MAX_HEROES + 1):
-			var path: String = GameState.town_slot_paths(t, n)[0]
-			if SaveIO.exists(path) and not SaveIO.made_by_save_io(path, "hero"):
-				return true
+	for path in hero_paths():
+		if SaveIO.exists(path) and not SaveIO.made_by_save_io(path, "hero"):
+			return true
 	return false
 
-## Runs the whole move. The profile and codex passed in are changed and saved.
-static func run(p: Profile, codex: Codex) -> Dictionary:
-	report = {"heroes": 0, "dust": 0, "unmapped": [], "class_reset": 0, "pets": 0}
-	_backup_all()
-	# Every hero in every town
+## Every hero save this move touches: each town's slots, plus 2.0 files that
+## haven't been moved into towns yet (hero_N.dat, save.dat, save_hc.dat: main
+## moves those after this runs, already converted).
+static func hero_paths() -> Array:
+	var out: Array = []
 	for t in range(1, GameData.MAX_TOWNS + 1):
 		for n in range(1, GameData.MAX_HEROES + 1):
-			var path: String = GameState.town_slot_paths(t, n)[0]
-			if not SaveIO.exists(path):
-				continue
-			var res := SaveIO.load_file(path, "hero")
-			if res["data"] == null:
-				continue  # unreadable: left exactly as it is
-			var d: Dictionary = res["data"]
-			migrate_hero(d, codex)
-			SaveIO.write(path, d, "hero")
+			out.append(GameState.town_slot_paths(t, n)[0])
+	for n in range(1, GameData.MAX_HEROES + 1):
+		out.append(GameState.OLD_SLOT_PATH % n)
+	out.append_array([GameState.SAVE_PATH, GameState.HC_SAVE_PATH])
+	return out
+
+static var test_fail_backup := false  # tests: pretend the safety copy failed
+
+## Runs the whole move. The profile and codex passed in are changed and saved.
+## report["ok"] is true only when every file was written: otherwise save_epoch
+## stays 12 and the move simply runs again next launch (every step is safe to
+## repeat: materials are gone once paid, ids stay ids).
+static func run(p: Profile, codex: Codex) -> Dictionary:
+	report = {"ok": false, "heroes": 0, "dust": 0, "unmapped": [], "class_reset": 0, "pets": 0}
+	# From here on any save of the profile says "2.0, not moved yet", so a failed run is
+	# retried next launch and never mistaken for older saves (which are wiped).
+	p.save_epoch = maxi(p.save_epoch, FROM_EPOCH)
+	if not _backup_all():
+		push_warning("SaveMigrate: the pre-2.1 safety copy failed; nothing was changed (it tries again next launch)")
+		return report
+	var all_ok := true
+	for path in hero_paths():
+		if not SaveIO.exists(path):
+			continue
+		var res := SaveIO.load_file(path, "hero")
+		if res["data"] == null:
+			continue  # unreadable: left exactly as it is
+		var d: Dictionary = res["data"]
+		migrate_hero(d, codex)
+		if SaveIO.write(path, d, "hero"):
 			report["heroes"] = int(report["heroes"]) + 1
+			if not path.contains("town"):  # a pre-towns file: main moves .dat/.bak/.tmp into a town next,
+				DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveIO.day_path(path)))  # so no stray daily copy stays behind
+		else:
+			all_ok = false
+			push_warning("SaveMigrate: couldn't write %s; it is moved again next launch" % path)
 	# Each town's stash (Profile.stash is the same array as the current town's)
 	for k in p.towns:
 		var tw: Dictionary = p.towns[k]
 		_walk_items(tw.get("stash", []))
 	_walk_items(p.stash)
 	migrate_codex(codex)
-	p.save_epoch = Profile.SAVE_EPOCH
-	p.towns_v1 = p.towns_v1 or not p.towns.is_empty()
+	codex.save()  # the codex first: the profile's epoch is what says the move is done
+	all_ok = all_ok and _codex_written(codex)
+	if all_ok:
+		p.save_epoch = Profile.SAVE_EPOCH
 	p.save()
-	codex.save()
+	report["ok"] = all_ok and _profile_written()
 	return report
 
-static func _backup_all() -> void:
+## Did the codex land on disk as it is now (read back, the bestiary keys match)?
+static func _codex_written(codex: Codex) -> bool:
+	if codex.path == "":
+		return true  # a test codex that never saves
+	var d = SaveIO.read(codex.path, "codex")
+	return d is Dictionary and ((d as Dictionary).get("bestiary", {}) as Dictionary).keys() == codex.bestiary.keys()
+
+## Did the profile land on disk marked as moved?
+static func _profile_written() -> bool:
+	var d = SaveIO.read(Profile.PATH, "profile")
+	return d is Dictionary and int((d as Dictionary).get("save_epoch", 0)) == Profile.SAVE_EPOCH
+
+## Copies every save file to user://pre_2_1_backup. False if any copy failed.
+static func _backup_all() -> bool:
+	if test_fail_backup:
+		return false
 	var bdir := ProjectSettings.globalize_path(BACKUP_DIR)
-	DirAccess.make_dir_recursive_absolute(bdir)
+	if DirAccess.make_dir_recursive_absolute(bdir) != OK:
+		return false
 	var files: Array = [Profile.PATH, Codex.PATH]
-	for t in range(1, GameData.MAX_TOWNS + 1):
-		for n in range(1, GameData.MAX_HEROES + 1):
-			files.append_array(GameState.town_slot_paths(t, n))
+	for path in hero_paths():
+		files.append_array(SaveIO.all_paths(path))
 	for f in files:
 		if FileAccess.file_exists(f):
 			var src := ProjectSettings.globalize_path(f)
 			var dst := bdir.path_join(src.get_file())
-			if not FileAccess.file_exists(dst):  # never overwrite the first copy
-				DirAccess.copy_absolute(src, dst)
-
+			if FileAccess.file_exists(dst):
+				continue  # never overwrite the first copy (a retry keeps the original 2.0 file)
+			if DirAccess.copy_absolute(src, dst) != OK:
+				return false
+	return true
 # ---------------------------------------------------------------------
 # One hero file (the raw saved Dictionary, before GameState reads it)
 # ---------------------------------------------------------------------

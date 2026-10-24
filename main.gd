@@ -191,8 +191,8 @@ func _fresh_start_check() -> void:
 		return
 	if SaveMigrate.due(profile, no_profile):
 		SaveMigrate.run(profile, codex)
-		migrate_notice = int(SaveMigrate.report.get("heroes", 0)) > 0
-		return
+		migrate_notice = bool(SaveMigrate.report.get("ok", false)) and int(SaveMigrate.report.get("heroes", 0)) > 0
+		return  # (if it failed, nothing is wiped: save_epoch stays 12 and it runs again next launch)
 	var had_saves := FileAccess.file_exists(Profile.PATH) or FileAccess.file_exists(GameState.SAVE_PATH) \
 		or FileAccess.file_exists(GameState.HC_SAVE_PATH) or FileAccess.file_exists(Codex.PATH)
 	for n in range(1, GameData.MAX_HEROES + 1):
