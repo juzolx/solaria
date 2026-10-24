@@ -127,7 +127,7 @@ func _awakening() -> void:
 					if state.start_race_trial():
 						main.sfx.play("boss_intro")
 					main.refresh(), UI.GOLD)
-				tb.disabled = state.enemy_is_boss or state.trial_active
+				tb.disabled = state.enemy_is_boss or Portals.inside(state)  # in town: tapping says why (Portals.open_block)
 				v.add_child(tb)
 	if not state.race_keys.is_empty():
 		var kt := UI.rich(12)

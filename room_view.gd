@@ -289,7 +289,7 @@ func _draw_campfire(x: float, z: float) -> Rect2:
 		draw_colored_polygon(pts, col)
 	return Rect2(base - Vector2(lw, s * 0.8), Vector2(lw * 2.0, s * 0.8))
 
-## A hidden portal: a tall swirling oval of violet light hanging over the floor.
+## A rift (portals.gd): a tall swirling oval of violet light hanging over the floor.
 func _draw_rift(x: float, z: float) -> Rect2:
 	var s := scene.focal / z
 	var c := scene.proj(x, HallsScene.FLOOR_Y + 0.95, z)

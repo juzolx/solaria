@@ -20,7 +20,7 @@ static var _cache := {}
 ## Maybe make the monster just spawned a variant (end of spawn_enemy).
 static func maybe(g: GameState) -> void:
 	g.enemy_variant = ""
-	if g.enemy_is_boss or g.enemy_goblin or g.enemy_wanderer or g.enemy_grave or g.enemy_calamity > 0 or not g.portal.is_empty():
+	if g.enemy_is_boss or g.enemy_goblin or g.enemy_wanderer or g.enemy_grave or g.enemy_calamity > 0 or Portals.inside(g):
 		return
 	if g.floor_num < FROM_FLOOR or randf() * 100.0 >= CHANCE:
 		return

@@ -195,7 +195,7 @@ var room_trap := {}         # 0.13: this room's trap {kind, spotted, done, x, y}
 var door_traps: Array = []  # which of the 3 doors are trapped
 var room_props: Array = []  # things to poke at in this room (halls.gd)
 var room_kind := "fight"    # what this room holds (a door kind: fight, treasure, rest, merchant, altar, nest, stranger, beast)
-var portal := {}            # 0.13: inside a hidden dungeon portal {theme, depth} ({} = not in one)
+var portal := {}            # inside a rift: {"kind": "rift", "depth", "floor", "left"} ({} = not in one; portals.gd)
 var doors: Array = []      # 0.13: what's behind the 3 blank doors of a cleared room (hidden until you walk through)
 
 # ---------- Current enemy ----------
@@ -1938,7 +1938,7 @@ func _enemy_defeated() -> void:
 	Lore.maybe_find(self, Lore.DROP_CHANCE)  # now and then, a torn page of the story
 	hero_hp = mini(hero_hp + int(get_max_hp() * 0.15 * (0.0 if curses.has("frailty") else 1.0)), get_max_hp())
 
-	# Inside a hidden portal: the rift decides what comes next
+	# Inside a rift: the rift decides what comes next (portals.gd)
 	if Rifts.on_kill(self):
 		_check_codex()
 		save_game()
@@ -2126,7 +2126,7 @@ func _hero_died() -> void:
 		if not leader_down:
 			_leader_falls()
 		return
-	Halls.leave_portal(self, false)  # a rift closes on you when you fall
+	Portals.on_fall(self)  # a rift closes on you when you fall
 	leader_down = false
 	last_death = Combat.recap(self)
 	events.append({"type": "death_recap"})
@@ -2148,15 +2148,7 @@ func _hero_died() -> void:
 	if party != null:
 		party.on_wipe()
 	if trial_active:
-		trial_active = false
-		trial_kind = "god"
-		trial_data = {}
-		say("[color=#f87171]%s was too strong. Train harder and try the trial again.[/color]" % enemy_name)
-		hero_hp = get_max_hp()
-		floor_num = trial_return
-		fight = 1
-		spawn_enemy()
-		save_game()
+		Portals.lose_trial(self)  # a lost trial costs nothing (portals.gd)
 		return
 	pierce_carry = 0
 	buffs.clear()
@@ -3626,6 +3618,7 @@ func load_game() -> bool:
 	if hero_hp <= 0 or hero_hp > get_max_hp():
 		hero_hp = get_max_hp()
 	spawn_enemy()
+	Portals.resume(self)  # back in a rift's fight, or a portal choice you hadn't made
 	return true
 
 ## v0.11: 4 stats at 3 points a level became 8 stats at 5 points a level.
@@ -3922,7 +3915,7 @@ func roll_doors(was_boss := false) -> Array:
 			kind = "fight"
 		if floor_num >= 3 and kind != "merchant" and randf() * 100.0 < Menagerie.NEST_DOOR_CHANCE:
 			kind = "nest"  # Juzo: a nest is the second-rarest find, after a Calamity
-		out.append(Rifts.maybe_door(self, kind))  # very rarely: a hidden portal
+		out.append(Rifts.maybe_door(self, kind))  # very rarely: a rift
 	if was_boss and not "camp" in out:
 		out[randi() % 3] = "camp"  # 0.13+: a Descenders' Camp waits after every boss (camp.gd)
 	return out
@@ -3997,8 +3990,7 @@ func choose_path(kind: String) -> void:
 ## The effect of a path room (also what a door leads into).
 func _apply_path(kind: String) -> void:
 	if kind.begins_with("portal:"):
-		Realms.enter(self, kind.substr(7))
-		events.append({"type": "portal"})
+		Portals.choose(self, kind)  # 2.1 F3: realm gates and rifts, one path
 		return
 	match kind:
 		"talk", "trade", "attack", "pass":
@@ -4358,7 +4350,10 @@ func gamble(id: int) -> Dictionary:
 ## hidden classes). Win it and _finish_trial does the rest; lose and you go back.
 ## info: {"name", "art", "lore", "hp" (x a boss, default 6), "atk" (default 1.5)}
 func start_special_trial(info: Dictionary, kind: String, data: Dictionary) -> bool:
-	if enemy_is_boss or trial_active:
+	var why := Portals.open_block(self)  # one portal at a time, only in the dungeon
+	if why != "":
+		say(why)
+		events.append({"type": "toast", "text": why})
 		return false
 	trial_return = floor_num
 	trial_active = true
@@ -4511,7 +4506,7 @@ func auto_door() -> String:
 ## 0.13+: "Skip easy fights": a monster far below you (one of your hits finishes it,
 ## and it can barely scratch you) falls in a single turn instead of playing out.
 func is_easy_fight() -> bool:
-	if enemy_is_boss or enemy_goblin or enemy_tier > 0 or enemy_wanderer or enemy_grave or enemy_calamity > 0 or not portal.is_empty():
+	if enemy_is_boss or enemy_goblin or enemy_tier > 0 or enemy_wanderer or enemy_grave or enemy_calamity > 0 or Portals.inside(self):
 		return false
 	return enemy_hp <= get_attack() and damage_taken() < get_max_hp() * 0.03
 

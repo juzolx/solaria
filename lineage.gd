@@ -354,8 +354,8 @@ static func escape_chance(g: GameState) -> float:
 	return clampf(c, Races.ESCAPE_MIN, Races.ESCAPE_MAX + ClassTree.escape_bonus(g) * 0.5)
 
 static func escape_block(g: GameState) -> String:
-	if not g.portal.is_empty():
-		return "The rift holds you"
+	if Portals.inside(g):
+		return Portals.no_run_text(g)
 	if g.enemy_calamity > 0:
 		return "There's no running now"
 	if g.enemy_is_boss:
@@ -395,7 +395,7 @@ static func try_escape(g: GameState) -> bool:
 
 ## A beaten monster (under 25% HP) can be let go: it becomes a friend.
 static func can_spare(g: GameState) -> bool:
-	if not g.portal.is_empty():
+	if Portals.inside(g):  # no sparing in a rift or a trial
 		return false
 	return g.enemy_calamity == 0 and not g.enemy_is_boss and not g.enemy_goblin and g.enemy_hp > 0 and g.enemy_hp <= g.enemy_max_hp * Races.SPARE_AT and g.horde_left <= 0
 

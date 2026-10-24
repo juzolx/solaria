@@ -1,5 +1,5 @@
 extends SceneTree
-## Hidden portals: three rift fights, then the vault; floors don't move inside.
+## Rifts (depth 1): three rift fights, then the vault; floors don't move inside.
 var fails := 0
 func check(c: bool, m: String) -> void:
 	if not c:
@@ -34,6 +34,8 @@ func _initialize() -> void:
 	var floor_in := g.floor_num
 	check(g.exploring and String(g.room_props[0]["kind"]) == "rift", "the room holds a rift")
 	Halls.interact(g, 0)
+	check(g.path_offer == ["portal:rift", "portal:leave"], "tapping the rift shows its portal card")
+	g.choose_path("portal:rift")
 	check(int(g.portal.get("left", 0)) == 3 and g.enemy_name.begins_with("Rift-touched") and g.enemy_tier == Monsters.EPIC, "through the rift: a rift-touched Epic (%s)" % g.enemy_name)
 	check(Lineage.escape_block(g) != "", "no running in the rift")
 	var bag0 := g.bag.size()

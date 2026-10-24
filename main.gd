@@ -1154,10 +1154,11 @@ func go_to_town(confirmed := false) -> bool:
 		return false
 	if not Town.enter(state):
 		var why := Town.blocked(state)
-		if why == Town.PORTAL_BLOCK and state.return_scrolls <= 0:
+		var held := why != "" and why == Portals.hold_text(state)  # a rift or trial holds you
+		if held and state.return_scrolls <= 0:
 			toast(why)
-		elif why in [Town.FLOOR_BLOCK, Town.PORTAL_BLOCK] and state.return_scrolls > 0:
-			confirm("Read a Return Scroll?", "You escape home right now with everything you carry. You have %d." % state.return_scrolls, "Read it", func():
+		elif (held or why == Town.FLOOR_BLOCK) and state.return_scrolls > 0:
+			confirm("Read a Return Scroll?", "You escape home right now with everything you carry.%s You have %d." % [Portals.scroll_note(state), state.return_scrolls], "Read it", func():
 				if Town.use_return(state):
 					sfx.play("click")
 					refresh())

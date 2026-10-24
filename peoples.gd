@@ -12,7 +12,7 @@ const REP_GAIN := 0.3
 ## After a monster spawns: are these friends?
 static func on_spawn(g: GameState) -> void:
 	g.enemy_peaceful = false
-	if g.enemy_people == "" or g.enemy_is_boss or g.enemy_wanderer or g.enemy_grave or g.horde_left > 0 or not g.portal.is_empty():
+	if g.enemy_people == "" or g.enemy_is_boss or g.enemy_wanderer or g.enemy_grave or g.horde_left > 0 or Portals.inside(g):
 		return
 	var idx := Races.rep_index(Lineage.rep(g, g.enemy_people))
 	if randf() * 100.0 < float(PASS_CHANCE.get(idx, 0.0)):
