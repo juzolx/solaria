@@ -1212,6 +1212,7 @@ func _sync_town() -> void:
 		return
 	town_talk.text = Lore.talk(state, town_tabs.current_tab)
 	building_bar.refresh(town_tabs.current_tab)
+	town_view.set_mode(state.hardcore)  # also picks the Church / Trophy Cabin picture
 	town_view.set_look(Town.look(state))
 	_town_heroes()
 	town_leave.text = "Into the dungeon"
