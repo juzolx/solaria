@@ -101,8 +101,7 @@ def main(root):
         "landmarks": [{"id": pid, "label": label, "cells": [i, j, i, j]} for pid, label, i, j in POINTS if pid not in point_prop],
         "houses": [list(h[:4]) for h in HOUSES], "plateau": list(PLATEAU), "plateau_z": PLATEAU_Z,
     }
-    with open(os.path.join(art, "town.json"), "w", newline="
-") as f:
+    with open(os.path.join(art, "town.json"), "w", newline="\n") as f:
         json.dump(data, f, indent=1)
     print("spots", len(spots), "walk", len(ok), "lights", len(lights))
 
