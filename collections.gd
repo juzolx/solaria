@@ -57,7 +57,7 @@ const OTHER := [
 	{"id": "sig_25", "track": "signatures", "need": 25, "pct": true, "title": "Trophy Hunter"},
 	{"id": "sig_50", "track": "signatures", "need": 50, "pct": true, "frame": ["c_keepsake", "Keepsake Case", "#ff6b9d", true]},
 	{"id": "sig_100", "track": "signatures", "need": 100, "pct": true, "title": "The Thousandfold"},
-	{"id": "slots_all", "track": "slots", "need": 6, "title": "Fully Kitted"},
+	{"id": "slots_all", "track": "slots", "need": 8, "title": "Fully Kitted"},  # 2.1: 8 slots (Ring and Necklace)
 	{"id": "sets_3", "track": "sets", "need": 3, "color": ["c_smith", "Smith's Bronze", "#d6a35c"]},
 	{"id": "sets_all", "track": "sets", "need": 10, "title": "Master of Sets", "frame": ["c_anvil", "Anvil-Struck", "#b8a07a", true]},
 	{"id": "pets_5", "track": "pets", "need": 5, "color": ["c_kennel", "Kennel Tan", "#d9b38c"]},

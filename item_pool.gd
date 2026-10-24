@@ -13,6 +13,8 @@ class_name ItemPool
 ##   Chest:    tunic plate robe
 ##   Legs:     pants greaves leggings
 ##   Feet:     boots sandals sabatons
+##   Ring:     band signet       (2.1; their items live in gear_slots.gd, GearSlots.POOL)
+##   Necklace: pendant amulet
 
 const TYPES := {
 	"Weapon": ["sword", "axe", "dagger", "mace", "spear", "bow", "staff"],
@@ -21,6 +23,8 @@ const TYPES := {
 	"Chest": ["tunic", "plate", "robe"],
 	"Legs": ["pants", "greaves", "leggings"],
 	"Feet": ["boots", "sandals", "sabatons"],
+	"Ring": ["band", "signet"],
+	"Necklace": ["pendant", "amulet"],
 }
 
 ## Old generic names (from earlier versions) mapped to a type.
@@ -40,6 +44,9 @@ const SPECIAL_TYPES := {
 	"emberforged_greaves": "greaves", "aegis_fragment": "shield", "crown_of_a_hundred_heads": "crown",
 	"anniss_skinning_claw": "dagger", "the_hollow_helm": "helm", "sailors_bane": "spear",
 	"dragonblood_plate": "plate", "book_of_every_monster": "tome",
+	# 2.1 jewelry
+	"anniss_bone_charm": "amulet", "draupnir": "band", "pearl_of_the_strait": "pendant", "andvaranaut": "band",
+	"brisingamen": "pendant", "ring_of_gyges": "signet",
 }
 
 const ZONES := [
@@ -497,6 +504,8 @@ const ZONES := [
 
 ## Picks a random hand-made item for this slot from the zone of this floor.
 static func pick(slot: String, zone_index: int) -> Array:
+	if GearSlots.is_jewelry(slot):
+		return GearSlots.pick(slot, zone_index)  # 2.1: rings and necklaces
 	var list: Array = ZONES[clampi(zone_index, 0, ZONES.size() - 1)][slot]
 	return list.pick_random()
 
@@ -508,7 +517,7 @@ static func all_types() -> Array:
 	return out
 
 static func count() -> int:
-	var n := 0
+	var n := GearSlots.count()
 	for z in ZONES:
 		for slot in z:
 			n += (z[slot] as Array).size()

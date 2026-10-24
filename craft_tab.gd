@@ -126,7 +126,7 @@ func setup(m) -> void:
 	gear_cost = UI.rich(12)
 	v.add_child(gear_cost)
 	var grid := GridContainer.new()
-	grid.columns = 3
+	grid.columns = 4  # 2.1: 8 slots in two even rows
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 6)
 	v.add_child(grid)

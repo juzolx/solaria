@@ -432,6 +432,8 @@ func _report(results: Array, hours: float, quick: bool) -> String:
 	for r in results:
 		played.append(float(r["minutes"]))
 	out += "- %d heroes, up to %.0f hours of play each (played %s to %s).\n" % [results.size(), hours, _hrs(played.min()), _hrs(played.max())]
+	# 2.1: Ring and Necklace (gear_slots.gd) each weigh about half a slot; re-check pace against reports made with 6 slots
+	out += "- Gear: %d slots. Ring and Necklace are about half a slot each (a ring is 15%% of a weapon's Attack, a necklace 25%% of a helmet's HP, plus a small charm from Uncommon up).\n" % GameData.SLOT_ORDER.size()
 	for m in [100, 250, 500, 750]:
 		var times: Array = []
 		var reached := 0

@@ -1971,7 +1971,7 @@ func _feed_souls(boss: bool) -> void:
 		if after > before:
 			bag_version += 1
 			if after >= GameData.SOUL_MAX and String(it.get("effect2", "")) == "":
-				var pool := GameData.LEGENDARY_EFFECTS.filter(func(fx): return fx["effect"] != it.get("effect", ""))
+				var pool := GearSlots.legendary_effects(String(it.get("slot", ""))).filter(func(fx): return fx["effect"] != it.get("effect", ""))
 				var fx: Dictionary = pool.pick_random()
 				it["effect2"] = fx["effect"]
 				it["effect2_value"] = maxi(1, int(round(float(fx["value"]) * 0.6)))
@@ -2650,6 +2650,7 @@ func reroll(id: int) -> void:
 		Church.reapply_power(item)  # 2.1: a (once) Cursed item stays 20% stronger
 		if new_rarity == GameData.LEGENDARY:
 			GameData.add_legendary_effect(item)
+		GearSlots.apply_charm(item)  # 2.1: a ring or necklace's charm grows with it
 		say("[color=#4ade80]Reroll success![/color] It's now %s." % _tag(item))
 		codex.add("rerolls_won")
 	else:
@@ -3613,6 +3614,7 @@ func load_game() -> bool:
 	enemy_goblin = bool(data.get("enemy_goblin", false))
 	Lineage.from_save(self, data.get("lineage", {}))
 	GameData.realm_order = realm_order
+	GearSlots.drop_unknown(self)  # 2.1: gear for a slot this version doesn't know never crashes a load
 	_give_old_legendaries_effects()
 	if shop.is_empty() or not data.has("featured"):  # older saves get the new shop
 		restock_shop()
@@ -3727,6 +3729,8 @@ func _convert_old_save(data: Dictionary) -> void:
 
 ## Remembers an item's look so you can wear it later (transmog).
 func add_to_wardrobe(item: Dictionary) -> void:
+	if not GearSlots.has_look(String(item.get("slot", ""))):
+		return  # 2.1: rings and necklaces don't show on the hero
 	var t := GameData.item_type(item)
 	var key := ""
 	if item.get("art", "") != "":
@@ -3743,7 +3747,7 @@ func add_to_wardrobe(item: Dictionary) -> void:
 ## What each slot looks like right now (transmog wins over the real item).
 func hero_looks() -> Dictionary:
 	var out := {}
-	for slot in GameData.SLOT_ORDER:
+	for slot in GearSlots.LOOK_SLOTS:  # 2.1: rings and necklaces have no look (keeps the hero cache key the same)
 		var tm = transmog.get(slot, "")
 		if tm is String and tm == "hide":
 			continue
@@ -4335,6 +4339,7 @@ func gamble(id: int) -> Dictionary:
 			item["bonus"] = int(ceil(int(item["bonus"]) * float(avg) / maxf(1.0, gs)))
 		if new_rarity == GameData.LEGENDARY:
 			GameData.add_legendary_effect(item)
+		GearSlots.apply_charm(item)  # 2.1: a ring or necklace's charm grows with it
 		add_to_wardrobe(item)
 		codex.add("gamble_wins")
 		_note_find(item)
