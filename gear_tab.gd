@@ -52,7 +52,7 @@ func setup(m) -> void:
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	doll.add_child(right)
 	for s in GameData.SLOT_ORDER:
-		var grid: VBoxContainer = left if s in ["Weapon", "Helmet", "Chest"] else right
+		var grid: VBoxContainer = left if s in ["Weapon", "Helmet", "Chest", "Ring"] else right  # 2.1: four a side, jewelry at the bottom
 		var card := PanelContainer.new()
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card.custom_minimum_size = Vector2(0, 66)

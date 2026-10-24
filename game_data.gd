@@ -105,7 +105,7 @@ const DEATH_KEEP_POTIONS := 2  # 2.1 (R5): a fall (not Hardcore) leaves you this
 # ---------- Crafting and shop ----------
 const CRAFT_GEAR_SCRAP := 20
 const CRAFT_RARITY_BONUS := 10
-const SHOP_SIZE := 6
+const SHOP_SIZE := 8  # 2.1: one per gear slot, so a missing slot always has something (restock_shop)
 const SHOP_RARITY_BONUS := 5
 const SHOP_PRICE_MULT := 4
 const MERCHANT_NAME := "Marta's Goods"
@@ -433,7 +433,8 @@ const RACES := Races.ORDER
 const RACE_INFO := Races.INFO
 
 # ---------- Gear ----------
-const SLOT_ORDER := ["Weapon", "Off Hand", "Helmet", "Chest", "Legs", "Feet"]
+## 2.1: Ring and Necklace join (gear_slots.gd: charms, balance notes, no look on the hero).
+const SLOT_ORDER := ["Weapon", "Off Hand", "Helmet", "Chest", "Legs", "Feet", "Ring", "Necklace"]
 const SLOT_INFO := {
 	"Weapon": {"stat": "Attack", "names": ["Sword", "Axe", "Dagger", "Mace", "Spear"], "base": 3.0, "per_floor": 2.0},
 	"Off Hand": {"stat": "Defense", "names": ["Buckler", "Shield", "Tower Shield"], "base": 1.0, "per_floor": 0.5},
@@ -441,6 +442,10 @@ const SLOT_INFO := {
 	"Chest": {"stat": "Defense", "names": ["Tunic", "Chestplate", "Robe"], "base": 1.0, "per_floor": 0.5},
 	"Legs": {"stat": "HP", "names": ["Pants", "Greaves", "Leggings"], "base": 5.0, "per_floor": 4.0},
 	"Feet": {"stat": "Defense", "names": ["Boots", "Sandals", "Sabatons"], "base": 1.0, "per_floor": 0.5},
+	# About half a slot each: 15% of a weapon's Attack, 25% of a helmet's HP (same base:per_floor
+	# ratio, so Gear Score matches), plus a charm effect from Uncommon up (GearSlots.CHARMS).
+	"Ring": {"stat": "Attack", "names": ["Band", "Signet"], "base": 0.45, "per_floor": 0.3},
+	"Necklace": {"stat": "HP", "names": ["Pendant", "Amulet"], "base": 1.25, "per_floor": 1.0},
 }
 
 # ---------- Zones, creatures and bosses ----------
@@ -484,6 +489,7 @@ const ROOT_ZONES := [
 		{"id": "wychwood_heart", "name": "Wychwood Heart", "monster": {"id": "woodwose", "name": "Woodwose", "shape": "brute", "color": "#7a5a3a"}},         # English
 	], "mid": {"id": "black_annis", "name": "Black Annis", "art": "boss_black_annis", "shape": "humanoid", "color": "#4a6fa5", "uniques": [  # English
 		{"id": "anniss_skinning_claw", "name": "Annis's Skinning Claw", "flavor": "Her iron nail, as long as a knife.", "slot": "Weapon", "effect": "lifesteal", "value": 12},
+		{"id": "anniss_bone_charm", "name": "Annis's Bone Charm", "flavor": "Knucklebones on a cord. She counted them every night. One is missing.", "slot": "Necklace", "effect": "lifesteal", "value": 8},  # 2.1 jewelry
 	]}, "boss": {"id": "grendel", "name": "Grendel", "art": "boss_grendel", "shape": "brute", "color": "#65a30d", "uniques": [  # Beowulf
 		{"id": "hrunting", "name": "Hrunting", "flavor": "Beowulf's borrowed blade. It failed him once. It won't fail you.", "slot": "Weapon", "effect": "lifesteal", "value": 10},
 		{"id": "grendels_hide", "name": "Grendel's Hide", "flavor": "Grendel's skin. No blade could cut it, and now none can cut you.", "slot": "Chest", "effect": "thorns", "value": 20},
@@ -507,6 +513,7 @@ const ROOT_ZONES := [
 	]}, "boss": {"id": "hel", "name": "Hel, Queen of the Dead", "art": "boss_hel", "shape": "spirit", "color": "#94a3b8", "uniques": [  # Norse
 		{"id": "helskor", "name": "Helskor", "flavor": "Hel's own shoes. Death walks lightly.", "slot": "Feet", "effect": "dodge", "value": 10},
 		{"id": "mask_of_half_death", "name": "Mask of Half-Death", "flavor": "Half of Hel's face was living, half was dead. So is this mask.", "slot": "Helmet", "effect": "regen", "value": 3},
+		{"id": "draupnir", "name": "Draupnir", "flavor": "Odin's ring, burned with Baldr and sent back up from Hel. Every ninth night it drips eight more.", "slot": "Ring", "effect": "gold_find", "value": 30},  # 2.1 jewelry
 	]}},
 	{"id": "flooded_depths", "name": "Flooded Depths", "color": "#0e7490", "enemies": [
 		{"id": "kappa", "name": "Kappa", "shape": "humanoid", "color": "#16a34a"},        # Japanese folklore
@@ -524,6 +531,7 @@ const ROOT_ZONES := [
 		{"id": "whirlpools_edge", "name": "Whirlpool's Edge", "monster": {"id": "ahuizotl", "name": "Ahuizotl", "shape": "beast", "color": "#2a4a6a"}},      # Aztec
 	], "mid": {"id": "scylla", "name": "Scylla", "art": "boss_scylla", "shape": "serpent", "color": "#4a8a8a", "uniques": [  # Greek
 		{"id": "sailors_bane", "name": "Sailor's Bane", "flavor": "Six heads, six bites, one spear.", "slot": "Weapon", "effect": "double_strike", "value": 18},
+		{"id": "pearl_of_the_strait", "name": "Pearl of the Strait", "flavor": "Grown in the whirlpool. It breathes when the tide turns.", "slot": "Necklace", "effect": "regen", "value": 2},  # 2.1 jewelry
 	]}, "boss": {"id": "charybdis", "name": "Charybdis", "art": "boss_charybdis", "shape": "serpent", "color": "#06b6d4", "uniques": [  # Greek
 		{"id": "scyllas_fang", "name": "Scylla's Fang", "flavor": "Pulled from the six-headed monster across the strait.", "slot": "Weapon", "effect": "crit", "value": 20},
 		{"id": "drowned_captains_boots", "name": "Drowned Captain's Boots", "flavor": "Every captain Charybdis swallowed left treasure behind. He left his boots.", "slot": "Feet", "effect": "gold_find", "value": 25},
@@ -544,9 +552,11 @@ const ROOT_ZONES := [
 		{"id": "muspel_gate", "name": "Muspel Gate", "monster": {"id": "basilisk", "name": "Basilisk", "shape": "serpent", "color": "#5a8a3a"}},         # European
 	], "mid": {"id": "fafnir", "name": "Fafnir", "art": "boss_fafnir", "shape": "serpent", "color": "#3e7a4a", "uniques": [  # Norse
 		{"id": "dragonblood_plate", "name": "Dragonblood Plate", "flavor": "Bathe in a dragon's blood and no blade can touch you. Almost.", "slot": "Chest", "effect": "regen", "value": 2},
+		{"id": "andvaranaut", "name": "Andvaranaut", "flavor": "The dwarf Andvari cursed his ring. Fafnir wore it anyway. So will you.", "slot": "Ring", "effect": "crit", "value": 15},  # 2.1 jewelry
 	]}, "boss": {"id": "surtr", "name": "Surtr the Fire Giant", "art": "boss_surtr", "shape": "brute", "color": "#ef4444", "uniques": [  # Norse
 		{"id": "flame_of_muspelheim", "name": "Flame of Muspelheim", "flavor": "Surtr's sword, meant to set the world on fire at the end of days.", "slot": "Weapon", "effect": "double_strike", "value": 25},
 		{"id": "emberforged_greaves", "name": "Emberforged Greaves", "flavor": "Hammered on the anvil of the fire giants.", "slot": "Legs", "effect": "regen", "value": 2},
+		{"id": "brisingamen", "name": "Brisingamen", "flavor": "Freyja's flaming necklace, forged by four dwarves. It burns with what it has seen.", "slot": "Necklace", "effect": "xp", "value": 20},  # 2.1 jewelry
 	]}},
 	{"id": "the_shadow_deep", "name": "The Shadow Deep", "color": "#6d28d9", "enemies": [
 		{"id": "wendigo", "name": "Wendigo", "shape": "brute", "color": "#d6d3d1"},         # Algonquian folklore
@@ -567,6 +577,7 @@ const ROOT_ZONES := [
 	]}, "boss": {"id": "typhon", "name": "Typhon, Father of Monsters", "art": "boss_typhon", "shape": "serpent", "color": "#7c3aed", "uniques": [  # Greek
 		{"id": "aegis_fragment", "name": "Aegis Fragment", "flavor": "A shard of Zeus's shield, with Medusa's gaze still in it.", "slot": "Off Hand", "effect": "dodge", "value": 12},
 		{"id": "crown_of_a_hundred_heads", "name": "Crown of a Hundred Heads", "flavor": "Typhon had a hundred dragon heads. This crown remembers all of them.", "slot": "Helmet", "effect": "thorns", "value": 30},
+		{"id": "ring_of_gyges", "name": "Ring of Gyges", "flavor": "Turn the stone inward and no one can see you. Plato worried about that.", "slot": "Ring", "effect": "dodge", "value": 10},  # 2.1 jewelry
 	]}},
 ]
 ## Floors 1-250 are the roots (above), 251-500 the race realms (realms.gd).
@@ -624,7 +635,7 @@ static func rarity_odds(bonus: int, legendary_chance: float) -> Array:
 static func gear_score(item: Dictionary) -> int:
 	if not SLOT_INFO.has(String(item.get("slot", ""))):
 		return 0
-	return int(round(item_power(item) / maxf(1.0, base_bonus(String(item["slot"]), 1)) * 10.0))
+	return int(round(item_power(item) / maxf(0.1, base_bonus(String(item["slot"]), 1)) * 10.0))  # 2.1: a ring's floor-1 value is under 1
 
 static func base_bonus(slot: String, floor_num: int) -> float:
 	var info: Dictionary = SLOT_INFO[slot]
@@ -650,6 +661,7 @@ static func make_item(slot: String, rarity: int, floor_num: int, id: int) -> Dic
 	}
 	if rarity == LEGENDARY or rarity >= MYTHIC:
 		add_legendary_effect(item)
+	GearSlots.apply_charm(item)  # 2.1: Uncommon to Epic rings and necklaces get a small charm
 	return item
 
 ## The name an item should have for its rarity. Hand-made items keep their name;
@@ -667,11 +679,12 @@ static func item_type(item: Dictionary) -> String:
 	var base: String = item.get("base_name", "")
 	if ItemPool.OLD_NAMES.has(base):
 		return ItemPool.OLD_NAMES[base]
-	return ItemPool.TYPES[item["slot"]][0]
+	return (ItemPool.TYPES.get(String(item.get("slot", "")), ["sword"]) as Array)[0]
 
 ## Gives a Legendary a random special effect and a title like "of Fury".
+## 2.1: rings and necklaces roll from their own pool (GearSlots.LEGENDARY_POOL).
 static func add_legendary_effect(item: Dictionary) -> Dictionary:
-	var fx: Dictionary = LEGENDARY_EFFECTS.pick_random()
+	var fx: Dictionary = GearSlots.legendary_effects(String(item.get("slot", ""))).pick_random()
 	item["effect"] = fx["effect"]
 	item["effect_value"] = fx["value"]
 	item["name"] = "%s %s" % [item["base_name"], fx["title"]]

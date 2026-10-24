@@ -15,8 +15,8 @@ func _initialize() -> void:
 		if c is Overlay:
 			c.queue_free()
 	var st: GameState = main.state
-	for s in ["Weapon", "Helmet", "Chest", "Feet"]:
-		st.equipped[s] = GameData.make_item(s, [2, 3, 4, 1][["Weapon", "Helmet", "Chest", "Feet"].find(s)], 30, st._new_id())
+	for s in ["Weapon", "Helmet", "Chest", "Feet", "Ring", "Necklace"]:
+		st.equipped[s] = GameData.make_item(s, [2, 3, 4, 1, 2, 4][["Weapon", "Helmet", "Chest", "Feet", "Ring", "Necklace"].find(s)], 30, st._new_id())
 	main.show_tab(1, 0)
 	main.refresh()
 	await create_timer(0.6).timeout

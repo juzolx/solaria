@@ -36,6 +36,7 @@ const TYPE_MATERIAL := {
 	"tunic": "leather", "plate": "steel", "robe": "cloth",
 	"pants": "linen", "greaves": "steel", "leggings": "leather",
 	"boots": "leather", "sandals": "leather", "sabatons": "steel",
+	"band": "gold", "signet": "steel", "pendant": "gold", "amulet": "bone",  # 2.1 jewelry
 }
 ## Uniques have their own colors (and a glow).
 const UNIQUE_STYLES := {
@@ -54,6 +55,12 @@ const UNIQUE_STYLES := {
 	"u_sailors_bane": {"mat": "coral", "trim": "#2ce8f5", "glow": true},
 	"u_dragonblood_plate": {"mat": "scale", "trim": "#e43b44", "glow": true},
 	"u_book_of_every_monster": {"mat": "leather", "trim": "#c27ad8", "glow": true},
+	"u_anniss_bone_charm": {"mat": "bone", "trim": "#4a6fa5", "glow": true},
+	"u_draupnir": {"mat": "gold", "trim": "#fde047", "glow": true},
+	"u_pearl_of_the_strait": {"mat": "pale", "trim": "#22d3ee", "glow": true},
+	"u_andvaranaut": {"mat": "gold", "trim": "#e43b44", "glow": true},
+	"u_brisingamen": {"mat": "ember", "trim": "#fbbf24", "glow": true},
+	"u_ring_of_gyges": {"mat": "dark", "trim": "#a78bfa", "glow": true},
 }
 ## Set pieces share a look per set.
 const SET_STYLES := {

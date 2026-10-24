@@ -22,6 +22,7 @@ const NOTES := [
 		"Art cleanup across heroes, monsters and the dungeon, and a new Credits screen (Menu > Credits and licenses) thanking every artist.",
 		"Fights feel punchier: a crisp one-frame hit flash, a squash on whoever gets hit, a golden flourish on level up and a burst of light when a hidden or God class answers. Reduce motion, Screen shake and Flashing effects in the Menu turn these down.",
 		"Menu > Copy debug info: copies your device, version and recent errors so you can paste them into a bug report. It stays on your phone; nothing is ever sent on its own.",
+		"Two new gear slots: Ring and Necklace (8 in all). They give a little Attack or HP plus a small charm from Uncommon up: rings lean to crits, luck and gold, necklaces to healing and wisdom. Six new Uniques to hunt, and Fully Kitted now needs all 8 slots.",
 	]},
 	{"version": "0.13", "name": "The Halls Below", "lines": [
 		"Every monster, boss and companion has new dark fantasy art (Dungeon Crawl Stone Soup, CC0).",

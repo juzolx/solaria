@@ -29,7 +29,7 @@ func show_for(m) -> void:
 	grid.add_theme_constant_override("v_separation", 8)
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_child(grid)
-	for slot in GameData.SLOT_ORDER:
+	for slot in GearSlots.LOOK_SLOTS:  # 2.1: rings and necklaces have no look (yet)
 		var l := UI.label(slot, 13, UI.TEXT)
 		l.custom_minimum_size = Vector2(80, 0)
 		grid.add_child(l)

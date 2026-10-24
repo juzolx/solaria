@@ -385,7 +385,7 @@ func _initialize() -> void:
 	check(w.hero_looks().has("Helmet"), "transmog look shows")
 	var hero_pic := Sprites.hero(w.appearance, w.hero_looks())
 	check(hero_pic["body"] != null, "hero picture builds")
-	check(ItemPool.count() == 300, "300 hand-made items (got %d)" % ItemPool.count())
+	check(ItemPool.count() == 360, "360 hand-made items: 300 body gear + 60 rings and necklaces (got %d)" % ItemPool.count())
 	for mname in Monsters.all_monsters():
 		check(not Sprites.enemy_by_key(String(Monsters.by_id(mname).get("art", mname))).is_empty(), "art for " + mname)
 	for zi in GameData.ZONES.size():
