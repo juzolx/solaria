@@ -73,12 +73,12 @@ func setup(m) -> void:
 	v.add_child(basics)
 	var pcard := _recipe_card(basics, "Health Potion", UI.PINK, "Heals 40% HP. Drunk automatically when your HP is low.")
 	potion_cost = pcard[0]
-	potion_button = UI.primary("Craft", func(): state.craft_potion(); main.sfx.play("craft"); main.refresh(), UI.PINK)
+	potion_button = UI.primary("Craft", func(): state.craft_potion(); main.sfx.play("craft"); main.refresh())   # the gold main action
 	pcard[1].add_child(potion_button)
 	var bcard := _recipe_card(basics, "Bigger Bag", UI.BLUE, "")
 	bag_info = bcard[2]
 	bag_cost = bcard[0]
-	bag_button = UI.primary("Craft", func(): state.craft_bag(); main.sfx.play("craft"); main.refresh(), UI.BLUE)
+	bag_button = UI.primary("Craft", func(): state.craft_bag(); main.sfx.play("craft"); main.refresh())
 	bcard[1].add_child(bag_button)
 
 	v = sets_box
@@ -86,13 +86,13 @@ func setup(m) -> void:
 	v.add_child(UI.heading("Set recipes  -  wear 2 or 3 pieces of a set for bonuses"))
 	for set_name in GameData.SET_ORDER:
 		var info: Dictionary = GameData.SETS[set_name]
-		var card := UI.panel(UI.INSET, Color(UI.TEAL, 0.45), 8, 10, 2)
+		var card := _frame(UiSkin.IRON)   # interface pass (approved mockup 11): the panel frame
 		v.add_child(card)
 		var cv := UI.vbox(5)
 		card.add_child(cv)
 		var head := UI.hbox(8)
 		cv.add_child(head)
-		var title := UI.label(String(info["name"]), 15, UI.TEAL)
+		var title := UI.label(String(info["name"]), 15, UI.GOLD)
 		head.add_child(title)
 		head.add_child(UI.spacer())
 		var wearing := UI.label("", UI.FONT_CAPTION, UI.DIM)
@@ -112,7 +112,7 @@ func setup(m) -> void:
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			b.clip_text = true
 			b.custom_minimum_size = Vector2(60, 56)
-			b.add_theme_color_override("font_color", Color("#99f6e4"))
+			b.add_theme_color_override("font_color", UI.TEXT)
 			b.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
 			b.expand_icon = false
 			b.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -166,12 +166,13 @@ func _fill_wares(force := false) -> void:
 	for i in state.smith_stock.size():
 		var e: Dictionary = state.smith_stock[i]
 		var item: Dictionary = e["item"]
-		var row := UI.panel(UI.INSET, Color(GameData.color_of(int(item["rarity"]))), 8, 8, 1)
+		var row := _frame(Color(GameData.color_of(int(item["rarity"]))))   # the line in the item's rarity colour
 		wares_list.add_child(row)
 		var h := UI.hbox(10)
 		row.add_child(h)
-		var pic := ItemGrid.picture(40)
-		pic.texture = Sprites.item_icon(item)
+		var pic := ItemGrid.picture(44)
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED   # whole pixels
+		pic.texture = UiIcons.big(Sprites.item_icon(item), 44)
 		h.add_child(pic)
 		var t := UI.rich(UI.FONT_CAPTION)
 		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -191,12 +192,12 @@ func _fill_wares(force := false) -> void:
 
 ## A small card: title, description, cost line, and a spot for its button.
 func _recipe_card(parent: Control, title: String, color: Color, text: String) -> Array:
-	var card := UI.panel(UI.INSET, Color(color, 0.45), 8, 10, 2)
+	var card := _frame(UiSkin.IRON)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(card)
 	var cv := UI.vbox(5)
 	card.add_child(cv)
-	cv.add_child(UI.label(title, 15, color))
+	cv.add_child(UI.label(title, 15, UI.GOLD))   # one accent: titles gold, not per-recipe colours
 	var desc := UI.rich(UI.FONT_CAPTION)
 	desc.custom_minimum_size = Vector2(0, 32)
 	desc.text = "[color=%s]%s[/color]" % [UI.hex(UI.DIM), text]
@@ -211,7 +212,8 @@ func _craft_set(set_name: String, slot: String) -> void:
 	main.refresh()
 
 func _chip(text: String, color: Color) -> void:
-	var p := UI.panel(Color("#0f1526"), Color(color, 0.4), 12, 6, 1)
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", UiSkin.bevel(UiSkin.SLATE, UI.EDGE, 4))
 	var l := UI.rich(UI.FONT_CAPTION)
 	l.fit_content = true
 	l.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -234,7 +236,7 @@ func refresh() -> void:
 	for c in mats_row.get_children():
 		c.queue_free()
 	_chip("Scrap [color=#e8b14a][b]%d[/b][/color]" % state.scrap, UI.GOLD)
-	_chip("Dust [color=#c4b5fd][b]%d[/b][/color]" % state.dust, Color("#c4b5fd"))
+	_chip("Dust [color=#c27ad8][b]%d[/b][/color]" % state.dust, Color("#c27ad8"))
 
 	potion_cost.text = "Costs: %s scrap" % UI.have_need(state.scrap, GameData.POTION_SCRAP)
 	potion_button.disabled = state.scrap < GameData.POTION_SCRAP
@@ -274,3 +276,9 @@ func refresh() -> void:
 	gear_cost.text = "Costs: %s scrap each. Items match your best floor (%d)." % [UI.have_need(state.scrap, GameData.CRAFT_GEAR_SCRAP), state.best_floor]
 	for slot in gear_buttons:
 		(gear_buttons[slot] as Button).disabled = state.scrap < GameData.CRAFT_GEAR_SCRAP or state.bag_full()
+
+## Interface pass: a forge card wears the panel frame, its line in `edge`.
+func _frame(edge: Color) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", UiSkin.frame(UI.INSET, edge, 10))
+	return p
