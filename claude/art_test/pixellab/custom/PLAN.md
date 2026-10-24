@@ -31,8 +31,8 @@ Check `get_balance` before each batch; show a sample before any batch over ~30 g
   palette shader. No pre-baked colour copies.
 - Faces: portrait only, one face patch (~2 KB) laid on at runtime.
 - Import with filter off (nearest), no mipmaps; frame counts stay at 4 (idle) / 8-9 (attack).
-- Open point: the PixelLab figure is ~60 px tall on a 64 px canvas, a bit over the ~54 px target. Options:
-  regenerate at size 56 (cheap, ~2 gens + anims) or accept 60 and keep the 3x battle scale. Needs Juzo's call.
+- SIZE LOCKED (Juzo, 2026-10-24): the hero is ~60 px tall on a 64 px canvas, shown at 3x in battle.
+  Every outfit, weapon, race and hair style is built to this; races scale relative to it (dwarf shorter, etc.).
 
 ## Known limits
 - PixelLab sprites are flat (one image per frame), not layers. Outfit x hair style combinations multiply, so
