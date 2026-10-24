@@ -34,3 +34,6 @@ store description. Mechanics stay; only names and text change (unless Juzo asks)
 ## Story facts from Juzo
 - Oct 23 2026: the people are trapped in the town; the dungeon is their only belief of a way out. The town is big and walled, a lived-in prison, with the dungeon entrance as the place of hope.
 - Oct 24 2026: nobody knows WHY they are trapped ("for god knows what reason"); the mystery is part of the story. They BELIEVE the dungeon is the way out (a belief, not a certainty).
+- Oct 24 2026: why they believe the dungeon is the way out: ALL of these (a) an old prophecy/carving at the dungeon entrance, (b) the first descenders who went deep never came back and people choose to believe they escaped, (c) strange things come up from below (light, wind, items from outside), (d) it is the only thing left to try.
+- Later update idea (Juzo): an ASCENDED HEROES town at the top/end, for heroes who make it out.
+- Hardcore towns get an ACTIVE GRAVEYARD (fallen Hardcore heroes are buried there; grows over time).
