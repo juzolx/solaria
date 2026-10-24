@@ -41,7 +41,7 @@ func setup(m) -> void:
 	add_child(v)
 
 	# ---- Merchant ----
-	var merchant := UI.panel(Color("#1a1408"), Color("#8a6d3b"), 10, 12, 2)
+	var merchant := _frame(UiSkin.IRON)   # interface pass (approved mockup 12): the panel frame
 	v.add_child(merchant)
 	var mrow := UI.hbox(10)
 	merchant.add_child(mrow)
@@ -63,12 +63,13 @@ func setup(m) -> void:
 	# ---- Featured deal ----
 	v.add_child(UI.heading("Featured deal  -  new stock every time you come home"))
 	featured_box = PanelContainer.new()
-	featured_style = UI.style(UI.INSET, UI.GOLD, 10, 12, 3)
+	featured_style = UI.style(UI.INSET, UI.GOLD, 10, 12, 2)
 	featured_box.add_theme_stylebox_override("panel", featured_style)
 	v.add_child(featured_box)
 	var frow := UI.hbox(12)
 	featured_box.add_child(frow)
 	featured_pic = ItemGrid.picture(64)
+	featured_pic.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED   # whole pixels
 	featured_pic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	frow.add_child(featured_pic)
 	featured_text = UI.rich(UI.FONT_CAPTION)
@@ -120,14 +121,14 @@ func setup(m) -> void:
 
 	# ---- Upgrades ----
 	v.add_child(UI.heading("Upgrades"))
-	var bag_card := UI.panel(UI.INSET, Color(UI.BLUE, 0.5), 8, 10, 2)
+	var bag_card := _frame(UiSkin.IRON)
 	v.add_child(bag_card)
 	var brow := UI.hbox(10)
 	bag_card.add_child(brow)
 	bag_text = UI.rich(UI.FONT_CAPTION)
 	bag_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	brow.add_child(bag_text)
-	bag_button = UI.primary("", func(): state.buy_bag_upgrade(); main.sfx.play("buy"); main.refresh(), UI.BLUE)
+	bag_button = UI.primary("", func(): state.buy_bag_upgrade(); main.sfx.play("buy"); main.refresh())
 	bag_button.custom_minimum_size = Vector2(130, 0)
 	bag_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	brow.add_child(bag_button)
@@ -147,7 +148,7 @@ func setup(m) -> void:
 		quick_sell[r] = b
 
 func _supply_card(parent: Control, id: String, title: String, text: String, color: Color, on_buy: Callable) -> void:
-	var card := UI.panel(UI.INSET, Color(color, 0.45), 8, 10, 2)
+	var card := _frame(UiSkin.IRON)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(card)
 	var cv := UI.vbox(4)
@@ -174,7 +175,7 @@ func _supply_card(parent: Control, id: String, title: String, text: String, colo
 func _gear_card(item: Dictionary, index: int) -> void:
 	var r := int(item["rarity"])
 	var color := Color(GameData.color_of(r))
-	var card := UI.panel(UI.INSET, color, 10, 10, 2)
+	var card := _frame(color)   # the shelf card's line is the item's rarity colour
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card.custom_minimum_size = Vector2(0, 196)
 	card.tooltip_text = ItemText.plain(item)
@@ -184,7 +185,8 @@ func _gear_card(item: Dictionary, index: int) -> void:
 	var top := UI.hbox(6)
 	cv.add_child(top)
 	var pic := ItemGrid.picture(44)
-	pic.texture = Sprites.item_icon(item)
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED   # whole pixels
+	pic.texture = UiIcons.big(Sprites.item_icon(item), 44)
 	top.add_child(pic)
 	var tv := UI.vbox(0)
 	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -252,7 +254,7 @@ func refresh() -> void:
 		featured_pic.texture = null
 	else:
 		var f := state.featured
-		featured_pic.texture = Sprites.item_icon(f)
+		featured_pic.texture = UiIcons.big(Sprites.item_icon(f), 64)
 		featured_style.border_color = Color(GameData.color_of(f["rarity"]))
 		featured_text.text = ItemText.describe(state, f) + "\n" + ItemText.compare(state, f)
 		featured_buy.visible = true
@@ -304,3 +306,9 @@ func refresh() -> void:
 		var b: Button = quick_sell[r]
 		b.text = "%s (%d)\n+%d gold" % [GameData.RARITY_NAMES[r], n, total]   # two lines: three across must fit a phone
 		b.disabled = n == 0
+
+## Interface pass: a shop card wears the panel frame, its line in `edge`.
+func _frame(edge: Color) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", UiSkin.frame(UI.INSET, edge, 10))
+	return p
