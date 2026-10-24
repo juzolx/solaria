@@ -66,16 +66,26 @@ static func chest_scrap() -> int:
 static func scrap_floor_mult(floor_num: int) -> float:
 	return 1.0 + maxi(0, floor_num) / float(SALVAGE_FLOOR_STEP)
 
-## Scrap from salvaging an item: its rarity's base, grown with its floor, plus half the
-## scrap its upgrades cost (so upgrading worn gear isn't wasted when a better drop comes).
-static func salvage_scrap(item: Dictionary) -> int:
-	var base := float(GameData.SCRAP_VALUES[int(item["rarity"])]) * scrap_floor_mult(int(item.get("floor", 1)))
-	return int(base) + int(upgrade_scrap_spent(item) * SALVAGE_UPGRADE_REFUND)
+## Scrap from salvaging an item: its rarity's base grown with its floor (times your scrap
+## bonus, `mult`), plus half the scrap really spent upgrading it. The refund is never
+## multiplied, so upgrading and salvaging always loses scrap (no loop).
+static func salvage_scrap(item: Dictionary, mult := 1.0) -> int:
+	return int(salvage_base(item) * mult) + salvage_refund(item)
 
-## Scrap all of an item's upgrades cost at the plain smith price (5 x L x rarity step each).
-static func upgrade_scrap_spent(item: Dictionary) -> int:
-	var lvl := int(item["level"])
-	return int(2.5 * lvl * (lvl + 1)) * (mini(int(item["rarity"]), GameData.LEGENDARY) + 1)
+## The salvage base: rarity value x (1 + item floor / 40).
+static func salvage_base(item: Dictionary) -> float:
+	return float(GameData.SCRAP_VALUES[int(item["rarity"])]) * scrap_floor_mult(int(item.get("floor", 1)))
+
+## Half the scrap actually paid for this item's upgrades (item["upg_scrap"]). Items upgraded
+## before R6 have no record: they keep the old +2 per level.
+static func salvage_refund(item: Dictionary) -> int:
+	if item.has("upg_scrap"):
+		return int(int(item["upg_scrap"]) * SALVAGE_UPGRADE_REFUND)
+	return int(item.get("level", 0)) * 2
+
+## Record scrap paid to upgrade an item (smith upgrades, a traveler's hone).
+static func note_upgrade_scrap(item: Dictionary, paid: int) -> void:
+	item["upg_scrap"] = int(item.get("upg_scrap", 0)) + maxi(0, paid)
 
 ## An elite room's monster fell: a plain chest of scrap (worth more deeper) and a little dust.
 static func elite_reward(g: GameState) -> void:

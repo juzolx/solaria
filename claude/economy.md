@@ -86,7 +86,7 @@ the balance sim); at 1,030 gold at best floor 100 it is now a real choice.
 
 | Source | Amount |
 |---|---|
-| Salvage | base Common 1, Uncommon 2, Rare 4, Epic 8, Legendary 16, Unique 40, Set 20, Signature 80, x (1 + item floor / 40) (R6: Epic on floor 100 = 28); plus half the scrap its upgrades cost (R6, was +2 per level); x Dwarf / forge-heat bonus |
+| Salvage | base Common 1, Uncommon 2, Rare 4, Epic 8, Legendary 16, Unique 40, Set 20, Signature 80, x (1 + item floor / 40) (R6: Epic on floor 100 = 28); x Dwarf / forge-heat bonus on that base only; plus half the scrap really paid for its upgrades (`item.upg_scrap`, never multiplied, so upgrade-and-salvage always loses scrap; R6, was +2 per level, which items upgraded before R6 keep) |
 | Auto-salvage and bag overflow | same values |
 | Plain chests (goblin, horde) | 8-12 (was 1-2 materials; 4-8 before the R5 balance pass) |
 | Elite room monster (R6) | a plain chest x (1 + floor / 40): 8-12 on floor 1, 28-42 on floor 100; plus 1 dust |

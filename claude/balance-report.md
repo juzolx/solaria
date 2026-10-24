@@ -47,7 +47,7 @@ What the numbers say:
 | `game_state.gd` `auto_door` | Auto with no reader skips the claw-marked door below 75% HP (same rule readers already used); healthy it still picks at random. |
 | `economy.gd` `elite_reward` | An elite room's monster pays a plain chest of scrap x (1 + floor/40) (28-42 on floor 100) and 1 dust (`ELITE_DUST`), on top of its Epic loot. Elite path text says so. |
 | `monsters.gd` TIERS | Attack: Epic 1.3 -> 1.22, Legendary 1.4 -> 1.32, Mythic 1.55 -> 1.45 (HP and modifiers unchanged). |
-| `economy.gd` `salvage_scrap` (via `GameData.scrap_value`) | Salvage = rarity base x (1 + item floor / 40) (`SALVAGE_FLOOR_STEP`; Epic on floor 100: 28, was 8) + half the scrap its upgrades cost (`SALVAGE_UPGRADE_REFUND` 0.5; was +2 per level). Upgrade costs unchanged. |
+| `economy.gd` `salvage_scrap` (via `GameData.scrap_value`) | Salvage = rarity base x (1 + item floor / 40) (`SALVAGE_FLOOR_STEP`; Epic on floor 100: 28, was 8) + half the scrap really paid for its upgrades (`item.upg_scrap`, `SALVAGE_UPGRADE_REFUND` 0.5; was +2 per level). The scrap bonus (Dwarf, Forge realm...) multiplies only the base, so there is no upgrade/salvage loop (Fable fix; test in stage6_currency). Upgrade costs unchanged. |
 | `game_data.gd` HP bands | 51-75 3.4% -> 4.4%, 76-100 3.0% -> 4.3% a floor (monster HP x1.47 at floor 100 and beyond). Attack bands unchanged. |
 | `game_state.gd` `spawn_enemy` | Bug fix: the elite flag was left on after a fall, so the next ordinary monster could wind up elite heavy blows. Now cleared on every spawn. |
 | `combat.gd` `recap` | Death recap records `elite` (for the sim). |

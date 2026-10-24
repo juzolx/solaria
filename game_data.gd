@@ -755,8 +755,8 @@ static func sell_value(item: Dictionary) -> int:
 	var f := int(item["floor"])
 	return maxi(1, int(int(SELL_MULTS[r]) * (2.0 + f * 0.5) * (1.0 + 0.2 * int(item["level"]))))
 
-static func scrap_value(item: Dictionary) -> int:
-	return Economy.salvage_scrap(item)  # R6: grows with the item floor, refunds half its upgrades
+static func scrap_value(item: Dictionary, mult := 1.0) -> int:
+	return Economy.salvage_scrap(item, mult)  # R6: base (x mult) grows with the item floor; + half the upgrade scrap paid
 
 static func upgrade_cost(item: Dictionary) -> int:
 	var base := 5 * (int(item["level"]) + 1) * (mini(int(item["rarity"]), LEGENDARY) + 1)

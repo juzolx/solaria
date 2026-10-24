@@ -2417,7 +2417,7 @@ func _give_item(item: Dictionary) -> void:
 	if verdict != "keep":
 		say(LootRules.carry_out(self, item, verdict))
 	elif bag.size() >= bag_capacity() + OVERFLOW_MAX and not keep:
-		var s := GameData.scrap_value(item)
+		var s := GameData.scrap_value(item, scrap_mult())
 		scrap += s
 		say("Bag overflowing! Salvaged %s (+%d scrap)" % [_tag(item), s])
 		tip("bag_full", "Your bag is past its limit, so new drops turn into scrap. Sell or salvage items in the Bag tab to make room.")
@@ -2597,7 +2597,7 @@ func salvage(id: int) -> void:
 	if item.get("locked", false):
 		say("%s is locked. Unlock it first." % _tag(item))
 		return
-	var value := int(GameData.scrap_value(item) * scrap_mult())
+	var value := GameData.scrap_value(item, scrap_mult())
 	scrap += value
 	Lineage.gain(self, "craft")
 	ClassTree.count(self, "scrapped")
@@ -2621,7 +2621,9 @@ func upgrade(id: int) -> void:
 	if Economy.upgrade_short(self, item) != "":
 		say(Economy.upgrade_short(self, item))
 		return
-	scrap -= GameData.upgrade_cost(item)
+	var paid := GameData.upgrade_cost(item)
+	scrap -= paid
+	Economy.note_upgrade_scrap(item, paid)  # R6: salvage gives back half of what was really paid
 	dust -= Economy.upgrade_dust(item)
 	ClassTree.grow(self, "craft")
 	item["level"] = int(item["level"]) + 1
@@ -2699,7 +2701,7 @@ func salvage_all(rarity: int) -> void:
 	var dust := 0
 	for item in bag.duplicate():
 		if int(item["rarity"]) == rarity and not item.get("locked", false) and not is_bound(item) and not is_upgrade(item):
-			total += GameData.scrap_value(item)
+			total += GameData.scrap_value(item, scrap_mult())  # R6: same formula as one salvage
 			dust += Economy.salvage_dust(item)
 			bag.erase(item)
 			count += 1

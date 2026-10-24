@@ -81,7 +81,7 @@ static func collect(g: GameState) -> String:
 			g.codex.found_item(item)
 			kept += 1
 		else:
-			g.scrap += GameData.scrap_value(item)
+			g.scrap += GameData.scrap_value(item, g.scrap_mult())
 	if kept > 0:
 		g.bag_version += 1
 	g.bench_haul = {}

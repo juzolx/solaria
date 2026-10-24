@@ -211,7 +211,7 @@ func _popup(id: int) -> void:
 	if found["where"] == "bag":
 		acts.append(["Equip", func(): state.equip(id); main.sfx.play("equip"); main.refresh(), UI.GREEN])
 		if not item.get("locked", false):
-			acts.append(["Salvage (%d scrap)" % GameData.scrap_value(item), func(): _act("salvage"), UI.BLUE])
+			acts.append(["Salvage (%d scrap)" % GameData.scrap_value(item, state.scrap_mult()), func(): _act("salvage"), UI.BLUE])
 			acts.append(["Sell (%d gold)" % state.sell_price(item), func(): _act("sell"), UI.GOLD])
 	ItemPopup.show_item(main, item, acts)
 
@@ -249,7 +249,7 @@ func _act(action: String) -> void:
 				selected_id = -1
 				main.refresh()
 			if ItemText.is_precious(item):
-				main.confirm("Salvage %s?" % GameData.display_name(item), "This is a %s item. You'll get %d scrap, but it's gone for good." % [GameData.RARITY_NAMES[int(item["rarity"])], GameData.scrap_value(item)], "Salvage it", do_salvage)
+				main.confirm("Salvage %s?" % GameData.display_name(item), "This is a %s item. You'll get %d scrap, but it's gone for good." % [GameData.RARITY_NAMES[int(item["rarity"])], GameData.scrap_value(item, state.scrap_mult())], "Salvage it", do_salvage)
 				return
 			do_salvage.call()
 			return
@@ -300,7 +300,7 @@ func refresh() -> void:
 		var scrap_total := 0
 		for it in items:
 			gold_total += state.sell_price(it)
-			scrap_total += int(GameData.scrap_value(it) * state.scrap_mult())
+			scrap_total += GameData.scrap_value(it, state.scrap_mult())
 		pick_sell.text = "Sell %d (%d gold)" % [items.size(), gold_total]
 		pick_salvage.text = "Salvage %d (%d scrap)" % [items.size(), scrap_total]
 		pick_sell.disabled = items.is_empty()
@@ -352,7 +352,7 @@ func _refresh_details() -> void:
 	var locked: bool = item.get("locked", false)
 	var text := ItemText.describe(state, item)
 	text += "\n" + (ItemText.compare(state, item) if in_bag else "[color=%s]You're wearing this.[/color]" % UI.hex(UI.DIM))
-	text += "\n[color=%s]Sell %d gold  -  Salvage %d scrap[/color]" % [UI.hex(UI.DIM), state.sell_price(item), GameData.scrap_value(item)]
+	text += "\n[color=%s]Sell %d gold  -  Salvage %d scrap[/color]" % [UI.hex(UI.DIM), state.sell_price(item), GameData.scrap_value(item, state.scrap_mult())]
 	details.text = text
 
 	equip_button.text = "Equip" if in_bag else "Unequip"
