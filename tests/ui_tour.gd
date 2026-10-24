@@ -18,6 +18,9 @@ func shot(label: String) -> void:
 			var need: float = (c.get("ui_root") as Control).get_combined_minimum_size().x
 			if need > screen_w + 1.0:
 				print("SCREEN TOO WIDE: %s needs %.0f px of %.0f%s" % [label, need, screen_w, _culprit(c.get("ui_root"), screen_w)])
+			var tall: float = (c.get("ui_root") as Control).get_combined_minimum_size().y
+			if tall > root.get_visible_rect().size.y + 1.0:
+				print("SCREEN TOO TALL: %s needs %.0f px of %.0f (the bottom bar is pushed off)" % [label, tall, root.get_visible_rect().size.y])
 	for c in root.get_children():
 		for o in c.get_children():
 			if o is Overlay and o.box != null and o.box.size.x > screen_w + 1.0:

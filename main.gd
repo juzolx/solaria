@@ -425,6 +425,15 @@ func _share_skill_book() -> void:
 	state.skill_book = profile.skill_book
 	profile.save()
 
+## The 7 reward days: one row on a wide screen, two rows on a phone (QA: seven
+## columns at 430 px split words like "potio-ns" and "Myste-ry Box").
+func daily_grid() -> GridContainer:
+	var g := GridContainer.new()
+	g.columns = 4 if is_tall or get_viewport().get_visible_rect().size.x < 720.0 else Codex.LOGIN_REWARDS.size()
+	g.add_theme_constant_override("h_separation", 6)
+	g.add_theme_constant_override("v_separation", 6)
+	return g
+
 ## Once a day: a small reward that grows over a 7-day streak.
 func _daily_login() -> void:
 	var day := codex.check_login()
@@ -436,7 +445,7 @@ func _daily_login() -> void:
 	codex.save()
 	var o := Overlay.new().open(self, "Daily reward", 520.0, UI.GOLD)
 	o.content.add_child(UI.label("Day %d of your streak" % int(codex.login["streak"]), 15, UI.TEXT))
-	var row := UI.hbox(6)
+	var row := daily_grid()
 	o.content.add_child(row)
 	for i in Codex.LOGIN_REWARDS.size():
 		var today := i == day - 1

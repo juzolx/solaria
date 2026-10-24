@@ -49,7 +49,13 @@ func _initialize() -> void:
 	var w := hero("Warrior")
 	check(Halls.door_sense(w) == 0, "a warrior can't read doors")
 	w._room_cleared()
+	# QA (Oct 24): a plain door, so the check doesn't flake when the roll makes door 0
+	# an elite (claw marks since R6) or a portal (portal doors always show)
+	w.doors = ["fight", "treasure", "rest"]
+	w.door_traps = [false, false, false]
 	check(Halls.read_door(w, 0)["label"] == "?", "unread doors are blank")
+	w.doors = ["elite", "fight", "fight"]
+	check(Halls.read_door(w, 0)["label"] == "Claw marks", "an elite door shows claw marks even to a blind team")
 	var r := hero("Ranger")
 	check(Halls.door_sense(r) == 1, "a ranger senses doors")
 	r._room_cleared()

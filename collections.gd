@@ -396,7 +396,7 @@ static func track_card(codex: Codex, track: String) -> PanelContainer:
 	v.add_child(top)
 	var nl := UI.label(track_name(track), UI.FONT_CAPTION, UI.TEXT)
 	nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	nl.clip_text = true
+	nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # QA: long names ("A rare find for every slot") were cut off on phones
 	top.add_child(nl)
 	top.add_child(UI.label(("%d / %d" % [have, goal]) if goal > 0 else str(have), UI.FONT_CAPTION, UI.GOLD))
 	var bar := UI.bar(UI.GOLD, 6)
