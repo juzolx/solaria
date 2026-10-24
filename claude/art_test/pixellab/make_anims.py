@@ -51,12 +51,12 @@ def gif(frames, path, z, ms):
 
 
 def main():
-    clips = {k: clip(k) for k in ["idle_north", "attack_north", "idle_south", "attack_south"]}
-    fi, fa = feet_row(clips["idle_north"]), feet_row(clips["attack_north"])
-    S = MS.Sheet(40 + 9 * 280, 1360, "PixelLab hero - idle + attack frames (3x)",
+    clips = {k: clip(k) for k in ["idle_north", "attack_north", "attack2_north", "idle_south", "attack_south"]}
+    fi, fa = feet_row(clips["idle_north"]), feet_row(clips["attack2_north"])
+    S = MS.Sheet(40 + 9 * 280, 1672, "PixelLab hero - idle + attack frames (3x)",
                  "Idle: breathing-idle template, 4 frames. Attack: custom v3 'overhead diagonal slash', 9 frames (frame 0 = rest pose).")
     y = 110
-    for k, lab in [("idle_north", "1  Idle - NORTH (battle view)"), ("attack_north", "2  Attack - NORTH (battle view)"),
+    for k, lab in [("idle_north", "1  Idle - NORTH (battle view)"), ("attack2_north", "2  Attack v2 (re-roll) - NORTH (battle view): overhead slash"), ("attack_north", "2b Attack v1 - NORTH (replaced)"),
                    ("idle_south", "3  Idle - SOUTH (front)"), ("attack_south", "4  Attack - SOUTH (front)")]:
         S.panel(20, y, 9 * 280, 302, lab)
         for i, f in enumerate(clips[k]):
@@ -64,10 +64,10 @@ def main():
             S.d.text((44 + i * 278, y + 40), str(i), font=MS.F_S, fill=MS.DIM)
         y += 312
     S.im.convert("RGB").save(os.path.join(HERE, "03_PL_anim_frames.png"))
-    for k, ms in [("idle_north", 220), ("idle_south", 220), ("attack_north", 90), ("attack_south", 90)]:
+    for k, ms in [("idle_north", 220), ("idle_south", 220), ("attack_north", 90), ("attack2_north", 90), ("attack_south", 90)]:
         gif(clips[k], os.path.join(HERE, f"04_PL_{k}_4x.gif"), 4, ms)
     # phone battle loop: idle x2, attack, idle
-    seq = [(f, fi) for f in clips["idle_north"] * 2] + [(f, fa) for f in clips["attack_north"]] + [(f, fi) for f in clips["idle_north"]]
+    seq = [(f, fi) for f in clips["idle_north"] * 2] + [(f, fa) for f in clips["attack2_north"]] + [(f, fi) for f in clips["idle_north"]]
     durs = [220] * 8 + [90] * 9 + [220] * 4
     frames = [scene(f, ft).convert("RGB").convert("P", palette=Image.ADAPTIVE) for f, ft in seq]
     frames[0].save(os.path.join(HERE, "05_PL_battle_loop_430x932.gif"), save_all=True,
