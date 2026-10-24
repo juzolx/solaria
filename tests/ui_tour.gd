@@ -102,6 +102,11 @@ func _initialize() -> void:
 		await close_popups(main)
 		await create_timer(0.4).timeout
 		await shot("town_map")
+		# the Map overlay over the town (interface pass, approved mockup 10)
+		TownMap.open_for(main, main.town_view.hidden_spots, main.town_view.locked, main._on_building)
+		await create_timer(0.3).timeout
+		await shot("town_map_overlay")
+		await close_popups(main)
 		var tg: TabContainer = main._groups()[2]
 		for s in tg.get_tab_count():
 			if tg.is_tab_hidden(s):
