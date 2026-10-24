@@ -1,7 +1,9 @@
 class_name ItemGrid
 extends RefCounted
-## Small square item pictures (the Vault, the Gear page): the item's icon on a
+## Small square item pictures (the Bag, the Vault, the Gear page): the item's icon on a
 ## frame in its rarity color. Empty squares show free space.
+## Interface pass (approved mockup 07): an ink cell, a 1 px rarity edge and a rarity strip
+## along the bottom, a gold frame when picked; the icon at whole pixels (2x when it fits).
 
 const CELL := 54
 
@@ -31,20 +33,19 @@ static func cell(item: Dictionary, on_press: Callable, selected := false, px := 
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(px, px)
 	b.focus_mode = Control.FOCUS_NONE
-	b.expand_icon = true
+	b.expand_icon = false   # whole pixels: the icon is already sized to the cell (UiIcons.big)
 	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
 	b.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	var edge := UI.BORDER
-	var bg := Color("#0e1322")
+	var edge := UI.EMPTY
+	var bg := UI.INSET
 	if not item.is_empty():
 		var rc := Color(GameData.color_of(int(item["rarity"])))
 		edge = UI.GOLD if selected else rc
 		if Church.is_cursed(item) and not selected:  # 2.1: cursed gear stands out
 			edge = Color(Church.COLOR)
 			badge = "CURSED" if badge == "" else badge
-		bg = rc.darkened(0.82)
-		b.icon = Sprites.item_icon(item)
+		b.icon = UiIcons.big(Sprites.item_icon(item), px - 10)
 		b.tooltip_text = ItemText.plain(item)
 		if on_press.is_valid():
 			b.pressed.connect(on_press)
@@ -53,7 +54,9 @@ static func cell(item: Dictionary, on_press: Callable, selected := false, px := 
 		if on_press.is_valid():
 			b.pressed.connect(on_press)
 	for st in ["normal", "hover", "pressed", "disabled"]:
-		var sb := UI.style(bg.lightened(0.08) if st == "hover" else bg, edge, 6, 5, 3 if selected else (2 if not item.is_empty() else 1))
+		var sb := UI.style(UiSkin.SLATE if st == "hover" else bg, edge, 6, 5, 2 if selected else 1)
+		if not item.is_empty() and not selected:
+			sb.border_width_bottom = 4   # the rarity strip
 		b.add_theme_stylebox_override(st, sb)
 	if badge != "":
 		var l := UI.label(badge, 10 if badge == "CURSED" else 11, Color(Church.COLOR).lightened(0.25) if badge == "CURSED" else UI.GREEN)
