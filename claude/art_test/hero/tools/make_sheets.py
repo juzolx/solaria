@@ -38,8 +38,11 @@ def rarity_ramps(i):
     return r
 
 
+ARM = "A"   # chosen arm variant for the leather base (see 01c)
+
+
 def battle(outfit="leather", hair="short", weapon="sword", skin="skin_fair", hairc="hair_brown",
-           rarity=0, robe=None, plate_ramp=None, outfit_rarity=0):
+           rarity=0, robe=None, plate_ramp=None, outfit_rarity=0, arm=None):
     """rarity = weapon (and shield) rarity; outfit_rarity = armour rarity. Each item keeps its own trim."""
     wr = rarity_ramps(rarity)
     orr = rarity_ramps(outfit_rarity)
@@ -53,8 +56,16 @@ def battle(outfit="leather", hair="short", weapon="sword", skin="skin_fair", hai
         if plate_ramp: o["M"] = plate_ramp
     if robe: o["C"] = robe
     o.update(orr)
-    names += ["base_body", ("outfit_" + outfit, o), "hair_" + hair, ("w_" + ("sword" if weapon == "sword_shield" else weapon), wr)]
-    names.append(("base_body_front", {"F": o.get("F", skin)}))
+    arm = arm or ARM
+    wname = "w_" + ("sword" if weapon == "sword_shield" else weapon)
+    if outfit == "leather":
+        if wname == "w_sword":
+            wname = "w_sword_" + arm
+        names += ["base_body_noarms", ("outfit_leather_noarms", o), "arms_" + arm, "hair_" + hair, (wname, wr)]
+        names.append("fist_" + arm if wname.startswith("w_sword") else ("base_body_front", {"F": skin}))
+    else:
+        names += ["base_body", ("outfit_" + outfit, o), "hair_" + hair, (wname, wr)]
+        names.append(("base_body_front", {"F": o.get("F", skin)}))
     ramps = {"S": skin, "F": skin, "H": hairc}
     return hero.render(names, ramps=ramps)[0]
 
@@ -136,7 +147,7 @@ class Sheet:
 
 
 def head_crop(im):
-    return im.crop((hero.PADL + 2, 14, hero.PADL + 32, 52))
+    return im.crop((hero.PADL + 10, 20, hero.PADL + 43, 60))
 
 
 # ------------------------------------------------------------------ sheets
@@ -153,12 +164,12 @@ def sheet_base():
     S.put(por, 40, 870, 1, label="1x"); S.put(por, 40, 950, 3, label="3x"); S.put(por, 210, 870, 7, label="7x")
     # layers
     S.panel(560, 820, 570, 420, "Layers (each recolours at runtime)")
-    parts = [("body", ["base_body"]), ("outfit", ["outfit_leather"]), ("hair", ["hair_short"]),
-             ("weapon", ["w_sword"]), ("hand", ["base_body_front"])]
+    parts = [("body", ["base_body_noarms"]), ("outfit", ["outfit_leather_noarms"]), ("arms", ["arms_A"]),
+             ("hair", ["hair_short"]), ("weapon", ["w_sword_A"]), ("hand", ["fist_A"])]
     x = 575
     for lab, n in parts:
         im = hero.render(n, ramps={})[0]
-        S.put(im, x, 860, 2, label=lab); x += 108
+        S.put(im, x, 860, 2, label=lab); x += 86
     S.d.text((575, 1130), "Stacked bottom to top. Each pixel stores (material, shade 1-4);", font=F_S, fill=DIM)
     S.d.text((575, 1156), "the game swaps the 4-step ramp per material (skin, hair, cloth,", font=F_S, fill=DIM)
     S.d.text((575, 1182), "leather, metal, trim, gem) - no redraws for colours.", font=F_S, fill=DIM)
@@ -310,10 +321,10 @@ def sheet_weapons():
         S.d.text((x, 470), lab, font=F_L, fill=TXT)
     S.panel(20, 530, 1360, 520, "Sword in 6 rarities (4x)")
     for i, (nm, rr) in enumerate(RARITY):
-        im = battle(rarity=i)
-        crop = im.crop((hero.PADL + 34, 0, hero.PADL + 60, 70))
+        im = hero.render([("w_sword", rarity_ramps(i)), "base_body_front"], ramps={})[0]
+        crop = im.crop((hero.PADL + 34, 0, hero.PADL + 60, 68))
         if nm == "Mythic":
-            crop = glow(im).crop((hero.PADL + 34, 0, hero.PADL + 60, 70))
+            crop = glow(im).crop((hero.PADL + 34, 0, hero.PADL + 60, 68))
         x = 40 + i * 222
         S.put(crop, x - 20, 570, 5) if False else S.put(crop, x, 570, 4)
         S.d.text((x, 925), nm, font=F_L, fill=hero.hexrgb(hero.RAMPS[rr][4]))
@@ -328,12 +339,30 @@ def sheet_weapons():
     S.save("05_HERO_custom_weapons_rarity.png")
 
 
+def sheet_arms():
+    S = Sheet(1600, 1000, "01c  Arm variants - pick one (A is used in 01 and the mockup)",
+              "Shoulder -> sleeve -> forearm -> hand as one shape; short, chunky, tapered for the chibi build.")
+    labs = {"A": "A  relaxed: elbow bent, blade held out from the hip",
+            "B": "B  on guard: sword arm raised, off arm braced",
+            "C": "C  rolled sleeves: bare chunky forearms"}
+    for i, k in enumerate("ABC"):
+        x = 20 + i * 525
+        S.panel(x, 110, 505, 860, labs[k][:1])
+        im = battle(arm=k)
+        S.put(im, x + 20, 160, 1, label="1x")
+        S.put(im, x + 110, 150, 3, label="3x (phone)")
+        S.put(im.crop((14, 38, 76, 66)), x + 30, 520, 7)
+        S.d.text((x + 30, 490), "arms at 7x", font=F_S, fill=DIM)
+        S.d.text((x + 20, 920), labs[k][3:], font=F_S, fill=TXT)
+    S.save("01c_HERO_arms_ABC.png")
+
+
 def export_layers():
     """Runtime export: one PNG per layer, R = shade (0 line, 1-4), G = material id, B = 0, A = 255."""
     mats = sorted(set("SFeEhHWVBTKMGRUQJDC"))
     ex = os.path.join(OUT, "layers")
     os.makedirs(ex, exist_ok=True)
-    names = ["base_body", "base_body_front", "outfit_leather", "outfit_cloth", "outfit_plate",
+    names = ["base_body", "base_body_front", "base_body_noarms", "outfit_leather_noarms", "arms_A", "arms_B", "arms_C", "fist_A", "fist_B", "fist_C", "w_sword_A", "w_sword_B", "w_sword_C", "outfit_leather", "outfit_cloth", "outfit_plate",
              "hair_short", "hair_long", "hair_buzz", "hair_tail", "w_sword", "w_staff", "w_bow", "w_shield",
              "port_body", "port_outfit_leather", "port_outfit_cloth", "port_outfit_plate",
              "port_hair_short", "port_hair_long", "port_hair_buzz", "port_hair_tail",
@@ -356,7 +385,7 @@ def export_layers():
 
 if __name__ == "__main__":
     port_outfits()
-    sheet_base(); export_layers()
+    sheet_base(); sheet_arms(); export_layers()
     # customisation sheets 02-05 come back once each piece is rebuilt on the pass-2 base
     if "--all" in sys.argv:
         sheet_skin_hair(); sheet_faces(); sheet_outfits(); sheet_weapons()

@@ -35,8 +35,8 @@ BODY = [
     (38, 15, "cccccccccccccccccccccb"), (39, 16, "bccccccccccccccccccb"), (40, 17, "bcccccccccccccccbb"),
     (41, 19, "bbccccccccccbb"), (42, 20, "abbbbbbbbbba"),
     # ears stick out at the sides of the mop
-    (33, 12, "c"), (34, 11, "cc"), (35, 11, "dc"), (36, 11, "cb"), (37, 12, "b"),
-    (33, 39, "b"), (34, 39, "bb"), (35, 39, "ba"), (36, 39, "ba"), (37, 39, "a"),
+    (33, 12, "c"), (34, 11, "ccb"), (35, 11, "dcb"), (36, 11, "cbb"), (37, 12, "b"),
+    (33, 39, "b"), (34, 38, "abb"), (35, 38, "aba"), (36, 38, "aba"), (37, 39, "a"),
     # neck between the nape tufts
     (43, 22, "abbbbbbba"), (44, 22, "abbbbbbba"), (45, 23, "aaaaaaa"),
     # left hand hanging at the side
@@ -90,9 +90,9 @@ HAIR_BUZZ = [
 # body skull is wider than the buzz rows: hair must cover it, so fill side rows to the skull edge
 def buzz_rows():
     rows = []
-    skull = {y: (x0, x0 + len(t) - 1) for y, x0, t in BODY if 27 <= y <= 43 and set(t) <= set("abcd") and len(t) > 6}
-    for y in range(26, 42):
-        if y not in skull and y > 27:
+    skull = {y: (x0, x0 + len(t) - 1) for y, x0, t in BODY if 24 <= y <= 43 and set(t) <= set("abcd") and len(t) > 6}
+    for y in range(24, 42):
+        if y not in skull:
             continue
         a, b = skull.get(y, (21, 27) if y == 26 else (19, 32))
         if y >= 39:          # nape: skin shows below a soft hairline
@@ -102,15 +102,15 @@ def buzz_rows():
         for i in range(n):
             x = a + i
             t = (x - a) / max(1, n - 1)
-            s = 3
-            if y <= 31 and t < 0.55: s = 4
-            if t > 0.7: s = 2
-            if t > 0.9 or i == 0: s = max(1, s - 1)
-            if y >= 37: s = min(s, 2)
-            if y >= 40: s = 1
-            row += str(s)
+            s_ = 3 if t < 0.45 else 2
+            if y <= 29 and 0.15 < t < 0.4: s_ = 4                      # one lit patch top-left
+            if y % 2 == 0 and (x + y // 2) % 5 in (0, 1) and 0 < i < n - 1: s_ = max(1, s_ - 1)   # cropped-hair dashes
+            if i == 0 or i == n - 1 or t > 0.85: s_ = max(1, s_ - 1)
+            if y >= 37: s_ = min(s_, 2)
+            if y >= 39: s_ = 1
+            row += str(s_)
         rows.append((y, a, row))
-    rows.append((25, 22, "33.3"))
+    rows.append((23, 22, "3.33"))
     return rows
 
 
@@ -328,5 +328,100 @@ def build():
     S(D.draw(D.blank(), shift(C.shield(), 0, 8), C.WCODE), "w_shield")
 
 
+
+
+# =========================================================== pass-2 customisation on the new base
+def long2():
+    """Mop on top, then three locks over the shirt/vest to the shoulder blades (lit left lock)."""
+    rows = [r for r in HAIR_SHORT if r[0] <= 36]
+    locks = [(13, 19, 52), (20, 31, 54), (32, 38, 51)]
+    for y in range(37, 55):
+        row, x0 = "", 13
+        for x in range(13, 39):
+            li = next(i for i, (a, b, e) in enumerate(locks) if a <= x <= b)
+            a, b, end = locks[li]
+            if y > end or (y >= end - 1 and x in (a, b)) or (y == end and x in (a + 1, b - 1)):
+                row += "."; continue
+            s = 1 if x in (a, b) else (3 if li < 2 else 2)
+            if li == 0 and 39 <= y <= 44 and a < x < b - 1: s = 4
+            if li == 1 and 42 <= y <= 46 and a + 2 < x < b - 3: s = 4
+            if y >= end - 2 and s > 1: s -= 1
+            if (x - a + (y // 4) % 2) % 4 == 3 and y % 5 != 0 and s > 1: s -= 1   # staggered strand breaks
+            row += str(s)
+        # split into segments
+        i = 0
+        while i < len(row):
+            if row[i] == ".": i += 1; continue
+            e = i
+            while e < len(row) and row[e] != ".": e += 1
+            rows.append((y, x0 + i, row[i:e])); i = e
+    return rows
+
+
+def tail2():
+    """Mop swept back and tied at the nape; the tail hangs down the middle of the back."""
+    rows = [r for r in HAIR_SHORT if r[0] <= 35]
+    rows += [
+        (36, 14, "1222221111111222221111"), (37, 15, "11222111111112221111"), (38, 17, "1111122222111111"),
+        (39, 21, "qsstrq"), (40, 22, "qrrq"),
+        (41, 22, "2343"), (42, 21, "234432"), (43, 21, "234432"), (44, 21, "233432"), (45, 21, "234332"),
+        (46, 21, "233321"), (47, 21, "234321"), (48, 22, "23321"), (49, 22, "23221"), (50, 22, "2321"),
+        (51, 23, "221"), (52, 23, "21"), (53, 24, "1"),
+    ]
+    return rows
+
+
+BOOTS2 = [r for r in LEATHER2 if any(c in "ABCD" for c in r[2])]
+
+CLOTH2 = [
+    (44, 19, "nooppppppppoon"), (45, 17, "noppppppppppppoon"), (46, 16, "nooommmmmmmmmmoonm"),   # hood down
+    (47, 16, "pppppoomnnnnnnnnnm"), (48, 16, "ppppooomnnnnnnnnmm"), (49, 16, "opppooomnnnnnnnnmm"),
+    (50, 16, "oppoooomnnnnnnnmmm"), (51, 16, "ooooooomnnnnnnnmmm"), (52, 16, "ooooooomnnnnnnnmmm"),
+    (53, 16, "noooooomnnnnnnmmmm"), (54, 16, "nnooooomnnnnnnmmmm"),
+    (55, 16, "sttssssssssssssssss"), (56, 16, "qrrrrrrrrrrrrrrrrrq"), (55, 29, "st"), (56, 29, "rq"), (57, 30, "s"), (58, 30, "q"),
+    (57, 16, "ooooooomnnnnnnnmm"), (58, 15, "pooooooomnnnnnnnmm"), (59, 15, "ooooooooomnnnnnnmm"),
+    (60, 15, "ooooooooomnnnnnnmmm"), (61, 14, "nooooooooomnnnnnnmmm"), (62, 14, "noooooooommnnnnnmmmm"),
+    (63, 14, "nnoooooommnnnnnnmmmm"), (64, 14, "QRRSSSSRRRRRRRRRRRRQ"), (65, 14, "QQRRRRRRRRRRRRRRRRQQ"),
+    # wide sleeves + cuffs
+    (46, 13, "op"), (47, 12, "nopp"), (48, 12, "noop"), (49, 12, "nooo"), (50, 11, "nnooo"), (51, 11, "nnnoo"),
+    (52, 12, "rsst"), (53, 12, "qrrq"),
+    (46, 37, "on"), (47, 36, "oonn"), (48, 36, "onnn"), (49, 36, "nnnm"), (50, 37, "nnnmm"), (51, 37, "sstr"),
+] + [r for r in BOOTS2 if r[0] >= 66]
+
+PLATE2 = [
+    (44, 21, "MNNNNNNNNM"), (45, 19, "NOPPPPOOONNNNM"),                                            # gorget
+    (46, 17, "NOPPPPPPOONNNNNNNM"), (47, 17, "NOPPPPPOOONNNNNNMM"), (48, 17, "NOPPOOOOONNNNNNNMM"),
+    (49, 17, "QRSSSSRRRRRRRRRRRQ"), (50, 17, "QRRRRRRRRRRRRRRRRQ"),                                 # 2 px trim band
+    (51, 17, "NOOOOzzzzzzzzONNNM"), (52, 17, "NOOOOOOOONNNNNNNMM"), (53, 17, "MNOOOOOONNNNNNNMMM"),
+    (54, 17, "MNNOOOONNNNNNMMMMM"), (55, 18, "MMNNNNNNNNNMMMMM"),
+    # round pauldrons
+    (44, 13, "NOPO"), (45, 12, "NOPPON"), (46, 11, "NOPPPONM"), (47, 11, "NOPPOONM"), (48, 11, "MNOOONNM"),
+    (49, 11, "QRSSRRQ"), (50, 12, "QRRRRQ"),
+    (44, 36, "OPON"), (45, 35, "NOPOON"), (46, 34, "NOPOONNM"), (47, 34, "NOOONNNM"), (48, 34, "MNOONNMM"),
+    (49, 35, "QRSRRQQ"), (50, 35, "QRRRRQ"),
+    # vambraces + left gauntlet
+    (51, 13, "NOON"), (52, 13, "QRRQ"), (53, 13, "NOPN"), (54, 13, "NOPN"), (55, 13, "MNNM"), (56, 14, "MM"),
+    (51, 37, "NOOM"), (52, 38, "QRRQ"), (53, 38, "NOOM"),
+    # belt, gem, faulds, mail, greaves
+    (56, 17, "qrrrrrrhkgrrrrrrrq"), (57, 17, "qqqqqqqhggqqqqqqqq"),
+    (58, 17, "NOPPONNOPPONNOONNM"), (59, 17, "MNNNMMMNNNMMMNNMMM"), (60, 18, "QRRRQQRRRQQRRRRQ"),
+    (61, 18, "uvwvuvwvuvwvuvwvu"),
+    (62, 18, "NOPPONM"), (62, 28, "NOONNMM"), (63, 18, "QRSRRQM"), (63, 28, "QRSRRQM"),
+    (64, 18, "NOPONNM"), (64, 28, "MNONNMM"), (65, 18, "MNOONNM"),
+] + BOOTS2
+
+
+def build2():
+    S = D.save
+    S(D.denoise(D.draw(D.blank(), long2())), "hair_long")
+    S(D.draw(D.blank(), tail2(), TCODE), "hair_tail")
+    S(D.draw(D.blank(), CLOTH2, CCODE), "outfit_cloth")
+    S(D.draw(D.blank(), PLATE2, PCODE), "outfit_plate")
+    dx, dy = HAND_SHIFT
+    S(D.draw(D.blank(), [r for r in shift(C.staff(), dx, dy) if 0 <= r[0] < 84], C.WCODE), "w_staff")
+    S(D.draw(D.blank(), [r for r in shift(C.bow(), dx, dy - 2) if 0 <= r[0] < 84], C.WCODE), "w_bow")
+    S(D.draw(D.blank(), shift(C.shield(), 0, 2), C.WCODE), "w_shield")
+
+
 if __name__ == "__main__":
-    build()
+    build(); build2()
