@@ -19,3 +19,5 @@ Hoods/helms from classes.gd "look" are left off the base outfit so every hair st
 | Ironbark | armour of dark bark plates and woven vines over a moss-green tunic, wooden shoulder plates with small leaves, leather greaves, wrapped boots |
 | Nightstalker | tight black and deep purple leather suit, dark purple scarf at the neck (face uncovered), crossed straps of throwing knives on the back, dark leggings, soft black boots |
 | Conjurer | long dark teal-blue robe with glowing cyan rune embroidery on hem and sleeves, dark leather belt with a chained tome hanging from it, black boots |
+
+Status 2026-10-24: all 13 base outfits done on both bodies (sheets in batch/<class>_frames.png, loops in batch/<class>_loop.gif). Conjurer adds "wide sleeves covering the arms (no white shirt sleeves)" like the Mage.
