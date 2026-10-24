@@ -30,20 +30,20 @@ func setup(m) -> void:
 	add_theme_constant_override("separation", 6)
 	var head := UI.hbox(8)
 	add_child(head)
-	var t := UI.label("SKILL BOOK", 14, UI.TEXT)
+	var t := UI.label("SKILL BOOK", UI.FONT_CAPTION, UI.TEXT)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(t)
-	dust_label = UI.label("", 13, Color("#c4b5fd"))
+	dust_label = UI.label("", UI.FONT_CAPTION, Color("#c4b5fd"))
 	head.add_child(dust_label)
 	head.add_child(UI.button("Autoplay...", func(): auto_battle_popup(main)))
 	head.add_child(UI.button("Craft...", _craft_popup))
 
-	add_child(UI.label("ACTIVE", 10, UI.DIM))
+	add_child(UI.label("ACTIVE", UI.FONT_CAPTION, UI.DIM))
 	slot_row_a = UI.hbox(4)
 	add_child(slot_row_a)
 	sig_row = UI.hbox(4)
 	add_child(sig_row)
-	add_child(UI.label("PASSIVE", 10, UI.DIM))
+	add_child(UI.label("PASSIVE", UI.FONT_CAPTION, UI.DIM))
 	slot_row_p = UI.hbox(4)
 	add_child(slot_row_p)
 
@@ -65,12 +65,12 @@ func setup(m) -> void:
 	cards.add_theme_constant_override("h_separation", 6)
 	cards.add_theme_constant_override("v_separation", 6)
 	scroll.add_child(cards)
-	empty_note = UI.label("", 12, UI.DIM)
+	empty_note = UI.label("", UI.FONT_CAPTION, UI.DIM)
 	empty_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(empty_note)
 	var box := UI.panel(UI.INSET, UI.EMPTY, 8, 8, 1)
 	add_child(box)
-	detail = UI.rich(12)
+	detail = UI.rich(UI.FONT_CAPTION)
 	detail.custom_minimum_size = Vector2(0, 62)
 	box.add_child(detail)
 	var row := UI.hbox(6)
@@ -99,7 +99,7 @@ func _slot_button(id: String, open: bool, need: int, active: bool, index := -1) 
 	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b.custom_minimum_size = Vector2(0, 34)
+	b.custom_minimum_size = Vector2(0, UI.TAP)
 	b.clip_text = true
 	b.add_theme_font_size_override("font_size", UI.MIN_FONT)
 	if not open:
@@ -126,8 +126,13 @@ func _slot_button(id: String, open: bool, need: int, active: bool, index := -1) 
 	b.text = "%s
 Rank %d" % [s["name"], state.skill_rank(id)]
 	b.icon = SkillIcons.for_tag(String(s["tags"][0]))  # 0.13+: slots show the skill's icon
-	b.add_theme_constant_override("icon_max_width", 22)
+	b.add_theme_constant_override("icon_max_width", 32)   # native size: crisp pixels
 	b.custom_minimum_size = Vector2(0, 46)
+	if not active:   # five passive slots share a phone row: icon on top, just the name under it
+		b.text = String(s["name"])
+		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		b.custom_minimum_size = Vector2(0, 62)
 	var c := Color(Classes.tag_color(s["tags"][0]))
 	b.add_theme_stylebox_override("normal", UI.style(c.darkened(0.7), c.darkened(0.2), 6, 4, 1))
 	b.add_theme_color_override("font_color", c.lightened(0.4))
@@ -207,9 +212,9 @@ func _card(id: String) -> Button:
 	b.icon = SkillIcons.for_tag(String(s["tags"][0]))
 	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
-	b.add_theme_constant_override("icon_max_width", 34)
+	b.add_theme_constant_override("icon_max_width", 32)   # native size: crisp pixels
 	b.clip_text = true
-	b.add_theme_font_size_override("font_size", 11)
+	b.add_theme_font_size_override("font_size", UI.FONT_CAPTION)
 	b.text = "%s\n%s" % [s["name"], "●".repeat(r) + "○".repeat(maxi(0, SkillData.MAX_RANK - r))]
 	var rc := Color(SkillData.RARITY_COLORS[int(s["rarity"])])
 	var eq := state.is_skill_equipped(id)
@@ -282,7 +287,7 @@ func _toggle_equip() -> void:
 ## Pick any skill in the game to craft with dust.
 func _craft_popup() -> void:
 	var o := Overlay.new().open(main, "Craft a skill with dust", 640.0, Color("#c4b5fd"))
-	o.content.add_child(UI.label("You have %d dust. Dust comes from bosses, rare monsters, vaults and stones of skills you have already maxed." % state.dust, 13, UI.DIM))
+	o.content.add_child(UI.label("You have %d dust. Dust comes from bosses, rare monsters, vaults and stones of skills you have already maxed." % state.dust, UI.FONT_CAPTION, UI.DIM))
 	var l := ItemList.new()
 	l.custom_minimum_size = Vector2(0, 340)
 	l.add_theme_font_size_override("font_size", UI.MIN_FONT)
@@ -308,7 +313,7 @@ func _craft_popup() -> void:
 			selected = picks[i]
 			shown = ""
 			main.refresh())
-	o.content.add_child(UI.label("Double-tap a skill to craft it.", 11, UI.DIM))
+	o.content.add_child(UI.label("Double-tap a skill to craft it.", UI.FONT_CAPTION, UI.DIM))
 
 ## Autoplay settings: whether the fight runs by itself, and what it does for you.
 static func auto_battle_popup(m) -> void:
@@ -328,7 +333,7 @@ static func _fill_auto(m, o: Overlay, st: GameState) -> void:
 		_fill_auto(m, o, st), UI.TEAL if st.autoplay else UI.RED)
 	mode.custom_minimum_size = Vector2(0, UI.TAP + 8)
 	o.content.add_child(mode)
-	var note := UI.label("With Autoplay off, nothing happens until you act: tap Attack (or the enemy) to take a turn, and use your skills when you choose.", 12, UI.DIM)
+	var note := UI.label("With Autoplay off, nothing happens until you act: tap Attack (or the enemy) to take a turn, and use your skills when you choose.", UI.FONT_CAPTION, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	o.content.add_child(note)
 	UI.section(o.content, "What runs by itself", "Each of these works in both modes.")
@@ -362,7 +367,7 @@ static func _fill_auto(m, o: Overlay, st: GameState) -> void:
 	UI.section(o.content, "Skill order", "Auto tries your skills top to bottom and uses the first one that makes sense right now (it won't heal you at full HP, or waste a big hit on a monster that resists it). Turn a skill off to only use it yourself.")
 	var order := st.auto_order()
 	if order.is_empty():
-		o.content.add_child(UI.label("No active skills equipped yet.", 13, UI.DIM))
+		o.content.add_child(UI.label("No active skills equipped yet.", UI.FONT_CAPTION, UI.DIM))
 	for i in order.size():
 		var id: String = order[i]
 		var s := SkillData.info(id)

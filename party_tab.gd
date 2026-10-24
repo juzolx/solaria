@@ -28,11 +28,11 @@ func refresh() -> void:
 	shown = key
 	OnlineUI.clear(box)
 	box.add_child(UI.label("YOUR PARTY", 15, UI.GOLD))
-	var note := UI.label("Take a team of 3: you plus up to 2 of your other Regular heroes. They use their own gear, stats and skills, level up with you, and share one skill book. Monsters get tougher with a bigger team and aim mostly at tanks (Warrior, Knight). A hero who falls loses only their own worn gear (bound items stay) and gets back up on the next floor. The run fails only when all three are down. Leave gear you love at home, or send a team with nothing to lose.", 12, UI.DIM)
+	var note := UI.label("Take a team of 3: you plus up to 2 of your other Regular heroes. They use their own gear, stats and skills, level up with you, and share one skill book. Monsters get tougher with a bigger team and aim mostly at tanks (Warrior, Knight). A hero who falls loses only their own worn gear (bound items stay) and gets back up on the next floor. The run fails only when all three are down. Leave gear you love at home, or send a team with nothing to lose.", UI.FONT_CAPTION, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if state.hardcore:
 		box.add_child(note)
-		box.add_child(UI.label("Hardcore heroes fight alone. One life, no backup.", 14, UI.RED))
+		box.add_child(UI.label("Hardcore heroes fight alone. One life, no backup.", UI.FONT_CAPTION, UI.RED))
 		return
 	_preset_rows()
 	box.add_child(note)
@@ -51,7 +51,7 @@ func refresh() -> void:
 		options.append([n, meta])
 	box.add_child(UI.heading("Bring along"))
 	if options.is_empty():
-		var t := UI.label("No other Regular heroes yet. Make more from the title screen: each town holds up to %d heroes." % GameData.MAX_HEROES, 12, UI.DIM)
+		var t := UI.label("No other Regular heroes yet. Make more from the title screen: each town holds up to %d heroes." % GameData.MAX_HEROES, UI.FONT_CAPTION, UI.DIM)
 		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(t)
 	for o in options:
@@ -61,7 +61,7 @@ func refresh() -> void:
 		var h := UI.hbox(8)
 		row.add_child(h)
 		h.add_child(_pic(meta.get("appearance", {})))
-		var r := UI.rich(13)
+		var r := UI.rich(UI.FONT_CAPTION)
 		r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		r.text = HeroSelect.describe(meta)
 		h.add_child(r)
@@ -89,7 +89,7 @@ func _preset_rows() -> void:
 func _bench_rows() -> void:
 	box.add_child(UI.heading("At home"))
 	if state.bench_roster.is_empty():
-		box.add_child(UI.wrap("Heroes you leave at home find gold, scrap and sometimes an item while you dive. What they find depends on their class.", 12, UI.DIM))
+		box.add_child(UI.wrap("Heroes you leave at home find gold, scrap and sometimes an item while you dive. What they find depends on their class.", UI.FONT_CAPTION, UI.DIM))
 		return
 	for h in state.bench_roster:
 		var r := Bench.rate(str(h["class"]))
@@ -97,7 +97,7 @@ func _bench_rows() -> void:
 		for k in ["gold", "scrap", "item"]:
 			if float(r[k]) > 1.0:
 				best.append(k + "s" if k == "item" else k)
-		var l := UI.rich(12)
+		var l := UI.rich(UI.FONT_CAPTION)
 		l.text = "[b]%s[/b], Lv %d %s: %s%s" % [h["name"], int(h["level"]), h["class"], r["job"], ("  [color=%s](good at %s)[/color]" % [UI.hex(UI.GREEN), " and ".join(best)]) if not best.is_empty() else ""]
 		box.add_child(l)
 	var haul := state.bench_haul
@@ -118,7 +118,7 @@ func _card_for_leader() -> PanelContainer:
 	var h := UI.hbox(8)
 	p.add_child(h)
 	h.add_child(_pic(state.appearance, state.hero_looks()))
-	var r := UI.rich(13)
+	var r := UI.rich(UI.FONT_CAPTION)
 	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	r.text = "[b]%s[/b]  [color=#e8b14a](you, the leader)[/color]\nLv %d %s  -  %s\nHP %d / %d" % [
 		state.hero_name if state.hero_name != "" else "Hero", state.level, state.title(), state.class_info().get("role", ""), state.hero_hp, state.get_max_hp()]
@@ -134,7 +134,7 @@ func _member_card(mem) -> PanelContainer:
 	var v := UI.vbox(4)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
-	var r := UI.rich(13)
+	var r := UI.rich(UI.FONT_CAPTION)
 	var skills: Array = []
 	for id in g.equipped_actives():
 		skills.append(SkillData.skill_name(id))
@@ -160,13 +160,13 @@ func _member_card(mem) -> PanelContainer:
 ## Team synergies (synergies.gd): the ones your team has light up, the rest say how to get them.
 func _synergy_rows() -> void:
 	var on := Synergies.active(state) if state.party != null and state.party.size() > 0 else []
-	box.add_child(UI.label("TEAM SYNERGIES  (%d active)" % on.size(), 13, UI.GOLD))
+	box.add_child(UI.label("TEAM SYNERGIES  (%d active)" % on.size(), UI.FONT_CAPTION, UI.GOLD))
 	for id in Synergies.LIST:
 		var s: Dictionary = Synergies.LIST[id]
 		var got: bool = id in on
-		var l := UI.label(("%s  -  %s" % [s["name"], s["text"]]), 12, Color(String(s["color"])) if got else UI.DIM)
+		var l := UI.label(("%s  -  %s" % [s["name"], s["text"]]), UI.FONT_CAPTION, Color(String(s["color"])) if got else UI.DIM)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(l)
-	var ts := UI.label("Team Strike: with companions standing, your whole team hits together every %d turns of a fight." % Synergies.STRIKE_EVERY, 12, UI.DIM)
+	var ts := UI.label("Team Strike: with companions standing, your whole team hits together every %d turns of a fight." % Synergies.STRIKE_EVERY, UI.FONT_CAPTION, UI.DIM)
 	ts.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(ts)

@@ -42,7 +42,7 @@ func setup(m) -> void:
 	smith_pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	smith_pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	who.add_child(smith_pic)
-	who.add_child(UI.wrap("%s, dwarf smith of the town forge" % Smith.NAME, 14, UI.GOLD))
+	who.add_child(UI.wrap("%s, dwarf smith of the town forge" % Smith.NAME, UI.FONT_CAPTION, UI.GOLD))
 	var tabs_row := UI.hbox(6)
 	v.add_child(tabs_row)
 	for sec in [["forge", "Forge"], ["sets", "Set Recipes"], ["wares", "Dwarf's Wares"]]:
@@ -94,12 +94,12 @@ func setup(m) -> void:
 		var title := UI.label(String(info["name"]), 15, UI.TEAL)
 		head.add_child(title)
 		head.add_child(UI.spacer())
-		var wearing := UI.label("", 12, UI.DIM)
+		var wearing := UI.label("", UI.FONT_CAPTION, UI.DIM)
 		head.add_child(wearing)
-		var bonus := UI.rich(12)
+		var bonus := UI.rich(UI.FONT_CAPTION)
 		bonus.text = "[color=%s]Bonus:[/color] %s" % [UI.hex(UI.DIM), info["text"]]
 		cv.add_child(bonus)
-		var cost := UI.rich(12)
+		var cost := UI.rich(UI.FONT_CAPTION)
 		cv.add_child(cost)
 		var row := BoxContainer.new()  # side by side, or stacked on phones (refresh)
 		row.add_theme_constant_override("separation", 6)
@@ -123,7 +123,7 @@ func setup(m) -> void:
 	v = forge_box
 	# ---- 4. Mystery gear ----
 	v.add_child(UI.heading("Mystery gear  -  pick a slot, get a random item with better odds"))
-	gear_cost = UI.rich(12)
+	gear_cost = UI.rich(UI.FONT_CAPTION)
 	v.add_child(gear_cost)
 	var grid := GridContainer.new()
 	grid.columns = 4  # 2.1: 8 slots in two even rows
@@ -172,7 +172,7 @@ func _fill_wares(force := false) -> void:
 		var pic := ItemGrid.picture(40)
 		pic.texture = Sprites.item_icon(item)
 		h.add_child(pic)
-		var t := UI.rich(12)
+		var t := UI.rich(UI.FONT_CAPTION)
 		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		t.text = ItemText.describe(state, item)
 		h.add_child(t)
@@ -196,11 +196,11 @@ func _recipe_card(parent: Control, title: String, color: Color, text: String) ->
 	var cv := UI.vbox(5)
 	card.add_child(cv)
 	cv.add_child(UI.label(title, 15, color))
-	var desc := UI.rich(12)
+	var desc := UI.rich(UI.FONT_CAPTION)
 	desc.custom_minimum_size = Vector2(0, 32)
 	desc.text = "[color=%s]%s[/color]" % [UI.hex(UI.DIM), text]
 	cv.add_child(desc)
-	var cost := UI.rich(12)
+	var cost := UI.rich(UI.FONT_CAPTION)
 	cv.add_child(cost)
 	return [cost, cv, desc]
 
@@ -211,7 +211,7 @@ func _craft_set(set_name: String, slot: String) -> void:
 
 func _chip(text: String, color: Color) -> void:
 	var p := UI.panel(Color("#0f1526"), Color(color, 0.4), 12, 6, 1)
-	var l := UI.rich(12)
+	var l := UI.rich(UI.FONT_CAPTION)
 	l.fit_content = true
 	l.autowrap_mode = TextServer.AUTOWRAP_OFF
 	l.text = text

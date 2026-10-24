@@ -1,6 +1,23 @@
 class_name UI
 extends RefCounted
 ## Shared colors and building blocks, so every screen looks and feels the same.
+##
+## THE DESIGN SYSTEM (UX pass, Oct 24 2026; see claude/ui-review.md). Keep to it:
+## - Palette: ink + iron/stone greys + bone text, ONE accent (GOLD) for "this
+##   matters / tap here", and ONE state family: GOOD (green) and BAD (red), with
+##   GOLD doubling as "suggested". Rarity colours are for ITEMS only (item
+##   frames, item names). BLUE/TEAL/PINK/PURPLE are legacy: elements, rarity
+##   and tags only, never for buttons, cards or frames.
+## - Buttons, by role: primary() = the gold main action on a screen; danger() =
+##   red, for diving, attacking and anything you cannot undo; everything else is
+##   a plain stone button (the theme).
+## - Type scale (design px at the 504-wide phone layout): CAPTION 15 (smallest
+##   allowed), BODY 16, TITLE 20, DISPLAY 26. Nothing below MIN_FONT.
+## - Spacing: 4 / 8 / 12 / 16 (SP_XS..SP_L). Touch targets >= TAP (44).
+## - Frames: iron frame (UiSkin.frame) for panels and popups; cards are inset
+##   stone with a 1 px iron edge, a gold edge when selected or suggested.
+## - Icons: chunky filled pixel shapes with a 1 px near-black outline
+##   (UiSkin.SOOT), tinted by state; never thin strokes, never smoothed.
 
 const BG := Color("#0b0a1d")       # catacomb ink (next update: the Art Direction palette)
 const PANEL := Color("#15142a")    # panels: indigo slate
@@ -17,6 +34,20 @@ const BLUE := Color("#60a5fa")
 const TEAL := Color("#2dd4bf")
 const PINK := Color("#f472b6")
 const PURPLE := Color("#a78bfa")
+const GOOD := GREEN   # state family: success, "you can afford it", upgrades
+const BAD := RED      # state family: danger, damage, "not enough"
+const GOLD_DEEP := Color("#8a6420")  # pressed / filled gold
+const CARD_EDGE := Color("#3d3b58")  # the 1 px iron edge of a card
+# Type scale (design px)
+const FONT_CAPTION := 15
+const FONT_BODY := 16
+const FONT_TITLE := 20
+const FONT_DISPLAY := 26
+# Spacing
+const SP_XS := 4
+const SP_S := 8
+const SP_M := 12
+const SP_L := 16
 
 static var sfx: Sfx  # set by main, used for button clicks
 static var tip_layer: CanvasLayer  # set by main: where tap-tips appear
@@ -24,7 +55,7 @@ static var _tip: Control
 const TAP := 44  # smallest comfortable tap target on a phone (pixels at the design size)
 const BUTTON_H := 42  # every button is at least this tall (~36 pt on a phone; Apple asks for 44 pt on main controls)
 const EDGE := Color("#7a7493")  # edges of things you can press: 3:1 contrast or better
-const MIN_FONT := 13  # ~11 pt on a phone at the 504-wide layout
+const MIN_FONT := FONT_CAPTION  # UX pass: 15 design px (~13 pt on a 430 pt wide phone); was 13
 static var colorblind := false  # set from the settings: adds words and symbols where color carries meaning
 static var high_contrast := false  # set from the settings: secondary (DIM) text is drawn brighter
 static var calm := false  # set from the settings (Reduce motion): no page fades
@@ -50,14 +81,14 @@ static func style(bg: Color, border: Color, radius := 8, margin := 8, width := 2
 	sb.set_content_margin_all(margin)
 	return sb
 
-static func label(text: String, font_size := 14, color := TEXT) -> Label:
+static func label(text: String, font_size := FONT_CAPTION, color := TEXT) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.add_theme_font_size_override("font_size", maxi(MIN_FONT, font_size))
 	l.add_theme_color_override("font_color", DIM_CONTRAST if high_contrast and color == DIM else color)
 	return l
 
-static func rich(font_size := 13, fit := true) -> RichTextLabel:
+static func rich(font_size := FONT_CAPTION, fit := true) -> RichTextLabel:
 	var r := RichTextLabel.new()
 	r.bbcode_enabled = true
 	r.scroll_active = false
@@ -88,7 +119,7 @@ static func panel(bg := INSET, border := EMPTY, radius := 8, margin := 10, width
 
 ## Small caps heading for a section.
 static func heading(text: String) -> Label:
-	var l := label("◆ " + text.to_upper(), 12, Color("#c9a36a"))  # next update: a small gold diamond, like a bestiary page
+	var l := label("◆ " + text.to_upper(), FONT_CAPTION, Color("#c9a36a"))  # next update: a small gold diamond, like a bestiary page
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # long headings wrap instead of widening the screen
 	return l
 
@@ -108,6 +139,7 @@ static func button(text: String, on_press: Callable) -> Button:
 
 ## A colored button for the main action on a screen.
 static func primary(text: String, on_press: Callable, color := GOLD) -> Button:
+	color = role_color(color)
 	var b := button(text, on_press)
 	b.add_theme_stylebox_override("normal", UiSkin.bevel(color.darkened(0.55), color, 8))
 	b.add_theme_stylebox_override("hover", UiSkin.bevel(color.darkened(0.4), color.lightened(0.2), 8))
@@ -115,6 +147,21 @@ static func primary(text: String, on_press: Callable, color := GOLD) -> Button:
 	b.add_theme_color_override("font_color", color.lightened(0.55))
 	b.add_theme_color_override("font_hover_color", Color.WHITE)
 	return b
+
+## The red button: going down, attacking, and anything you cannot undo.
+static func danger(text: String, on_press: Callable) -> Button:
+	return primary(text, on_press, BAD)
+
+## Design system: a main-action colour folds into its role. Green, teal, blue,
+## pink and purple buttons all become the one gold accent; red stays red
+## (danger); other colours (a building's own, a dim BORDER) are kept.
+## Note: GOOD is GREEN, so a "good" main button turns gold too. Meaning that a
+## colour used to carry must live in the button's words ("Found town", "Collect").
+static func role_color(c: Color) -> Color:
+	for legacy in [GREEN, TEAL, BLUE, PINK, PURPLE]:
+		if c.is_equal_approx(legacy):
+			return GOLD
+	return c
 
 static func bar(fill: Color, height := 8) -> ProgressBar:
 	var b := ProgressBar.new()
@@ -125,13 +172,13 @@ static func bar(fill: Color, height := 8) -> ProgressBar:
 	return b
 
 ## A rounded "pill" holding a value, used in the top bar.
-static func pill(text_color: Color) -> Array:
+static func pill(text_color: Color, font_size := FONT_CAPTION) -> Array:
 	var p := panel(Color("#0f1526"), Color(text_color, 0.35), 12, 0, 1)
 	p.get_theme_stylebox("panel").content_margin_left = 12
 	p.get_theme_stylebox("panel").content_margin_right = 12
 	p.get_theme_stylebox("panel").content_margin_top = 4
 	p.get_theme_stylebox("panel").content_margin_bottom = 4
-	var l := label("", 15, text_color)
+	var l := label("", font_size, text_color)
 	p.add_child(l)
 	return [p, l]
 
@@ -141,7 +188,7 @@ static func have_need(have: int, need: int) -> String:
 	return "[color=%s]%d[/color][color=%s] / %d[/color]" % [hex(c), have, hex(DIM), need]
 
 ## A label that wraps onto more lines instead of stretching the screen.
-static func wrap(text: String, font_size := 13, color := TEXT) -> Label:
+static func wrap(text: String, font_size := FONT_CAPTION, color := TEXT) -> Label:
 	var l := label(text, font_size, color)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -150,9 +197,12 @@ static func wrap(text: String, font_size := 13, color := TEXT) -> Label:
 ## A rounded card with a colored edge on the left. Returns [card, inner vbox].
 static func card(accent := BORDER, bg := INSET, sep := 6) -> Array:
 	var p := PanelContainer.new()
-	var st := style(bg, Color(accent, 0.55), 10, 12, 1)
+	var st := style(bg, Color(accent, 0.55), 6, 12, 1)
 	st.border_width_left = 4
 	st.border_color = accent
+	if accent == BORDER or accent == CARD_EDGE:
+		st.border_width_left = 1   # design system: plain cards have one quiet iron edge
+		st.border_color = CARD_EDGE
 	p.add_theme_stylebox_override("panel", st)
 	var v := vbox(sep)
 	p.add_child(v)
@@ -162,7 +212,7 @@ static func card(accent := BORDER, bg := INSET, sep := 6) -> Array:
 static func section(parent: Control, title: String, note := "") -> void:
 	var h := hbox(8)
 	parent.add_child(h)
-	var t := label(title.to_upper(), 13, GOLD)
+	var t := label(title.to_upper(), FONT_CAPTION, GOLD)
 	h.add_child(t)
 	var line := ColorRect.new()
 	line.color = Color(GOLD, 0.25)
@@ -171,10 +221,10 @@ static func section(parent: Control, title: String, note := "") -> void:
 	line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(line)
 	if note != "":
-		parent.add_child(UI.wrap(note, 12, DIM))
+		parent.add_child(UI.wrap(note, FONT_CAPTION, DIM))
 
 ## A small rounded tag ("SUGGESTED", "WEAK: Fire").
-static func chip(text: String, color: Color, font_size := 11) -> PanelContainer:
+static func chip(text: String, color: Color, font_size := FONT_CAPTION) -> PanelContainer:
 	var p := panel(Color(color, 0.14), Color(color, 0.6), 9, 0, 1)
 	var sb: StyleBoxFlat = p.get_theme_stylebox("panel")
 	sb.content_margin_left = 7
@@ -228,6 +278,7 @@ static func show_tip(near: Control, text: String) -> void:
 
 ## A big, phone-friendly button with a title and a small line under it.
 static func big_button(title: String, sub: String, on_press: Callable, color := GOLD) -> Button:
+	color = role_color(color)
 	var b := button("", on_press)
 	b.custom_minimum_size = Vector2(0, 54)
 	b.add_theme_stylebox_override("normal", style(Color(color, 0.12), Color(color, 0.7), 8, 8, 1))
@@ -253,7 +304,7 @@ static func big_button(title: String, sub: String, on_press: Callable, color := 
 
 static func make_theme() -> Theme:
 	var t := Theme.new()
-	t.default_font_size = 14
+	t.default_font_size = FONT_BODY
 	t.set_color("font_color", "Label", TEXT)
 	t.set_color("default_color", "RichTextLabel", TEXT)
 	t.set_stylebox("panel", "PanelContainer", UiSkin.frame(PANEL, UiSkin.IRON, 12))  # next update: iron frames on stone
@@ -292,7 +343,10 @@ static func make_theme() -> Theme:
 	t.set_color("font_selected_color", "TabContainer", GOLD)
 	t.set_color("font_unselected_color", "TabContainer", DIM)
 	t.set_color("font_hovered_color", "TabContainer", TEXT)
-	t.set_font_size("font_size", "TabContainer", 15)
+	t.set_font_size("font_size", "TabContainer", FONT_BODY)
+	t.set_font_size("font_size", "Button", FONT_CAPTION)
+	t.set_font_size("font_size", "OptionButton", FONT_CAPTION)
+	t.set_font_size("font_size", "ItemList", FONT_CAPTION)
 
 	# Sub-tabs (inside a main tab): flatter, with a gold underline
 	t.add_type("SubTabs")
@@ -303,7 +357,12 @@ static func make_theme() -> Theme:
 	t.set_stylebox("tab_selected", "SubTabs", sub_on)
 	t.set_stylebox("tab_unselected", "SubTabs", style(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 6, 0))
 	t.set_stylebox("tab_hovered", "SubTabs", style(Color(0, 0, 0, 0), Color("#8a6d3b"), 0, 6, 0))
-	t.set_font_size("font_size", "SubTabs", 13)
+	t.set_font_size("font_size", "SubTabs", FONT_CAPTION)
+	for st_name in ["tab_selected", "tab_unselected", "tab_hovered"]:   # UX pass: sub-tabs are a full 44 px tap target
+		var sb := t.get_stylebox(st_name, "SubTabs").duplicate() as StyleBox
+		sb.content_margin_top = 13
+		sb.content_margin_bottom = 13
+		t.set_stylebox(st_name, "SubTabs", sb)
 	t.set_color("font_selected_color", "SubTabs", TEXT)
 
 	t.set_stylebox("normal", "OptionButton", UiSkin.bevel(Color("#211f36"), EDGE, 6))

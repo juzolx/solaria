@@ -1415,8 +1415,7 @@ func _member_plate(m, g: GameState, c: Rect2, u: float) -> void:
 		draw_rect(Rect2(bx, by, bw, 5), Color(0.03, 0.03, 0.05, 0.85))
 		draw_rect(Rect2(bx + 1, by + 1, (bw - 2) * clampf(float(m.hp) / maxf(1.0, m.max_hp()), 0.0, 1.0), 3), Color("#22c55e") if not m.knocked_out else Color("#64748b"))
 		var font := ThemeDB.fallback_font
-		draw_string_outline(font, Vector2(bx - 20, by - 3), m.name, HORIZONTAL_ALIGNMENT_CENTER, bw + 40, 13, 3, Color(0, 0, 0, 0.9))
-		draw_string(font, Vector2(bx - 20, by - 3), m.name, HORIZONTAL_ALIGNMENT_CENTER, bw + 40, 13, Color(g.class_info().get("color", "#ffffff")).lightened(0.4))
+		_outlined(font, Vector2(bx - 30, by - 4), _fit_text(font, m.name, NAME_FS, bw + 60), HORIZONTAL_ALIGNMENT_CENTER, bw + 60, NAME_FS, Color(g.class_info().get("color", "#ffffff")).lightened(0.4))
 
 ## The visible body part of the hero (for bars, effects and centering).
 func _hero_rect() -> Rect2:
@@ -1519,7 +1518,7 @@ func _draw() -> void:
 			halls.draw_scenery(self, th)
 		halls.vignette(self, size)
 		_draw_mood(w, h, _ground())
-	draw_string(font, Vector2(14, 24), "%s  -  %s  -  Floor %d" % [zone["name"], GameData.sub_name(state.floor_num), state.floor_num], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 1, 1, 0.55))
+	_outlined(font, Vector2(12, 26), _fit_text(font, "%s  -  %s" % [zone["name"], GameData.sub_name(state.floor_num)], SCENE_FS, size.x - 24.0), HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS, Color(1, 1, 1, 0.7))
 	_draw_status(font)
 
 	# Shake as "trauma": strength grows faster than linearly (small taps barely move the
@@ -1637,21 +1636,25 @@ func _draw() -> void:
 		if state.enemy_goblin:
 			name_color = Color("#fde68a")
 		var bar_color := Color("#d97706") if boss else Color("#ef4444")
+		# UX pass (Juzo: names easy for everyone to read): just the name, coloured by
+		# tier, with small diamond pips for elite tiers and dots for a pack, not extra words
 		var label := state.enemy_name
+		var pips := 0
 		var veiled := Realms.hides_tier(state) and not boss
 		if veiled:
 			name_color = Color("#f9a8d4")
 			label = "??? " + state.enemy_name
 		elif state.enemy_calamity > 0:
-			label = "CALAMITY: " + state.enemy_name
 			name_color = Color("#ff6b6b")
+			pips = 3
 		elif state.enemy_tier > 0 and not boss and not state.enemy_wanderer:
-			label = "%s %s" % [Monsters.tier_name(state.enemy_tier), state.enemy_name]
+			pips = clampi(state.enemy_tier, 1, 3)
 		if state.enemy_goblin:
-			label += "  (%d turns)" % state.goblin_turns
+			label += " (%d)" % state.goblin_turns
+		var pack := Vector2i.ZERO
 		if state.horde_left > 0 and not boss:
-			label += "  [%s %d/%d]" % ["Pack" if state.horde_pack else "Horde", state.horde_total - state.horde_left + 1, state.horde_total]
-		_draw_bar(er, label, state.enemy_hp, state.enemy_max_hp, bar_color, Color(name_color, enemy_alpha))
+			pack = Vector2i(state.horde_total - state.horde_left + 1, state.horde_total)
+		_draw_bar(er, label, state.enemy_hp, state.enemy_max_hp, bar_color, Color(name_color, enemy_alpha), pips, pack)
 		if state.enemy_shield > 0:
 			_draw_shield(er)
 		if not state.enemy_mods.is_empty() and not veiled:
@@ -1999,17 +2002,17 @@ func _draw_mods(r: Rect2) -> void:
 	var total := 0.0
 	var widths: Array = []
 	for m in state.enemy_mods:
-		var wdt := font.get_string_size(str(m), HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 12.0
+		var wdt := font.get_string_size(str(m), HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS).x + 12.0
 		widths.append(wdt)
 		total += wdt + 4.0
 	var cx := clampf(x - total / 2.0, 4.0, size.x - total - 4.0)
 	for i in state.enemy_mods.size():
 		var m: String = state.enemy_mods[i]
 		var c := Color(Monsters.MODS[m]["color"])
-		var box := Rect2(cx, y - 13.0, widths[i], 17.0)
+		var box := Rect2(cx, y - 18.0, widths[i], 24.0)
 		draw_rect(box, Color(0.03, 0.04, 0.08, 0.85 * enemy_alpha))
 		draw_rect(box, Color(c, 0.8 * enemy_alpha), false, 1.0)
-		draw_string(font, Vector2(cx + 6.0, y), m, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(c, enemy_alpha))
+		draw_string(font, Vector2(cx + 6.0, y), m, HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS, Color(c, enemy_alpha))
 		cx += widths[i] + 4.0
 
 ## Small status chips: shrine curse, scroll of luck, hunter's scroll.
@@ -2023,10 +2026,10 @@ func _draw_status(font: Font) -> void:
 		chips.append(["Hunting %d" % state.hunt_spawns, Color("#fb923c")])
 	var x := 14.0
 	for c in chips:
-		var wdt := font.get_string_size(c[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 12.0
-		draw_rect(Rect2(x, 32, wdt, 18), Color(0.03, 0.04, 0.08, 0.8))
-		draw_rect(Rect2(x, 32, wdt, 18), c[1], false, 1.0)
-		draw_string(font, Vector2(x + 6, 46), c[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, c[1])
+		var wdt := font.get_string_size(c[0], HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS).x + 12.0
+		draw_rect(Rect2(x, 34, wdt, 24), Color(0.03, 0.04, 0.08, 0.8))
+		draw_rect(Rect2(x, 34, wdt, 24), c[1], false, 1.0)
+		draw_string(font, Vector2(x + 6, 52), c[0], HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS, c[1])
 		x += wdt + 6.0
 
 ## The light color of the current zone (for rim lights).
@@ -2087,10 +2090,35 @@ func _bar_rect(r: Rect2) -> Rect2:
 	var bx := clampf(r.get_center().x - bw / 2.0, 6.0, size.x - bw - 6.0)
 	# Monsters (at the back) get theirs under their feet; your team (in front) above their heads
 	if r.get_center().y > size.y * 0.62:
-		return Rect2(bx, minf(r.end.y + 8.0, size.y - 34.0), bw, 12.0)
-	return Rect2(bx, _ground() + 9.0, bw, 12.0)
+		return Rect2(bx, minf(r.end.y + 8.0, size.y - 68.0), bw, 14.0)   # room for the name above the message strip
+	return Rect2(bx, _ground() + 9.0, bw, 14.0)
 
-func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color, label_color: Color) -> void:
+## In-scene text sizes (design px; x0.85 on a 430 pt phone): names and numbers 18 (~15 pt).
+const NAME_FS := 18
+const SCENE_FS := 18
+
+## Text with a dark outline and a soft drop shadow: readable on any background.
+func _outlined(font: Font, pos: Vector2, text: String, align: HorizontalAlignment, width: float, fs: int, col: Color) -> void:
+	var a := col.a
+	draw_string_outline(font, pos + Vector2(0, 2), text, align, width, fs, 5, Color(0, 0, 0, 0.5 * a))
+	draw_string_outline(font, pos, text, align, width, fs, 5, Color(0.04, 0.03, 0.06, 0.95 * a))
+	draw_string(font, pos, text, align, width, fs, col)
+
+## Shortens a name with "..." so it never wraps or runs off the plate.
+func _fit_text(font: Font, text: String, fs: int, max_w: float) -> String:
+	if font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x <= max_w:
+		return text
+	var t := text
+	while t.length() > 3 and font.get_string_size(t + "...", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > max_w:
+		t = t.left(t.length() - 1)
+	return t.strip_edges() + "..."
+
+## A small outlined diamond (an elite tier pip).
+func _pip(c: Vector2, rad: float, col: Color) -> void:
+	draw_colored_polygon(PackedVector2Array([c + Vector2(0, -rad - 1.5), c + Vector2(rad + 1.5, 0), c + Vector2(0, rad + 1.5), c + Vector2(-rad - 1.5, 0)]), Color(0.04, 0.03, 0.06, col.a))
+	draw_colored_polygon(PackedVector2Array([c + Vector2(0, -rad), c + Vector2(rad, 0), c + Vector2(0, rad), c + Vector2(-rad, 0)]), col)
+
+func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color, label_color: Color, pips := 0, pack := Vector2i.ZERO) -> void:
 	var font := ThemeDB.fallback_font
 	var b := _bar_rect(r)
 	var a := label_color.a
@@ -2108,11 +2136,23 @@ func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color,
 		draw_rect(Rect2(b.position + Vector2(fw, 0), Vector2(b.size.x * (ghost - pct), b.size.y)), Color(1.0, 0.92, 0.7, 0.75 * a))
 	draw_rect(Rect2(b.position, Vector2(fw, b.size.y)), Color(fill.darkened(0.15), a))
 	draw_rect(Rect2(b.position, Vector2(fw, 3.0)), Color(fill.lightened(0.35), a))
-	draw_string_outline(font, Vector2(b.position.x, b.end.y - 2.0), "%s / %s" % [_short(maxi(value, 0)), _short(max_value)], HORIZONTAL_ALIGNMENT_CENTER, b.size.x, 12, 3, Color(0, 0, 0, a))
-	draw_string(font, Vector2(b.position.x, b.end.y - 2.0), "%s / %s" % [_short(maxi(value, 0)), _short(max_value)], HORIZONTAL_ALIGNMENT_CENTER, b.size.x, 12, Color(1, 1, 1, a))
-	var ny := b.end.y + 15.0
-	draw_string_outline(font, Vector2(b.position.x - 60, ny), label, HORIZONTAL_ALIGNMENT_CENTER, b.size.x + 120, 13, 4, Color(0, 0, 0, a))
-	draw_string(font, Vector2(b.position.x - 60, ny), label, HORIZONTAL_ALIGNMENT_CENTER, b.size.x + 120, 13, label_color)
+	_outlined(font, Vector2(b.position.x, b.position.y + b.size.y * 0.5 + SCENE_FS * 0.36), "%s / %s" % [_short(maxi(value, 0)), _short(max_value)], HORIZONTAL_ALIGNMENT_CENTER, b.size.x, SCENE_FS, Color(1, 1, 1, a))
+	# The name on its own line under the bar (never over the sprite), one line only
+	var extra := (pips * 12.0 + 6.0 if pips > 0 else 0.0) + (pack.y * 10.0 + 8.0 if pack.y > 0 else 0.0)
+	var max_w := minf(b.size.x + 100.0, size.x - 12.0) - extra
+	var shown := _fit_text(font, label, NAME_FS, max_w)
+	var tw := font.get_string_size(shown, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FS).x
+	var total := tw + extra
+	var x0 := clampf(b.get_center().x - total / 2.0, 6.0, maxf(6.0, size.x - total - 6.0))
+	var ny := b.end.y + 5.0 + NAME_FS
+	for i in pips:
+		_pip(Vector2(x0 + 5.0 + i * 12.0, ny - NAME_FS * 0.36), 4.0, label_color)
+	var tx := x0 + (pips * 12.0 + 6.0 if pips > 0 else 0.0)
+	_outlined(font, Vector2(tx, ny), shown, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FS, label_color)
+	for i in pack.y:   # a pack: one dot per monster, filled up to this one
+		var dc := Vector2(tx + tw + 10.0 + i * 10.0, ny - NAME_FS * 0.36)
+		draw_circle(dc, 4.5, Color(0.04, 0.03, 0.06, a))
+		draw_circle(dc, 3.0, Color(label_color, a) if i < pack.x else Color(0.35, 0.33, 0.42, a))
 
 ## 1234567 -> "1.23M" so bars stay readable.
 func _short(v: int) -> String:
@@ -2178,7 +2218,7 @@ func _pixel_color(ch: String, tint: Color) -> Color:
 # =====================================================================
 
 ## A row of small chips: [label, color]. Centered on x, at y (top).
-func _chip_row(chips: Array, x: float, y: float, font: Font, fs := 13) -> void:
+func _chip_row(chips: Array, x: float, y: float, font: Font, fs := SCENE_FS) -> void:
 	if chips.is_empty():
 		return
 	# Too many for one line: the rest wrap onto lines ABOVE (the row below stays clear)
@@ -2253,8 +2293,8 @@ func _draw_enemy_info(r: Rect2, font: Font) -> void:
 	if state.boss_minions > 0:
 		st.append(["Minions x%d" % state.boss_minions, Color("#d4d4d4")])
 	var top := maxf(34.0, r.position.y - 6.0)
-	_chip_row(st, r.get_center().x, top - 22.0, font)
-	_chip_row(chips, r.get_center().x, top, font, 12)
+	_chip_row(st, r.get_center().x, top - 30.0, font)
+	_chip_row(chips, r.get_center().x, top, font)
 
 ## Your statuses (poison, burns, chill) over your head.
 func _draw_hero_status(r: Rect2, font: Font) -> void:
@@ -2266,7 +2306,9 @@ func _draw_hero_status(r: Rect2, font: Font) -> void:
 			chips.append(["%s%s %d" % [info["name"], (" x%d" % stk) if stk > 1 else "", int(state.hero_status[k])], Color(info["color"])])
 	if state.bag_full() and not state.in_town:
 		chips.append(["BAG FULL: sell to use new drops" if state.bag.size() < state.bag_capacity() + GameState.OVERFLOW_MAX else "BAG OVERFLOWING: drops become scrap", Color("#f87171")])
-	_chip_row(chips, r.get_center().x, maxf(34.0, r.position.y - 4.0), font)
+	# UX pass: down the left edge at chest height, so they never sit on the monster's name plate
+	for i in chips.size():
+		_chip_row([chips[i]], 0.0, r.position.y + 12.0 + i * (SCENE_FS + 10.0), font)
 
 ## Your menagerie pets on the run (caught or hatched), at the hero's right. They grow
 ## with their level: a baby is small, a level 30 pet stands tall. Cherished ones glow.

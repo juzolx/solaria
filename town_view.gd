@@ -532,7 +532,7 @@ func _plate_rect(s: Dictionary) -> Rect2:
 	return rect
 
 func _font_size() -> int:
-	return clampi(int(round(11.0 * maxf(1.0, scale_f * 0.9))), 12, 18)
+	return clampi(int(round(11.0 * maxf(1.0, scale_f * 0.9))), 18, 22)   # UX pass: >= 18 design px (~15 pt on a phone)
 
 func _draw_labels() -> void:
 	var font := get_theme_default_font()
@@ -553,19 +553,21 @@ func _draw_labels() -> void:
 		var col := Color("#f6d88f") if why == "" else Color("#8b90a0")
 		if id == "gate":
 			col = Color("#fca5a5")
+		labels.draw_string_outline(font, rect.position + Vector2(9, rect.size.y / 2.0 + fs * 0.36), String(s["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0.04, 0.03, 0.06, 0.95))
 		labels.draw_string(font, rect.position + Vector2(9, rect.size.y / 2.0 + fs * 0.36), String(s["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
 		var n := int(badges.get(id, 0))
 		if n > 0 and why == "":
 			var c := rect.position + Vector2(rect.size.x - 2, 2)
-			labels.draw_circle(c, 9, Color("#dc2626"))
-			labels.draw_string(font, c + Vector2(-4 if n < 10 else -7, 5), str(n), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
+			labels.draw_circle(c, 12, Color(0.04, 0.03, 0.06))
+			labels.draw_circle(c, 11, Color("#dc2626"))
+			labels.draw_string(font, c + Vector2(-20, 6), str(n), HORIZONTAL_ALIGNMENT_CENTER, 40, 16, Color.WHITE)
 		if hot and notes.has(id):
 			var note := String(notes[id]) if why == "" else why
-			var nw := font.get_string_size(note, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 14.0
-			var nr := Rect2(rect.get_center().x - nw / 2.0, rect.end.y + 3, nw, 20)
+			var nw := font.get_string_size(note, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x + 14.0
+			var nr := Rect2(rect.get_center().x - nw / 2.0, rect.end.y + 3, nw, 26)
 			nr.position.x = clampf(nr.position.x, 4.0, size.x - nw - 4.0)
 			var nb := StyleBoxFlat.new()
 			nb.bg_color = Color(0.05, 0.06, 0.11, 0.9)
 			nb.set_corner_radius_all(5)
 			labels.draw_style_box(nb, nr)
-			labels.draw_string(font, nr.position + Vector2(7, 14), note, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#d6d3c4"))
+			labels.draw_string(font, nr.position + Vector2(7, 19), note, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("#d6d3c4"))

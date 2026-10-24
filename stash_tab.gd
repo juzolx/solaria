@@ -25,12 +25,12 @@ func setup(m) -> void:
 	add_theme_constant_override("separation", 6)
 	var head := UI.hbox(8)
 	add_child(head)
-	title = UI.label("", 14, UI.GOLD)
+	title = UI.label("", UI.FONT_CAPTION, UI.GOLD)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
 	upgrade_button = UI.button("", _upgrade)
 	head.add_child(upgrade_button)
-	var note := UI.label("Shared by the heroes of this town. Tap an item to look at it, then move it, or drag it across.", 12, UI.DIM)
+	var note := UI.label("Shared by the heroes of this town. Tap an item to look at it, then move it, or drag it across.", UI.FONT_CAPTION, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(note)
 	var scroll := ScrollContainer.new()
@@ -40,10 +40,10 @@ func setup(m) -> void:
 	var body := UI.vbox(8)
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(body)
-	body.add_child(UI.label("THE VAULT", 11, UI.DIM))
+	body.add_child(UI.label("THE VAULT", UI.FONT_CAPTION, UI.DIM))
 	vault_grid = ItemGrid.grid()
 	body.add_child(vault_grid)
-	bag_title = UI.label("", 11, UI.DIM)
+	bag_title = UI.label("", UI.FONT_CAPTION, UI.DIM)
 	body.add_child(bag_title)
 	bag_grid = ItemGrid.grid()
 	body.add_child(bag_grid)
@@ -54,7 +54,7 @@ func setup(m) -> void:
 	info.add_child(ih)
 	info_pic = ItemGrid.picture(48)
 	ih.add_child(info_pic)
-	info_text = UI.rich(12)
+	info_text = UI.rich(UI.FONT_CAPTION)
 	info_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info_text.custom_minimum_size = Vector2(120, 0)
 	ih.add_child(info_text)

@@ -26,13 +26,13 @@ func refresh() -> void:
 	if not Buildings.built("cabin"):
 		box.add_child(UI.wrap("An empty lot. Build the cabin (above) and %s gets a place to hang its trophies. They are already being counted: %d so far." % [p.town_name(p.town), Trophies.data.size()], 13, UI.DIM))
 		return
-	box.add_child(UI.wrap("The pride of %s. Every boss slain, Calamity ended, God class that answered, rare find and great depth goes on the wall. Just for show." % p.town_name(p.town), 12, UI.DIM))
-	box.add_child(UI.label("DEEPEST FLOOR IN THIS TOWN: %d" % maxi(p.max_floor, main.state.best_floor), 12, UI.GOLD))
+	box.add_child(UI.wrap("The pride of %s. Every boss slain, Calamity ended, God class that answered, rare find and great depth goes on the wall. Just for show." % p.town_name(p.town), UI.FONT_CAPTION, UI.DIM))
+	box.add_child(UI.label("DEEPEST FLOOR IN THIS TOWN: %d" % maxi(p.max_floor, main.state.best_floor), UI.FONT_CAPTION, UI.GOLD))
 	var all := Trophies.all()
 	var on_show := Trophies.shown()
 	box.add_child(UI.label("ON DISPLAY  %d / %d" % [on_show.size(), Trophies.slots()], 11, UI.DIM))
 	if all.is_empty():
-		box.add_child(UI.wrap("The shelves are bare. Slay a boss to hang your first trophy.", 13, UI.DIM))
+		box.add_child(UI.wrap("The shelves are bare. Slay a boss to hang your first trophy.", UI.FONT_CAPTION, UI.DIM))
 	var grid := HFlowContainer.new()
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 8)
@@ -43,9 +43,9 @@ func refresh() -> void:
 		card.custom_minimum_size = Vector2(150, 0)
 		var v := UI.vbox(2)
 		card.add_child(v)
-		v.add_child(UI.label(String(k[0]).to_upper(), 10, Color(String(k[1]))))
-		v.add_child(UI.wrap(String(t["name"]), 12, UI.TEXT))
+		v.add_child(UI.label(String(k[0]).to_upper(), UI.FONT_CAPTION, Color(String(k[1]))))
+		v.add_child(UI.wrap(String(t["name"]), UI.FONT_CAPTION, UI.TEXT))
 		v.add_child(UI.label("%s  ·  %s" % [String(t.get("hero", "")), String(t.get("date", ""))], 10, UI.DIM))
 		grid.add_child(card)
 	if all.size() > on_show.size():
-		box.add_child(UI.wrap("%d more trophies wait in the back room. A bigger cabin shows more." % (all.size() - on_show.size()), 12, UI.DIM))
+		box.add_child(UI.wrap("%d more trophies wait in the back room. A bigger cabin shows more." % (all.size() - on_show.size()), UI.FONT_CAPTION, UI.DIM))

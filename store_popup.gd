@@ -11,7 +11,7 @@ func show_for(m) -> void:
 	main = m
 	open(m, "Supporter store", 560.0)
 	Store.request_prices()
-	var note := UI.label("Everything here is extra room or looks. Nothing sold here makes a hero stronger, and there are no random items.", 12, UI.DIM)
+	var note := UI.label("Everything here is extra room or looks. Nothing sold here makes a hero stronger, and there are no random items.", UI.FONT_CAPTION, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(note)
 	rows = UI.vbox(6)
@@ -21,7 +21,7 @@ func show_for(m) -> void:
 		_update())
 	restore.custom_minimum_size = Vector2(0, UI.TAP)
 	content.add_child(restore)
-	status = UI.label("", 12, UI.GOLD)
+	status = UI.label("", UI.FONT_CAPTION, UI.GOLD)
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(status)
 	_update()
@@ -45,13 +45,13 @@ func _update() -> void:
 		var v := UI.vbox(0)
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(v)
-		v.add_child(UI.label(String(p["name"]), 14, UI.TEXT))
-		var t := UI.label(String(p["text"]), 11, UI.DIM)
+		v.add_child(UI.label(String(p["name"]), UI.FONT_CAPTION, UI.TEXT))
+		var t := UI.label(String(p["text"]), UI.FONT_CAPTION, UI.DIM)
 		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		t.custom_minimum_size = Vector2(120, 0)
 		v.add_child(t)
 		if Store.owns(main.profile, id):
-			h.add_child(UI.label("Owned", 12, UI.GREEN))
+			h.add_child(UI.label("Owned", UI.FONT_CAPTION, UI.GREEN))
 		else:
 			var pid: String = id
 			var b := UI.primary(String(Store.prices.get(id, "Buy")), func():

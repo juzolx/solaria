@@ -25,8 +25,7 @@ func setup(m) -> void:
 
 	var head := UI.hbox(8)
 	add_child(head)
-	var hint := UI.label("Tap a slot, then an item to wear it. Or drag it onto a slot", 13, UI.DIM)
-	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var hint := UI.wrap("Tap a slot, then an item to wear it, or drag an item onto a slot.", UI.FONT_CAPTION, UI.DIM)
 	hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(hint)
 	equip_best_button = UI.primary("Equip Best", func():
@@ -69,7 +68,7 @@ func setup(m) -> void:
 		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		ch.add_child(pic)
 		slot_pics[s] = pic
-		var r := UI.rich(11)
+		var r := UI.rich(UI.FONT_CAPTION)
 		r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		ch.add_child(r)
@@ -77,9 +76,9 @@ func setup(m) -> void:
 		slot_labels[s] = r
 		slot_styles[s] = st
 
-	stats_label = UI.rich(13)
+	stats_label = UI.rich(UI.FONT_CAPTION)
 	add_child(stats_label)
-	list_title = UI.label("", 13, UI.TEXT)
+	list_title = UI.wrap("", UI.FONT_CAPTION, UI.TEXT)
 	add_child(list_title)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -90,7 +89,7 @@ func setup(m) -> void:
 	scroll.add_child(sv)
 	item_grid = ItemGrid.grid()
 	sv.add_child(item_grid)
-	empty_note = UI.label("", 12, UI.DIM)
+	empty_note = UI.label("", UI.FONT_CAPTION, UI.DIM)
 	sv.add_child(empty_note)
 	resized.connect(_on_resized)
 

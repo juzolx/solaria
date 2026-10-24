@@ -45,7 +45,7 @@ func _show(main_node, id: String, as_popup: bool) -> void:
 	page_panel.add_child(pv)
 	title_label = UI.label("", 20, Color("#f6d88f"))
 	pv.add_child(title_label)
-	text = UI.rich(14)
+	text = UI.rich(UI.FONT_CAPTION)
 	text.custom_minimum_size = Vector2(0 if narrow else 380, 0)
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pv.add_child(text)

@@ -54,7 +54,7 @@ func _owned() -> void:
 		ev.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(ev)
 		var etier := clampi(int(e.get("tier", 0)), 0, 5)
-		ev.add_child(UI.label(Menagerie.egg_name(e), 14, Color(Menagerie.TIER_COLORS[etier])))
+		ev.add_child(UI.label(Menagerie.egg_name(e), UI.FONT_CAPTION, Color(Menagerie.TIER_COLORS[etier])))
 		ev.add_child(UI.wrap("Something inside is moving. It hatches in %d floor%s.\nQuest: %s" % [int(e["floors"]), "" if int(e["floors"]) == 1 else "s", EggQuests.text(e)], 13, UI.TEXT))
 	# Empty slots hint at what's out there (never how)
 	var empty := maxi(0, 3 - state.pets.size() - state.eggs.size())
@@ -64,7 +64,7 @@ func _owned() -> void:
 		var hints := ["Old hunters swear there are nests in the deep halls, for the lucky.",
 			"Every region keeps its own eggs, they say. Few ever see one.",
 			"A nest is a rarer thing than most heroes meet in a lifetime."]
-		c[1].add_child(UI.wrap("?  " + hints[(i + state.pets.size()) % hints.size()], 12, UI.DIM))
+		c[1].add_child(UI.wrap("?  " + hints[(i + state.pets.size()) % hints.size()], UI.FONT_CAPTION, UI.DIM))
 
 func _pet_row(p: Dictionary) -> PanelContainer:
 	var id := int(p["id"])
@@ -145,7 +145,7 @@ func _ability_lines(v: VBoxContainer, p: Dictionary) -> void:
 	var fam := String((PetAbilities.FAMILIES.get(PetAbilities.family(String(p.get("species", ""))), {}) as Dictionary).get("name", "pet"))
 	for a in PetAbilities.lines(p):
 		if a["on"]:
-			v.add_child(UI.wrap("+ " + String(a["text"]), 11, UI.TEXT))
+			v.add_child(UI.wrap("+ " + String(a["text"]), UI.FONT_CAPTION, UI.TEXT))
 		else:
 			v.add_child(UI.wrap("A higher-ranked %s pet (%s and up) would know: %s" % [fam, Menagerie.TIER_NAMES[int(a["rank"])], a["text"]], 11, UI.DIM))
 
@@ -160,7 +160,7 @@ func _pet_card() -> void:
 	var c := UI.card(col if st >= 0 else UI.BORDER)
 	box.add_child(c[0])
 	if st < 0:
-		c[1].add_child(UI.label("Someone is watching you from the shadows... (level %d)" % World.PET_LEVEL, 13, UI.DIM))
+		c[1].add_child(UI.label("Someone is watching you from the shadows... (level %d)" % World.PET_LEVEL, UI.FONT_CAPTION, UI.DIM))
 		return
 	var h := UI.hbox(8)
 	c[1].add_child(h)
@@ -187,7 +187,7 @@ func _pet_card() -> void:
 	var stages: Array = []
 	for i in 4:
 		stages.append(String(info["stages"][i]) if i <= st or state.dev_mode else "???")
-	c[1].add_child(UI.wrap("Evolves: " + "  >  ".join(stages), 12, UI.DIM))
+	c[1].add_child(UI.wrap("Evolves: " + "  >  ".join(stages), UI.FONT_CAPTION, UI.DIM))
 	var nrow := UI.hbox(6)
 	c[1].add_child(nrow)
 	var le := LineEdit.new()

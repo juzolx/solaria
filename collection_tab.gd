@@ -62,11 +62,11 @@ func _trophy(item: Dictionary, have: bool, source: String) -> PanelContainer:
 	if not have:
 		pic.modulate = Color(0, 0, 0, 0.55)
 	v.add_child(pic)
-	var n := UI.label(item["name"] if have else "???", 11, c if have else UI.DIM)
+	var n := UI.label(item["name"] if have else "???", UI.FONT_CAPTION, c if have else UI.DIM)
 	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(n)
-	var s := UI.label(source, 9, UI.DIM)
+	var s := UI.label(source, UI.FONT_CAPTION, UI.DIM)
 	s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	s.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(s)

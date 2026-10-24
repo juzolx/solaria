@@ -12,7 +12,7 @@ func show_for(m) -> void:
 	main = m
 	state = m.state
 	open(m, "Wardrobe", 760.0)
-	content.add_child(UI.label("Wear the look of anything you've found. Your stats still come from the gear you really wear.", 13, UI.DIM))
+	content.add_child(UI.label("Wear the look of anything you've found. Your stats still come from the gear you really wear.", UI.FONT_CAPTION, UI.DIM))
 	var body := UI.hbox(16)
 	content.add_child(body)
 	var left := UI.panel(UI.INSET, UI.BORDER, 10, 10, 1)
@@ -30,7 +30,7 @@ func show_for(m) -> void:
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_child(grid)
 	for slot in GearSlots.LOOK_SLOTS:  # 2.1: rings and necklaces have no look (yet)
-		var l := UI.label(slot, 13, UI.TEXT)
+		var l := UI.label(slot, UI.FONT_CAPTION, UI.TEXT)
 		l.custom_minimum_size = Vector2(80, 0)
 		grid.add_child(l)
 		var ob := OptionButton.new()
@@ -54,7 +54,7 @@ func show_for(m) -> void:
 		ob.item_selected.connect(func(i: int): state.set_transmog(slot, keys[i]); _update())
 		grid.add_child(ob)
 		pickers[slot] = [ob, keys]
-	content.add_child(UI.label("You've found %d looks. New ones are added as you find gear." % state.wardrobe.size(), 12, UI.DIM))
+	content.add_child(UI.label("You've found %d looks. New ones are added as you find gear." % state.wardrobe.size(), UI.FONT_CAPTION, UI.DIM))
 	_update()
 	tree_exiting.connect(func(): main.refresh())
 

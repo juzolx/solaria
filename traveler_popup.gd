@@ -25,8 +25,8 @@ func show_for(main_node, p: Dictionary) -> void:
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
 	var ttl := String(who["title"])
-	v.add_child(UI.label(ttl.left(1).to_upper() + ttl.substr(1), 12, UI.DIM))
-	v.add_child(UI.wrap(String(who["line"]), 14, UI.TEXT))
+	v.add_child(UI.label(ttl.left(1).to_upper() + ttl.substr(1), UI.FONT_CAPTION, UI.DIM))
+	v.add_child(UI.wrap(String(who["line"]), UI.FONT_CAPTION, UI.TEXT))
 	var st: GameState = m.state
 	for n in 2:
 		var o: Dictionary = who["offers"][n]

@@ -8,6 +8,7 @@ const VERSION := "2.1"
 const NOTES := [
 	{"version": "2.1", "name": "Gods and Nests", "lines": [
 		"A fresh start: every town and hero begins again under the new rules. Your settings are kept.",
+		"Easier to read: bigger text everywhere, calmer colours (gold marks what matters), clearer skill and menu icons, and no more screens cut off at the edge of a phone.",
 		"New class rules: your class evolves at levels 15, 35 and 75, and you pick one of two paths each time. Level 75 classes have a rank from C to SS.",
 		"God classes: above every rank stand the God classes. Nobody knows how to reach one; some say a God answers those who have done exactly the right things.",
 		"Hidden classes are earned by how you play and appear at level 15, 35 or 75.",

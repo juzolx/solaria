@@ -6,7 +6,7 @@ static func not_setup_card() -> PanelContainer:
 	var card := UI.panel(UI.INSET, UI.BORDER, 10, 14, 1)
 	var v := UI.vbox(8)
 	card.add_child(v)
-	var t := UI.rich(13)
+	var t := UI.rich(UI.FONT_CAPTION)
 	if OS.is_debug_build():
 		# For whoever builds the game
 		v.add_child(UI.label("Online isn't turned on yet", 16, UI.GOLD))
@@ -23,7 +23,7 @@ static func name_card(main, on_done: Callable) -> PanelContainer:
 	var v := UI.vbox(8)
 	card.add_child(v)
 	v.add_child(UI.label("Pick your online name", 16, UI.GOLD))
-	v.add_child(UI.label("This is how other players see you on leaderboards and in guilds.", 12, UI.DIM))
+	v.add_child(UI.label("This is how other players see you on leaderboards and in guilds.", UI.FONT_CAPTION, UI.DIM))
 	var row := UI.hbox(8)
 	v.add_child(row)
 	var field := LineEdit.new()
@@ -32,7 +32,7 @@ static func name_card(main, on_done: Callable) -> PanelContainer:
 	field.text = main.profile.player_name
 	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(field)
-	var status := UI.label("", 12, UI.RED)
+	var status := UI.label("", UI.FONT_CAPTION, UI.RED)
 	var go := UI.primary("Save name", func(): pass)
 	go.pressed.connect(func():
 		go.disabled = true
@@ -54,6 +54,6 @@ static func clear(box: Node) -> void:
 		c.queue_free()
 
 static func error_label(text: String) -> Label:
-	var l := UI.label(text, 13, UI.RED)
+	var l := UI.label(text, UI.FONT_CAPTION, UI.RED)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
