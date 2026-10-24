@@ -87,6 +87,10 @@ def decor():
           (P32, 0, 16, 20), (P32, 1, 16, 21), (P32, 39, 23, 19), (P32, 2, 18, 23), (P32, 0, 21, 16),
           (P32, 3, 21, 22), (P32, 29, 20, 22)]
     LIGHTS.extend([(19.5, 19.5, 20, (255, 190, 110), 50)])
+    for i, j in ((18, 10), (21, 10), (18, 13), (21, 13)):
+        d.append((UP, 4, i, j))
+        LIGHTS.append((i + .5, j + .5, 40, (255, 160, 80), 44))
+    d += [(P32, 24, 14, 8), (P32, 23, 16, 8), (P32, 24, 24, 8), (P32, 23, 26, 8), (P32, 44, 13, 8)]
     # Bounty Board beside the dungeon stairs (heroes read it before descending); Mailbox by the Inn
     d += [(P48, 6, 23, 8), (P48, 8, 12, 14)]
     # street lamps along the main street and lanes
@@ -99,47 +103,56 @@ def decor():
     # shop front (cross street side)
     d += [(P32, 1, 13, 24), (P32, 2, 13, 21)]
     # vault: lantern + chest
-    d += [(P32, 31, 32, 20)]
+    d += [(P32, 31, 32, 21)]
+    d += fence("wood", 28, 16, 32, 20)
+    d = [e for e in d if not (e[0] == "fence" and e[4] == "j" and e[2] == 28 and e[3] == 18)]   # gate on the square side
+    d += [(P32, 36, 30, 18), (P32, 3, 29, 17), (P32, 14, 31, 16), (P32, 15, 28, 19), (TREE, 9, 31, 19)]
     # guild training yard
-    d += [(P32, 40, 36, 3), (P32, 40, 37, 5), (P32, 41, 35, 6), (P32, 18, 36, 6), (P32, 3, 30, 7)]
+    d += [(P32, 40, 35, 4), (P32, 40, 36, 6), (P32, 41, 35, 6), (P32, 18, 36, 5)]
     # clinic: herb pots, cauldron; pet pen with fence, kennel, hay
-    d += [(P32, 15, 24, 35), (P32, 14, 25, 35), (P32, 37, 29, 33), (P32, 43, 29, 31)]
-    d += fence("wood", 30, 30, 38, 35)
-    d += [(P48, 14, 34, 32), (P48, 15, 36, 33), (P32, 58, 32, 32), (P32, 59, 35, 31), (UP, 5, 31, 31)]
-    LIGHTS.append((31.5, 31.5, 34, (255, 190, 110), 36))
+    d += [(P32, 37, 29, 34), (P32, 43, 29, 32)]
+    d += fence("wood", 30, 31, 37, 35)
+    d += [(P48, 14, 34, 32), (P48, 15, 35, 33), (P32, 58, 32, 33), (P32, 59, 35, 31), (UP, 5, 31, 32)]
+    LIGHTS.append((31.5, 32.5, 34, (255, 190, 110), 36))
     # fields + scarecrow
-    for i in range(1, 5):
+    for i in range(2, 6):
         for j in range(30, 35):
             d.append((P32, (20, 21, 22)[(i + j) % 3], i, j))
-    d += [(P32, 40, 2, 32)]
+    d += [(P32, 40, 3, 32)]
     # houses: woodpiles, barrels, benches
-    d += [(P32, 16, 34, 14), (P32, 0, 34, 18), (P32, 3, 5, 22), (P32, 30, 5, 24), (P32, 50, 27, 22),
+    d += [(P32, 16, 33, 13), (P32, 0, 33, 18), (P32, 3, 2, 22), (P32, 30, 2, 24), (P32, 50, 27, 22),
           (P32, 56, 13, 33), (P32, 35, 12, 35)]
     # trophy cabin: hide rack, skull pike, antler... (built state)
     d += [(P32, 51, 18, 33), (P32, 46, 18, 30)]
     # graveyard: rows of graves, angel, cross, iron fence, gate to the lane
     graves = (6, 7, 8, 10, 60, 63, 9)
-    step = 1 if HARDCORE else 2
-    for i in range(2, 12, step):
-        for j in range(2, 7 if HARDCORE else 6, step):
-            if (i, j) != (6, 4):
-                d.append((P32, graves[rng.randrange(len(graves))], i, j))
-    d += [(P48, 12, 6, 4), (P48, 13, 10, 3), (P32, 53, 1, 1), (P32, 54, 11, 1)]
     if HARDCORE:
-        d += [(P32, 6, 2, 17), (P32, 63, 3, 18), (P32, 60, 4, 17), (P32, 9, 1, 18), (TREE, 7, 5, 9)]
+        for i in range(2, 12):
+            for j in range(2, 7):
+                if (i, j) != (6, 4):
+                    d.append((P32, graves[rng.randrange(len(graves))], i, j))
+    else:   # the Church's garden: flower beds, bushes, benches round the angel, two old stones
+        d += [(P32, 14, 3, 3), (P32, 15, 4, 5), (P32, 14, 9, 5), (P32, 15, 10, 3), (P32, 3, 5, 3), (P32, 3, 8, 5),
+              (TREE, 12, 3, 5), (TREE, 13, 9, 2), (UP, 8, 2, 2), (UP, 8, 11, 6), (P32, 10, 10, 5), (P32, 6, 2, 6)]
+    d += [(P48, 12, 6, 4), (P48, 13, 10, 3), (P32, 54, 11, 2)]
+    if HARDCORE:
+        d += [(P32, 6, 3, 17), (P32, 63, 4, 18), (P32, 60, 5, 17), (P32, 9, 2, 18), (TREE, 7, 5, 9)]
     d += [e for e in fence("iron", 1, 1, 12, 7) if not (e[4] == "i" and e[3] == 7 and e[2] in (6, 7))]
-    d += [(P32, 28, 3, 6), (P32, 28, 9, 2)]
+    if HARDCORE:
+        d += [(P32, 28, 3, 6), (P32, 28, 9, 2)]
     # torches on the inner wall faces between towers
     for i in (5, 14, 25, 35):
         d.append((P32, 12, i, 1))
         LIGHTS.append((i + .5, 1.5, 28, (255, 170, 90), 30))
-    for j in (6, 13, 26, 33):
+    for j in (6, 26):
         if HARDCORE and j < 20:
             continue
         d.append((P32, 12, 1, j))
         LIGHTS.append((1.5, j + .5, 28, (255, 170, 90), 30))
     # river side: reeds-ish rocks, signpost at the bridge
     d += [(P32, 19, 23, 25), (P32, 24, 12, 29), (P32, 23, 30, 29), (P32, 25, 35, 29)]
+    d += [(P48, 11, 26, 36), (P32, 12, 29, 36), (P32, 0, 27, 36), (P32, 19, 31, 36), (P32, 1, 12, 36)]
+    LIGHTS.append((29.5, 36.5, 30, (255, 170, 90), 34))
     # gate courtyard: torches by the sealed gate, crates
     d += [(P32, 12, 17, 36), (P32, 12, 22, 36), (P32, 11, 16, 35), (P32, 1, 23, 35)]
     LIGHTS.extend([(17.5, 36.5, 30, (255, 170, 90), 36), (22.5, 36.5, 30, (255, 170, 90), 36)])
@@ -183,8 +196,11 @@ def trees():
                 add(i, j - 2, oaks + (8,))
     for i, j in ((2, 24), (3, 25), (36, 21), (37, 22), (37, 24), (36, 36), (37, 35), (35, 37)):
         add(i, j, oaks + small)
-    for i, j in ((2, 5), (11, 2)):               # dead trees inside the graveyard fence
-        t.append((rng.choice((6, 7)), i, j, 0, 0))
+    if HARDCORE:
+        for i, j in ((2, 5), (11, 2)):           # dead trees inside the graveyard fence
+            t.append((rng.choice((6, 7)), i, j, 0, 0))
+    for i, j in ((27, 2), (27, 5), (35, 2), (36, 7), (35, 35), (37, 34)):
+        add(i, j, oaks + pines)
     return t
 
 

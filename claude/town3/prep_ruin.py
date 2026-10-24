@@ -35,4 +35,35 @@ for _ in range(5):                                                     # roof ho
     x, y = rng.randint(120, 175), rng.randint(95, 150)
     if px[x, y][3]:
         d.polygon([(x, y), (x + 5, y + 2), (x + 3, y + 6), (x - 2, y + 4)], fill=(10, 8, 14, 255))
+# boards nailed across every window and the rose window (the lit glass regions of the Regular church)
+src = Image.open("art/church.png").convert("RGBA")
+sp = src.load()
+warm = {(x, y) for y in range(h) for x in range(w) if sp[x, y][3] and sp[x, y][0] > 150 and sp[x, y][1] > 100 and sp[x, y][2] < 120 and sp[x, y][0] - sp[x, y][2] > 70}
+seen = set()
+for start in sorted(warm):
+    if start in seen:
+        continue
+    comp, stack = [], [start]
+    seen.add(start)
+    while stack:
+        cx, cy = stack.pop()
+        comp.append((cx, cy))
+        for n in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+            if n in warm and n not in seen:
+                seen.add(n)
+                stack.append(n)
+    if len(comp) < 12:
+        continue
+    xs, ys = [c[0] for c in comp], [c[1] for c in comp]
+    x0, x1, y0, y1 = min(xs) - 1, max(xs) + 1, min(ys), max(ys)
+    if y1 < cut:
+        continue
+    for k, yy in enumerate(range(y0 + 2, y1, 5)):                    # planks, slightly askew
+        d.line([(x0, yy + (k % 2)), (x1, yy + 1 - (k % 2))], fill=(14, 8, 18, 255), width=3)
+        d.line([(x0, yy + (k % 2)), (x1, yy + 1 - (k % 2))], fill=(92, 66, 44, 255), width=1)
+for _ in range(9):                                                     # more roof holes
+    x, y = rng.randint(110, 185), rng.randint(cut + 10, 165)
+    if px[x, y][3]:
+        d.polygon([(x, y), (x + 7, y + 3), (x + 4, y + 8), (x - 3, y + 5)], fill=(10, 8, 14, 255))
+        d.line([(x - 1, y + 2), (x + 6, y + 5)], fill=(70, 52, 38, 255))   # a broken rafter
 im.save("art/church_ruin.png")

@@ -50,7 +50,7 @@ def ground_kind():
 
 
 TILE_OF = {"grass": "grass", "yard": "grass", "plateau": "flag", "grave": "grave", "road": "cobble",
-           "square": "flag", "water": "water", "bridge": "cobble", "path": "cobble", "field": "dirt", "pen": "grass"}
+           "square": "flag", "water": "water", "bridge": "cobble", "path": "cobble", "dirt": "dirt", "garden": "grass", "field": "dirt", "pen": "grass"}
 
 
 def load_tiles():
@@ -69,6 +69,8 @@ def draw_ground(img, tiles):
             if not 0 <= j < N:
                 continue
             k = TILE_OF[g[i][j]]
+            if k == "grave" and not HARDCORE:
+                k = "grass"
             var = tiles[k]
             t = var[(i * 7 + j * 13 + (i * j) % 5) % len(var)]
             x, y = at(i, j)
@@ -196,7 +198,7 @@ def shadows(img):
 def put(sprites, im, foot_xy, anchor, key=None):
     """Queue a sprite so its anchor pixel lands on foot_xy; sorted by key (screen y of its front)."""
     x, y = int(round(foot_xy[0] - anchor[0])), int(round(foot_xy[1] - anchor[1]))
-    sprites.append((key if key is not None else foot_xy[1], x, y, im))
+    sprites.append((key if key is not None else foot_xy[1], x, y, im, TAG[0]))
 
 
 def place_lot(sprites, lid, x0, y0, x1, y1, z=0):
@@ -221,7 +223,8 @@ def place_lot(sprites, lid, x0, y0, x1, y1, z=0):
     else:
         fx, fy = at(x1 + 1, y1 + 1, z)
         put(sprites, im, (fx + dx, fy + dy), base_corner(im), front)
-    _, x, y, _ = sprites[-1]
+    _, x, y, _, _ = sprites[-1]
+    sprites[-1] = sprites[-1][:4] + (lid,)
     b = im.getbbox()
     BOXES[lid] = (x + b[0], y + b[1], b[2] - b[0], b[3] - b[1])
 
@@ -278,7 +281,7 @@ def place_walls(sprites):
 
 def shadow(img, sprites):
     sh = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    for _, x, y, im in sprites:
+    for _, x, y, im, _ in sprites:
         a = im.getchannel("A").point(lambda v: 90 if v > 100 else 0)
         blk = Image.new("RGBA", im.size, (10, 6, 20, 255))
         blk.putalpha(a)
@@ -286,6 +289,8 @@ def shadow(img, sprites):
     img.alpha_composite(sh)
 
 
+TAG = [""]         # tag put() gives the next sprites (a lot id for buildings)
+LAST_SPRITES = []  # the sorted sprites of the last compose (export_town builds walker occluders from them)
 BOXES = {}      # sprite id -> opaque box on the town canvas (tap areas for town.json)
 NO_OVERLAYS = []  # [True] -> leave out walkers and level props (the game draws those itself)
 EMPTY = set()   # lot ids drawn as empty building plots (Church / Trophy Cabin before they're built)
@@ -350,7 +355,7 @@ def compose():
         im = sheet(name, n)
         x, y = at(i + .5, j + .5, z)
         put(sprites, im, (x, y + 3), bottom(im), at(i + .5, j + .5)[1] + 4)
-        _, px, py, _ = sprites[-1]
+        _, px, py, _, _ = sprites[-1]
         b = im.getbbox()
         BOXES[(name, n, i, j)] = (px + b[0], py + b[1], b[2] - b[0], b[3] - b[1])
     for n, i, j, dx, dy in trees():
@@ -358,7 +363,8 @@ def compose():
         x, y = at(i + .5, j + .5)
         put(sprites, im, (x + dx, y + dy + 4), bottom(im), y + dy + 6)
     sprites.sort(key=lambda s: s[0])
-    for _, x, y, im in sprites:
+    LAST_SPRITES[:] = sprites
+    for _, x, y, im, _ in sprites:
         img.alpha_composite(im, (x, y))
     return img
 
@@ -388,6 +394,12 @@ def dusk(img):
         ground = GROUND_IMG[0].convert("RGB")
         same = ImageChops.difference(ground, rgb).convert("L").point(lambda v: 255 if v < 3 else 0)
         glow = ImageChops.multiply(glow, Image.merge("RGB", (same, same, same)))
+    beam = Image.new("RGB", rgb.size, (0, 0, 0))
+    bd = ImageDraw.Draw(beam)
+    bx, by = at(19.9, 4.0, PLATEAU_Z + 30)
+    for w, f in ((26, .10), (16, .16), (8, .24)):
+        bd.polygon([(bx - w, by), (bx + w, by), (bx + w * .6, by - 150), (bx - w * .6, by - 150)], fill=(int(90 * f * 2), int(210 * f * 2), int(255 * f * 2)))
+    glow = ImageChops.add(glow, beam)
     out = ImageChops.add(dark, glow)
     if HARDCORE:                       # the whole town colder and greyer...
         out = ImageEnhance.Color(out).enhance(0.85)
@@ -398,6 +410,21 @@ def dusk(img):
         blue = ImageChops.multiply(out, Image.new("RGB", out.size, (150, 165, 200)))
         out = Image.composite(blue, out, mask)
     return out
+
+
+def day(img):
+    """Day: brighter ground, roofs and walls, windows unlit, a lighter sky behind the walls."""
+    rgb = img.convert("RGB")
+    px = rgb.load()
+    for y in range(rgb.height):
+        for x in range(rgb.width):
+            r, g, b = px[x, y]
+            if r > 215 and g > 140 and b < 110 and r - b > 130:      # lit glass -> daylight glass
+                px[x, y] = (96, 104, 118)
+            elif (r, g, b) == (20, 18, 30):
+                px[x, y] = (58, 70, 92)
+    rgb = ImageEnhance.Brightness(rgb).enhance(1.22)
+    return ImageEnhance.Color(rgb).enhance(1.1)
 
 
 def phone(img, cx, cy, scale=2, size=(430, 932)):

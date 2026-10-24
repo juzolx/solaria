@@ -16,7 +16,8 @@
   "file": "smith.png"
  },
  "stash": {
-  "file": "stash_warm.png"
+  "file": "stash_warm.png",
+  "flip": true
  },
  "clinic": {
   "file": "clinic.png"
@@ -75,14 +76,6 @@
   "file": "house_a.png",
   "flip": true
  },
- "house3": {
-  "file": "house_b.png",
-  "flip": true
- },
- "house4": {
-  "file": "house_a.png",
-  "flip": false
- },
  "tower4": {
   "file": "tower.png"
  },
@@ -91,5 +84,8 @@
  },
  "tower6": {
   "file": "tower.png"
+ },
+ "house3": {
+  "file": "house_a.png"
  }
 }

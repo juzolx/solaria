@@ -51,6 +51,10 @@ var zoom := 2.0         # iso: 2x or 3x (pinch / wheel)
 var pan_v := Vector2.INF  # iso: map offset in view pixels (INF = not placed yet: start on the market)
 var walk := {}          # iso: Vector2i cell -> true where people can walk
 var walk_doors: Array = []  # iso: door cells people walk between
+var walk_stops: Array = []  # iso: cells beside stalls, the well and the boards where people stop a while
+var raised := {}        # iso: Vector2i cell -> true on the plateau path (people stand higher there)
+var occluders: Array = []  # iso: [texture name, x, y, sort y, tag(, look)] - drawn again over a walker behind them
+var occ_tex := {}
 var up_tex := {}        # iso: level-prop name -> Texture2D
 var touches := {}       # iso: finger index -> position, for the pinch
 var pinch_from := 0.0
@@ -83,6 +87,11 @@ const FOLK := [
 	[{"body": "masc", "skin": 4, "hair": "Short", "hair_color": 2, "eyes": 1, "race": "Human"}, {"Chest": ["tunic", "leather"], "Legs": ["pants", "cloth"], "Feet": ["boots", "leather"]}],
 	[{"body": "masc", "skin": 1, "hair": "Bald", "hair_color": 8, "eyes": 3, "race": "Dwarf"}, {"Chest": ["tunic", "leather"], "Feet": ["boots", "leather"]}],
 	[{"body": "fem", "skin": 0, "hair": "Long", "hair_color": 16, "eyes": 5, "race": "Elf"}, {"Chest": ["tunic", "cloth"], "Legs": ["leggings", "cloth"], "Feet": ["boots", "leather"]}],
+	# more townsfolk for the bigger iso town
+	[{"body": "masc", "skin": 3, "hair": "Short", "hair_color": 10, "eyes": 2, "race": "Human"}, {"Chest": ["robe", "cloth"], "Feet": ["sandals", "leather"]}],
+	[{"body": "fem", "skin": 5, "hair": "Bun", "hair_color": 3, "eyes": 1, "race": "Human"}, {"Chest": ["tunic", "cloth"], "Legs": ["pants", "cloth"], "Feet": ["boots", "leather"]}],
+	[{"body": "masc", "skin": 2, "hair": "Bald", "hair_color": 0, "eyes": 4, "race": "Human"}, {"Chest": ["tunic", "leather"], "Legs": ["pants", "leather"], "Feet": ["boots", "leather"]}],
+	[{"body": "fem", "skin": 1, "hair": "Long", "hair_color": 7, "eyes": 3, "race": "Elf"}, {"Chest": ["robe", "cloth"], "Feet": ["sandals", "leather"]}],
 ]
 
 func _ready() -> void:
@@ -100,6 +109,11 @@ func _ready() -> void:
 			walk[Vector2i(int(c[0]), int(c[1]))] = true
 		for sp in data.get("spots", []):
 			walk_doors.append(Vector2i(int(sp["door"][0]), int(sp["door"][1])))
+		for c in data.get("stops", []):
+			walk_stops.append(Vector2i(int(c[0]), int(c[1])))
+		for c in data.get("raised", []):
+			raised[Vector2i(int(c[0]), int(c[1]))] = true
+		occluders = data.get("occluders", [])
 	map = TextureRect.new()
 	map.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	map.stretch_mode = TextureRect.STRETCH_SCALE
@@ -392,7 +406,8 @@ func set_heroes(list: Array, key: String) -> void:
 # Iso townsfolk: stand at a door, then walk the street grid to another door.
 func _cell_px(c: Vector2i) -> Vector2:
 	var o: Array = data["origin"]
-	return Vector2(float(o[0]) + (c.x - c.y) * 16.0, float(o[1]) + (c.x + c.y + 1) * 8.0)
+	var z := float(data.get("raised_z", 0)) if raised.has(c) else 0.0
+	return Vector2(float(o[0]) + (c.x - c.y) * 16.0, float(o[1]) + (c.x + c.y + 1) * 8.0 - z)
 
 func _place_on_grid(f: Dictionary) -> void:
 	var c: Vector2i = walk_doors[randi() % walk_doors.size()] if not walk_doors.is_empty() else Vector2i(17, 20)
@@ -423,18 +438,57 @@ func _grid_path(a: Vector2i, b: Vector2i) -> Array:
 		c2 = prev[c2]
 	return out
 
+## Where to go next: mostly a building's door (then inside for a while), else a stall, the well
+## or a board to stand at, sometimes just a nearby street cell to idle.
+func _pick_goal(f: Dictionary) -> void:
+	var r := randf()
+	var goal: Vector2i = f["cell"]
+	f["goal_door"] = false
+	if r < 0.45 and not walk_doors.is_empty():
+		goal = walk_doors[randi() % walk_doors.size()]
+		f["goal_door"] = true
+	elif r < 0.85 and not walk_stops.is_empty():
+		goal = walk_stops[randi() % walk_stops.size()]
+	else:
+		var keys := walk.keys()
+		goal = keys[randi() % keys.size()]
+	f["path"] = _grid_path(f["cell"], goal)
+	if (f["path"] as Array).is_empty():
+		f["wait"] = 1.0
+
+func _arrive(f: Dictionary) -> void:
+	if f.get("goal_door", false) and not f.get("hero", false) or (f.get("goal_door", false) and randf() < 0.5):
+		f["inside"] = randf_range(3.0, 8.0)   # went in: fades out at the door, comes back out later
+		f["fade"] = 0.0
+	f["wait"] = randf_range(1.5, 4.0)
+	f["goal_door"] = false
+
 func _step_iso_walker(f: Dictionary, delta: float) -> void:
+	if float(f.get("inside", 0.0)) > 0.0:
+		f["inside"] = float(f["inside"]) - delta
+		f["fade"] = minf(1.0, float(f.get("fade", 0.0)) + delta * 3.0)
+		return
+	if float(f.get("fade", 0.0)) > 0.0:
+		f["fade"] = maxf(0.0, float(f["fade"]) - delta * 3.0)
 	if float(f["wait"]) > 0.0:
 		f["wait"] = float(f["wait"]) - delta
-		if float(f["wait"]) <= 0.0 and not walk_doors.is_empty():
-			f["path"] = _grid_path(f["cell"], walk_doors[randi() % walk_doors.size()])
-			if (f["path"] as Array).is_empty():
-				f["wait"] = 1.0
+		if float(f["wait"]) <= 0.0:
+			_pick_goal(f)
 		return
 	var path: Array = f["path"]
 	if path.is_empty():
-		f["wait"] = randf_range(2.0, 6.0)
+		_arrive(f)
 		return
+	# two people meeting on the street stop for a chat now and then
+	if not f.get("hero", false) and randf() < 0.004:
+		for o in folk:
+			if o != f and float(o["wait"]) <= 0.0 and float(o.get("inside", 0.0)) <= 0.0 and Vector2(float(o["x"]), float(o["y"])).distance_to(Vector2(float(f["x"]), float(f["y"]))) < 22.0:
+				var t := randf_range(2.5, 5.0)
+				f["wait"] = t
+				o["wait"] = t
+				f["flip"] = float(o["x"]) < float(f["x"])
+				o["flip"] = not f["flip"]
+				return
 	var to := _cell_px(path[0])
 	var at := Vector2(float(f["x"]), float(f["y"]))
 	var stp := 20.0 * delta
@@ -501,6 +555,8 @@ func _draw_people() -> void:
 	var sorted := folk.duplicate()
 	sorted.sort_custom(func(a, b): return float(a["y"]) < float(b["y"]))
 	for f in sorted:
+		if iso and float(f.get("fade", 0.0)) >= 1.0:
+			continue
 		var walking := float(f["wait"]) <= 0.0
 		var frames: Array = f["walk"] if walking else f["idle"]
 		var i := (int(float(f["t"]) * 9.0) % maxi(1, frames.size() - 1)) + 1 if walking else (int(float(f["t"]) * 1.5) % frames.size())
@@ -514,7 +570,10 @@ func _draw_people() -> void:
 		people.draw_circle(Vector2(float(f["x"]), float(f["y"]) - 2.0), 9.0 * k, Color(0.04, 0.03, 0.08, 0.25))
 		if f["flip"]:
 			people.draw_set_transform(Vector2((float(f["x"]) * 2.0) * scale_f, 0), 0.0, Vector2(-scale_f, scale_f))
-		people.draw_texture_rect(tx, Rect2(pos, Vector2(w, w)), false)
+		people.draw_texture_rect(tx, Rect2(pos, Vector2(w, w)), false, Color(1, 1, 1, 1.0 - float(f.get("fade", 0.0))))
+		if iso:
+			people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
+			_cover(Rect2(pos, Vector2(w, w)), float(f["y"]))
 		if f.get("hero", false):
 			# A small marker over your heroes (brighter over the one you're playing)
 			people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
@@ -523,6 +582,26 @@ func _draw_people() -> void:
 			people.draw_colored_polygon(PackedVector2Array([top + Vector2(-7, -9), top + Vector2(7, -9), top + Vector2(0, 1)]), Color(0.05, 0.03, 0.08, 0.85))
 			people.draw_colored_polygon(PackedVector2Array([top + Vector2(-5, -8), top + Vector2(5, -8), top + Vector2(0, -1)]), col)
 	people.draw_set_transform(Vector2.ZERO)
+
+## Iso: redraw whatever stands in front of a walker (sorts lower on screen) and overlaps it,
+## so people pass behind buildings, walls and trees instead of over their roofs.
+func _cover(r: Rect2, foot_y: float) -> void:
+	for o in occluders:
+		if float(o[3]) <= foot_y:
+			continue
+		var tag := String(o[4])
+		if tag == "church" or tag == "cabin":
+			if not Buildings.built(tag):
+				continue
+			if tag == "church" and o.size() > 5 and String(o[5]) != ("ruin" if hardcore else "holy"):
+				continue
+		var n := String(o[0])
+		if not occ_tex.has(n):
+			occ_tex[n] = load("res://art/town/iso/occ/%s.png" % n)
+		var t: Texture2D = occ_tex[n]
+		var orect := Rect2(float(o[1]), float(o[2]), t.get_width(), t.get_height())
+		if orect.intersects(r):
+			people.draw_texture(t, orect.position)
 
 ## Iso: each building's level props (L1 scaffolding + piles, L2 lantern + upgrade, L3 banners + showpiece).
 func _draw_levels() -> void:
