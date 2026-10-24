@@ -6,9 +6,10 @@ extends RefCounted
 
 const PATH := "user://profile.dat"
 const MAX_RUNS := 20
-## Bump this to wipe every hero for a fresh start (settings and the online login stay).
+## The save format generation. main moves 2.0 saves (12) into 13 (save_migrate.gd); anything
+## older is wiped once (settings and the online login stay).
 ## 12 = Solaria 0.12: the dungeon revamp (Juzo said all saves can be reset).
-const SAVE_EPOCH := 13  # 13 = Solaria 2.1: new class rules, a fresh start (Juzo, Oct 20)
+const SAVE_EPOCH := 13  # 13 = Solaria 2.1: 2.0 saves (12) are moved over by save_migrate.gd, not wiped (Juzo, Oct 24)
 
 var last_mode := ""          # "regular", "hardcore" or "" before you've picked
 var sound_on := true

@@ -53,7 +53,8 @@ lookup use ids. Display names live only in the data and can change freely.
 - **Classes**: every TREES node is `[id, name, side, ...]` with its old slug frozen in the data.
   `Signatures.NAMES`, `FINAL_STATS`, `MID_EXTRA`, God `"from"`, and `path:` keys use node ids;
   God classes use their `god_*` ids; `discovered` records node ids.
-- **Saves**: SAVE_EPOCH 13 is a fresh start, so nothing is migrated. Unknown keys are harmless:
+- **Saves**: 2.0 saves (epoch 12) are moved to SAVE_EPOCH 13 once by `save_migrate.gd` (Juzo, Oct 24:
+  no wipe): every name key above is re-keyed by id, materials become dust. Unknown keys are harmless:
   counters iterate the data, `name_of` / `set_name_of` fall back to the id, unknown sets give no
   bonus, `ClassTree.from_save` drops unknown class ids (tests/stage6_ids.gd checks these).
 - Bounty / contract `text` is written once when posted (with the name of that day); they reset
