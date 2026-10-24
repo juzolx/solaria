@@ -3769,6 +3769,8 @@ func hero_looks() -> Dictionary:
 	# God rank classes shine: a golden aura around the hero
 	if not uc.is_empty() and ClassTree.rank_of(uc) == "God" and transmog.get("Aura", "") != "hide":
 		out["Aura"] = {"type": "aura", "color": Color(ClassTree.RANK_COLORS["God"])}
+	# 2.1 heroes wear their class's outfit (armour has no look), upgraded at class levels 15 / 35 / 75
+	out["Class"] = {"cls": hero_class if hero_class != "" else "Warrior", "tier": [0, 15, 35, 75][mini(class_path.size(), 3)]}
 	return out
 
 func set_transmog(slot: String, key: String) -> void:

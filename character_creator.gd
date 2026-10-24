@@ -70,6 +70,8 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	_swatch_row(right, "Hair color", "hair_color", Sprites.swatches("hair"))
 	_swatch_row(right, "Fur color", "fur", Lpc.FUR.map(func(f): return Color(f[1][1])))
 	_swatch_row(right, "Eyes", "eyes", Sprites.swatches("eyes"))
+	if HeroArt.available():
+		_text_row(right, "Face", "face", HeroArt.FACES, HeroArt.FACE_NAMES)
 
 	var done_button := UI.primary("Done", _finish, UI.GOLD)
 	done_button.custom_minimum_size = Vector2(0, 44)
@@ -119,7 +121,7 @@ func _pick(field: String, value) -> void:
 			app["skin"] = ok[0]
 		if String(value) == "Beastkin" and not app.has("fur"):
 			app["fur"] = 5
-		var styles := Lpc.hair_styles(String(value))
+		var styles := _hair_list(String(value))
 		if not str(app.get("hair", "")) in styles:
 			app["hair"] = styles[0]
 	if UI.sfx:
@@ -129,7 +131,9 @@ func _pick(field: String, value) -> void:
 func _randomize() -> void:
 	app["body"] = Sprites.BODIES.pick_random()
 	app["skin"] = Races.skins(app.get("race", "Human")).pick_random()
-	app["hair"] = Lpc.hair_styles(app.get("race", "Human")).pick_random()
+	app["hair"] = _hair_list(app.get("race", "Human")).pick_random()
+	if HeroArt.available():
+		app["face"] = HeroArt.FACES.pick_random()
 	app["hair_color"] = randi() % Sprites.hair_colors().size()
 	app["eyes"] = randi() % Sprites.eye_colors().size()
 	app["fur"] = randi() % Lpc.FUR.size()
@@ -143,9 +147,13 @@ func _update() -> void:
 	if lock_race:
 		race_text.text += "\n[color=%s](Your race was picked when this hero was made.)[/color]" % UI.hex(UI.DIM)
 	# Beastkin: fur color instead of skin, hair and hair color
-	var furry := race == "Beastkin"
+	# 2.1 heroes: every race uses the drawn human body for now (skin tones per race), its 37 hair
+	# styles and the drawn faces; fur, crests and eye colours come back with each race's own art
+	var furry := race == "Beastkin" and not HeroArt.available()
 	for field in row_parts:
 		var show: bool = (field == "fur") == furry if field in ["skin", "hair", "hair_color", "fur"] else true
+		if field == "eyes" and HeroArt.available():
+			show = false
 		for c in row_parts[field]:
 			(c as Control).visible = show
 	for field in rows:
@@ -154,7 +162,7 @@ func _update() -> void:
 			if field == "skin":
 				b.visible = int(entry[1]) in Races.skins(race)
 			elif field == "hair":
-				b.visible = entry[1] in Lpc.hair_styles(race)
+				b.visible = entry[1] in _hair_list(race)
 			var picked: bool = app.get(field) == entry[1]
 			if entry.size() > 2:  # color swatch
 				var c: Color = entry[2]
@@ -191,3 +199,7 @@ func _finish() -> void:
 		app["name"] = n if n != "" else NAMES.pick_random()
 	close()
 	on_done.call(app)
+
+## The hair styles a race can pick (2.1 heroes: the 37 drawn styles for everyone).
+static func _hair_list(race: String) -> Array:
+	return Sprites.HAIR_STYLES.duplicate() if HeroArt.available() else Lpc.hair_styles(race)
