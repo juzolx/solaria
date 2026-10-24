@@ -50,16 +50,47 @@ func _sprite_rules(path: String, img: Image) -> void:
 	check(soft == 0, "%s: %d soft (half see-through) pixels" % [path, soft])
 	check(bare == 0, "%s: %d edge pixels without the dark outline" % [path, bare])
 
+func _native_rules(path: String, img: Image) -> void:
+	check(img.get_width() <= ArtStyle.NATIVE_MAX.x and img.get_height() <= ArtStyle.NATIVE_MAX.y, "%s is %s (at most %s)" % [path, img.get_size(), ArtStyle.NATIVE_MAX])
+	var colors := {}
+	var soft := 0
+	var bare := 0
+	for y in img.get_height():
+		for x in img.get_width():
+			var c := img.get_pixel(x, y)
+			if c.a8 == 0:
+				continue
+			if c.a8 != 255:
+				soft += 1
+			colors[c.to_rgba32()] = true
+			if ArtStyle.is_outline(c):
+				continue
+			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var nx: int = x + d.x
+				var ny: int = y + d.y
+				if nx < 0 or ny < 0 or nx >= img.get_width() or ny >= img.get_height() or img.get_pixel(nx, ny).a8 == 0:
+					bare += 1
+					break
+	check(colors.size() <= ArtStyle.NATIVE_COLORS, "%s: %d colours (at most %d)" % [path, colors.size(), ArtStyle.NATIVE_COLORS])
+	check(soft == 0, "%s: %d soft (half see-through) pixels" % [path, soft])
+	check(bare == 0, "%s: %d edge pixels without the dark outline" % [path, bare])
+
 func _initialize() -> void:
 	check(not ArtStyle.in_palette(ArtStyle.OUTLINE), "the outline color is not a palette color")
 	check(ArtStyle.in_palette(Color(ArtStyle.PALETTE[3])), "palette colors are in the palette")
 
-	# Monsters, bosses, Calamities and companions: 68x68 (giants 68x132), on a 2x grid
+	# Monsters, bosses, Calamities and companions: 68x68 (giants 68x132), on a 2x grid.
+	# Redrawn monsters are native art ("hd": 1 in art_info.gd): 1 file pixel = 1 art pixel,
+	# any size up to ArtStyle.NATIVE_MAX, their own few colours, hard alpha and a closed outline.
 	var monsters := 0
+	var native_info: Dictionary = ArtInfo.DATA["enemies"]
 	for d in ["res://art/enemies/", "res://art/pets/"]:
 		for f in _pngs(d):
 			var img := _load(d + f)
 			monsters += 1
+			if d == "res://art/enemies/" and int(native_info.get(f.get_basename(), {}).get("hd", 2)) == 1:
+				_native_rules(d + f, img)
+				continue
 			check(img.get_size() == ArtStyle.MONSTER_SIZE or img.get_size() == ArtStyle.TALL_SIZE, "%s%s is %s (68x68 or 68x132)" % [d, f, img.get_size()])
 			var rough := 0
 			for by in range(0, img.get_height(), 2):
