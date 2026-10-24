@@ -45,10 +45,13 @@ class Wheel:
 	var angle := 0.0      # where the pointer points (radians, 0 = up)
 	var glow := 0.0
 	var glow_color := Color.WHITE
+	const LABEL_H := 22.0
 
 	func _draw() -> void:
-		var c := size / 2.0
-		var r := minf(size.x, size.y) * 0.44
+		# The win line gets its own strip under the wheel (it used to sit on the rim)
+		var area := Vector2(size.x, maxf(1.0, size.y - LABEL_H))
+		var c := area / 2.0
+		var r := minf(area.x, area.y) * 0.44
 		if glow > 0.0:
 			draw_circle(c, r * 1.12, Color(glow_color, 0.25 * glow))
 		draw_circle(c, r + 6.0, Color("#2a2010"))
@@ -74,13 +77,13 @@ class Wheel:
 		var side := Vector2(-dir.y, dir.x)
 		draw_colored_polygon(PackedVector2Array([tip, c + side * r * 0.07, c - side * r * 0.07]), Color("#f6d88f"))
 		var font := UI.game_font()   # interface pass: the game font everywhere
-		draw_string(font, Vector2(0, size.y - 4), "%d%% win" % chance, HORIZONTAL_ALIGNMENT_CENTER, size.x, 14, Color("#4ade80"))
+		draw_string(font, Vector2(0, size.y - 4), "%d%% win" % chance, HORIZONTAL_ALIGNMENT_CENTER, size.x, UI.MIN_FONT, Color("#4ade80"))
 
 func setup(m) -> void:
 	main = m
 	state = m.state
 	name = "Wheel"
-	vertical = (m as Node).get_viewport().get_visible_rect().size.x < 720.0  # phones: the wheel sits under the items
+	vertical = _phone()
 	add_theme_constant_override("separation", 12)
 	var left := UI.vbox(6)
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -95,7 +98,7 @@ func setup(m) -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	left.add_child(scroll)
-	scroll.custom_minimum_size = Vector2(0, 130)  # phones stack the wheel under this: it was squeezed to nothing
+	scroll.custom_minimum_size = Vector2(0, 120)  # phones stack the wheel under this: it was squeezed to nothing
 	var sv := UI.vbox(4)
 	sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(sv)
@@ -124,7 +127,12 @@ func setup(m) -> void:
 	right.add_child(nb)
 	normal_box = nb
 	wheel = Wheel.new()
-	wheel.custom_minimum_size = Vector2(230, 230)
+	# QA (Oct 24): 230 px pushed the bottom bar off a phone once the building bar sat over
+	# the page. Smaller at least, and it grows into any room the page has.
+	wheel.custom_minimum_size = Vector2(180, 180)
+	wheel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	nb.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	right.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	nb.add_child(wheel)
 	high_box = UI.vbox(6)
 	high_box.visible = false
@@ -186,8 +194,12 @@ func _pick(id: int) -> void:
 	main.sfx.play("click")
 	refresh()
 
+## Phones (the tall layout, or any narrow screen): the wheel sits under the items.
+func _phone() -> bool:
+	return bool(main.get("is_tall")) or main.get_viewport().get_visible_rect().size.x < 720.0
+
 func refresh() -> void:
-	vertical = main.get_viewport().get_visible_rect().size.x < 720.0  # phones: the wheel sits under the items
+	vertical = _phone()
 	var key := "%d|%d|%d|%s|%s|%s" % [state.bag_version, state.gold, selected_id, str(slate), high, leg]
 	if key != shown and not spinning:
 		shown = key

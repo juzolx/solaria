@@ -2360,26 +2360,25 @@ func _draw_team_strip(font: Font) -> void:
 		var key: String = r[4]
 		if not _strip_pics.has(key):
 			_strip_pics[key] = Sprites.portrait(g.appearance, g.hero_looks())
-		var box := Rect2(x, y, cw, 28)
+		var box := Rect2(x, y, cw, 36)  # UX: 15 px name (was 10 px in a 28 px plate)
 		draw_rect(box, Color(0.03, 0.04, 0.08, 0.78))
 		draw_rect(box, Color(Color(g.class_info().get("color", "#94a3b8")), 0.7), false, 1.0)
 		var pic: Texture2D = _strip_pics[key]
 		var down: bool = r[3]
 		if pic:
-			draw_texture_rect(pic, Rect2(x + 2, y + 2, 24, 24), false, Color(1, 1, 1, 0.4 if down else 1.0))
+			draw_texture_rect(pic, Rect2(x + 4, y + 4, 28, 28), false, Color(1, 1, 1, 0.4 if down else 1.0))
 		var pct := clampf(float(r[1]) / maxf(1.0, float(r[2])), 0.0, 1.0)
-		var bw := cw - 34.0
-		draw_string(font, Vector2(x + 30, y + 11), g.hero_name if g.hero_name != "" else g.hero_class, HORIZONTAL_ALIGNMENT_LEFT, bw, 10, Color(1, 1, 1, 0.5 if down else 0.9))
-		draw_rect(Rect2(x + 30, y + 16, bw, 6), Color(0.1, 0.1, 0.14))
+		var bw := cw - 38.0
+		var nm: String = "DOWN" if down else (g.hero_name if g.hero_name != "" else g.hero_class)  # knocked out: the plate says so in place of the name
+		draw_string(font, Vector2(x + 36, y + 16), _fit_text(font, nm, UI.MIN_FONT, bw), HORIZONTAL_ALIGNMENT_LEFT, bw, UI.MIN_FONT, Color("#f87171") if down else Color(1, 1, 1, 0.9))
+		draw_rect(Rect2(x + 36, y + 23, bw, 7), Color(0.1, 0.1, 0.14))
 		var col := Color("#22c55e") if pct > 0.5 else (Color("#eab308") if pct > 0.25 else Color("#ef4444"))
-		draw_rect(Rect2(x + 30, y + 16, bw * pct, 6), Color(0.4, 0.4, 0.4) if down else col)
-		if down:
-			draw_string(font, Vector2(x + 30, y + 27), "DOWN", HORIZONTAL_ALIGNMENT_LEFT, bw, 9, Color("#f87171"))
+		draw_rect(Rect2(x + 36, y + 23, bw * pct, 7), Color(0.4, 0.4, 0.4) if down else col)
 		x += cw + 4.0
 	var tsl := Synergies.strike_left(state)
 	if tsl > 0:
-		draw_string_outline(font, Vector2(6, y + 41), "Team Strike in %d" % tsl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, 3, Color(0, 0, 0, 0.9))
-		draw_string(font, Vector2(6, y + 41), "Team Strike in %d" % tsl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#fbbf24"))
+		draw_string_outline(font, Vector2(6, y + 54), "Team Strike in %d" % tsl, HORIZONTAL_ALIGNMENT_LEFT, -1, UI.MIN_FONT, 3, Color(0, 0, 0, 0.9))
+		draw_string(font, Vector2(6, y + 54), "Team Strike in %d" % tsl, HORIZONTAL_ALIGNMENT_LEFT, -1, UI.MIN_FONT, Color("#fbbf24"))
 
 static var _dissolves := {}
 const DISSOLVE_FRAMES := 8

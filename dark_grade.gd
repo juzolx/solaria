@@ -8,6 +8,7 @@ extends RefCounted
 
 const SPRITE := 1.0    # full strength for monsters, bosses and pets
 const SCENE := 0.85    # a bit gentler for backgrounds (the UI sits on top of them)
+const NATIVE := 0.3    # redrawn monsters: already dark and muted, so only a touch (plus the rim light)
 const RIM := Color(0.11, 0.12, 0.16)  # moonlight on top/left edges
 const SHADOW_TINT := Color(0.82, 0.88, 1.12)
 const LIGHT_TINT := Color(1.0, 0.95, 0.86)
@@ -16,7 +17,8 @@ static var enabled := true
 static var _textures := {}
 
 ## A graded copy of an image (or the image itself when the grade is off).
-static func image(src: Image, strength := SPRITE, rim := true) -> Image:
+## rim_strength: how strong the rim light is (default: the grade's own strength).
+static func image(src: Image, strength := SPRITE, rim := true, rim_strength := -1.0) -> Image:
 	if not enabled or src == null:
 		return src
 	var img := src.duplicate() as Image
@@ -27,6 +29,7 @@ static func image(src: Image, strength := SPRITE, rim := true) -> Image:
 	var h := img.get_height()
 	var data := img.get_data()
 	var out := data.duplicate()
+	var rs := strength if rim_strength < 0.0 else rim_strength
 	for y in h:
 		for x in w:
 			var i := (y * w + x) * 4
@@ -37,7 +40,7 @@ static func image(src: Image, strength := SPRITE, rim := true) -> Image:
 				continue  # the baked outline stays the same dark everywhere
 			var c := _grade(raw, strength, rim)
 			if rim:
-				c = _rim(data, w, h, x, y, c, strength)
+				c = _rim(data, w, h, x, y, c, rs)
 			out[i] = clampi(int(c.r * 255.0 + 0.5), 0, 255)
 			out[i + 1] = clampi(int(c.g * 255.0 + 0.5), 0, 255)
 			out[i + 2] = clampi(int(c.b * 255.0 + 0.5), 0, 255)

@@ -58,7 +58,7 @@ const ENEMY_GROWTH := 1.025  # legacy flat 2.5% per floor: only Calamity HP stil
 ## [last floor of the band, growth per floor]. Before 2.1 it was 2.5% all the way down.
 ## HP (how long a fight takes) and Attack (how likely you fall) have their own tables:
 ## Attack eases off sooner, so the deep floors ask for patience more than for luck.
-const ENEMY_GROWTH_BANDS := [[25, 1.027], [50, 1.034], [75, 1.044], [100, 1.043], [150, 1.012], [250, 1.008], [100000, 1.006]]
+const ENEMY_GROWTH_BANDS := [[25, 1.027], [50, 1.034], [75, 1.049], [100, 1.049], [150, 1.012], [250, 1.008], [100000, 1.006]]
 const ENEMY_ATK_GROWTH_BANDS := [[25, 1.027], [50, 1.032], [75, 1.014], [100, 1.011], [150, 1.006], [250, 1.006], [100000, 1.005]]
 
 ## The extra (on top of linear) monster HP scaling for a floor: the product of each
@@ -633,9 +633,27 @@ static func rarity_odds(bonus: int, legendary_chance: float) -> Array:
 ## 0.13+: Gear Score puts every slot on one scale (a weapon's Attack and a helmet's HP
 ## differ), so items can be compared and averaged: about 10 per Common item of floor 1.
 static func gear_score(item: Dictionary) -> int:
-	if not SLOT_INFO.has(String(item.get("slot", ""))):
+	var slot := String(item.get("slot", ""))
+	if not SLOT_INFO.has(slot):
 		return 0
-	return int(round(item_power(item) / maxf(0.1, base_bonus(String(item["slot"]), 1)) * 10.0))  # 2.1: a ring's floor-1 value is under 1
+	return int(round(_score_power(item) / maxf(0.1, base_bonus(slot, 1)) * 10.0))  # 2.1: a ring's floor-1 value is under 1
+
+## item_power, but for jewelry the main stat comes from the unrounded roll: a ring's bonus
+## is truncated to a whole number (0.75 -> 1, 1.95 -> 1, 2.25 -> 2), which made early ring and
+## necklace Gear Scores jump around (13, 13, 27...). Items whose bonus isn't the plain roll
+## (blessed, rerolled by hand...) keep their real bonus.
+static func _score_power(item: Dictionary) -> float:
+	var slot := String(item["slot"])
+	var b := int(item["bonus"])
+	var main := float(b)
+	var r := int(item.get("rarity", 0))
+	if GearSlots.is_jewelry(slot) and r >= 0 and r < RARITY_MULTS.size():
+		var exact := base_bonus(slot, int(item.get("floor", 1))) * float(RARITY_MULTS[r])
+		if maxi(1, int(exact)) == b:
+			main = exact
+	var p := main + maxi(1, int(ceil(b * 0.1))) * int(item["level"])
+	var sl := soul_level(item)
+	return p * (1.0 + SOUL_POWER * sl) if sl > 0 else p
 
 static func base_bonus(slot: String, floor_num: int) -> float:
 	var info: Dictionary = SLOT_INFO[slot]
@@ -973,8 +991,13 @@ static func xp_to_next(level: int) -> int:
 	var early := clampf(0.35 + 0.65 * (level - 1) / 24.0, 0.35, 1.0)
 	return maxi(10, int(30 * pow(level, 1.8) * early))
 
+## R7 balance: kill XP grows 2 a floor down to floor 50 (XP_SLOW_FROM), then XP_DEEP_STEP a
+## floor, so levels come slower past floor 50 (floor 100: 129 XP a kill, was 204).
+const XP_SLOW_FROM := 50
+const XP_DEEP_STEP := 0.5
 static func xp_for_kill(floor_num: int, boss: bool) -> int:
-	return (4 + floor_num * 2) * (8 if boss else 1)
+	var per := 4.0 + mini(floor_num, XP_SLOW_FROM) * 2.0 + maxi(0, floor_num - XP_SLOW_FROM) * XP_DEEP_STEP
+	return int(per) * (8 if boss else 1)
 
 static func make_set_item(set_id: String, slot: String, floor_num: int, id: int) -> Dictionary:
 	var info: Dictionary = SLOT_INFO[slot]

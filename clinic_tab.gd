@@ -37,7 +37,7 @@ func refresh() -> void:
 		var pic := TextureRect.new()
 		pic.texture = Menagerie.texture(p)
 		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		pic.custom_minimum_size = Vector2(48, 48)
+		pic.custom_minimum_size = Vector2(64, 64)  # 32 px art at a clean 2x
 		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		h.add_child(pic)

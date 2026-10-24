@@ -21,6 +21,7 @@ var item_tabs: TabContainer
 var town_tabs: TabContainer
 var town_page: VBoxContainer    # the Town group: a "back to the map" bar over town_tabs
 var town_talk: Label            # what the building's keeper says
+var town_keeper: TextureRect    # and their picture beside it
 var town_back: Control
 var fight_frame: Control
 var fight_panel: Control
@@ -424,6 +425,15 @@ func _share_skill_book() -> void:
 	state.skill_book = profile.skill_book
 	profile.save()
 
+## The 7 reward days: one row on a wide screen, two rows on a phone (QA: seven
+## columns at 430 px split words like "potio-ns" and "Myste-ry Box").
+func daily_grid() -> GridContainer:
+	var g := GridContainer.new()
+	g.columns = 4 if is_tall or get_viewport().get_visible_rect().size.x < 720.0 else Codex.LOGIN_REWARDS.size()
+	g.add_theme_constant_override("h_separation", 6)
+	g.add_theme_constant_override("v_separation", 6)
+	return g
+
 ## Once a day: a small reward that grows over a 7-day streak.
 func _daily_login() -> void:
 	var day := codex.check_login()
@@ -435,7 +445,7 @@ func _daily_login() -> void:
 	codex.save()
 	var o := Overlay.new().open(self, "Daily reward", 520.0, UI.GOLD)
 	o.content.add_child(UI.label("Day %d of your streak" % int(codex.login["streak"]), 15, UI.TEXT))
-	var row := UI.hbox(6)
+	var row := daily_grid()
 	o.content.add_child(row)
 	for i in Codex.LOGIN_REWARDS.size():
 		var today := i == day - 1
@@ -757,9 +767,19 @@ func _build_ui() -> void:
 	back_btn.custom_minimum_size = Vector2(0, UI.TAP)
 	town_back.add_child(back_btn)
 	# The keeper of whichever building you're in has something to say (lore.gd)
+	var talk_row := UI.hbox(8)
+	town_page.add_child(talk_row)
+	town_keeper = TextureRect.new()
+	town_keeper.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	town_keeper.custom_minimum_size = Vector2(128, 128)   # 2x the 64 px art, crisp and readable on a phone
+	town_keeper.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	town_keeper.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	talk_row.add_child(town_keeper)
 	town_talk = UI.label("", UI.FONT_CAPTION, Color("#d8c9a8"))
 	town_talk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	town_page.add_child(town_talk)
+	town_talk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	town_talk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	talk_row.add_child(town_talk)
 	building_bar = BuildingBar.new()
 	building_bar.setup(self)
 	town_page.add_child(building_bar)
@@ -1226,6 +1246,8 @@ func _sync_town() -> void:
 	if not inside:
 		return
 	town_talk.text = Lore.talk(state, town_tabs.current_tab)
+	town_keeper.texture = Lore.keeper_art(town_tabs.current_tab)
+	town_keeper.visible = town_keeper.texture != null
 	building_bar.refresh(town_tabs.current_tab)
 	town_view.set_look(Town.look(state))
 	_town_heroes()

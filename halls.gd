@@ -13,12 +13,13 @@ extends RefCounted
 ##   level 3: ...and whether the door is trapped
 
 const TRAPS := {
-	"spikes": {"name": "Spike trap", "text": "Spikes shoot up from the floor!", "dmg": 0.12},
-	"darts": {"name": "Dart trap", "text": "Poisoned darts hiss out of the walls!", "dmg": 0.05, "status": "poison", "turns": 4},
-	"flames": {"name": "Flame jet", "text": "A jet of fire bursts from the floor!", "dmg": 0.1, "status": "burn", "turns": 3},
-	"frost": {"name": "Frost rune", "text": "A rune flares and frost locks your joints!", "dmg": 0.04, "status": "chill", "turns": 4},
-	"smoke": {"name": "Smoke trap", "text": "Black smoke fills the room. You can barely see!", "dmg": 0.0, "status": "blind", "turns": 4},
-	"alarm": {"name": "Alarm", "text": "A bell rings somewhere above. Something is coming!", "dmg": 0.0, "ambush": true},
+	# every trap is a magic circle on the floor; its colour tells you what it does
+	"spikes": {"name": "Crimson rune", "text": "A crimson rune flares and blades of light cut you!", "dmg": 0.12, "color": "#e43b44"},
+	"darts": {"name": "Venom rune", "text": "A green rune flares and poison seeps into you!", "dmg": 0.05, "status": "poison", "turns": 4, "color": "#63c74d"},
+	"flames": {"name": "Ember rune", "text": "An ember rune erupts in flame!", "dmg": 0.1, "status": "burn", "turns": 3, "color": "#f77622"},
+	"frost": {"name": "Frost rune", "text": "A frost rune flares and the cold locks your joints!", "dmg": 0.04, "status": "chill", "turns": 4, "color": "#2ce8f5"},
+	"smoke": {"name": "Shadow rune", "text": "A shadow rune swallows the light. You can barely see!", "dmg": 0.0, "status": "blind", "turns": 4, "color": "#9a4fc0"},
+	"alarm": {"name": "Bell rune", "text": "A golden rune tolls like a bell. Something is coming!", "dmg": 0.0, "ambush": true, "color": "#fee761"},
 }
 const ROOM_TRAP_CHANCE := 14.0     # % per room, +5 per 100 floors
 const DOOR_TRAP_CHANCE := 8.0      # % per door

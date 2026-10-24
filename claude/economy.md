@@ -150,8 +150,8 @@ sinks all game long.
 - 8 gear slots. Jewelry weighs about half a slot: a Ring gives Attack at 15% of a weapon's
   (`base 0.45, per_floor 0.3`), a Necklace HP at 25% of a helmet's (`base 1.25, per_floor 1.0`).
   The weapon is the only other Attack slot, so a "half weapon" ring (+50% gear Attack) would be far too much.
-- Charm from Uncommon up (`GearSlots.CHARMS`, Uncommon/Rare/Epic): rings crit 2/3/5, gold find 5/8/12,
-  stones 8/12/18, double strike 2/3/4; necklaces regen -/-/1, lifesteal 1/2/3, XP 3/5/8, potions 8/12/18.
+- Charm from Uncommon up (`GearSlots.CHARMS`, Uncommon/Rare/Epic): rings crit 2/3/4, gold find 5/8/12,
+  stones 8/12/15, double strike 2/3/4; necklaces regen -/-/1, lifesteal 1/2/3, XP 3/5/8, potions 8/12/15 (R7: Epic crit, stones and potions one step lower).
   Legendary jewelry rolls from `GearSlots.LEGENDARY_POOL`. A blessed ring or necklace gives +1.5% (half).
 - Sell, scrap, dust, upgrade, reroll and Wheel costs are by rarity, the same as every slot (unchanged).
 - Drops: uniform slot picks now spread over 8 slots, so body gear drops a little less often (each 1/8 of
