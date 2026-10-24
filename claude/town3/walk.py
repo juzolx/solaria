@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw
 from layout import N, GROUND, LOTS, HOUSES, MARKET, PLATEAU, PLATEAU_Z, POINTS
 from compose import at, dusk, compose, phone
 
-WALK = {"road", "square", "bridge", "plateau", "path"}
+WALK = {"road", "square", "bridge", "plateau", "path", "dirt"}
 
 
 def grid():
@@ -24,7 +24,7 @@ def grid():
         for i in range(x0, x1 + 1):
             for j in range(y0, y1 + 1):
                 ok.discard((i, j))
-    ok -= {(19, 19), (20, 19), (19, 20), (20, 20)}      # the well
+    ok -= {(20, 20), (21, 20), (20, 21), (21, 21)}      # the well
     return ok
 
 

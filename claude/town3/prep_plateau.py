@@ -11,7 +11,7 @@ cob = [Image.open(f"art/tiles/cobble_{n}.png") for n in range(3)]
 blk = Image.open("art/wall_block.png").convert("RGBA")
 blk = Image.merge("RGBA", (*ImageEnhance.Brightness(blk.convert("RGB")).enhance(0.75).split(), blk.getchannel("A")))
 def cell(i, j, z=0): return OX + (i - j) * 16, OY + (i + j) * 8 - z
-for zz in (0, 8):                       # two courses of blocks under the paving
+for zz in ():                           # (block courses removed: they read as a wall)
     for i in range(14):                 # front (+j) face, leaving the stairs
         if not 5 <= i <= 8:
             x, y = cell(i, 6, zz)

@@ -51,6 +51,12 @@ var zoom := 2.0         # iso: 2x or 3x (pinch / wheel)
 var pan_v := Vector2.INF  # iso: map offset in view pixels (INF = not placed yet: start on the market)
 var walk := {}          # iso: Vector2i cell -> true where people can walk
 var walk_doors: Array = []  # iso: door cells people walk between
+var inn_doors: Array = []  # iso: the Inn and its lodging wing - everyone lives at the Inn, so most trips start or end here
+var walk_stops: Array = []  # iso: cells beside stalls, the well and the boards where people stop a while
+var raised := {}        # iso: Vector2i cell -> true on the plateau path (people stand higher there)
+var occluders: Array = []  # iso: {"tex", "rect", "y", "tag", "look"} sorted by y (front-most last) - drawn again over a walker behind them
+var occ_state := ""     # iso: which Church / Trophy Cabin occluders are active ("church:holy|cabin" style key)
+var occ_live: Array = []  # iso: occluders for the current state, sorted by y
 var up_tex := {}        # iso: level-prop name -> Texture2D
 var touches := {}       # iso: finger index -> position, for the pinch
 var pinch_from := 0.0
@@ -83,6 +89,11 @@ const FOLK := [
 	[{"body": "masc", "skin": 4, "hair": "Short", "hair_color": 2, "eyes": 1, "race": "Human"}, {"Chest": ["tunic", "leather"], "Legs": ["pants", "cloth"], "Feet": ["boots", "leather"]}],
 	[{"body": "masc", "skin": 1, "hair": "Bald", "hair_color": 8, "eyes": 3, "race": "Dwarf"}, {"Chest": ["tunic", "leather"], "Feet": ["boots", "leather"]}],
 	[{"body": "fem", "skin": 0, "hair": "Long", "hair_color": 16, "eyes": 5, "race": "Elf"}, {"Chest": ["tunic", "cloth"], "Legs": ["leggings", "cloth"], "Feet": ["boots", "leather"]}],
+	# more townsfolk for the bigger iso town
+	[{"body": "masc", "skin": 3, "hair": "Short", "hair_color": 10, "eyes": 2, "race": "Human"}, {"Chest": ["robe", "cloth"], "Feet": ["sandals", "leather"]}],
+	[{"body": "fem", "skin": 5, "hair": "Bun", "hair_color": 3, "eyes": 1, "race": "Human"}, {"Chest": ["tunic", "cloth"], "Legs": ["pants", "cloth"], "Feet": ["boots", "leather"]}],
+	[{"body": "masc", "skin": 2, "hair": "Bald", "hair_color": 0, "eyes": 4, "race": "Human"}, {"Chest": ["tunic", "leather"], "Legs": ["pants", "leather"], "Feet": ["boots", "leather"]}],
+	[{"body": "fem", "skin": 1, "hair": "Long", "hair_color": 7, "eyes": 3, "race": "Elf"}, {"Chest": ["robe", "cloth"], "Feet": ["sandals", "leather"]}],
 ]
 
 func _ready() -> void:
@@ -100,6 +111,36 @@ func _ready() -> void:
 			walk[Vector2i(int(c[0]), int(c[1]))] = true
 		for sp in data.get("spots", []):
 			walk_doors.append(Vector2i(int(sp["door"][0]), int(sp["door"][1])))
+		for c in data.get("inn_doors", []):
+			inn_doors.append(Vector2i(int(c[0]), int(c[1])))
+			walk[inn_doors[-1]] = true
+		for c in data.get("stops", []):
+			walk_stops.append(Vector2i(int(c[0]), int(c[1])))
+		for c in data.get("raised", []):
+			raised[Vector2i(int(c[0]), int(c[1]))] = true
+		# keep only the street network reachable from the Inn, and doors / stops on it (no stuck walkers)
+		if not inn_doors.is_empty():
+			var seen := {inn_doors[0]: true}
+			var q: Array = [inn_doors[0]]
+			while not q.is_empty():
+				var c: Vector2i = q.pop_front()
+				for dv in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+					var nb: Vector2i = c + dv
+					if walk.has(nb) and not seen.has(nb):
+						seen[nb] = true
+						q.append(nb)
+			walk = seen
+			walk_doors = walk_doors.filter(func(c): return walk.has(c))
+			inn_doors = inn_doors.filter(func(c): return walk.has(c))
+			walk_stops = walk_stops.filter(func(c): return walk.has(c))
+		# occluders: textures loaded once here, sorted by depth so _cover can stop early
+		for o in data.get("occluders", []):
+			var t: Texture2D = load("res://art/town/iso/occ/%s.png" % String(o[0]))
+			if t == null:
+				continue
+			occluders.append({"tex": t, "rect": Rect2(float(o[1]), float(o[2]), t.get_width(), t.get_height()), "y": float(o[3]),
+				"tag": String(o[4]), "look": String(o[5]) if o.size() > 5 else ""})
+		occluders.sort_custom(func(a, b): return float(a["y"]) < float(b["y"]))
 	map = TextureRect.new()
 	map.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	map.stretch_mode = TextureRect.STRETCH_SCALE
@@ -142,8 +183,21 @@ func _iso_tex() -> Texture2D:
 	var cabin := "built" if Buildings.built("cabin") else "lot"
 	var path := String(data["art"]) % [church, cabin]
 	if not tex.has(path):
+		tex.clear()                    # one town picture in memory at a time (~6 MB each)
 		tex[path] = load(path)
 	return tex[path]
+
+## The occluders for this town's state (built Church holy or ruined, Trophy Cabin), rebuilt only when it changes.
+func _live_occluders() -> Array:
+	var key := "%s:%s:%s" % [Buildings.built("church"), hardcore, Buildings.built("cabin")]
+	if key != occ_state:
+		occ_state = key
+		occ_live = occluders.filter(func(o):
+			var tag := String(o["tag"])
+			if (tag == "church" or tag == "cabin") and not Buildings.built(tag):
+				return false
+			return tag != "church" or String(o["look"]) == "" or String(o["look"]) == ("ruin" if hardcore else "holy"))
+	return occ_live
 
 ## Regular or Hardcore town; call again after the Church or Trophy Cabin is built.
 func set_mode(hc: bool) -> void:
@@ -392,10 +446,12 @@ func set_heroes(list: Array, key: String) -> void:
 # Iso townsfolk: stand at a door, then walk the street grid to another door.
 func _cell_px(c: Vector2i) -> Vector2:
 	var o: Array = data["origin"]
-	return Vector2(float(o[0]) + (c.x - c.y) * 16.0, float(o[1]) + (c.x + c.y + 1) * 8.0)
+	var z := float(data.get("raised_z", 0)) if raised.has(c) else 0.0
+	return Vector2(float(o[0]) + (c.x - c.y) * 16.0, float(o[1]) + (c.x + c.y + 1) * 8.0 - z)
 
 func _place_on_grid(f: Dictionary) -> void:
-	var c: Vector2i = walk_doors[randi() % walk_doors.size()] if not walk_doors.is_empty() else Vector2i(17, 20)
+	var starts := inn_doors if not inn_doors.is_empty() else walk_doors   # people come out of the Inn
+	var c: Vector2i = starts[randi() % starts.size()] if not starts.is_empty() else Vector2i(17, 20)
 	var p := _cell_px(c)
 	f["x"] = p.x
 	f["y"] = p.y
@@ -423,18 +479,60 @@ func _grid_path(a: Vector2i, b: Vector2i) -> Array:
 		c2 = prev[c2]
 	return out
 
+## Where to go next: mostly a building's door (then inside for a while), else a stall, the well
+## or a board to stand at, sometimes just a nearby street cell to idle.
+func _pick_goal(f: Dictionary) -> void:
+	var r := randf()
+	var goal: Vector2i = f["cell"]
+	f["goal_door"] = false
+	if r < 0.25 and not inn_doors.is_empty():
+		goal = inn_doors[randi() % inn_doors.size()]
+		f["goal_door"] = true
+	elif r < 0.5 and not walk_doors.is_empty():
+		goal = walk_doors[randi() % walk_doors.size()]
+		f["goal_door"] = true
+	elif r < 0.85 and not walk_stops.is_empty():
+		goal = walk_stops[randi() % walk_stops.size()]
+	else:
+		var keys := walk.keys()
+		goal = keys[randi() % keys.size()]
+	f["path"] = _grid_path(f["cell"], goal)
+	if (f["path"] as Array).is_empty():
+		f["wait"] = 1.0
+
+func _arrive(f: Dictionary) -> void:
+	if f.get("goal_door", false) and not f.get("hero", false) or (f.get("goal_door", false) and randf() < 0.5):
+		f["inside"] = randf_range(2.0, 5.0)   # went in: fades out at the door, comes back out later
+		f["fade"] = 0.0
+	f["wait"] = randf_range(1.5, 4.0)
+	f["goal_door"] = false
+
 func _step_iso_walker(f: Dictionary, delta: float) -> void:
+	if float(f.get("inside", 0.0)) > 0.0:
+		f["inside"] = float(f["inside"]) - delta
+		f["fade"] = minf(1.0, float(f.get("fade", 0.0)) + delta * 3.0)
+		return
+	if float(f.get("fade", 0.0)) > 0.0:
+		f["fade"] = maxf(0.0, float(f["fade"]) - delta * 3.0)
 	if float(f["wait"]) > 0.0:
 		f["wait"] = float(f["wait"]) - delta
-		if float(f["wait"]) <= 0.0 and not walk_doors.is_empty():
-			f["path"] = _grid_path(f["cell"], walk_doors[randi() % walk_doors.size()])
-			if (f["path"] as Array).is_empty():
-				f["wait"] = 1.0
+		if float(f["wait"]) <= 0.0:
+			_pick_goal(f)
 		return
 	var path: Array = f["path"]
 	if path.is_empty():
-		f["wait"] = randf_range(2.0, 6.0)
+		_arrive(f)
 		return
+	# two people meeting on the street stop for a chat now and then
+	if not f.get("hero", false) and randf() < 0.004:
+		for o in folk:
+			if o != f and float(o["wait"]) <= 0.0 and float(o.get("inside", 0.0)) <= 0.0 and Vector2(float(o["x"]), float(o["y"])).distance_to(Vector2(float(f["x"]), float(f["y"]))) < 22.0:
+				var t := randf_range(2.5, 5.0)
+				f["wait"] = t
+				o["wait"] = t
+				f["flip"] = float(o["x"]) < float(f["x"])
+				o["flip"] = not f["flip"]
+				return
 	var to := _cell_px(path[0])
 	var at := Vector2(float(f["x"]), float(f["y"]))
 	var stp := 20.0 * delta
@@ -501,6 +599,8 @@ func _draw_people() -> void:
 	var sorted := folk.duplicate()
 	sorted.sort_custom(func(a, b): return float(a["y"]) < float(b["y"]))
 	for f in sorted:
+		if iso and float(f.get("fade", 0.0)) >= 1.0:
+			continue
 		var walking := float(f["wait"]) <= 0.0
 		var frames: Array = f["walk"] if walking else f["idle"]
 		var i := (int(float(f["t"]) * 9.0) % maxi(1, frames.size() - 1)) + 1 if walking else (int(float(f["t"]) * 1.5) % frames.size())
@@ -514,7 +614,10 @@ func _draw_people() -> void:
 		people.draw_circle(Vector2(float(f["x"]), float(f["y"]) - 2.0), 9.0 * k, Color(0.04, 0.03, 0.08, 0.25))
 		if f["flip"]:
 			people.draw_set_transform(Vector2((float(f["x"]) * 2.0) * scale_f, 0), 0.0, Vector2(-scale_f, scale_f))
-		people.draw_texture_rect(tx, Rect2(pos, Vector2(w, w)), false)
+		people.draw_texture_rect(tx, Rect2(pos, Vector2(w, w)), false, Color(1, 1, 1, 1.0 - float(f.get("fade", 0.0))))
+		if iso:
+			people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
+			_cover(Rect2(pos, Vector2(w, w)), float(f["y"]))
 		if f.get("hero", false):
 			# A small marker over your heroes (brighter over the one you're playing)
 			people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
@@ -523,6 +626,20 @@ func _draw_people() -> void:
 			people.draw_colored_polygon(PackedVector2Array([top + Vector2(-7, -9), top + Vector2(7, -9), top + Vector2(0, 1)]), Color(0.05, 0.03, 0.08, 0.85))
 			people.draw_colored_polygon(PackedVector2Array([top + Vector2(-5, -8), top + Vector2(5, -8), top + Vector2(0, -1)]), col)
 	people.draw_set_transform(Vector2.ZERO)
+
+## Iso: redraw whatever stands in front of a walker (sorts lower on screen) and overlaps it,
+## so people pass behind buildings, walls and trees instead of over their roofs.
+func _cover(r: Rect2, foot_y: float) -> void:
+	var live := _live_occluders()
+	# sorted back to front: find the first one in front of the walker, then draw those back to front
+	var first := live.size()
+	while first > 0 and float(live[first - 1]["y"]) > foot_y:
+		first -= 1
+	for k in range(first, live.size()):
+		var o: Dictionary = live[k]
+		var orect: Rect2 = o["rect"]
+		if orect.intersects(r):
+			people.draw_texture(o["tex"], orect.position)
 
 ## Iso: each building's level props (L1 scaffolding + piles, L2 lantern + upgrade, L3 banners + showpiece).
 func _draw_levels() -> void:
@@ -629,6 +746,8 @@ func _draw_pen_pets(px: float) -> void:
 			people.draw_set_transform(Vector2(float(p["x"]) * 2.0 * scale_f, 0), 0.0, Vector2(-scale_f, scale_f))
 		people.draw_texture_rect(tx, Rect2(pos, dst), false)
 		people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
+		if iso:
+			_cover(Rect2(pos, dst), float(p["y"]))   # pets hide behind the wall and the kennel too
 
 # =====================================================================
 # Glow and weather

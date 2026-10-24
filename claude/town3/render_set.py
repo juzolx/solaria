@@ -17,8 +17,8 @@ def town(level=3, hardcore=False, empty=()):
     C.EMPTY.clear()
     C.EMPTY.update(empty)
     D.LIGHTS.clear()
-    day = C.compose()
-    return day, C.dusk(day)
+    base = C.compose()
+    return C.day(base), C.dusk(base)
 
 
 def view(img):
