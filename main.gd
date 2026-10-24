@@ -1045,7 +1045,7 @@ func _build_fight(parent: Control) -> void:
 	potion_button = UI.button("", func(): state.use_potion(); refresh())
 	potion_button.icon = Sprites.consumable_icon("potion")
 	potion_button.expand_icon = false
-	potion_button.add_theme_constant_override("icon_max_width", 20)
+	potion_button.add_theme_constant_override("icon_max_width", 32)   # the potion art at its own pixels
 	potion_button.tooltip_text = "Heal 40% of your max HP"
 	auto_potion_button = UI.button("", func():
 		state.auto_potion = not state.auto_potion
@@ -1794,8 +1794,13 @@ func _refresh_fight() -> void:
 		var c := Color(Classes.tag_color(sk["tags"][0]))
 		b.icon = SkillIcons.for_tag(String(sk["tags"][0]))
 		b.add_theme_constant_override("icon_max_width", 32)   # native size: crisp pixels
-		b.add_theme_stylebox_override("normal", UI.style(c.darkened(0.6), c, 6, 8))
-		b.add_theme_color_override("font_color", c.lightened(0.55))
+		# Interface pass: no rainbow. A ready skill is the main action (slate + gold frame);
+		# a recharging one is dim slate. The tag colour stays in its icon and recharge ring.
+		var ready := cd <= 0
+		b.add_theme_stylebox_override("normal", UiSkin.bevel(UiSkin.SLATE, UI.GOLD_DULL, 8) if ready else UiSkin.bevel(UI.PANEL, UI.EMPTY, 8))
+		b.add_theme_stylebox_override("disabled", UiSkin.bevel(UI.PANEL, UI.EMPTY, 8))
+		b.add_theme_color_override("font_color", UI.GOLD if ready else UI.DIM)
+		b.add_theme_color_override("font_disabled_color", UI.DIM)
 		for ch in b.get_children():
 			if ch is CooldownRing:
 				ch.frac = clampf(float(cd) / maxf(1.0, float(sk.get("cd", 1))), 0.0, 1.0)

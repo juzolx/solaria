@@ -1635,7 +1635,7 @@ func _draw() -> void:
 			name_color = Color(Monsters.tier_color(state.enemy_tier)).lightened(0.15)
 		if state.enemy_goblin:
 			name_color = Color("#fde68a")
-		var bar_color := Color("#d97706") if boss else Color("#ef4444")
+		var bar_color := Color("#f77622") if boss else Color("#e43b44")   # interface pass: palette.gpl torch / blood
 		# UX pass (Juzo: names easy for everyone to read): just the name, coloured by
 		# tier, with small diamond pips for elite tiers and dots for a pack, not extra words
 		var label := state.enemy_name
@@ -1675,7 +1675,7 @@ func _draw() -> void:
 	_draw_hero()
 	var hero_name := "HERO" if state.hero_class == "" else "%s  Lv %d" % [state.title(), state.level]
 	Cosmetics.draw_frame(self, _bar_rect(hr), state.codex, bob)
-	_draw_bar(hr, hero_name, state.hero_hp, state.get_max_hp(), Color("#22c55e"), Cosmetics.name_color(state.codex))
+	_draw_bar(hr, hero_name, state.hero_hp, state.get_max_hp(), Color("#63c74d"), Cosmetics.name_color(state.codex))
 	# Thin XP bar under the health bar
 	var xbr := _bar_rect(hr)
 	var xbw := xbr.size.x
@@ -2123,9 +2123,17 @@ func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color,
 	var b := _bar_rect(r)
 	var a := label_color.a
 	var pct := clampf(float(value) / maxf(1.0, max_value), 0.0, 1.0)
+	# Interface pass: a plate behind the bar and the name, so both read on any backdrop
+	# (ink fill, slate line, #0e0812 outline: the same frame as every panel)
+	var pextra := (pips * 12.0 + 6.0 if pips > 0 else 0.0) + (pack.y * 10.0 + 8.0 if pack.y > 0 else 0.0)
+	var pw := maxf(b.size.x, font.get_string_size(_fit_text(font, label, NAME_FS, minf(b.size.x + 100.0, size.x - 12.0) - pextra), HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FS).x + pextra) + 16.0
+	var plate := Rect2(clampf(b.get_center().x - pw / 2.0, 2.0, maxf(2.0, size.x - pw - 2.0)), b.position.y - 6.0, pw, b.size.y + NAME_FS + 16.0)
+	draw_rect(plate, Color(UiSkin.SOOT, 0.9 * a))
+	draw_rect(plate.grow(-2.0), Color(UiSkin.IRON, 0.9 * a))
+	draw_rect(plate.grow(-4.0), Color(Color("#181425"), 0.88 * a))
 	# frame, track, fill with a lighter top line, then a recent-damage ghost
-	draw_rect(b.grow(1.0), Color(0.0, 0.0, 0.0, 0.85 * a))
-	draw_rect(b, Color(0.08, 0.09, 0.14, 0.95 * a))
+	draw_rect(b.grow(2.0), Color(UiSkin.SOOT, a))
+	draw_rect(b, Color(Color("#120e1c"), a))
 	var fw := (b.size.x) * pct
 	# The ghost: health just lost stays as a pale strip that drains away (_process),
 	# so every hit reads clearly. Healing moves it straight up.
