@@ -1136,6 +1136,12 @@ func _build_town(parent: Control) -> void:
 	town_status = UI.wrap("", UI.FONT_CAPTION, UI.TEXT)   # wraps instead of pushing the buttons off a phone screen
 	town_status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(town_status)
+	var town_map := UI.button("Map", func():   # approved mockup 10: find a building fast in the busy iso town
+		sfx.play("click")
+		TownMap.open_for(self, town_view.hidden_spots, town_view.locked, _on_building))
+	town_map.custom_minimum_size = Vector2(0, UI.TAP)
+	town_map.tooltip_text = "The town map: tap a place to go there"
+	row.add_child(town_map)
 	town_mail = UI.button("Mail", func(): _on_building("mail"))
 	town_mail.custom_minimum_size = Vector2(0, UI.TAP)
 	row.add_child(town_mail)
