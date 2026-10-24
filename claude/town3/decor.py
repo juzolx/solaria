@@ -143,11 +143,11 @@ def decor():
         for i, j in ((3, 2), (4, 2), (3, 3), (8, 2), (9, 2), (9, 3), (3, 5), (4, 6), (9, 5), (8, 6), (10, 4), (2, 4)):
             d.append((P32, 14 if (i + j) % 2 else 15, i, j))
         d += [(P32, 3, 5, 4), (P32, 3, 7, 4), (P32, 3, 5, 6), (P32, 3, 7, 6), (TREE, 12, 2, 2), (TREE, 13, 11, 6),
-              (UP, 8, 10, 2), (P32, 11, 7, 2)]
+              (TREE, 0, 10, 2), (P32, 11, 7, 2)]
     d += [(P48, 12, 6, 4)] + ([(P48, 13, 10, 3), (P32, 54, 11, 2)] if HARDCORE else [])
     if HARDCORE:
         d += [(P32, 6, 3, 17), (P32, 63, 4, 18), (P32, 60, 5, 17), (P32, 9, 2, 18), (TREE, 7, 5, 9)]
-    d += [e for e in fence("iron", 1, 1, 12, 7) if not (e[4] == "i" and e[3] == 7 and e[2] in (6, 7))]
+    d += [e for e in fence("iron" if HARDCORE else "wood", 1, 1, 12, 7) if not (e[4] == "i" and e[3] == 7 and e[2] in (6, 7))]
     if HARDCORE:
         d += [(P32, 28, 3, 6), (P32, 28, 9, 2)]
     # torches on the inner wall faces between towers

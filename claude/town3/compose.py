@@ -369,8 +369,8 @@ def compose():
     LAST_SPRITES[:] = sprites
     for _, x, y, im, tag in sprites:
         img.alpha_composite(im, (x, y))
-        if tag == "plateau":           # the plateau's paving and stairs take ground light like the streets
-            GROUND_IMG[:] = [img.copy()]
+        if tag == "plateau" and GROUND_IMG:   # the plateau's paving and stairs take ground light like the streets
+            GROUND_IMG[0].alpha_composite(im, (x, y))
     return img
 
 
