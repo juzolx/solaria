@@ -37,7 +37,9 @@ Check `get_balance` before each batch; show a sample before any batch over ~30 g
   the chest to ..."), not a whole outfit. Cutting finished outfits apart leaves holes (the ranger cape hides
   its chest from behind). Cost: 1 gen per view per body = 4 gens per item for battle + portrait.
 - Each body (male, female, later races) needs its own copy of each item; items don't move between bodies.
-- Colours / rarity stay code ramp swaps per piece.
+- Rarity is NOT shown on the worn hero (Juzo, 2026-10-24): rarity colours, trim, gem and Mythic glow appear
+  only in the inventory / item screens. Worn pieces keep their own look (robe blue, ranger green, ...).
+  Runtime recolours on the hero are for hair, skin and any dye/cosmetic options only.
 - OPEN, biggest decision: animation. Static pieces mix freely, but PixelLab's frame animations are whole
   sprites. Options: (a) animate the hero in code from the pieces (idle bob, lean, arm + weapon swing:
   fully interchangeable, cheapest on iPhone, stiffer than PixelLab frames); (b) per-item frame animation
