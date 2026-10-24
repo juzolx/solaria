@@ -205,8 +205,24 @@ def sheet(cells):
     return s
 
 
+def despeck(c, smallest=3, loose=0):
+    """Drops loose specks (8-connected islands under `smallest` pixels): edit noise and fragments a
+    rotated weapon leaves behind. loose: also drop any piece under this size apart from the main shape
+    (the base frames' dotted sword trail, weapon fragments)."""
+    p = c.load()
+    pts = {(x, y) for y in range(c.height) for x in range(c.width) if p[x, y][3]}
+    parts = sorted(comps(pts), key=len)
+    for comp in parts[:-1] if parts else []:
+        if len(comp) < max(smallest, loose):
+            for q in comp:
+                p[q] = (0, 0, 0, 0)
+    return c
+
+
 def save(name, cells, idx=None):
     os.makedirs(os.path.dirname(os.path.join(OUT, name)), exist_ok=True)
+    whole = os.path.basename(name).startswith("outfit_")
+    cells = [despeck(c, 3, 20 if whole else 0) for c in cells]
     sheet(cells).save(os.path.join(OUT, name + ".png"), optimize=True)
     if idx is not None:
         sheet(idx).save(os.path.join(OUT, name + "_idx.png"), optimize=True)
@@ -315,7 +331,7 @@ def main():
                 save(f"{b}/race_{race.lower()}_back", back, [index_of(c) for c in back])
             info.setdefault("races", {}).setdefault(race, []).append(b)
         print(b, "races done")
-    with open(os.path.join(OUT, "heroes.json"), "w") as f:
+    with open(os.path.join(OUT, "heroes.json"), "w", newline=chr(10)) as f:
         json.dump(info, f, indent=1)
 
 

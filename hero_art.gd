@@ -177,6 +177,7 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 		out["tex"].append(ImageTexture.create_from_image(im))
 		out["white"].append(ImageTexture.create_from_image(Sprites._silhouette(im)))
 	_built[key] = out
+	_imgs.clear()  # the decoded layer sheets are only needed while building (the frames are cached)
 	return out
 
 ## The frames as the battle's animation table (same shape as Lpc.build()["anims"]): every attack name
@@ -207,3 +208,12 @@ static func class_of(looks: Dictionary) -> Array:
 
 static func clear_cache() -> void:
 	_built.clear()
+	_imgs.clear()
+
+## The looks of a saved hero's slot summary (GameState.meta()): 2.0 saves have no "Class" yet,
+## so the class comes from the summary itself (else every old slot would show a Warrior).
+static func meta_looks(meta: Dictionary) -> Dictionary:
+	var looks: Dictionary = (meta.get("looks", {}) as Dictionary).duplicate()
+	if not looks.has("Class") and str(meta.get("class", "")) != "":
+		looks["Class"] = {"cls": str(meta["class"]), "tier": 0}
+	return looks

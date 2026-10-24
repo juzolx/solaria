@@ -649,6 +649,11 @@ func _lpc_play(anim: String) -> void:
 		lpc_anim = anim
 		lpc_t = 0.0
 
+## The hit frame, unless a swing is still playing (getting hit never cuts an attack short).
+func _lpc_hurt() -> void:
+	if lpc_anim == "combat_idle":
+		_lpc_play("hurt")
+
 func _hero_attack(e: Dictionary) -> void:
 	_lpc_play(Lpc.attack_anim(_weapon_type()))
 	var ranged := _weapon_type() in ["bow", "staff"]
@@ -717,7 +722,7 @@ func _enemy_attack(e: Dictionary) -> void:
 	kb.tween_property(self, "recoil", 0.0, 0.22)
 	hero_flash = 1.0
 	create_tween().tween_property(self, "hero_flash", 0.0, 0.1)
-	_later(0.08, func(): _lpc_play("hurt"))  # 2.1 heroes have a hit frame
+	_later(0.08, _lpc_hurt)  # 2.1 heroes have a hit frame
 	shake = maxf(shake, 4.0)
 	_squash("hero_squash")
 	_burst(_hero_center(), Color("#f87171"), 8, 200.0)
@@ -1272,8 +1277,11 @@ func _process(delta: float) -> void:
 ## pixel is then exactly the same size, with no uneven or blurred pixels.
 func _unit() -> int:
 	# 2.1 ONE scale: hero, monsters and pets all show every art pixel at ArtStyle.SCREEN_PX design
-	# points (whole screen pixels), so one screen never mixes pixel sizes
-	return ArtStyle.unit(_scr())
+	# points (whole screen pixels), so one screen never mixes pixel sizes. On short screens (iPhone SE,
+	# iPad) everyone steps down together: the hero's 64-pixel frame must fit between the top quarter of
+	# the stage (the monster) and the team's ground line
+	var sc := _scr()
+	return clampi(ArtStyle.unit(sc), 1, maxi(1, floori((_team_ground() - size.y * 0.25) * sc / 64.0)))
 
 ## Screen pixels per design pixel (the window's stretch factor).
 func _scr() -> float:
