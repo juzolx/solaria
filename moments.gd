@@ -89,13 +89,14 @@ func _build(kind: String, title: String, sub: String, color: Color, extra: Strin
 		l.visible_ratio = 0.0
 		l.modulate.a = 1.0
 		var dur := 0.9 if i == (1 if kicker != "" else 0) else 0.35
-		if kind == "hidden" or kind == "god" and i == 1:
+		if kind in ["hidden", "god"] and i == 1:
 			dur = 1.6
 		t.tween_property(l, "visible_ratio", 1.0, dur)
 	t.tween_interval(2.6 if kind != "boss" else 1.8)
 	t.tween_callback(close)
 	# A6: the rarest moments (hidden or God class, awakening) open with a burst of light
-	if kind in ["hidden", "god", "awaken", "transform"]:
+	var calm: bool = main_node != null and main_node.profile != null and main_node.profile.reduce_motion
+	if kind in ["hidden", "god", "awaken", "transform"] and not calm:
 		_ray_color = color
 		_ray_center = Vector2(size.x * 0.5, size.y * 0.42)
 		var ft := create_tween()

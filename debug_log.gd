@@ -41,7 +41,7 @@ static func start() -> void:
 ## Adds one line (thread safe, cheap: no file work here).
 static func add(text: String) -> void:
 	var t := Time.get_time_string_from_system()
-	var line := (t + " " + text.replace("\n", " ")).left(LINE_MAX)
+	var line := (t + " " + text.replace("\n", " ").replace(OS.get_user_data_dir(), "user://")).left(LINE_MAX)  # no user folder names in reports
 	_mutex.lock()
 	lines.append(line)
 	if lines.size() > MAX:
