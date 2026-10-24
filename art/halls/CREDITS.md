@@ -1,5 +1,7 @@
 # First-person room textures
 
-Walls, floors and ceilings: Tiny Texture Packs 1, 2 and 3 by Screaming Brain Studios, CC0 (https://opengameart.org/content/tiny-texture-pack-1). Shrunk to 32x32, palette-cut and graded by tools/fp_textures.py (run on the unpacked source packs).
+z0-z9 walls, floors, ceilings, doors and torches, and z1 chest, altar and statue: made for Solaria with PixelLab (pixellab.ai, Juzo's subscription), then snapped to art/palette.gpl with hard alpha.
 
-door.png and door_open.png were drawn for Solaria (CC0).
+portal.png (the champion's gate that replaces the middle door) was made the same way.
+
+door.png and door_open.png were drawn for Solaria (CC0). They are the fallback for zones without their own door.

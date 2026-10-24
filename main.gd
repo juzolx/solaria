@@ -21,6 +21,7 @@ var item_tabs: TabContainer
 var town_tabs: TabContainer
 var town_page: VBoxContainer    # the Town group: a "back to the map" bar over town_tabs
 var town_talk: Label            # what the building's keeper says
+var town_keeper: TextureRect    # and their picture beside it
 var town_back: Control
 var fight_frame: Control
 var fight_panel: Control
@@ -757,9 +758,19 @@ func _build_ui() -> void:
 	back_btn.custom_minimum_size = Vector2(0, UI.TAP)
 	town_back.add_child(back_btn)
 	# The keeper of whichever building you're in has something to say (lore.gd)
+	var talk_row := UI.hbox(8)
+	town_page.add_child(talk_row)
+	town_keeper = TextureRect.new()
+	town_keeper.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	town_keeper.custom_minimum_size = Vector2(128, 128)   # 2x the 64 px art, crisp and readable on a phone
+	town_keeper.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	town_keeper.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	talk_row.add_child(town_keeper)
 	town_talk = UI.label("", UI.FONT_CAPTION, Color("#d8c9a8"))
 	town_talk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	town_page.add_child(town_talk)
+	town_talk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	town_talk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	talk_row.add_child(town_talk)
 	building_bar = BuildingBar.new()
 	building_bar.setup(self)
 	town_page.add_child(building_bar)
@@ -1226,6 +1237,8 @@ func _sync_town() -> void:
 	if not inside:
 		return
 	town_talk.text = Lore.talk(state, town_tabs.current_tab)
+	town_keeper.texture = Lore.keeper_art(town_tabs.current_tab)
+	town_keeper.visible = town_keeper.texture != null
 	building_bar.refresh(town_tabs.current_tab)
 	town_view.set_look(Town.look(state))
 	_town_heroes()
