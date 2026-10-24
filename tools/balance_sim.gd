@@ -180,6 +180,9 @@ func _play(cls: String, race: String, hours: float, budget_s: float) -> Dictiona
 			Calamity.fight(g)
 		var worn := g.equipped.size()
 		g.take_turn()
+		for ev in g.events:
+			if String(ev.get("type", "")) == "elite":
+				res["elites"] = int(res.get("elites", 0)) + 1
 		g.messages.clear()
 		g.events.clear()
 		var d := g.codex.stat("deaths")
@@ -194,7 +197,7 @@ func _play(cls: String, race: String, hours: float, budget_s: float) -> Dictiona
 					top = k
 			if not res.has("killers"):
 				res["killers"] = []
-			(res["killers"] as Array).append({"floor": last_floor, "tier": int(ld.get("tier", 0)), "boss": bool(ld.get("boss", false)),
+			(res["killers"] as Array).append({"floor": last_floor, "tier": int(ld.get("tier", 0)), "boss": bool(ld.get("boss", false)), "elite": bool(ld.get("elite", false)),
 				"turns": int(ld.get("turns", 0)), "top": top, "worn": worn, "left": float(ld.get("enemy_left", 0.0)),
 				"mods": (ld.get("mods", []) as Array).duplicate()})
 			_note_death(turn, last_floor)
@@ -234,7 +237,7 @@ func _play(cls: String, race: String, hours: float, budget_s: float) -> Dictiona
 			kills_mark = kills
 			turn_mark = turn
 			(res["samples"] as Array).append({"min": minutes, "floor": g.best_floor, "level": g.level, "gs": g.average_gear_score(),
-				"gold": g.total_gold(), "scrap": g.scrap, "dust": g.dust, "deaths": deaths, "atk": g.get_attack(), "hp": g.get_max_hp(), "tpk": tpk})
+				"gold": g.total_gold(), "scrap": g.scrap, "dust": g.dust, "deaths": deaths, "atk": g.get_attack(), "hp": g.get_max_hp(), "tpk": tpk, "upg": _avg_upg(g)})
 		# Stuck check
 		if turn % 25 == 0:
 			var sig := "%d|%d|%d|%d|%s|%d" % [g.floor_num, g.fight, g.enemy_hp, g.hero_hp, str(g.in_town), g.codex.stat("turns")]
@@ -266,10 +269,7 @@ func _play(cls: String, race: String, hours: float, budget_s: float) -> Dictiona
 	res["turns"] = turn
 	res["class_title"] = g.title()
 	res["pets"] = g.pets.size()
-	var lv := 0
-	for sl in g.equipped:
-		lv += int(g.equipped[sl]["level"])
-	res["upg"] = float(lv) / maxf(1.0, g.equipped.size())
+	res["upg"] = _avg_upg(g)
 	return res
 
 ## Everything the report needs at one moment.
@@ -278,7 +278,14 @@ func _snap(g: GameState, turn: int) -> Dictionary:
 	return {"min": turn * TURN_SECONDS / 60.0, "floor": g.best_floor, "level": g.level, "gs": g.average_gear_score(),
 		"atk": g.get_attack(), "def": g.get_defense(), "hp": g.get_max_hp(), "e_hp": g.enemy_max_hp, "e_atk": g.enemy_attack,
 		"swings": float(g.enemy_max_hp) / maxf(1.0, float(g.get_attack())), "hits": float(g.get_max_hp()) / float(dmg),
-		"deaths": g.codex.stat("deaths"), "gold": g.total_gold(), "scrap": g.scrap, "dust": g.dust, "boss": g.enemy_is_boss}
+		"deaths": g.codex.stat("deaths"), "gold": g.total_gold(), "scrap": g.scrap, "dust": g.dust, "boss": g.enemy_is_boss, "upg": _avg_upg(g)}
+
+## Average upgrade level of worn gear.
+func _avg_upg(g: GameState) -> float:
+	var lv := 0
+	for sl in g.equipped:
+		lv += int(g.equipped[sl]["level"])
+	return float(lv) / maxf(1.0, g.equipped.size())
 
 # =====================================================================
 # Player behaviour
@@ -588,7 +595,13 @@ func _report(results: Array, hours: float, quick: bool) -> String:
 		var bosses := 0
 		var modded := 0
 		var modc := {}
+		var elite_deaths := 0
+		var elite_rooms := 0
+		for r in results:
+			elite_rooms += int(r.get("elites", 0))
 		for kd in ks:
+			if bool(kd.get("elite", false)):
+				elite_deaths += 1
 			var tn: String = Monsters.TIER_NAMES[clampi(int(kd["tier"]), 0, 5)]
 			tiers[tn] = int(tiers.get(tn, 0)) + 1
 			var tp: String = kd["top"] if String(kd["top"]) != "" else "?"
@@ -606,6 +619,13 @@ func _report(results: Array, hours: float, quick: bool) -> String:
 		out += "## How heroes fall\n\n"
 		out += "- %d deaths: %d with 2 or fewer gear pieces worn (re-gearing after a fall), %d to bosses, %d to monsters with modifiers.\n" % [ks.size(), naked, bosses, modded]
 		out += "- Fight length at death: median %d turns. Monster HP left when the hero fell: median %d%%.\n" % [int(_median(turns)), int(_median(left) * 100.0)]
+		out += "- Elite rooms: %d entered, %d deaths there (%d%% of all deaths, %.1f%% of elite rooms).\n" % [elite_rooms, elite_deaths, int(100.0 * elite_deaths / maxf(1.0, ks.size())), 100.0 * elite_deaths / maxf(1.0, elite_rooms)]
+		var up100: Array = []
+		for r in results:
+			if (r["snaps"] as Dictionary).has(100):
+				up100.append(float(r["snaps"][100].get("upg", 0.0)))
+		if not up100.is_empty():
+			out += "- Worn gear upgrade level on reaching floor 100: median +%.1f.\n" % _median(up100)
 		out += "- Killer's tier: %s.\n" % ", ".join(tiers.keys().map(func(t): return "%s %d" % [t, tiers[t]]))
 		out += "- Biggest damage source in the fatal fight: %s.\n" % ", ".join(tops.keys().map(func(t): return "%s %d" % [t, tops[t]]))
 		out += "- Killer's modifiers: %s.\n\n" % ", ".join(modc.keys().map(func(t): return "%s %d" % [t, modc[t]]))
@@ -615,7 +635,7 @@ func _report(results: Array, hours: float, quick: bool) -> String:
 	for r in results:
 		longest = maxi(longest, (r["samples"] as Array).size())
 	var step := maxi(1, int(ceil(float(longest) / 16.0)))
-	for metric in [["floor", "Best floor"], ["level", "Level"], ["gs", "Gear Score (average of worn gear)"], ["gold", "Gold + bank"], ["scrap", "Scrap"], ["dust", "Dust"], ["deaths", "Deaths so far"], ["atk", "Hero attack"], ["hp", "Hero max HP"], ["tpk", "Turns per kill (over the last 10 minutes)"]]:
+	for metric in [["floor", "Best floor"], ["level", "Level"], ["gs", "Gear Score (average of worn gear)"], ["gold", "Gold + bank"], ["scrap", "Scrap"], ["upg", "Average upgrade level of worn gear"], ["dust", "Dust"], ["deaths", "Deaths so far"], ["atk", "Hero attack"], ["hp", "Hero max HP"], ["tpk", "Turns per kill (over the last 10 minutes)"]]:
 		out += "### %s\n\n| Play time |" % metric[1]
 		out += hdr2 + "\n" + rl2 + "\n"
 		var i := step - 1
@@ -627,7 +647,7 @@ func _report(results: Array, hours: float, quick: bool) -> String:
 				if i < smp.size():
 					label = _hm(smp[i]["min"])
 					var v: float = float(smp[i][metric[0]])
-					row2 += " %s |" % (("%.1f" % v) if metric[0] == "tpk" else _num(v))
+					row2 += " %s |" % (("%.1f" % v) if metric[0] in ["tpk", "upg"] else _num(v))
 				else:
 					row2 += " - |"
 			out += "| %s |%s\n" % [label, row2]

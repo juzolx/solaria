@@ -109,6 +109,9 @@ static func read_door(g: GameState, i: int) -> Dictionary:
 	if i < g.doors.size() and String(g.doors[i]) in Portals.DOOR_KINDS:
 		return Portals.read_door(g, String(g.doors[i]))  # portal doors always show
 	var lvl := team_sense(g)
+	if lvl == 0 and i < g.doors.size() and String(g.doors[i]) == "elite":
+		# R6: an elite door is never blind: deep claw marks warn anyone (readers still tell the rest)
+		return {"color": "#f87171", "label": "Claw marks", "text": "Deep claw marks. Something strong waits here: at least Epic, with better loot."}
 	if lvl == 0 or i >= g.doors.size():
 		return {"color": "", "label": "?", "text": "A blank door. Who knows what's behind it."}
 	var kind: String = g.doors[i]

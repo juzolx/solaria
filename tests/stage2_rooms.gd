@@ -28,7 +28,11 @@ func _initialize() -> void:
 		g._enemy_defeated()
 		g.horde_left = 0
 	check(g.door_pending() and g.floor_num == 7, "cleared room: three doors, same floor")
+	g.doors[1] = "fight"
 	check(g.path_info("door_m")["name"] == "Middle door", "doors are blank")
+	g.doors[1] = "elite"
+	check(g.path_info("door_m")["name"] == "Middle door: Claw marks", "an elite door always shows claw marks (R6)")
+	g.doors[1] = "fight"
 	g.doors = ["fight", "fight", "fight"]
 	g.choose_path("door_r")
 	check(g.floor_num == 8 and not g.door_pending() and g.fight == 1, "a door leads to the next floor")

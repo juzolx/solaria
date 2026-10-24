@@ -1311,6 +1311,7 @@ func _frozen_crit() -> bool:
 	return enemy_frozen > 0
 
 func spawn_enemy() -> void:
+	enemy_elite = false  # (an elite room sets it after the spawn; a fall used to leave it on for the next monster)
 	enemy_calamity = 0
 	enemy_grave = false
 	enemy_wanderer = false
@@ -1818,6 +1819,8 @@ func _enemy_defeated() -> void:
 		return
 	Town.on_kill(self, species, tier, was_boss, zone_i)
 	ClassTree.on_kill(self, was_boss, tier, was_goblin)
+	if enemy_elite and not was_boss and not was_goblin:
+		Economy.elite_reward(self)  # R6: an elite room pays for its risk
 	if not was_goblin:
 		Mastery.on_kill(self)
 		_feed_souls(was_boss)
@@ -2414,7 +2417,7 @@ func _give_item(item: Dictionary) -> void:
 	if verdict != "keep":
 		say(LootRules.carry_out(self, item, verdict))
 	elif bag.size() >= bag_capacity() + OVERFLOW_MAX and not keep:
-		var s := GameData.scrap_value(item)
+		var s := GameData.scrap_value(item, scrap_mult())
 		scrap += s
 		say("Bag overflowing! Salvaged %s (+%d scrap)" % [_tag(item), s])
 		tip("bag_full", "Your bag is past its limit, so new drops turn into scrap. Sell or salvage items in the Bag tab to make room.")
@@ -2594,7 +2597,7 @@ func salvage(id: int) -> void:
 	if item.get("locked", false):
 		say("%s is locked. Unlock it first." % _tag(item))
 		return
-	var value := int(GameData.scrap_value(item) * scrap_mult())
+	var value := GameData.scrap_value(item, scrap_mult())
 	scrap += value
 	Lineage.gain(self, "craft")
 	ClassTree.count(self, "scrapped")
@@ -2618,7 +2621,9 @@ func upgrade(id: int) -> void:
 	if Economy.upgrade_short(self, item) != "":
 		say(Economy.upgrade_short(self, item))
 		return
-	scrap -= GameData.upgrade_cost(item)
+	var paid := GameData.upgrade_cost(item)
+	scrap -= paid
+	Economy.note_upgrade_scrap(item, paid)  # R6: salvage gives back half of what was really paid
 	dust -= Economy.upgrade_dust(item)
 	ClassTree.grow(self, "craft")
 	item["level"] = int(item["level"]) + 1
@@ -2697,7 +2702,7 @@ func salvage_all(rarity: int) -> void:
 	var dust := 0
 	for item in bag.duplicate():
 		if int(item["rarity"]) == rarity and not item.get("locked", false) and not is_bound(item) and not is_upgrade(item):
-			total += GameData.scrap_value(item)
+			total += GameData.scrap_value(item, scrap_mult())  # R6: same formula as one salvage
 			dust += Economy.salvage_dust(item)
 			bag.erase(item)
 			count += 1
@@ -4491,13 +4496,16 @@ func auto_door() -> String:
 	var lvl := Halls.team_sense(self)
 	if doors.size() < DOOR_KEYS.size():
 		return String(DOOR_KEYS.pick_random())
-	if lvl == 0:  # blank doors, but a portal door always shows (Portals.read_door)
+	if lvl == 0:  # blank doors, but a portal door always shows (Portals.read_door), and so do an elite door's claw marks
 		var plain: Array = []
+		var hurt := hero_hp < get_max_hp() * 0.75
 		for i in DOOR_KEYS.size():
 			var dk: String = doors[i]
 			if dk in Portals.DOOR_KINDS:
 				if Portals.auto_wants(self, dk):
 					return String(DOOR_KEYS[i])
+			elif dk == "elite" and hurt:
+				continue  # R6: hurt, Auto stays clear of the claw-marked door
 			else:
 				plain.append(DOOR_KEYS[i])
 		return String(plain.pick_random() if not plain.is_empty() else DOOR_KEYS.pick_random())

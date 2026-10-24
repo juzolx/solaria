@@ -216,5 +216,47 @@ func _initialize() -> void:
 	by.shop.append(GameData.make_item("Feet", 3, 40, by._new_id()))
 	check(by.buy_shop(0) and bool(by.bag[-1].get("bought", false)), "shop purchases are marked bought")
 
+	# R6: salvage scrap grows with the item's floor and refunds half of the upgrades
+	var e1 := GameData.make_item("Weapon", 3, 1, by._new_id())
+	var e100 := GameData.make_item("Weapon", 3, 100, by._new_id())
+	check(GameData.scrap_value(e1) == 8 and GameData.scrap_value(e100) == 28, "Epic salvage: 8 on floor 1, 28 on floor 100 (got %d, %d)" % [GameData.scrap_value(e1), GameData.scrap_value(e100)])
+	e100["level"] = 3
+	check(GameData.scrap_value(e100) == 28 + 6, "an old upgraded item (no record of scrap paid) keeps the old +2 per level")
+	Economy.note_upgrade_scrap(e100, 120)
+	check(GameData.scrap_value(e100) == 28 + 60, "salvaging gives back half the upgrade scrap really paid")
+	check(GameData.scrap_value(e100, 2.0) == 56 + 60, "the scrap bonus multiplies only the base, never the refund")
+	# No scrap loop: upgrade to +10 with a scrap bonus, salvage it, the total must go DOWN
+	var dw := GameState.new()
+	dw.codex.path = ""
+	dw.autosave = false
+	dw.appearance = {"body": "masc", "skin": 1, "hair": "Long", "hair_color": 0, "eyes": 4, "race": "Dwarf"}
+	dw.new_game()
+	dw.choose_class("Warrior")
+	dw.best_floor = 100
+	dw.floor_num = 100
+	dw.scrap = 100000
+	dw.dust = 1000
+	var loop_item := GameData.make_item("Ring" if GameData.SLOT_ORDER.has("Ring") else "Weapon", 4, 100, dw._new_id())
+	dw.bag.append(loop_item)
+	var start_scrap := dw.scrap
+	for _u in GameData.MAX_UPGRADE:
+		dw.upgrade(int(loop_item["id"]))
+	check(int(loop_item["level"]) == GameData.MAX_UPGRADE, "upgraded to +10 for the loop test")
+	var fresh_value := int(Economy.salvage_base(loop_item) * dw.scrap_mult())
+	dw.salvage(int(loop_item["id"]))
+	check(dw.scrap_mult() > 1.0 and dw.scrap < start_scrap, "upgrade to +10 then salvage (scrap bonus x%.2f, fresh salvage %d): scrap goes down (%d -> %d)" % [dw.scrap_mult(), fresh_value, start_scrap, dw.scrap])
+	for m in [2.25, 3.0]:
+		loop_item["level"] = GameData.MAX_UPGRADE
+		check(GameData.scrap_value(loop_item, m) - int(Economy.salvage_base(loop_item) * m) < int(loop_item["upg_scrap"]), "even at x%.2f the refund is less than the upgrades cost" % m)
+	var el := _hero()
+	el.floor_num = 100
+	el.enemy_elite = true
+	var s_el := el.scrap
+	var d_el := el.dust
+	Economy.elite_reward(el)
+	check(el.scrap - s_el >= 28 and el.scrap - s_el <= 42 and el.dust - d_el == Economy.ELITE_DUST, "an elite pays 28-42 scrap and 1 dust on floor 100")
+	el.spawn_enemy()
+	check(not el.enemy_elite, "a new monster is never left flagged elite")
+
 	print("STAGE6 CURRENCY TESTS DONE, failures: ", fails)
 	quit()
