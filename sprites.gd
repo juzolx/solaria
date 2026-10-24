@@ -552,7 +552,7 @@ const POSES := {
 	"follow": {"lean": 1, "squash": 0},
 	"crouch": {"lean": -1, "squash": 2},
 	"cast": {"lean": -1, "squash": -2},
-	"hit1": {"lean": -3, "squash": 0},
+	"hit1": {"lean": -3, "squash": 2},  # A6: squash on the hit frame
 	"hit2": {"lean": -1, "squash": 0},
 	"kneel1": {"lean": -1, "squash": 3},
 	"kneel2": {"lean": -2, "squash": 6},

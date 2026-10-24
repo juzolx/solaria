@@ -20,6 +20,8 @@ const NOTES := [
 		"Share card: the Share button on the Hero tab makes a picture of your hero (name, title, class, depth, gear, pet and proudest trophies) to keep or share.",
 		"One portal system: rifts, realm gates and trials share one set of rules (see Codex > Guide > Portals). Rifts and Deep Rifts are now one rift with a depth you see on its card before you step through, and you can walk on. A trial waiting for you can also show up behind a door as a champion's gate. Rift and gate doors always show: three doors, your choice. A Return Scroll gets you out of any portal. Closing the game no longer loses a rift or a realm choice.",
 		"Art cleanup across heroes, monsters and the dungeon, and a new Credits screen (Menu > Credits and licenses) thanking every artist.",
+		"Fights feel punchier: a crisp one-frame hit flash, a squash on whoever gets hit, a golden flourish on level up and a burst of light when a hidden or God class answers. Reduce motion, Screen shake and Flashing effects in the Menu turn these down.",
+		"Menu > Copy debug info: copies your device, version and recent errors so you can paste them into a bug report. It stays on your phone; nothing is ever sent on its own.",
 	]},
 	{"version": "0.13", "name": "The Halls Below", "lines": [
 		"Every monster, boss and companion has new dark fantasy art (Dungeon Crawl Stone Soup, CC0).",

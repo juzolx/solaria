@@ -110,6 +110,10 @@ func show_for(m) -> void:
 	var cr := UI.button("Credits and licenses", func(): CreditsScreen.new().show_for(main))
 	cr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_child(cr)
+	# R6: errors kept on this phone only; the player copies them into a bug report
+	var dbg := UI.button("Copy debug info", _show_debug_info)
+	dbg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(dbg)
 
 	if Store.ENABLED:
 		content.add_child(UI.heading("Supporter store"))
@@ -230,6 +234,21 @@ func _slider(label_text: String, value: float, on_change: Callable) -> HBoxConta
 	s.drag_ended.connect(func(_changed): profile.save())
 	row.add_child(s)
 	return row
+
+## R6: the device, version and recent errors as text, copied for a bug report. Stays on
+## the phone until the player pastes it somewhere (no analytics, nothing sent).
+func _show_debug_info() -> void:
+	DebugLog.flush()
+	var text := DebugLog.report()
+	DisplayServer.clipboard_set(text)
+	var o := Overlay.new().open(main, "Debug info (copied)", 420.0, UI.GOLD)
+	o.content.add_child(UI.wrap("Copied. Paste it into your TestFlight feedback or a message to the developer. It never leaves your phone on its own.", 12, UI.DIM))
+	var box := UI.wrap(text, 10, UI.TEXT)
+	o.content.add_child(box)
+	var clr := UI.button("Clear the log", func():
+		DebugLog.clear()
+		box.text = DebugLog.report())
+	o.content.add_child(clr)
 
 func _toggle_a11y(key: String) -> void:
 	match key:
