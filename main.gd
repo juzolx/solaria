@@ -771,7 +771,7 @@ func _build_ui() -> void:
 	town_page.add_child(talk_row)
 	town_keeper = TextureRect.new()
 	town_keeper.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	town_keeper.custom_minimum_size = Vector2(128, 128)   # 2x the 64 px art, crisp and readable on a phone
+	town_keeper.custom_minimum_size = Vector2(64, 64)   # 1x the 64 px art (crisp); 2x pushed the Tavern page off a 430x932 phone
 	town_keeper.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	town_keeper.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	talk_row.add_child(town_keeper)
