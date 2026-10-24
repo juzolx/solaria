@@ -28,6 +28,7 @@ var zone := 0
 var light_col := Color("#ffb35c")
 var amb_col := Color("#8fae8a")
 var fx_kind := "fireflies"
+var gate := false        # a champion's gate: the middle door is a glowing portal
 var _size := Vector2.ZERO
 static var _texcache := {}
 
@@ -90,6 +91,7 @@ func rebuild(zone_i: int, seed_value: int, mood: Dictionary) -> void:
 	light_col = mood.get("light", Color("#ffb35c"))
 	amb_col = mood.get("amb", Color("#8fae8a"))
 	fx_kind = String(mood.get("kind", "fireflies"))
+	gate = bool(mood.get("gate", false))
 	var kinds: Array = KINDS_FOREST if zone == 0 else KINDS_OTHER
 	kind = kinds[rng.randi() % kinds.size()]
 	flicker.clear()
@@ -118,42 +120,6 @@ func rebuild(zone_i: int, seed_value: int, mood: Dictionary) -> void:
 # =====================================================================
 # Pixel art drawn in code (original to Solaria)
 # =====================================================================
-
-static func _pix(name: String, rows: PackedStringArray, pal: Dictionary) -> ImageTexture:
-	if _texcache.has(name):
-		return _texcache[name]
-	var img := Image.create(rows[0].length(), rows.size(), false, Image.FORMAT_RGBA8)
-	img.fill(Color(0, 0, 0, 0))
-	for y in rows.size():
-		for x in rows[y].length():
-			var ch := rows[y][x]
-			if pal.has(ch):
-				img.set_pixel(x, y, pal[ch])
-	var tex := ImageTexture.create_from_image(img)
-	_texcache[name] = tex
-	return tex
-
-static func mushroom_tex() -> ImageTexture:
-	return _pix("mushroom", PackedStringArray([
-		"..cccc..", ".cCCCCc.", "cCCwCCCc", "cCCCCwCc", ".cccccc.",
-		"...ss...", "...ss...", "..sss...", "...ss...", "..ssss.."]),
-		{"c": Color("#1b6b6e"), "C": Color("#5ad1e6"), "w": Color("#d8fbff"), "s": Color("#c9c2a8")})
-
-static func bones_tex() -> ImageTexture:
-	return _pix("bones", PackedStringArray([
-		"....ww..........", "..wwwwww...ww...", ".wWwwWWwwwwWw.ww", "wwWWwwwWWwwwwwWw",
-		".wwwwwwwwwwwwww.", "..dddddddddddd.."]),
-		{"w": Color("#c8c0a8"), "W": Color("#ece4cc"), "d": Color("#2a2620")})
-
-static func skull_tex() -> ImageTexture:
-	return _pix("skull", PackedStringArray([
-		"..wwww..", ".wwwwww.", "wwwwwwww", "wkkwwkkw", "wkkwwkkw", "wwwkkwww", ".wwwwww.", ".w.ww.w."]),
-		{"w": Color("#d6ceb4"), "k": Color("#16110d")})
-
-static func candle_tex() -> ImageTexture:
-	return _pix("candle", PackedStringArray([
-		".f.", "fFf", ".F.", ".k.", "ccc", "ccc", "cCc", "ccc", "ccc"]),
-		{"f": Color("#ff9a3c"), "F": Color("#fff2c0"), "k": Color("#2a1d14"), "c": Color("#d9ccaf"), "C": Color("#f2ead2")})
 
 static func vine_tex(seed_value: int) -> ImageTexture:
 	var key := "vine%d" % seed_value
@@ -197,26 +163,6 @@ static func moss_tex() -> ImageTexture:
 	_texcache["moss"] = tex
 	return tex
 
-static func rune_tex() -> ImageTexture:
-	if _texcache.has("rune"):
-		return _texcache["rune"]
-	var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
-	img.fill(Color(0, 0, 0, 0))
-	var c := Color("#5ad1e6")
-	for a in 360:
-		var v: Vector2 = Vector2.from_angle(deg_to_rad(a))
-		for rr in [29.5, 28.5, 20.5]:
-			var p: Vector2 = Vector2(31.5, 31.5) + v * float(rr)
-			img.set_pixel(int(p.x), int(p.y), c)
-	for i in 8:
-		var v: Vector2 = Vector2.from_angle(TAU * i / 8.0)
-		for s in range(21, 28):
-			var p: Vector2 = Vector2(31.5, 31.5) + v * float(s)
-			img.set_pixel(int(p.x), int(p.y), c)
-	var tex := ImageTexture.create_from_image(img)
-	_texcache["rune"] = tex
-	return tex
-
 static func web_tex() -> ImageTexture:
 	if _texcache.has("web"):
 		return _texcache["web"]
@@ -251,6 +197,10 @@ func _mat(path: String, tint := Color.WHITE) -> StandardMaterial3D:
 	m.metallic_specular = 0.15
 	m.uv1_triplanar = true
 	return m
+
+## A room prop or event sprite (art/props, 40x40).
+static func prop(name: String) -> Texture2D:
+	return load("res://art/props/%s.png" % name)
 
 ## This zone's own hall art (art/halls/z<zone>_<name>.png), or the shared fallback.
 func _zart(name: String, fallback := "") -> Texture2D:
@@ -517,7 +467,12 @@ func _shell() -> void:
 		arch.position = Vector3(x, dh - dw / 2.0, -RD - 0.1)
 		arch.material = dark
 		far.add_child(arch)
-		_sprite(_zart("door", "res://art/halls/door.png"), Vector3(x, 0.0, -RD - 0.25), dh * 0.98, true, false)
+		if gate and x == 0.0:
+			var portal := _sprite(load("res://art/halls/portal.png"), Vector3(x, 0.0, -RD - 0.25), dh * 0.98, false, false)
+			portal.modulate = Color(1.3, 1.2, 1.3)
+			_light(Vector3(x, dh * 0.5, -RD + 0.4), Color("#d05ad8"), 1.6, 3.5)
+		else:
+			_sprite(_zart("door", "res://art/halls/door.png"), Vector3(x, 0.0, -RD - 0.25), dh * 0.98, true, false)
 
 func _pillars(rows: Array, mat: Material, with_beams: bool) -> void:
 	for zz in rows:
@@ -569,16 +524,13 @@ func _rubble(center: Vector3, spread: float, count: int, mat: Material) -> void:
 		var height := maxf(0.0, (1.0 - off.length() / spread)) * 0.3
 		_box(Vector3(s, s * 0.7, s * 0.9), center + off + Vector3(0, height + s * 0.3, 0), mat, Vector3(rng.randf_range(0, 40), rng.randf_range(0, 360), rng.randf_range(0, 40)))
 
-## The zone's own props (chest, altar, statue) where it has them, at the room's sides.
+## The zone's own props (chest, altar) where it has them, at the room's sides.
 func _zone_props() -> void:
 	var side := -1.0 if rng.randf() < 0.5 else 1.0
 	var chest := _zart("chest")
 	var altar := _zart("altar")
-	var statue := _zart("statue")
 	match kind:
 		"Overgrown hall":
-			if statue:
-				_sprite(statue, Vector3(side * (HW - 0.6), 0, -RD + 0.8), 1.5)
 			if chest:
 				_sprite(chest, Vector3(-side * (HW - 0.65), 0, -RD + 1.1), 0.5)
 		"Collapsed chamber":
@@ -587,6 +539,15 @@ func _zone_props() -> void:
 		"Forgotten shrine":
 			if altar:
 				_sprite(altar, Vector3(side * (HW - 0.55), 0, -3.1), 0.7)
+	# every zone: a few everyday things along the walls
+	match kind:
+		"Overgrown hall":
+			_sprite(prop("urn"), Vector3(side * (HW - 0.45), 0, -2.5), 0.6)
+			_sprite(prop("barrel" if rng.randf() < 0.5 else "crate"), Vector3(-side * (HW - 0.5), 0, -3.4), 0.6)
+		"Collapsed chamber":
+			_sprite(prop("skeleton"), Vector3(HW - 0.45, 0, -2.1), 0.6)
+		"Root-choked passage", "Mushroom grotto":
+			_sprite(prop("boulder"), Vector3(side * (HW - 0.6), 0, -RD + 1.4), 0.7)
 
 ## Drifting particles in the region's mood (HallsScene.MOODS kinds).
 func _region_particles() -> void:
@@ -639,8 +600,8 @@ func _collapsed_chamber() -> void:
 	_box(Vector3(0.5, 2.4, 0.5), Vector3(-HW + 0.6, 0.25, -3.3), dark, Vector3(88, 12, 0))
 	_box(Vector3(HallsScene.W * 0.8, 0.3, 0.35), Vector3(0.3, 3.2, -RD + 1.4), dark, Vector3(0, 8, -14))
 	_torch(Vector3(HW - 0.08, 2.0, -RD * 0.7))
-	_sprite(bones_tex(), Vector3(1.9, 0, -3.0), 0.3)
-	_sprite(skull_tex(), Vector3(1.6, 0, -2.8), 0.22)
+	_sprite(prop("bones"), Vector3(1.9, 0, -3.0), 0.4)
+	_sprite(prop("skull"), Vector3(1.5, 0, -2.7), 0.25)
 	if zone == 0:
 		_vines_on_walls(3)
 
@@ -648,10 +609,10 @@ func _mushroom_grotto() -> void:
 	var spots := [Vector3(-HW + 1.0, 0, -2.6), Vector3(HW - 1.0, 0, -3.0), Vector3(-HW + 0.9, 0, -RD + 1.2), Vector3(HW - 0.9, 0, -RD + 1.0)]
 	for sp in spots:
 		var c: Vector3 = sp
-		for i in rng.randi_range(4, 7):
-			var h := rng.randf_range(0.28, 0.7)
-			var s := _sprite(mushroom_tex(), c + Vector3(rng.randf_range(-0.4, 0.4), 0, rng.randf_range(-0.4, 0.4)), h, false)
-			s.modulate = Color(1.3, 1.3, 1.3)
+		for i in rng.randi_range(2, 3):
+			var h := rng.randf_range(0.6, 0.95)
+			var s := _sprite(prop("mushrooms"), c + Vector3(rng.randf_range(-0.4, 0.4), 0, rng.randf_range(-0.4, 0.4)), h, false)
+			s.modulate = Color(1.9, 1.9, 1.9)
 		_light(c + Vector3(0, 0.5, 0), Color("#5ad1e6"), 1.5, 3.0, false, false)
 	_corner_roots(4)
 	_vines_on_walls(4)
@@ -659,34 +620,22 @@ func _mushroom_grotto() -> void:
 	_mist_layer(0.1, 0.03)
 
 func _forgotten_shrine() -> void:
-	_flat(rune_tex(), Vector3(0.0, 0.02, -2.9), Vector2(2.2, 2.2), Vector3(-90, rng.randf_range(0, 45), 0), Color(0.35, 1.0, 1.1, 1.0))
+	_flat(load("res://art/traps/circle.png"), Vector3(0.0, 0.02, -2.9), Vector2(2.2, 2.2), Vector3(-90, rng.randf_range(0, 45), 0), Color(0.35, 1.0, 1.1, 1.0))
 	_light(Vector3(0.0, 0.3, -2.9), Color("#5ad1e6"), 0.9, 2.6, false, false)
 	for side in [-1.0, 1.0]:
 		var base := Vector3(side * 2.0, 0, -1.8)
-		var bowl := MeshInstance3D.new()
-		var cm := CylinderMesh.new()
-		cm.top_radius = 0.22
-		cm.bottom_radius = 0.1
-		cm.height = 0.9
-		cm.radial_segments = 8
-		bowl.mesh = cm
-		var metal := StandardMaterial3D.new()
-		metal.albedo_color = Color("#2a2622")
-		metal.metallic = 0.6
-		metal.roughness = 0.5
-		bowl.material_override = metal
-		bowl.position = base + Vector3(0, 0.45, 0)
-		root3.add_child(bowl)
-		var flame := _sprite(load("res://art/dungeon/torch.png"), base + Vector3(0, 0.75, 0), 0.5, false)
-		flame.modulate = Color(1.5, 1.2, 1.0)
+		var brazier := _sprite(prop("brazier"), base, 1.0, false)
+		brazier.modulate = Color(1.2, 1.1, 1.0)
 		_light(base + Vector3(0, 1.2, 0.1), light_col, 1.8, 4.0, true)
-	_sprite(_zart("statue", "res://art/dungeon/statue_0.png"), Vector3(-HW + 0.7, 0, -RD + 0.9), 1.6)
-	_sprite(_zart("statue", "res://art/dungeon/statue_2.png"), Vector3(HW - 0.7, 0, -RD + 0.9), 1.6)
+	# one statue, and only in some shrines, so they don't stand in every room
+	if rng.randf() < 0.5:
+		var left := rng.randf() < 0.5
+		_sprite(_zart("statue", "res://art/props/statue_hooded.png" if left else "res://art/props/statue_gargoyle.png"), Vector3((-1.0 if left else 1.0) * (HW - 0.7), 0, -RD + 0.9), 1.6)
 	for i in 5:
-		var c := _sprite(candle_tex(), Vector3(rng.randf_range(-HW + 0.3, -1.4) if i % 2 == 0 else rng.randf_range(1.4, HW - 0.3), 0, -RD + rng.randf_range(0.3, 0.8)), rng.randf_range(0.16, 0.26), false)
+		var c := _sprite(prop("candles"), Vector3(rng.randf_range(-HW + 0.3, -1.4) if i % 2 == 0 else rng.randf_range(1.4, HW - 0.3), 0, -RD + rng.randf_range(0.3, 0.8)), rng.randf_range(0.28, 0.4), false)
 		c.modulate = Color(1.2, 1.15, 1.1)
-	_sprite(bones_tex(), Vector3(-2.0, 0, -3.8), 0.3)
-	_sprite(skull_tex(), Vector3(-1.7, 0, -3.6), 0.22)
+	_sprite(prop("bones"), Vector3(-2.0, 0, -3.8), 0.4)
+	_sprite(prop("skull"), Vector3(-1.6, 0, -3.5), 0.25)
 	if zone == 0:
 		_vines_on_walls(3)
 

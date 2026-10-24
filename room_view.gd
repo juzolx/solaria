@@ -146,13 +146,16 @@ func _draw_prop(i: int, font: Font) -> void:
 			rect = scene.sprite(self, SpriteLight.lit(sn["tex"], scene.zone), x, z, 1.4, Color.WHITE, bob)
 	elif kind == "campfire":
 		rect = _draw_campfire(x, z)
-	elif kind in ["rift", "gate"]:  # a champion's gate is drawn as a portal too
+	elif kind == "rift":
 		rect = _draw_rift(x, z)
+	elif kind == "gate":
+		if not used:
+			rect = _draw_gate()
 	elif kind == "camp":
-		rect = _draw_camp(x, z)
+		rect = _draw_camp(-0.9, 2.1)   # by the left wall, below and beside the doors
 	elif tile != "":
-		var big := 1.6 if tile == "altar" else 1.1
-		rect = scene.sprite(self, scene.tx("res://art/dungeon/%s.png" % tile), x, z, big, Color(0.6, 0.6, 0.6) if used else Color.WHITE)
+		var big := 1.5 if tile == "altar" else 1.3
+		rect = scene.sprite(self, scene.tx("res://art/props/%s.png" % tile), x, z, big, Color(0.6, 0.6, 0.6) if used else Color.WHITE)
 	if not Halls.can_interact(state) or rect.size == Vector2.ZERO or kind == "campfire":
 		return
 	if used and not kind in ["merchant", "camp"]:
@@ -169,18 +172,33 @@ func _draw_prop(i: int, font: Font) -> void:
 	draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, 100, 10, 3, Color(0, 0, 0, 0.9))
 	draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, 100, 10, lc)
 
-## A trap you've spotted (hidden ones stay hidden): a glowing plate on the floor.
+## A trap you've spotted (hidden ones stay hidden): a magic circle on the floor, slowly
+## turning, in the colour of what it does (Halls.TRAPS "color").
 func _draw_trap() -> void:
 	var rtrap: Dictionary = state.room_trap
 	var x := _prop_x(float(rtrap["x"]))
 	var z := _prop_z(float(rtrap["y"]))
 	var fy := HallsScene.FLOOR_Y + 0.01
-	var tex := scene.tx("res://art/dungeon/trap_%s.png" % String(rtrap["kind"]))
-	if tex:
-		scene.quad(self, tex, Vector3(x - 0.45, fy, z + 0.45), Vector3(x + 0.45, fy, z + 0.45), Vector3(x + 0.45, fy, z - 0.45), Vector3(x - 0.45, fy, z - 0.45), Vector2.ZERO, Vector2.ONE)
-	draw_set_transform(scene.proj(x, HallsScene.FLOOR_Y, z), 0.0, Vector2(1.0, 0.35))
-	draw_arc(Vector2.ZERO, scene.focal * 0.55 / z, 0, TAU, 24, Color(1, 0.75, 0.2, 0.5 + 0.3 * sin(t * 5.0)), 2.0)
-	draw_set_transform(Vector2.ZERO)
+	var col := Color(String(Halls.TRAPS[String(rtrap["kind"])].get("color", "#fee761")))
+	var pulse := 0.8 + 0.2 * sin(t * 3.0)
+	var r := 1.1   # the same size as the shrine's rune circle
+	var tint := Color(col.r * 1.4 * pulse, col.g * 1.4 * pulse, col.b * 1.4 * pulse)
+	var cols := PackedColorArray([tint, tint, tint, tint])
+	var tex := scene.tx("res://art/traps/circle.png")
+	# an 8x8 grid of small quads so the circle follows the floor's perspective (one big quad warps it)
+	var spin := t * 0.4
+	var n := 8
+	for gy in n:
+		for gx in n:
+			var pts := PackedVector2Array()
+			var uvs := PackedVector2Array()
+			for c in [Vector2(gx, gy), Vector2(gx + 1, gy), Vector2(gx + 1, gy + 1), Vector2(gx, gy + 1)]:
+				var u: Vector2 = c / float(n)
+				var lx := (u.x - 0.5) * 2.0 * r
+				var lz := (u.y - 0.5) * 2.0 * r
+				pts.append(scene.proj(x + lx * cos(spin) - lz * sin(spin), fy, z + lx * sin(spin) + lz * cos(spin)))
+				uvs.append(u)
+			draw_polygon(pts, cols, uvs, tex)
 
 func _draw_team() -> void:
 	var members: Array = state.party.members if state.party != null else []
@@ -278,16 +296,8 @@ func _draw_campfire(x: float, z: float) -> Rect2:
 		draw_set_transform(base, 0.0, Vector2(1.0, 0.35))
 		draw_circle(Vector2.ZERO, s * (0.5 + k * 0.25) * (1.0 + 0.05 * sin(t * 9.0)), Color(1.0, 0.55, 0.2, 0.08))
 		draw_set_transform(Vector2.ZERO)
-	var lw := s * 0.55
-	draw_line(base + Vector2(-lw, 0), base + Vector2(lw, -s * 0.08), Color("#4a2e1a"), maxf(3.0, s * 0.1))
-	draw_line(base + Vector2(-lw, -s * 0.08), base + Vector2(lw, 0), Color("#5c3a22"), maxf(3.0, s * 0.1))
-	for k in 3:
-		var fh := s * (0.7 - k * 0.18) * (1.0 + 0.15 * sin(t * (8.0 + k * 3.0) + k))
-		var fw := s * (0.28 - k * 0.07)
-		var col: Color = [Color("#e8541c"), Color("#f59e0b"), Color("#fde68a")][k]
-		var pts := PackedVector2Array([base + Vector2(-fw, -s * 0.05), base + Vector2(sin(t * 6.0 + k) * fw * 0.4, -s * 0.05 - fh), base + Vector2(fw, -s * 0.05)])
-		draw_colored_polygon(pts, col)
-	return Rect2(base - Vector2(lw, s * 0.8), Vector2(lw * 2.0, s * 0.8))
+	var flick := 1.0 + 0.06 * sin(t * 9.0) + 0.04 * sin(t * 23.0)
+	return scene.sprite(self, scene.tx("res://art/props/campfire.png"), x, z, 1.1, Color(flick, flick, flick))
 
 ## A rift (portals.gd): a tall swirling oval of violet light hanging over the floor.
 func _draw_rift(x: float, z: float) -> Rect2:
@@ -296,6 +306,18 @@ func _draw_rift(x: float, z: float) -> Rect2:
 	var rw := s * 0.55
 	var rh := s * 0.9
 	scene.shadow(self, scene.proj(x, HallsScene.FLOOR_Y, z), rw * 0.8)
+	_draw_portal(c, rw, rh)
+	return Rect2(c - Vector2(rw, rh), Vector2(rw * 2.0, rh * 2.0))
+
+## A champion's gate: the middle door itself is the portal (HallsScene/Room3D draw it);
+## returns the doorway to tap.
+func _draw_gate() -> Rect2:
+	var tl := scene.proj(-HallsScene.DOOR_W / 2.0, HallsScene.FLOOR_Y + HallsScene.DOOR_H, HallsScene.D)
+	var br := scene.proj(HallsScene.DOOR_W / 2.0, HallsScene.FLOOR_Y, HallsScene.D)
+	return Rect2(tl, br - tl)
+
+## Swirling violet light with motes spiraling in, centred on c.
+func _draw_portal(c: Vector2, rw: float, rh: float) -> void:
 	for i in 6:
 		var k := 1.0 - i / 6.0
 		var wob := 1.0 + 0.05 * sin(t * 3.0 + i)
@@ -310,7 +332,6 @@ func _draw_rift(x: float, z: float) -> Rect2:
 		var p := c + Vector2(cos(a) * rw * (1.2 - d), sin(a) * rh * (1.2 - d))
 		draw_rect(Rect2(p, Vector2(2, 2)), Color(0.85, 0.8, 1.0, d))
 	draw_circle(c, rw * 0.18, Color(1, 1, 1, 0.6 + 0.3 * sin(t * 4.0)))
-	return Rect2(c - Vector2(rw, rh), Vector2(rw * 2.0, rh * 2.0))
 
 ## Menagerie pets on the run follow at the leader's left, sized by their level.
 func _draw_menagerie_room(leader_feet: Vector2, leader_sz: float) -> void:
@@ -329,19 +350,16 @@ func _draw_menagerie_room(leader_feet: Vector2, leader_sz: float) -> void:
 		var w := s * asz.x / asz.y
 		draw_texture_rect(SpriteLight.lit(art["tex"], scene.zone), Rect2(at - Vector2(w / 2.0, s * 0.9 + hop), Vector2(w, s)), false, Color(0.9, 0.88, 0.85))
 
-## A Descenders' Camp: two tents around a fire, Snik's lantern hanging between them.
+## A Descenders' Camp by the left wall: two tents stepping back along it, the fire in front
+## of them (below the doors), Snik's lantern between the tents. Drawn far to near.
 func _draw_camp(x: float, z: float) -> Rect2:
 	var s := scene.focal / z
-	for side in [-1.0, 1.0]:
-		var base := scene.proj(x + side * 0.85, HallsScene.FLOOR_Y, z + 0.3)
-		var tw := s * 0.75
-		var th := s * 0.62
-		var pts := PackedVector2Array([base + Vector2(-tw / 2.0, 0), base + Vector2(0, -th), base + Vector2(tw / 2.0, 0)])
-		draw_colored_polygon(pts, Color("#5b4636").darkened(0.2))
-		draw_polyline(PackedVector2Array([pts[0], pts[1], pts[2]]), Color("#a08060"), 2.0)
-		draw_colored_polygon(PackedVector2Array([base + Vector2(-tw * 0.12, 0), base + Vector2(0, -th * 0.45), base + Vector2(tw * 0.12, 0)]), Color("#1a120c"))
-	var lamp := scene.proj(x, HallsScene.FLOOR_Y + 1.1, z + 0.3)
+	var t1 := scene.sprite(self, scene.tx("res://art/props/tent.png"), x - 1.6, z + 1.2, 1.1)
+	var t2 := scene.sprite(self, scene.tx("res://art/props/tent.png"), x - 1.2, z + 0.3, 1.1)
+	var lamp := scene.proj(x - 1.0, HallsScene.FLOOR_Y + 1.0, z + 0.6)
 	draw_circle(lamp, s * 0.06, Color(1.0, 0.8, 0.4, 0.9))
 	draw_circle(lamp, s * 0.16, Color(1.0, 0.7, 0.3, 0.15 + 0.05 * sin(t * 5.0)))
-	var fire := _draw_campfire(x, z)
-	return fire.merge(Rect2(scene.proj(x - 1.25, HallsScene.FLOOR_Y + 0.7, z), Vector2(s * 2.5, s * 0.7)))
+	var flick := 1.0 + 0.06 * sin(t * 9.0)
+	var fire := scene.sprite(self, scene.tx("res://art/props/cookfire.png"), x, z, 1.0, Color(flick, flick, flick))
+	scene.sprite(self, scene.tx("res://art/props/backpack.png"), x - 0.6, z - 0.2, 0.5)
+	return fire.merge(t1).merge(t2)

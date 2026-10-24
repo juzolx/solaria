@@ -28,6 +28,8 @@ const MONSTER_SIZE := Vector2i(68, 68)
 const TALL_SIZE := Vector2i(68, 132)
 ## Dungeon props and consumable icons: 32x32 files, 1x art (Dungeon Crawl tiles).
 const PROP_SIZE := Vector2i(32, 32)
+## Room props and events (art/props: chests, shrine, campfire, statues...): 40x40 files, 1x art.
+const ROOM_PROP_SIZE := Vector2i(40, 40)
 ## Gear item icons: every icon sits centered in one square frame, at the gear art's own pixel size.
 const ICON_FRAME := 44
 ## Effects keep a few hard alpha steps instead of soft gradients.

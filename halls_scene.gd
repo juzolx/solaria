@@ -40,6 +40,7 @@ var light := Color.WHITE
 var dark := 0.4
 var t := 0.0
 var key := ""
+var gate := false          # a champion's gate waits here: the middle door is a portal
 var _tex := {}
 var r3: Room3D = null      # the real 3D room (not on Low graphics)
 var _r3_key := ""
@@ -55,10 +56,12 @@ func mood() -> Dictionary:
 
 ## Lays out the room (same floor and room = same room). Rebuilds only when needed.
 func build(st: GameState, sz: Vector2) -> void:
-	var k := "%d|%d|%d" % [st.floor_num, st.room_count, int(sz.x) * 10000 + int(sz.y)]
+	var g: bool = not st.room_props.is_empty() and String(st.room_props[0]["kind"]) == "gate" and not st.room_props[0].get("used", false)
+	var k := "%d|%d|%d|%d" % [st.floor_num, st.room_count, int(sz.x) * 10000 + int(sz.y), int(g)]
 	if k == key:
 		return
 	key = k
+	gate = g
 	focal = sz.x * 0.62
 	center = Vector2(sz.x / 2.0, sz.y * 0.40)
 	var rng := RandomNumberGenerator.new()
@@ -246,7 +249,7 @@ func _draw_3d(ci: CanvasItem, sz: Vector2) -> bool:
 	if _r3_key != key:
 		_r3_key = key
 		r3.fit(sz)
-		r3.rebuild.call_deferred(zone, _seed, {"light": light, "amb": amb, "kind": mood()["kind"], "dark": dark})
+		r3.rebuild.call_deferred(zone, _seed, {"light": light, "amb": amb, "kind": mood()["kind"], "dark": dark, "gate": gate})
 		return false
 	r3.fit(sz)
 	ci.draw_texture_rect(r3.texture(), Rect2(Vector2.ZERO, sz), false)
@@ -262,7 +265,9 @@ func draw_doors(ci: CanvasItem, st: GameState, hit: Dictionary, font: Font) -> v
 		var tl := proj(x - DOOR_W / 2.0, FLOOR_Y + DOOR_H, D)
 		var br := proj(x + DOOR_W / 2.0, FLOOR_Y, D)
 		var rect := Rect2(tl, br - tl)
-		if dt and not is_3d():
+		if gate and i == 1 and not is_3d():
+			ci.draw_texture_rect(tx("res://art/halls/portal.png"), rect, false)
+		elif dt and not is_3d():
 			ci.draw_texture_rect(dt, rect, false, lit(x, FLOOR_Y + 1.0, D - 0.3))
 		if not open:
 			continue
