@@ -46,6 +46,35 @@ Check `get_balance` before each batch; show a sample before any batch over ~30 g
   (an edit per frame per item: ~50 gens per item, too expensive); (c) PixelLab frames for the base body only
   and gear frozen on top (looks broken in the attack). Recommendation: (a).
 
+## Plan review (2026-10-24): go back to the old system's structure, with the new art
+Why the old LPC paper doll (lpc.gd, sprites.gd, character_creator.gd) was clean:
+- ONE shared frame set: every body, hair and gear part is drawn on the same frames (lpc.gd: combat_idle,
+  slash, thrust, spellcast, shoot, walk; 64 px core frame, bigger swing frames centred on it).
+- Every part is drawn PER FRAME, so stacking any parts in a fixed layer order animates cleanly.
+- Colours are recolour maps on each part (base ramp -> chosen ramp), so no baked copies.
+Where the new pipeline broke that:
+- Parts exist only on the rest pose; the motion was made by moving pieces in code (B) or by mixing in a few
+  PixelLab key poses (D). In-betweens are guesses: floating hands, a visible switch at key poses, legs that
+  belong to the chest's key pose.
+Simplest clean path (same structure as the old system):
+1. Fixed small frame set, battle view (north): idle 2, attack 4 (rest, raised, strike, follow-through),
+   hit 1. Portrait (south): idle 2. Town walk later, same rule. Other attack families (thrust, cast, shoot)
+   = 4 more frames each, added when weapons need them.
+2. Base body drawn by PixelLab on exactly those frames, wearing plain underclothes (from the approved
+   attack + idle: pick the frames, 1 edit each = ~9 gens per body).
+3. Every chest / legs / feet item drawn on EVERY frame: a PixelLab edit of that base frame that changes only
+   that slot ("change only the legs to plate greaves"), then cut out as the pixels that changed. Same pose,
+   so all items line up and stack in a fixed order, like LPC. ~9 gens per item per body.
+4. Head things ride on the head: hair (37 styles, done) and helmets are placed per frame by matching the head
+   (headswap.py already does this on attack frames). Weapons are placed per frame at the hand with a small
+   angle table per frame (like LPC weapon sheets, but one drawing per weapon). No extra generations.
+5. Plug the new parts into the existing creator: same part list / layer order / recolour idea as lpc.gd,
+   new art files. Character creation works like today.
+Cost: starter set = 2 bodies x (9 base + 12 items: leather/plate/robe/ranger chest, legs, feet) x 9
+   = ~230 gens; each later item ~18 (both bodies). Helmets, hair, weapons, colours: ~0.
+What Juzo would see first: one sample of the frame set - 2 bodies x 3 mixed kits, idle + attack + hit,
+   battle view and portrait, as a GIF (~40 gens to prove it before the batch).
+
 ## Style (Juzo, 2026-10-24): the hero is the reference, the style bible follows it
 - Keep the PixelLab hero as drawn: its near-black outline (#000000-#070207) and its richer shading
   (~12-14 shades in hair, ~18-20 across the browns) are the target look, not 3-5 shade ramps.
