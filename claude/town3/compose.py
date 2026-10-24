@@ -50,11 +50,11 @@ def ground_kind():
 
 
 TILE_OF = {"grass": "grass", "yard": "grass", "plateau": "flag", "grave": "grave", "road": "cobble",
-           "square": "flag", "water": "water", "bridge": "cobble", "path": "cobble", "dirt": "dirt", "garden": "grass", "field": "dirt", "pen": "grass"}
+           "square": "flag", "water": "water", "bridge": "cobble", "path": "cobble", "dirt": "dirt", "garden": "grass", "planks": "planks", "field": "dirt", "pen": "grass"}
 
 
 def load_tiles():
-    t = {}
+    t = {"planks": [load("tiles_extra_planks.png")]}
     for name in os.listdir(os.path.join(ROOT, "art", "tiles")):
         key = name.split("_")[0]
         t.setdefault(key, []).append(load("tiles/" + name))
@@ -329,7 +329,7 @@ def compose():
     cache = {}
     def sheet(name, n):
         if (name, n) not in cache:
-            im = load(f"folk/{n}.png" if name == "folk" else f"{name}/{'t' if name == 'trees' else 'p'}{n}.png")
+            im = load("reeds.png" if name == "reeds" else f"folk/{n}.png" if name == "folk" else f"{name}/{'t' if name == 'trees' else 'p'}{n}.png")
             if name == "props32" and n in SMALL:   # clutter at half size: a barrel is half a walker
                 im = im.resize((16, 16), Image.NEAREST)
             cache[(name, n)] = im
@@ -345,6 +345,12 @@ def compose():
     deco = [e for e in decor() if not any(inside(e, built_only[l]) for l in EMPTY)] + extra
     if NO_OVERLAYS:
         deco = [e for e in deco if e[0] not in ("folk", "props_up")]
+    bed = load("tiles_extra_flowerbed.png")
+    for e in [e for e in deco if e[0] == "bed"]:      # flowerbeds are ground: drawn before every sprite
+        x, y = at(e[2], e[3])
+        img.alpha_composite(bed, (int(x) - 16, int(y)))
+    GROUND_IMG[:] = [img.copy()] if GROUND_IMG else []
+    deco = [e for e in deco if e[0] != "bed"]
     for e in deco:
         if e[0] == "fence":
             _, kind, i, j, axis = e

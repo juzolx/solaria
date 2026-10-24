@@ -140,8 +140,7 @@ def decor():
                 if (i, j) != (6, 4):
                     d.append((P32, graves[rng.randrange(len(graves))], i, j))
     else:   # the Church's garden: flowerbeds either side of a gravel path, benches facing the angel, a shrine
-        for i, j in ((3, 2), (4, 2), (3, 3), (8, 2), (9, 2), (9, 3), (3, 5), (4, 6), (9, 5), (8, 6), (10, 4), (2, 4)):
-            d.append((P32, 14 if (i + j) % 2 else 15, i, j))
+        d += [("bed", 0, i, j) for i0, j0 in ((3, 2), (8, 2), (3, 5), (8, 5)) for i in (i0, i0 + 1) for j in (j0, j0 + 1)]
         d += [(P32, 3, 5, 4), (P32, 3, 7, 4), (P32, 3, 5, 6), (P32, 3, 7, 6), (TREE, 12, 2, 2), (TREE, 13, 11, 6),
               (TREE, 0, 10, 2), (P32, 11, 7, 2)]
     d += [(P48, 12, 6, 4)] + ([(P48, 13, 10, 3), (P32, 54, 11, 2)] if HARDCORE else [])
@@ -159,6 +158,9 @@ def decor():
             continue
         d.append((P32, 12, 1, j))
         LIGHTS.append((1.5, j + .5, 28, (255, 170, 90), 30))
+    d += [("fence", "wood", 7, 27, "j"), ("fence", "wood", 7, 28, "j"), ("fence", "wood", 9, 27, "j"), ("fence", "wood", 9, 28, "j")]
+    for i, j in ((3, 26), (5, 29), (11, 26), (13, 29), (25, 26), (27, 29), (31, 26), (33, 29), (36, 26)):
+        d.append(("reeds", 0, i, j))
     # river side: reeds-ish rocks, signpost at the bridge
     d += [(P32, 19, 23, 25), (P32, 24, 12, 29), (P32, 23, 30, 29), (P32, 25, 35, 29)]
     d += [(P48, 11, 26, 37), (P32, 12, 29, 37), (P32, 0, 27, 37), (P32, 19, 31, 37), (P32, 1, 12, 37)]
