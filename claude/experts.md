@@ -19,7 +19,7 @@ claude/stable-ids.md and its research document.
 
 | Expert | Owns | Must know |
 |---|---|---|
-| Art Director | heroes (2x), town, dungeon look, monsters, animation, effects | art_style.gd palette/outline/grid, tools/bake_art.gd, C:\ai ComfyUI (SDXL + pixel LoRA, ControlNet pose, IP-Adapter, rembg), Juzo's reference shots |
+| Art Director | heroes, town, dungeon look, monsters, animation, effects | claude/research/art-critique.md (Juzo's direction + decisions), sprite-design.md, art-pipeline.md, C:\ai ComfyUI, Juzo's refs (claude/art_refs, style only). Works one asset to excellence before the next; pixel-art fundamentals checklist (silhouette, clusters, no banding, hue-shifted ramps, selective outline/AA, top-left light, appeal); studies refs at pixel level first; several candidates, refine 2-3x side by side with refs; self-score 1-10 per sheet, keep working below 7; Fable art critique as final gate |
 | Systems Designer | classes, pets, buildings, Church, collections, portals, presets | owner's class rules (15/35/75, unique + God classes by secret deeds), pets from nests, cosmetics never power |
 | Balance & Economy | progression curve, gold/scrap/dust, drop rates, Wheel odds | tools/balance_sim.gd, claude/economy.md, target floor 100 in 4-6 h |
 | Save & Platform | saves, iOS lifecycle, performance, export, Codemagic/TestFlight | save_io.gd, export_presets.cfg, codemagic.yaml, Xcode 26 rule |
