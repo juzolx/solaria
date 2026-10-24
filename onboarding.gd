@@ -167,6 +167,7 @@ static func coach(m, text: String) -> PanelContainer:
 	var p := UI.panel(Color(0.05, 0.06, 0.11, 0.96), UI.GOLD, 10, 14, 2)
 	p.add_to_group("coach")
 	p.z_index = 90  # above popups like the hero maker
+	p.add_to_group("toast")  # a popup opened later clears it (Overlay.open clears toasts)
 	var v := UI.vbox(10)
 	p.add_child(v)
 	var r := UI.rich(17)
