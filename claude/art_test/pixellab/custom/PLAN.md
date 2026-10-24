@@ -62,6 +62,17 @@ Check `get_balance` before each batch; show a sample before any batch over ~30 g
   right hand"), its layer = the pixels that changed. ~9 gens per outfit per body, ~7 per weapon per body.
 - Sample first: Warrior (plate, sword) + Cleric (robe, mace) on both bodies, then batch after Juzo rates.
 
+## Class tiers (Juzo, 2026-10-24)
+- One outfit per base class (13). Small add-ons at level 15 and 35 (trim, shoulder piece, cape ...), a BIG
+  upgrade at the final tier (level 75; Juzo said "60", the final upgrade is at 75 - confirm): new silhouette
+  elements (armour plates, robe overlay, hood/crown, glowing accents). One version per base class per tier,
+  shared by all branches of that line; hidden + God classes get specials later.
+- Made as chained PixelLab edits of the same 9 frames: tier 15 = edit of the base frames ("add only ..."),
+  tier 35 = edit of the tier-15 frames, tier 75 = bigger edit of the tier-35 frames. 9 gens per tier per body.
+- Cost: base outfits left 11 x 18 = ~198; tiers 13 x 3 x 18 = ~702; total ~900 (shared account had 1,196 on
+  Oct 24). Proposal: this month the base outfits + the tier 75 versions (~430), tiers 15/35 after the
+  Nov 24 refill.
+
 ## Plan review (2026-10-24): go back to the old system's structure, with the new art
 Why the old LPC paper doll (lpc.gd, sprites.gd, character_creator.gd) was clean:
 - ONE shared frame set: every body, hair and gear part is drawn on the same frames (lpc.gd: combat_idle,
