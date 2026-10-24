@@ -52,7 +52,9 @@ func _header() -> void:
 	var cur := ClassTree.current(state)
 	var r := ClassTree.rank_of(cur) if not cur.is_empty() else ""
 	var border: Color = Color(ClassTree.RANK_COLORS[r]) if r != "" else color
-	var card := UI.panel(UI.INSET, border, 10, 12, 2)
+	# interface pass: the panel frame; a rank colour (identity, like rarity) may tint its line, the class colour stays in the name
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", UiSkin.frame(UI.INSET, border if r != "" else UiSkin.IRON, 12))
 	box.add_child(card)
 	var h := UI.hbox(12)
 	card.add_child(h)
@@ -136,12 +138,13 @@ static func class_card(m, n: Dictionary, with_button: bool, on_pick: Callable) -
 	# A God class that answered is a swap, not a tree pick: faith and side never lock it
 	var is_god := bool(n.get("god", false)) or r == "God"
 	var why := "" if is_god else ClassTree.lock_reason(g, n, not with_button)
-	var p := UI.panel(UI.INSET, border if why == "" else UI.BORDER, 8, 10, 2 if why == "" else 1)
+	var p := PanelContainer.new()   # interface pass: the panel frame; only a rank colour tints its line
+	p.add_theme_stylebox_override("panel", UiSkin.frame(UI.INSET, Color(ClassTree.RANK_COLORS[r]) if r != "" and why == "" else UiSkin.IRON, 10))
 	var v := UI.vbox(4)
 	p.add_child(v)
 	var head := UI.hbox(6)
 	v.add_child(head)
-	var nl := UI.label(String(n["name"]), 16, border.lightened(0.2) if why == "" else UI.DIM)
+	var nl := UI.label(String(n["name"]), 16, UI.GOLD if why == "" else UI.DIM)
 	nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(nl)
 	var tags := UI.rich(UI.FONT_CAPTION)
@@ -158,7 +161,7 @@ static func class_card(m, n: Dictionary, with_button: bool, on_pick: Callable) -
 		wl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(wl)
 	if with_button and why == "":
-		var b := UI.primary("Swap" if is_god else "Choose", on_pick, border)
+		var b := UI.primary("Swap" if is_god else "Choose", on_pick)   # the gold main action
 		v.add_child(b)
 	return p
 
@@ -189,7 +192,8 @@ func _tree() -> void:
 		var reached := not n.is_empty()
 		var ready: bool = not reached and ClassTree.pick_tier(state) == i - 1 and state.level >= int(st["level"])
 		var col := UI.GOLD if reached else (UI.GREEN if ready else UI.BORDER)
-		var p := UI.panel(Color("#1d1708") if reached else UI.INSET, col, 8, 6, 2 if reached or ready else 1)
+		var p := PanelContainer.new()   # interface pass: slate steps; gold = reached, green = choose now
+		p.add_theme_stylebox_override("panel", UiSkin.bevel(UiSkin.SLATE if reached or ready else UI.PANEL, UI.GOLD_DULL if reached else (UI.GREEN if ready else UI.EMPTY), 6))
 		p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(p)
 		var v := UI.vbox(1)
