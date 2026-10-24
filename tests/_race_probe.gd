@@ -1,7 +1,7 @@
 extends SceneTree
 ## Every standard-body race on both bodies (battle idle, attack, hit, portrait) into shots/race_probe.png.
-const RACES := ["Human", "Elf", "Angel", "Demon", "Beastkin", "Dragonkin", "Undead", "Vampire", "Lich"]
-const CLASSES := ["Warrior", "Mage", "Ranger", "Knight", "Cleric", "Nightstalker", "Conjurer", "Bard", "Acolyte"]
+const RACES := ["Human", "Elf", "Angel", "Demon", "Beastkin", "Dragonkin", "Undead", "Vampire", "Lich", "Goblin", "Goblin", "Dwarf", "Dwarf"]
+const CLASSES := ["Warrior", "Mage", "Ranger", "Knight", "Cleric", "Nightstalker", "Conjurer", "Bard", "Acolyte", "Ranger", "Wanderer", "Knight", "Cleric"]
 func _initialize() -> void:
 	var cols := [0, 3, 6]  # battle idle, attack (raised), hit
 	var sheet := Image.create(96 * 8, 96 * RACES.size(), false, Image.FORMAT_RGBA8)
