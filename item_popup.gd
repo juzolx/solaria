@@ -29,7 +29,7 @@ func _build(m, item: Dictionary, actions: Array) -> void:
 			row.add_child(empty)
 		else:
 			row.add_child(_card(state, worn, "WEARING NOW"))
-	var cmp := UI.rich(14)
+	var cmp := UI.rich(UI.FONT_CAPTION)
 	cmp.text = "[color=%s]You're wearing this.[/color]" % UI.hex(UI.DIM) if is_worn else ItemText.compare(state, item)
 	content.add_child(cmp)
 	if not actions.is_empty():
@@ -62,7 +62,7 @@ func _card(state: GameState, item: Dictionary, label: String) -> PanelContainer:
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	head.add_child(pic)
 	head.add_child(UI.label(label, UI.FONT_CAPTION, UI.DIM))
-	var t := UI.rich(13)
+	var t := UI.rich(UI.FONT_CAPTION)
 	if narrow:
 		t.add_theme_font_size_override("normal_font_size", UI.FONT_CAPTION)
 		t.add_theme_font_size_override("bold_font_size", UI.FONT_CAPTION)

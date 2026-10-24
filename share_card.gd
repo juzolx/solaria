@@ -318,12 +318,12 @@ static func _preview(main, img: Image, path: String) -> void:
 	o.content.add_child(pic)
 	var full := ProjectSettings.globalize_path(path)
 	if OS.has_feature("pc"):
-		o.content.add_child(UI.wrap("Saved as a picture (1080 x 1350): %s" % full, 11, UI.DIM))
+		o.content.add_child(UI.wrap("Saved as a picture (1080 x 1350): %s" % full, UI.FONT_CAPTION, UI.DIM))
 		var b := UI.primary("Open folder", func(): OS.shell_show_in_file_manager(full), UI.TEAL)
 		b.custom_minimum_size = Vector2(0, UI.TAP)
 		o.content.add_child(b)
 	else:
-		o.content.add_child(UI.wrap("Saved in the game's files. To share it, take a screenshot of this card.", 12, UI.DIM))
+		o.content.add_child(UI.wrap("Saved in the game's files. To share it, take a screenshot of this card.", UI.FONT_CAPTION, UI.DIM))
 	var ok := UI.button("Close", o.close)
 	ok.custom_minimum_size = Vector2(0, UI.TAP)
 	o.content.add_child(ok)

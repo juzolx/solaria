@@ -30,9 +30,9 @@ func refresh() -> void:
 	OnlineUI.clear(box)
 	box.add_child(UI.heading("Church"))
 	if not Buildings.built("church"):
-		box.add_child(UI.wrap("An empty lot by the graveyard. Build the Church (above) and its priest will lift curses from your gear and bless it.", 13, UI.DIM))
+		box.add_child(UI.wrap("An empty lot by the graveyard. Build the Church (above) and its priest will lift curses from your gear and bless it.", UI.FONT_CAPTION, UI.DIM))
 		return
-	box.add_child(UI.wrap("Some gear comes up from the deep Cursed: stronger than it should be, with a downside and a hidden power. The priest can lift the curse (the power stays) or bless a clean piece.", 12, UI.DIM))
+	box.add_child(UI.wrap("Some gear comes up from the deep Cursed: stronger than it should be, with a downside and a hidden power. The priest can lift the curse (the power stays) or bless a clean piece.", UI.FONT_CAPTION, UI.DIM))
 	var cursed: Array = []
 	var clean: Array = []
 	for it in Church.items_here(g):
@@ -40,14 +40,14 @@ func refresh() -> void:
 			cursed.append(it)
 		elif Church.can_bless(it):
 			clean.append(it)
-	box.add_child(UI.label("CURSED GEAR", 11, Color(Church.COLOR)))
+	box.add_child(UI.label("CURSED GEAR", UI.FONT_CAPTION, Color(Church.COLOR)))
 	if cursed.is_empty():
-		box.add_child(UI.wrap("Nothing you wear or carry is cursed.", 12, UI.DIM))
+		box.add_child(UI.wrap("Nothing you wear or carry is cursed.", UI.FONT_CAPTION, UI.DIM))
 	for it in cursed:
 		_row(g, it, true)
-	box.add_child(UI.label("BLESS YOUR GEAR  (once per item)", 11, UI.GOLD))
+	box.add_child(UI.label("BLESS YOUR GEAR  (once per item)", UI.FONT_CAPTION, UI.GOLD))
 	if clean.is_empty():
-		box.add_child(UI.wrap("Nothing here to bless.", 12, UI.DIM))
+		box.add_child(UI.wrap("Nothing here to bless.", UI.FONT_CAPTION, UI.DIM))
 	var n := 0
 	for it in clean:
 		_row(g, it, false)
@@ -64,9 +64,9 @@ func _row(g: GameState, it: Dictionary, curse: bool) -> void:
 	var v := UI.vbox(2)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
-	var r := UI.rich(12)
+	var r := UI.rich(UI.FONT_CAPTION)
 	v.add_child(r)
-	var cost := UI.label("", 11, UI.DIM)
+	var cost := UI.label("", UI.FONT_CAPTION, UI.DIM)
 	v.add_child(cost)
 	var id := int(it["id"])
 	var b: Button

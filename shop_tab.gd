@@ -49,7 +49,7 @@ func setup(m) -> void:
 	mcol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mrow.add_child(mcol)
 	mcol.add_child(UI.label(GameData.MERCHANT_NAME.to_upper(), 20, UI.GOLD))
-	greeting = UI.rich(12)
+	greeting = UI.rich(UI.FONT_CAPTION)
 	mcol.add_child(greeting)
 	gold_label = UI.rich(16)
 	gold_label.custom_minimum_size = Vector2(120, 0)
@@ -71,7 +71,7 @@ func setup(m) -> void:
 	featured_pic = ItemGrid.picture(64)
 	featured_pic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	frow.add_child(featured_pic)
-	featured_text = UI.rich(13)
+	featured_text = UI.rich(UI.FONT_CAPTION)
 	featured_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	frow.add_child(featured_text)
 	featured_buy = UI.primary("", func():
@@ -124,7 +124,7 @@ func setup(m) -> void:
 	v.add_child(bag_card)
 	var brow := UI.hbox(10)
 	bag_card.add_child(brow)
-	bag_text = UI.rich(13)
+	bag_text = UI.rich(UI.FONT_CAPTION)
 	bag_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	brow.add_child(bag_text)
 	bag_button = UI.primary("", func(): state.buy_bag_upgrade(); main.sfx.play("buy"); main.refresh(), UI.BLUE)
@@ -159,10 +159,10 @@ func _supply_card(parent: Control, id: String, title: String, text: String, colo
 		var pic := ItemGrid.picture(28)
 		pic.texture = ic
 		top.add_child(pic)
-	var tl := UI.label(title, 14, color)
+	var tl := UI.label(title, UI.FONT_CAPTION, color)
 	tl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(tl)
-	var lbl := UI.rich(12)
+	var lbl := UI.rich(UI.FONT_CAPTION)
 	lbl.custom_minimum_size = Vector2(0, 32)
 	lbl.text = "[color=%s]%s[/color]" % [UI.hex(UI.DIM), text]
 	cv.add_child(lbl)
@@ -194,11 +194,11 @@ func _gear_card(item: Dictionary, index: int) -> void:
 		l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		l.clip_text = true
 		tv.add_child(l)
-	var nm := UI.label(GameData.display_name(item), 14, color.lightened(0.15))
+	var nm := UI.label(GameData.display_name(item), UI.FONT_CAPTION, color.lightened(0.15))
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	nm.custom_minimum_size = Vector2(0, 38)
 	cv.add_child(nm)
-	var stat := UI.rich(13)
+	var stat := UI.rich(UI.FONT_CAPTION)
 	var d := ItemText.delta(state, item)
 	var dcol := UI.GREEN if d.begins_with("(+") else (UI.RED if d.begins_with("(-") else UI.DIM)
 	stat.text = "+%d %s  [color=%s]%s[/color]" % [GameData.item_power(item), item["stat"], UI.hex(dcol), d]
@@ -221,7 +221,7 @@ func _rebuild_shelf() -> void:
 	for i in state.shop.size():
 		_gear_card(state.shop[i], i)
 	if state.shop.is_empty():
-		var empty := UI.label("The shelves are empty. New stock after the next boss.", 13, UI.DIM)
+		var empty := UI.label("The shelves are empty. New stock after the next boss.", UI.FONT_CAPTION, UI.DIM)
 		gear_grid.add_child(empty)
 
 func _refresh_wanderer() -> void:

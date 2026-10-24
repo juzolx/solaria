@@ -37,7 +37,7 @@ func _fill() -> void:
 		_fill(), UI.TEAL if bool(lf["on"]) else UI.RED)
 	master.custom_minimum_size = Vector2(0, UI.TAP + 8)
 	body.add_child(master)
-	body.add_child(UI.wrap("New drops that match a rule below are dealt with the moment they drop. Right now it %s." % LootRules.summary(state), 13, UI.DIM))
+	body.add_child(UI.wrap("New drops that match a rule below are dealt with the moment they drop. Right now it %s." % LootRules.summary(state), UI.FONT_CAPTION, UI.DIM))
 
 	UI.section(body, "What happens to them")
 	var sell := String(lf["action"]) == "sell"
@@ -47,7 +47,7 @@ func _fill() -> void:
 	act.custom_minimum_size = Vector2(0, UI.TAP)
 	act.tooltip_text = "Tap to switch between selling (gold) and salvaging (scrap)"
 	body.add_child(act)
-	body.add_child(UI.wrap("Gold from sold drops is carried: you lose it if you fall. Scrap is safe.", 13, UI.GOLD if sell else UI.DIM))
+	body.add_child(UI.wrap("Gold from sold drops is carried: you lose it if you fall. Scrap is safe.", UI.FONT_CAPTION, UI.GOLD if sell else UI.DIM))
 
 	UI.section(body, "By rarity", "Drops of this rarity and below.")
 	_row_button("Rarity: %s" % LootRules.RARITY_NAMES[state.auto_salvage + 1], state.auto_salvage >= 0,
@@ -80,7 +80,7 @@ func _fill() -> void:
 	UI.section(body, "Always keep", "These win over every rule above.")
 	_row_button("Set pieces: %s" % ("ON" if bool(lf["keep_sets"]) else "OFF"), bool(lf["keep_sets"]),
 		func(): LootRules.toggle(state, "keep_sets"), "Pieces of a gear set are kept, whatever their rarity")
-	body.add_child(UI.wrap("Upgrades for what you wear, locked items and Legendary or better are never touched.", 13, UI.DIM))
+	body.add_child(UI.wrap("Upgrades for what you wear, locked items and Legendary or better are never touched.", UI.FONT_CAPTION, UI.DIM))
 
 	UI.section(body, "While Auto plays")
 	_row_button("Use the loot filter during Auto: %s" % ("ON" if AutoDive.filter_in_auto(state) else "OFF"), AutoDive.filter_in_auto(state),

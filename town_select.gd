@@ -11,7 +11,7 @@ func show_for(main_node, from_title = null) -> void:
 	m = main_node
 	title_screen = from_title
 	open(m, "Your towns", 720.0)
-	var note := UI.wrap("Each town has its own heroes, stash and skill book. Build a team in one, or start fresh in another. Settings and the Codex are shared.", 13, UI.DIM)
+	var note := UI.wrap("Each town has its own heroes, stash and skill book. Build a team in one, or start fresh in another. Settings and the Codex are shared.", UI.FONT_CAPTION, UI.DIM)
 	content.add_child(note)
 	for t in range(1, GameData.MAX_TOWNS + 1):
 		content.add_child(_card(t))
@@ -33,10 +33,10 @@ func _card(t: int) -> PanelContainer:
 	top.add_child(UI.label(p.town_name(t).to_upper() if founded else "TOWN %d" % t, 15, UI.GOLD if founded else UI.DIM))
 	if founded:
 		var hc := p.town_hardcore(t)
-		top.add_child(UI.chip("HARDCORE" if hc else "REGULAR", UI.RED if hc else UI.GREEN, 10))
+		top.add_child(UI.chip("HARDCORE" if hc else "REGULAR", UI.RED if hc else UI.GREEN, UI.FONT_CAPTION))
 	if here and founded:
-		top.add_child(UI.chip("YOU'RE HERE", UI.GOLD, 10))
-	var info := UI.wrap("", 12, UI.DIM)
+		top.add_child(UI.chip("YOU'RE HERE", UI.GOLD, UI.FONT_CAPTION))
+	var info := UI.wrap("", UI.FONT_CAPTION, UI.DIM)
 	if founded:
 		var heroes := GameState.town_heroes(t)
 		var best := p.max_floor if here else int(p.towns.get(str(t), {}).get("max_floor", 0))
@@ -44,7 +44,7 @@ func _card(t: int) -> PanelContainer:
 	else:
 		info.text = "Empty land. Found a town here: name it, choose Regular or Hardcore, and make its first hero."
 	v.add_child(info)
-	var b := UI.primary("Here" if here and founded else ("Enter" if founded else "Found town"), func(): _go(t), UI.GOLD if founded else UI.GREEN)
+	var b := UI.primary("Here" if here and founded else ("Enter" if founded else "Found town"), func(): _go(t))   # one gold main action; the words say whether it founds or enters
 	b.disabled = here and founded
 	b.custom_minimum_size = Vector2(120, UI.TAP)
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER

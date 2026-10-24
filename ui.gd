@@ -81,14 +81,14 @@ static func style(bg: Color, border: Color, radius := 8, margin := 8, width := 2
 	sb.set_content_margin_all(margin)
 	return sb
 
-static func label(text: String, font_size := 14, color := TEXT) -> Label:
+static func label(text: String, font_size := FONT_CAPTION, color := TEXT) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.add_theme_font_size_override("font_size", maxi(MIN_FONT, font_size))
 	l.add_theme_color_override("font_color", DIM_CONTRAST if high_contrast and color == DIM else color)
 	return l
 
-static func rich(font_size := 13, fit := true) -> RichTextLabel:
+static func rich(font_size := FONT_CAPTION, fit := true) -> RichTextLabel:
 	var r := RichTextLabel.new()
 	r.bbcode_enabled = true
 	r.scroll_active = false
@@ -155,6 +155,8 @@ static func danger(text: String, on_press: Callable) -> Button:
 ## Design system: a main-action colour folds into its role. Green, teal, blue,
 ## pink and purple buttons all become the one gold accent; red stays red
 ## (danger); other colours (a building's own, a dim BORDER) are kept.
+## Note: GOOD is GREEN, so a "good" main button turns gold too. Meaning that a
+## colour used to carry must live in the button's words ("Found town", "Collect").
 static func role_color(c: Color) -> Color:
 	for legacy in [GREEN, TEAL, BLUE, PINK, PURPLE]:
 		if c.is_equal_approx(legacy):
@@ -186,7 +188,7 @@ static func have_need(have: int, need: int) -> String:
 	return "[color=%s]%d[/color][color=%s] / %d[/color]" % [hex(c), have, hex(DIM), need]
 
 ## A label that wraps onto more lines instead of stretching the screen.
-static func wrap(text: String, font_size := 13, color := TEXT) -> Label:
+static func wrap(text: String, font_size := FONT_CAPTION, color := TEXT) -> Label:
 	var l := label(text, font_size, color)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -222,7 +224,7 @@ static func section(parent: Control, title: String, note := "") -> void:
 		parent.add_child(UI.wrap(note, FONT_CAPTION, DIM))
 
 ## A small rounded tag ("SUGGESTED", "WEAK: Fire").
-static func chip(text: String, color: Color, font_size := 11) -> PanelContainer:
+static func chip(text: String, color: Color, font_size := FONT_CAPTION) -> PanelContainer:
 	var p := panel(Color(color, 0.14), Color(color, 0.6), 9, 0, 1)
 	var sb: StyleBoxFlat = p.get_theme_stylebox("panel")
 	sb.content_margin_left = 7
@@ -356,6 +358,11 @@ static func make_theme() -> Theme:
 	t.set_stylebox("tab_unselected", "SubTabs", style(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 6, 0))
 	t.set_stylebox("tab_hovered", "SubTabs", style(Color(0, 0, 0, 0), Color("#8a6d3b"), 0, 6, 0))
 	t.set_font_size("font_size", "SubTabs", FONT_CAPTION)
+	for st_name in ["tab_selected", "tab_unselected", "tab_hovered"]:   # UX pass: sub-tabs are a full 44 px tap target
+		var sb := t.get_stylebox(st_name, "SubTabs").duplicate() as StyleBox
+		sb.content_margin_top = 13
+		sb.content_margin_bottom = 13
+		t.set_stylebox(st_name, "SubTabs", sb)
 	t.set_color("font_selected_color", "SubTabs", TEXT)
 
 	t.set_stylebox("normal", "OptionButton", UiSkin.bevel(Color("#211f36"), EDGE, 6))

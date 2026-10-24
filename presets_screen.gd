@@ -16,8 +16,8 @@ func show_for(main_node, changed := Callable()) -> void:
 	on_change = changed
 	Presets.migrate(state)
 	open(m, "Presets", 560.0)
-	content.add_child(UI.wrap("Save what you're running now (stats, skills, gear, team and rows, supplies) and switch back in one tap. Anything you no longer have is skipped.", 13, UI.DIM))
-	note = UI.wrap("", 13, UI.GOLD)
+	content.add_child(UI.wrap("Save what you're running now (stats, skills, gear, team and rows, supplies) and switch back in one tap. Anything you no longer have is skipped.", UI.FONT_CAPTION, UI.DIM))
+	note = UI.wrap("", UI.FONT_CAPTION, UI.GOLD)
 	note.visible = false
 	content.add_child(note)
 	body = UI.vbox(10)
@@ -33,7 +33,7 @@ func _fill() -> void:
 		body.add_child(c[0])
 		var inner: VBoxContainer = c[1]
 		inner.add_child(UI.label(Presets.name_of(state, i) if saved else "Empty slot %d" % (i + 1), 17, UI.TEXT if saved else UI.DIM))
-		inner.add_child(UI.wrap(Presets.summary(state, i), 13, UI.DIM))
+		inner.add_child(UI.wrap(Presets.summary(state, i), UI.FONT_CAPTION, UI.DIM))
 		var row := UI.hbox(8)
 		inner.add_child(row)
 		var idx := i
@@ -69,7 +69,7 @@ func _fill_teams() -> void:
 		var use := UI.primary("Use", func(): _use_team(idx), UI.GOLD)
 		use.disabled = not saved or Presets.team_leader_gone(m.profile, i)
 		if Presets.team_leader_gone(m.profile, i):
-			inner.add_child(UI.wrap("Its leader is gone: save a new team here.", 13, UI.DIM))
+			inner.add_child(UI.wrap("Its leader is gone: save a new team here.", UI.FONT_CAPTION, UI.DIM))
 		var save := UI.button("Save team here", func(): _save_team(idx))
 		var clr := UI.button("Clear", func():
 			Presets.clear_team(m.profile, idx)

@@ -58,7 +58,7 @@ func _power_card() -> void:
 	if state.form != "":
 		title += "  -  " + state.form
 	hv.add_child(UI.label(title.to_upper(), 20, c.lightened(0.3)))
-	var t := UI.rich(12)
+	var t := UI.rich(UI.FONT_CAPTION)
 	t.text = "[color=%s]%s.[/color] %s" % [UI.hex(UI.DIM), r, info["text"]]
 	hv.add_child(t)
 	# The meter
@@ -66,7 +66,7 @@ func _power_card() -> void:
 	var nr := Lineage.next_rank(state)
 	var row := UI.hbox(8)
 	v.add_child(row)
-	var pl := UI.label("%s  %.1f" % [p["name"], pw], 14, c)
+	var pl := UI.label("%s  %.1f" % [p["name"], pw], UI.FONT_CAPTION, c)
 	pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(pl)
 	for n in [1, 5]:
@@ -78,13 +78,13 @@ func _power_card() -> void:
 	bar.max_value = float(nr["power"]) if not nr.is_empty() else maxf(1.0, pw)
 	bar.value = minf(pw, bar.max_value)
 	v.add_child(bar)
-	var fl := UI.rich(11)
+	var fl := UI.rich(UI.FONT_CAPTION)
 	var side := "Good" if state.faith >= 0.0 else "Evil"
 	fl.text = "[color=%s]Faith: [/color][color=%s]%s %d[/color][color=%s]  (Holy skills, bosses and good deeds raise it; Shadow and Blood skills and dark bargains lower it. It opens and locks realms%s.)[/color]" % [
 		UI.hex(UI.DIM), "#fde68a" if side == "Good" else "#8b5cf6", side, int(absf(state.faith)), UI.hex(UI.DIM),
 		", and an Angel who falls too far never rises again" if r == "Angel" else ""]
 	v.add_child(fl)
-	var how := UI.rich(11)
+	var how := UI.rich(UI.FONT_CAPTION)
 	how.text = "[color=%s]%s Every 10 points: %s[/color]" % [UI.hex(UI.DIM), p["how"], Classes.bonus_text(Races.power_bonus(r, 10.0))]
 	v.add_child(how)
 
@@ -104,7 +104,7 @@ func _awakening() -> void:
 		var v := UI.vbox(3)
 		p.add_child(v)
 		var known := done or next or state.is_discovered(rank["name"])
-		v.add_child(UI.label(("%d. %s" % [i + 1, rank["name"] if known else "???"]) + ("  (you)" if done and i == state.awaken - 1 else ""), 14, UI.GOLD if done else UI.TEXT))
+		v.add_child(UI.label(("%d. %s" % [i + 1, rank["name"] if known else "???"]) + ("  (you)" if done and i == state.awaken - 1 else ""), UI.FONT_CAPTION, UI.GOLD if done else UI.TEXT))
 		var lines: Array = []
 		lines.append(_need("Level %d" % int(rank["level"]), state.level >= int(rank["level"]) or done))
 		lines.append(_need("%d %s" % [int(rank["power"]), Races.power_info(r)["name"]], Lineage.power(state) >= float(rank["power"]) or done))
@@ -113,7 +113,7 @@ func _awakening() -> void:
 			lines.append(_need(Races.key_text(key), done or String(key["item"]) in state.race_keys))
 		elif key.has("trial"):
 			lines.append(_need(Races.key_text(key), done))
-		var t := UI.rich(11)
+		var t := UI.rich(UI.FONT_CAPTION)
 		t.text = "  ".join(lines) + ("\n" + String(rank["text"]) if known else "")
 		v.add_child(t)
 		if next:
@@ -130,7 +130,7 @@ func _awakening() -> void:
 				tb.disabled = state.enemy_is_boss or Portals.inside(state)  # in town: tapping says why (Portals.open_block)
 				v.add_child(tb)
 	if not state.race_keys.is_empty():
-		var kt := UI.rich(12)
+		var kt := UI.rich(UI.FONT_CAPTION)
 		kt.text = "[color=%s]Carrying:[/color] %s" % [UI.hex(UI.DIM), ", ".join(state.race_keys)]
 		box.add_child(kt)
 
@@ -147,7 +147,7 @@ func _form() -> void:
 	box.add_child(UI.heading("Transformation"))
 	if state.form != "":
 		var f: Dictionary = Races.FORMS[state.form]
-		var t := UI.rich(12)
+		var t := UI.rich(UI.FONT_CAPTION)
 		t.text = "[color=%s][b]%s.[/b][/color] %s\n[color=%s]%s[/color]" % [f["color"], state.form, f["text"], UI.hex(UI.DIM),
 			"There's a cure, if you want one." if f["curable"] else "This is forever. Only starting the hero over can undo it."]
 		box.add_child(t)
@@ -156,7 +156,7 @@ func _form() -> void:
 			if not state.cure_active:
 				box.add_child(UI.button("Search for a cure", func(): Lineage.start_cure(state); main.refresh()))
 			else:
-				var ct := UI.rich(12)
+				var ct := UI.rich(UI.FONT_CAPTION)
 				ct.text = String(c["text"]) % int(c["kills"]) + "\n[color=%s]Progress: %s[/color]" % [UI.hex(UI.DIM), Lineage.cure_block(state) if Lineage.cure_block(state) != "" else "ready"]
 				box.add_child(ct)
 				var fb := UI.primary("Finish the cure", func(): Lineage.finish_cure(state); main.refresh(), UI.GREEN)
@@ -165,7 +165,7 @@ func _form() -> void:
 		return
 	# The Lich ritual
 	var why := Lineage.lich_block(state)
-	var lt := UI.rich(12)
+	var lt := UI.rich(UI.FONT_CAPTION)
 	lt.text = "[color=%s][b]The Lich ritual.[/b][/color] %s\n[color=%s]%s[/color]" % [lich["color"], lich["text"], UI.hex(UI.DIM),
 		"You can't go back from this." if why == "" else why]
 	box.add_child(lt)
@@ -179,7 +179,7 @@ func _form() -> void:
 
 func _reputation() -> void:
 	box.add_child(UI.heading("How the races see you"))
-	var t := UI.label("Sparing their people and helping them raises it; killing them lowers it. Helping one race annoys its rivals.", 11, UI.DIM)
+	var t := UI.label("Sparing their people and helping them raises it; killing them lowers it. Helping one race annoys its rivals.", UI.FONT_CAPTION, UI.DIM)
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(t)
 	var grid := GridContainer.new()
@@ -190,7 +190,7 @@ func _reputation() -> void:
 	for r in Races.ORDER:
 		var val := Lineage.rep(state, r)
 		var lv := Races.rep_level(val)
-		var nl := UI.label(r, 12, UI.TEXT)
+		var nl := UI.label(r, UI.FONT_CAPTION, UI.TEXT)
 		nl.custom_minimum_size = Vector2(80, 0)
 		grid.add_child(nl)
 		var bar := UI.bar(Color(lv[1]), 8)
@@ -201,7 +201,7 @@ func _reputation() -> void:
 		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		bar.tooltip_text = "%d / 100" % int(val)
 		grid.add_child(bar)
-		var ll := UI.label(lv[0], 12, Color(lv[1]))
+		var ll := UI.label(lv[0], UI.FONT_CAPTION, Color(lv[1]))
 		ll.custom_minimum_size = Vector2(70, 0)
 		grid.add_child(ll)
 
@@ -214,7 +214,7 @@ func _realms() -> void:
 	var week := Realms.realm_of_week()
 	for i in Realms.IDS.size():
 		var id: String = state.realm_order[i] if i < state.realm_order.size() else ""
-		var t := UI.rich(12)
+		var t := UI.rich(UI.FONT_CAPTION)
 		if id == "":
 			var opts: Array = []
 			for o in Realms.IDS:
@@ -231,6 +231,6 @@ func _realms() -> void:
 				UI.hex(UI.DIM), inf["mechanic"]["name"], inf["mechanic"]["text"]]
 		box.add_child(t)
 	if not state.quest.is_empty():
-		var q := UI.rich(12)
+		var q := UI.rich(UI.FONT_CAPTION)
 		q.text = "[color=#e8b14a]Quest:[/color] %s (%d / %d)" % [state.quest["text"], int(state.quest["have"]), int(state.quest["need"])]
 		box.add_child(q)

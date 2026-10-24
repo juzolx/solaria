@@ -207,7 +207,7 @@ func _has_current_heroes() -> bool:
 func _show_fresh_start() -> void:
 	fresh_start_notice = false
 	var o := Overlay.new().open(self, "A fresh start", 440.0, UI.GOLD)
-	o.content.add_child(UI.wrap("Solaria %s brings new class rules, towns that grow and much more. Every town and hero has been reset so everyone starts fresh. Your settings are kept." % PatchNotes.VERSION, 14, UI.TEXT))
+	o.content.add_child(UI.wrap("Solaria %s brings new class rules, towns that grow and much more. Every town and hero has been reset so everyone starts fresh. Your settings are kept." % PatchNotes.VERSION, UI.FONT_CAPTION, UI.TEXT))
 	var b := UI.primary("Begin", o.close, UI.GOLD)
 	b.custom_minimum_size = Vector2(0, 44)
 	o.content.add_child(b)
@@ -329,7 +329,7 @@ func _show_save_notices() -> void:
 	var text := "\n\n".join(SaveIO.notices)
 	SaveIO.notices.clear()
 	var o := Overlay.new().open(self, "Save restored", 440.0, UI.GOLD)
-	o.content.add_child(UI.wrap(text, 14, UI.TEXT))
+	o.content.add_child(UI.wrap(text, UI.FONT_CAPTION, UI.TEXT))
 	var b := UI.primary("OK", o.close, UI.GOLD)
 	b.custom_minimum_size = Vector2(0, 44)
 	o.content.add_child(b)
@@ -434,15 +434,15 @@ func _daily_login() -> void:
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var v := UI.vbox(2)
 		c.add_child(v)
-		v.add_child(UI.label("Day %d" % (i + 1), 11, UI.GOLD if today else UI.DIM))
-		var l := UI.label(str(Codex.LOGIN_REWARDS[i]["text"]), 11, UI.TEXT if (today or done) else UI.DIM)
+		v.add_child(UI.label("Day %d" % (i + 1), UI.FONT_CAPTION, UI.GOLD if today else UI.DIM))
+		var l := UI.label(str(Codex.LOGIN_REWARDS[i]["text"]), UI.FONT_CAPTION, UI.TEXT if (today or done) else UI.DIM)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
 		row.add_child(c)
-	var got_label := UI.rich(14)
+	var got_label := UI.rich(UI.FONT_CAPTION)
 	got_label.text = "Today: " + got
 	o.content.add_child(got_label)
-	o.content.add_child(UI.label("Come back tomorrow to keep the streak going.", 12, UI.DIM))
+	o.content.add_child(UI.label("Come back tomorrow to keep the streak going.", UI.FONT_CAPTION, UI.DIM))
 	sfx.play("buy")
 	refresh()
 
@@ -519,10 +519,10 @@ func _show_path_choice() -> void:
 		bv.offset_top = 6
 		bv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(bv)
-		var n := UI.label(info["name"], 14, c)
+		var n := UI.label(info["name"], UI.FONT_CAPTION, c)
 		n.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		bv.add_child(n)
-		var d := UI.label(info["text"], 11, UI.TEXT)
+		var d := UI.label(info["text"], UI.FONT_CAPTION, UI.TEXT)
 		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		d.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		bv.add_child(d)
@@ -531,7 +531,7 @@ func _show_path_choice() -> void:
 	var crow := UI.hbox(8)
 	crow.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(crow)
-	path_count_label = UI.label("", 12, UI.DIM)
+	path_count_label = UI.label("", UI.FONT_CAPTION, UI.DIM)
 	path_count_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	crow.add_child(path_count_label)
 	var hold := UI.button("Wait for me", func():
@@ -576,7 +576,7 @@ func _show_recap() -> void:
 	close.custom_minimum_size = Vector2(56, UI.TAP)
 	head.add_child(close)
 	if r.has("woke"):
-		var lost_l := UI.rich(13)
+		var lost_l := UI.rich(UI.FONT_CAPTION)
 		lost_l.text = "[color=#f87171]Lost: %s.[/color] [color=%s]You woke at the checkpoint on floor %d. The Bank, Vault and Mailbox are safe.[/color]" % [
 			String(r.get("lost", "")) if String(r.get("lost", "")) != "" else "nothing (you carried nothing in)", UI.hex(UI.DIM), int(r["woke"])]
 		v.add_child(lost_l)
@@ -588,12 +588,12 @@ func _show_recap() -> void:
 	keys.sort_custom(func(a, b): return int(taken[a]) > int(taken[b]))
 	for k in keys:
 		parts.append("%s %d%%" % [names.get(k, String(k)), int(round(float(taken[k]) * 100.0 / total))])
-	var info := UI.rich(12)
+	var info := UI.rich(UI.FONT_CAPTION)
 	info.text = "[color=%s]%d turns. Damage you took: %s. Biggest hit: %d. It had %d%% health left.[/color]" % [UI.hex(UI.DIM), int(r.get("turns", 0)),
 		", ".join(parts) if not parts.is_empty() else "none", int(r.get("biggest", 0)), int(float(r.get("enemy_left", 0.0)) * 100)]
 	v.add_child(info)
 	for tip_text in r.get("tips", []):
-		var t := UI.rich(13)
+		var t := UI.rich(UI.FONT_CAPTION)
 		t.text = "[color=#e8b14a]Tip:[/color] %s" % tip_text
 		v.add_child(t)
 	var off := UI.button("Don't show these again", func():
@@ -745,7 +745,7 @@ func _build_ui() -> void:
 	back_btn.custom_minimum_size = Vector2(0, UI.TAP)
 	town_back.add_child(back_btn)
 	# The keeper of whichever building you're in has something to say (lore.gd)
-	town_talk = UI.label("", 12, Color("#d8c9a8"))
+	town_talk = UI.label("", UI.FONT_CAPTION, Color("#d8c9a8"))
 	town_talk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	town_page.add_child(town_talk)
 	building_bar = BuildingBar.new()
@@ -975,12 +975,12 @@ func _build_fight(parent: Control) -> void:
 	# The next goal: always something to chase (world.gd)
 	var goal_row := UI.vbox(2)
 	col.add_child(goal_row)
-	goal_label = UI.label("", 13, UI.GOLD)
+	goal_label = UI.label("", UI.FONT_CAPTION, UI.GOLD)
 	goal_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	goal_row.add_child(goal_label)
 	goal_bar = UI.bar(UI.GOLD, 5)
 	goal_row.add_child(goal_bar)
-	log_label = UI.rich(12, false)
+	log_label = UI.rich(UI.FONT_CAPTION, false)
 	log_label.custom_minimum_size = Vector2(0, 80)
 	col.add_child(log_label)
 
@@ -1130,7 +1130,7 @@ func toast(text: String) -> void:
 	var vp := get_viewport().get_visible_rect().size
 	var p := UI.panel(Color(0.05, 0.06, 0.11, 0.95), UI.GOLD, 8, 10, 1)
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var l := UI.label(text, 13, UI.TEXT)
+	var l := UI.label(text, UI.FONT_CAPTION, UI.TEXT)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.custom_minimum_size = Vector2(minf(420.0, vp.x - 40.0) - 24.0, 0)
@@ -1252,7 +1252,7 @@ func _sync_town() -> void:
 ## "Are you sure?" popup. on_yes runs only if the player confirms.
 func confirm(title: String, text: String, yes_text: String, on_yes: Callable) -> void:
 	var o := Overlay.new().open(self, title, 440.0, UI.RED)
-	var body := UI.rich(14)
+	var body := UI.rich(UI.FONT_CAPTION)
 	body.text = text
 	o.content.add_child(body)
 	var row := UI.hbox(8)
@@ -1272,8 +1272,8 @@ func _show_calamity(e: Dictionary) -> void:
 	var nm := UI.label(String(e["name"]), 24, col.lightened(0.2))
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	o.content.add_child(nm)
-	o.content.add_child(UI.wrap(String(e["lore"]), 13, UI.DIM))
-	o.content.add_child(UI.wrap("Nothing in this dungeon is stronger. If it beats you, you only pass out: you wake on this floor with everything you carried, and it doesn't count as a death. Running works about half the time.", 13, UI.TEXT))
+	o.content.add_child(UI.wrap(String(e["lore"]), UI.FONT_CAPTION, UI.DIM))
+	o.content.add_child(UI.wrap("Nothing in this dungeon is stronger. If it beats you, you only pass out: you wake on this floor with everything you carried, and it doesn't count as a death. Running works about half the time.", UI.FONT_CAPTION, UI.TEXT))
 	var row := UI.hbox(8)
 	o.content.add_child(row)
 	var run_b := UI.button("Run", func():
@@ -1321,7 +1321,7 @@ func _blackout(who: String) -> void:
 
 func _show_class_picker() -> void:
 	class_overlay = Overlay.new().open(self, "Choose your class", 920.0, UI.GOLD, false)
-	var sub := UI.label("Your class sets your strengths, your first skills and your look. Any class can use any skill stone, but skills sharing your class's tags hit harder.", 13, UI.DIM)
+	var sub := UI.label("Your class sets your strengths, your first skills and your look. Any class can use any skill stone, but skills sharing your class's tags hit harder.", UI.FONT_CAPTION, UI.DIM)
 	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	class_overlay.content.add_child(sub)
 	var grid := GridContainer.new()
@@ -1355,11 +1355,11 @@ func _show_class_picker() -> void:
 		var tags: Array = []
 		for t in info["tags"]:
 			tags.append("[color=%s]%s[/color]" % [Classes.tag_color(t), t])
-		var tl := UI.rich(11)
+		var tl := UI.rich(UI.FONT_CAPTION)
 		tl.text = "%s  -  %s" % [info["role"], " ".join(tags)]
 		tl.custom_minimum_size = Vector2(170, 0)
 		hv.add_child(tl)
-		var text := UI.rich(12)
+		var text := UI.rich(UI.FONT_CAPTION)
 		text.custom_minimum_size = Vector2(240, 0)
 		var start: Array = info["start"]
 		text.text = "%s
@@ -1400,7 +1400,7 @@ func _show_god_offer(id: String) -> void:
 	var n := ClassTree.node(id)
 	var o := Overlay.new().open(self, "A God class answers you", 760.0, Color(ClassTree.RANK_COLORS["God"]), true)
 	o.tree_exited.connect(func(): timer.start())
-	o.content.add_child(UI.wrap(String(GodClasses.info(id).get("lore", "")), 14, UI.TEXT))
+	o.content.add_child(UI.wrap(String(GodClasses.info(id).get("lore", "")), UI.FONT_CAPTION, UI.TEXT))
 	o.content.add_child(ClassTab.class_card(self, n, true, func():
 		if GodClasses.take(state, id):
 			# A6: a short flourish (the moment plays its own sound)
@@ -1408,7 +1408,7 @@ func _show_god_offer(id: String) -> void:
 			_play_moments.call_deferred()
 		o.close()
 		refresh()))
-	o.content.add_child(UI.wrap("It's for good: the God class replaces your class. Not now? It waits in Character > Class.", 12, UI.DIM))
+	o.content.add_child(UI.wrap("It's for good: the God class replaces your class. Not now? It waits in Character > Class.", UI.FONT_CAPTION, UI.DIM))
 
 ## Levels 15, 35 and 75: choose where your Evolution Tree goes.
 func _show_tree_picker() -> void:
@@ -1422,7 +1422,7 @@ func _show_tree_picker() -> void:
 	o.tree_exited.connect(func(): timer.start())
 	if t >= 0:
 		var al := ClassTree.alignment(state)
-		var intro := UI.rich(13)
+		var intro := UI.rich(UI.FONT_CAPTION)
 		intro.text = "[color=%s]Your deeds are [color=%s][b]%s[/b][/color] (faith %+d). %s[/color]" % [UI.hex(UI.DIM), ClassTree.ALIGN_COLORS[al], ClassTree.ALIGN_NAMES[al], int(state.faith),
 			"Good heroes can't take Evil classes, and Evil heroes can't take Good ones." if state.hero_class != "Wanderer" else "The Wanderer is always Neutral."]
 		o.content.add_child(intro)
@@ -1931,7 +1931,7 @@ func _confirm_leave() -> void:
 	var lines := "You head back to town and bank everything you carry:\n\n[color=#e8b14a]%d gold[/color] carried and [color=#4ade80]%d new item%s[/color] found this dive%s." % [
 		state.gold, finds, "" if finds == 1 else "s", (", plus the %d piece%s you wear" % [worn, "" if worn == 1 else "s"]) if worn > 0 else ""]
 	lines += "\n\n[color=%s]Your next dive starts again from a checkpoint.[/color]" % UI.hex(UI.DIM)
-	var body := UI.rich(14)
+	var body := UI.rich(UI.FONT_CAPTION)
 	body.text = lines
 	o.content.add_child(body)
 	var row := UI.hbox(8)

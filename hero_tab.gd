@@ -97,7 +97,7 @@ func setup(m) -> void:
 	v.add_child(points_panel)
 	var pv := UI.vbox(8)
 	points_panel.add_child(pv)
-	points_label = UI.rich(14)
+	points_label = UI.rich(UI.FONT_CAPTION)
 	pv.add_child(points_label)
 	var prow := UI.hbox(8)
 	pv.add_child(prow)
@@ -180,7 +180,7 @@ func _stat_row(st: String) -> PanelContainer:
 	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nm.clip_text = true
 	nh.add_child(nm)
-	var chip := UI.label("★", 14, UI.GOLD)
+	var chip := UI.label("★", UI.FONT_CAPTION, UI.GOLD)
 	UI.tip(chip, "Suggested for your class")
 	nh.add_child(chip)
 	# The number, big
@@ -363,7 +363,7 @@ func _build_special_rows(names: Array) -> void:
 		h.add_child(val)
 		var bar := UI.bar(col, 6)
 		c[1].add_child(bar)
-		var txt := UI.rich(12)
+		var txt := UI.rich(UI.FONT_CAPTION)
 		c[1].add_child(txt)
 		special_rows[n] = [val, txt, bar, c[0]]
 

@@ -25,7 +25,7 @@ func refresh() -> void:
 	var head := UI.label("Pages found: %d / %d" % [codex.lore.size(), Lore.PAGES.size()], 15, UI.GOLD)
 	box.add_child(head)
 	if codex.lore.is_empty():
-		var hint := UI.label("Torn pages turn up in the dungeon: now and then on a fallen monster, more often in chests. Each one tells a little more of Solaria's story.", 13, UI.DIM)
+		var hint := UI.label("Torn pages turn up in the dungeon: now and then on a fallen monster, more often in chests. Each one tells a little more of Solaria's story.", UI.FONT_CAPTION, UI.DIM)
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(hint)
 		return
@@ -35,9 +35,9 @@ func refresh() -> void:
 		box.add_child(card)
 		var v := UI.vbox(4)
 		card.add_child(v)
-		v.add_child(UI.label(("%d. %s" % [i + 1, Lore.PAGES[i][0]]) if found else "%d. ???" % (i + 1), 14, Color("#e8b14a") if found else UI.DIM))
+		v.add_child(UI.label(("%d. %s" % [i + 1, Lore.PAGES[i][0]]) if found else "%d. ???" % (i + 1), UI.FONT_CAPTION, Color("#e8b14a") if found else UI.DIM))
 		if found:
-			var t := UI.label(String(Lore.PAGES[i][1]), 13, UI.TEXT)
+			var t := UI.label(String(Lore.PAGES[i][1]), UI.FONT_CAPTION, UI.TEXT)
 			t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			v.add_child(t)
 		if not found:

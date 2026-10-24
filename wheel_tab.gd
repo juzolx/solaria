@@ -87,10 +87,10 @@ func setup(m) -> void:
 	add_child(left)
 	left_col = left
 	left.add_child(UI.label("FORTUNE'S WHEEL", 18, UI.GOLD))
-	var note := UI.label("Put an item on the Wheel. Win: it comes back one rarity higher. Lose: it's gone. Common %d%%, Uncommon %d%%, Rare %d%%, Epic %d%%." % GameData.GAMBLE_CHANCES, 12, UI.DIM)
+	var note := UI.label("Put an item on the Wheel. Win: it comes back one rarity higher. Lose: it's gone. Common %d%%, Uncommon %d%%, Rare %d%%, Epic %d%%." % GameData.GAMBLE_CHANCES, UI.FONT_CAPTION, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	left.add_child(note)
-	left.add_child(UI.label("TAP AN ITEM TO SPIN FOR IT  (its odds are on it)", 11, UI.DIM))
+	left.add_child(UI.label("TAP AN ITEM TO SPIN FOR IT  (its odds are on it)", UI.FONT_CAPTION, UI.DIM))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -101,7 +101,7 @@ func setup(m) -> void:
 	scroll.add_child(sv)
 	grid = ItemGrid.grid()
 	sv.add_child(grid)
-	empty_note = UI.label("Nothing to put on the Wheel. Locked items and Legendary or better can't go on the wheel.", 12, UI.DIM)
+	empty_note = UI.label("Nothing to put on the Wheel. Locked items and Legendary or better can't go on the wheel.", UI.FONT_CAPTION, UI.DIM)
 	empty_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	sv.add_child(empty_note)
 	left.resized.connect(_on_left_resized.bind(left))
@@ -129,7 +129,7 @@ func setup(m) -> void:
 	high_box = UI.vbox(6)
 	high_box.visible = false
 	right.add_child(high_box)
-	heat_label = UI.rich(12)
+	heat_label = UI.rich(UI.FONT_CAPTION)
 	high_box.add_child(heat_label)
 	mini_grid = GridContainer.new()
 	mini_grid.columns = 2
@@ -142,7 +142,7 @@ func setup(m) -> void:
 	leg_box.visible = false
 	right.add_child(leg_box)
 	leg_box.add_child(UI.label("LEGENDARY TABLE", 16, Color("#facc15")))
-	leg_info = UI.rich(13)
+	leg_info = UI.rich(UI.FONT_CAPTION)
 	leg_box.add_child(leg_info)
 	for r in [0, 1, 2]:
 		var lb := UI.button("+ all %s" % GameData.RARITY_NAMES[r], _load_rarity.bind(r))
@@ -150,7 +150,7 @@ func setup(m) -> void:
 		lb.add_theme_font_size_override("font_size", UI.MIN_FONT)
 		lb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		load_row.add_child(lb)
-	info = UI.rich(13)
+	info = UI.rich(UI.FONT_CAPTION)
 	right.add_child(info)
 	spin_button = UI.primary("Spin!", _spin, UI.GOLD)
 	spin_button.custom_minimum_size = Vector2(0, 44)
@@ -491,8 +491,8 @@ func _spin_leg() -> void:
 func show_odds() -> void:
 	var o := Overlay.new().open(main, "WHEEL ODDS", 480.0, UI.GOLD)
 	o.content.add_child(UI.label("ITEM WHEEL", 15, UI.GOLD))
-	o.content.add_child(UI.wrap("Win: the item comes back one rarity higher. Lose: it's gone.", 12, UI.DIM))
-	var nt := UI.rich(13)
+	o.content.add_child(UI.wrap("Win: the item comes back one rarity higher. Lose: it's gone.", UI.FONT_CAPTION, UI.DIM))
+	var nt := UI.rich(UI.FONT_CAPTION)
 	var lines: Array = []
 	for row in WheelTables.normal_rows():
 		lines.append("[color=%s]%s[/color] to %s: [b]%d%%[/b]" % [GameData.color_of(int(row["rarity"])), row["name"], row["to"], int(row["pct"])])
@@ -501,7 +501,7 @@ func show_odds() -> void:
 	o.content.add_child(UI.label("LEGENDARY TABLE", 15, Color("#facc15")))
 	var fort := WheelTables.fortune(state)
 	if not WheelTables.legendary_unlocked(state):
-		o.content.add_child(UI.wrap(WheelTables.lock_text(state), 12, UI.RED))
+		o.content.add_child(UI.wrap(WheelTables.lock_text(state), UI.FONT_CAPTION, UI.RED))
 	var parts: Array = []
 	for p in WheelTables.fortune_parts(state):
 		if float(p[1]) > 0.0:
@@ -510,7 +510,7 @@ func show_odds() -> void:
 	o.content.add_child(UI.wrap("Your Fortune: %d%s. Each point raises top prizes by %d%% (up to x%d) and Legendary items by %d%% (up to x%d)." % [
 		int(fort), src, int(round(WheelTables.TOP_PER_POINT * 100)), int(WheelTables.TOP_CAP),
 		int(round(WheelTables.RARE_PER_POINT * 100)), int(WheelTables.RARE_CAP)], 12, UI.DIM))
-	var lt := UI.rich(13)
+	var lt := UI.rich(UI.FONT_CAPTION)
 	lines = []
 	var rows := WheelTables.legendary_rows(fort)
 	for i in rows.size():

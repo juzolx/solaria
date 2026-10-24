@@ -32,7 +32,7 @@ func refresh() -> void:
 	shown = key
 	OnlineUI.clear(box)
 	if state.hero_class == "":
-		box.add_child(UI.label("Choose a class first.", 14, UI.DIM))
+		box.add_child(UI.label("Choose a class first.", UI.FONT_CAPTION, UI.DIM))
 		return
 	_header()
 	_pick_panel()
@@ -78,7 +78,7 @@ func _header() -> void:
 	var steps: Array = [state.hero_class]
 	for n in ClassTree.path_nodes(state):
 		steps.append(n["name"])
-	var path := UI.rich(13)
+	var path := UI.rich(UI.FONT_CAPTION)
 	path.text = "[color=%s]Your path:[/color] %s" % [UI.hex(UI.DIM), "  >  ".join(steps)]
 	cv.add_child(path)
 	var lines: Array = []
@@ -86,23 +86,23 @@ func _header() -> void:
 		lines.append("[color=%s]%s:[/color] %s" % [UI.hex(UI.DIM), n["name"], ClassTree.bonus_text(n)])
 	if lines.is_empty():
 		lines.append("[color=%s]%s[/color]" % [UI.hex(UI.DIM), info["blurb"]])
-	var bt := UI.rich(12)
+	var bt := UI.rich(UI.FONT_CAPTION)
 	bt.text = "\n".join(lines)
 	cv.add_child(bt)
 	var sn := ClassTree.stat_name(state)
 	if sn != "":
-		var st := UI.rich(12)
+		var st := UI.rich(UI.FONT_CAPTION)
 		st.text = "[color=%s]Special stat:[/color] [b]%s %.1f[/b]  [color=%s](grows when you %s, and from every boss)[/color]\n[color=%s]It gives you:[/color] %s" % [
 			UI.hex(UI.DIM), sn, state.unique_value(sn), UI.hex(UI.DIM), ClassTree.grow_text(state), UI.hex(UI.DIM), ClassTree.stat_text(state)]
 		cv.add_child(st)
-	var faith := UI.rich(11)
+	var faith := UI.rich(UI.FONT_CAPTION)
 	faith.text = "[color=%s]Faith %+d. Holy skills, bosses and good deeds raise it; Shadow and Blood skills and dark bargains lower it. At %+d you count as Good, at %d as Evil.%s[/color]" % [
 		UI.hex(UI.DIM), int(state.faith), int(ClassTree.GOOD_AT), int(ClassTree.EVIL_AT), " The Wanderer is always Neutral." if state.hero_class == "Wanderer" else ""]
 	cv.add_child(faith)
 
 static func _badge(text: String, c: Color) -> PanelContainer:
 	var p := UI.panel(Color(c, 0.14), c, 6, 4, 1)
-	p.add_child(UI.label(text, 11, c.lightened(0.2)))
+	p.add_child(UI.label(text, UI.FONT_CAPTION, c.lightened(0.2)))
 	return p
 
 # =====================================================================
@@ -113,7 +113,7 @@ func _pick_panel() -> void:
 	var t := ClassTree.pick_tier(state)
 	if t < 0:
 		if not ClassTree.options(state).is_empty():
-			box.add_child(UI.label("Next choice at level %d." % int(ClassTree.PICK_LEVELS[state.class_path.size()]), 12, UI.DIM))
+			box.add_child(UI.label("Next choice at level %d." % int(ClassTree.PICK_LEVELS[state.class_path.size()]), UI.FONT_CAPTION, UI.DIM))
 		return
 	box.add_child(UI.heading("Choose your class (level %d)" % int(ClassTree.PICK_LEVELS[t])))
 	var cols := UI.hbox(8)
@@ -144,17 +144,17 @@ static func class_card(m, n: Dictionary, with_button: bool, on_pick: Callable) -
 	var nl := UI.label(String(n["name"]), 16, border.lightened(0.2) if why == "" else UI.DIM)
 	nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(nl)
-	var tags := UI.rich(11)
+	var tags := UI.rich(UI.FONT_CAPTION)
 	var bits: Array = ["[color=%s]%s[/color]" % [ClassTree.ALIGN_COLORS[side], ClassTree.ALIGN_NAMES[side]]]
 	if r != "":
 		bits.append("[color=%s]%s[/color]" % [ClassTree.RANK_COLORS[r], ClassTree.rank_text(n)])
 	tags.text = "  ".join(bits)
 	v.add_child(tags)
-	var t := UI.rich(12)
+	var t := UI.rich(UI.FONT_CAPTION)
 	t.text = "%s.\n[color=%s]%s[/color]" % [n["role_text"], UI.hex(UI.DIM), ClassTree.bonus_text(n)]
 	v.add_child(t)
 	if why != "" and (with_button or why.begins_with("Your deeds")):
-		var wl := UI.label(why, 11, Color("#f87171"))
+		var wl := UI.label(why, UI.FONT_CAPTION, Color("#f87171"))
 		wl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(wl)
 	if with_button and why == "":
@@ -194,9 +194,9 @@ func _tree() -> void:
 		row.add_child(p)
 		var v := UI.vbox(1)
 		p.add_child(v)
-		v.add_child(UI.label("Start" if i == 0 else "Level %d" % int(st["level"]), 10, UI.DIM))
+		v.add_child(UI.label("Start" if i == 0 else "Level %d" % int(st["level"]), UI.FONT_CAPTION, UI.DIM))
 		var name_text: String = String(n["name"]) if reached else ("Choose now!" if ready else "???")
-		var nl := UI.label(name_text, 13, UI.GOLD if reached else (UI.GREEN if ready else UI.DIM))
+		var nl := UI.label(name_text, UI.FONT_CAPTION, UI.GOLD if reached else (UI.GREEN if ready else UI.DIM))
 		nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(nl)
 	# Dev Mode still shows the whole branching tree
@@ -254,7 +254,7 @@ func _signatures() -> void:
 			var b := UI.button("Use", func(): state.set_signature(sid); main.refresh())
 			b.custom_minimum_size = Vector2(64, UI.TAP)
 			h.add_child(b)
-		var t := UI.rich(12)
+		var t := UI.rich(UI.FONT_CAPTION)
 		var els: Array = []
 		for tg in s["tags"]:
 			els.append("[color=%s]%s[/color]" % [Classes.tag_color(tg), tg])
@@ -274,7 +274,7 @@ func _god_classes() -> void:
 		var me := ClassTree.node(state.god_class)
 		box.add_child(class_card(main, me, false, Callable()))
 		return
-	box.add_child(UI.wrap("Your deeds were seen. A God class answers you: you can swap into it now, or later from here. It's for good.", 12, Color(ClassTree.RANK_COLORS["God"])))
+	box.add_child(UI.wrap("Your deeds were seen. A God class answers you: you can swap into it now, or later from here. It's for good.", UI.FONT_CAPTION, Color(ClassTree.RANK_COLORS["God"])))
 	for id in state.god_offers:
 		box.add_child(class_card(main, ClassTree.node(id), true, func():
 			main.confirm("Become %s?" % ClassTree.node(id)["name"], "A God class is the rank above every other. It replaces your class for good.", "Swap", func():
@@ -304,8 +304,8 @@ func _hidden_classes() -> void:
 		var nl := UI.label(Hidden.title(state), 16, col)
 		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(nl)
-		head.add_child(UI.label(Hidden.TIER_NAMES[int(c["tier"])], 11, Color(Hidden.TIER_COLORS[int(c["tier"])])))
-		var t := UI.rich(12)
+		head.add_child(UI.label(Hidden.TIER_NAMES[int(c["tier"])], UI.FONT_CAPTION, Color(Hidden.TIER_COLORS[int(c["tier"])])))
+		var t := UI.rich(UI.FONT_CAPTION)
 		var lines: Array = ["[color=%s]%s[/color]" % [UI.hex(UI.DIM), c["lore"]],
 			"Step %d of 3:  %s" % [st, " > ".join(c["stages"])],
 			"[color=#4ade80]Now:[/color] %s" % Hidden.stage_text(id, st)]
@@ -324,7 +324,7 @@ func _hidden_classes() -> void:
 	box.add_child(UI.heading("Hidden classes (Dev Mode)"))
 	for id in Hidden.ORDER:
 		var c := Hidden.info(id)
-		var r := UI.rich(11)
+		var r := UI.rich(UI.FONT_CAPTION)
 		var lines: Array = ["[b]%s[/b]  %s  [color=%s]%s[/color]" % [c["name"], "EARNED" if state.hidden.has(id) else "", UI.hex(UI.DIM), c["rumor"]]]
 		for line in Hidden.progress(state, id):
 			lines.append(_line(line))
@@ -335,7 +335,7 @@ func _hidden_classes() -> void:
 static func hidden_offer_cards(m, parent: Control, on_done: Callable) -> void:
 	var st: GameState = m.state
 	var stage := Hidden.stage(st)
-	var note := UI.wrap("Secret classes you earned by how you play. Take one instead of the main route, until level %d. It becomes your class for good: no more evolutions." % (st.hidden_offer_level + 1), 12, Color("#c4b5fd"))
+	var note := UI.wrap("Secret classes you earned by how you play. Take one instead of the main route, until level %d. It becomes your class for good: no more evolutions." % (st.hidden_offer_level + 1), UI.FONT_CAPTION, Color("#c4b5fd"))
 	parent.add_child(note)
 	for id in st.hidden_offer:
 		var c := Hidden.info(id)
@@ -349,8 +349,8 @@ static func hidden_offer_cards(m, parent: Control, on_done: Callable) -> void:
 		var nl := UI.label(c["stages"][stage - 1], 16, col)
 		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(nl)
-		head.add_child(UI.label(Hidden.TIER_NAMES[int(c["tier"])], 11, Color(Hidden.TIER_COLORS[int(c["tier"])])))
-		var t := UI.rich(12)
+		head.add_child(UI.label(Hidden.TIER_NAMES[int(c["tier"])], UI.FONT_CAPTION, Color(Hidden.TIER_COLORS[int(c["tier"])])))
+		var t := UI.rich(UI.FONT_CAPTION)
 		var lines: Array = ["[color=%s]%s[/color]" % [UI.hex(UI.DIM), c["lore"]], "[color=#4ade80]Gives:[/color] %s" % Hidden.stage_text(id, stage)]
 		if stage < 3:
 			lines.append("[color=%s]Grows at level %s into %s.[/color]" % [UI.hex(UI.DIM), " and ".join(Hidden.STAGE_LEVELS.slice(stage).map(func(x): return str(x))), " and ".join(c["stages"].slice(stage))])

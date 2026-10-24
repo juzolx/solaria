@@ -37,7 +37,7 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	lv.add_child(preview)
-	race_text = UI.rich(13)
+	race_text = UI.rich(UI.FONT_CAPTION)
 	lv.add_child(race_text)
 	var rnd := UI.button("Randomize look", _randomize)
 	lv.add_child(rnd)
@@ -47,7 +47,7 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_child(right)
 	if ask_name:
-		right.add_child(UI.label("NAME", 11, UI.DIM))
+		right.add_child(UI.label("NAME", UI.FONT_CAPTION, UI.DIM))
 		var nrow := UI.hbox(6)
 		right.add_child(nrow)
 		name_edit = LineEdit.new()
@@ -77,7 +77,7 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	_update()
 
 func _text_row(parent: Control, label_text: String, field: String, values: Array, names: Array = []) -> void:
-	var lbl := UI.label(label_text.to_upper(), 11, UI.DIM)
+	var lbl := UI.label(label_text.to_upper(), UI.FONT_CAPTION, UI.DIM)
 	parent.add_child(lbl)
 	var flow := HFlowContainer.new()
 	row_parts[field] = [lbl, flow]
@@ -94,7 +94,7 @@ func _text_row(parent: Control, label_text: String, field: String, values: Array
 	rows[field] = list
 
 func _swatch_row(parent: Control, label_text: String, field: String, colors: Array) -> void:
-	var lbl := UI.label(label_text.to_upper(), 11, UI.DIM)
+	var lbl := UI.label(label_text.to_upper(), UI.FONT_CAPTION, UI.DIM)
 	parent.add_child(lbl)
 	var flow := HFlowContainer.new()
 	row_parts[field] = [lbl, flow]

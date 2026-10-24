@@ -43,14 +43,14 @@ func refresh() -> void:
 		(taken if c.get("taken", false) else posted).append(c)
 	box.add_child(UI.label("YOUR CONTRACTS  (%d / %d)" % [taken.size(), Town.max_taken()], 11, UI.DIM))
 	if taken.is_empty():
-		box.add_child(UI.label("No contracts yet. Take one from the board below.", 12, UI.DIM))
+		box.add_child(UI.label("No contracts yet. Take one from the board below.", UI.FONT_CAPTION, UI.DIM))
 	for c in taken:
 		box.add_child(_card(c, true))
-	box.add_child(UI.label("POSTED", 11, UI.DIM))
+	box.add_child(UI.label("POSTED", UI.FONT_CAPTION, UI.DIM))
 	for c in posted:
 		box.add_child(_card(c, false))
 	var streak := int(main.codex.login.get("streak", 0))
-	var note := UI.label("Hunts pay gold or gear. Elite contracts want Rare or stronger monsters. WANTED posters name a boss and pay with a weapon for your class. Rewards arrive in your Mailbox the moment a contract is done. Login streak: %d day%s." % [streak, "" if streak == 1 else "s"], 11, UI.DIM)
+	var note := UI.label("Hunts pay gold or gear. Elite contracts want Rare or stronger monsters. WANTED posters name a boss and pay with a weapon for your class. Rewards arrive in your Mailbox the moment a contract is done. Login streak: %d day%s." % [streak, "" if streak == 1 else "s"], UI.FONT_CAPTION, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(note)
 
@@ -68,12 +68,12 @@ func _card(c: Dictionary, taken: bool) -> PanelContainer:
 	var tag: String = {"hunt": "HUNT", "elite": "ELITE", "wanted": "WANTED"}.get(kind, "")
 	var top := UI.hbox(6)
 	v.add_child(top)
-	top.add_child(UI.chip(tag, accent, 10))
-	var name_l := UI.label(String(c["text"]).trim_prefix("WANTED: "), 14, UI.TEXT)
+	top.add_child(UI.chip(tag, accent, UI.FONT_CAPTION))
+	var name_l := UI.label(String(c["text"]).trim_prefix("WANTED: "), UI.FONT_CAPTION, UI.TEXT)
 	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(name_l)
-	var rw := UI.rich(12)
+	var rw := UI.rich(UI.FONT_CAPTION)
 	rw.text = "[color=%s]Reward:[/color] [color=#f6d88f]%s[/color]" % [UI.hex(UI.DIM), Town.reward_text(c["reward"], g)]
 	v.add_child(rw)
 	if taken:

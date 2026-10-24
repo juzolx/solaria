@@ -24,7 +24,7 @@ Old minimum text (13 design px) was ~11 pt on the phone; the new minimum (15) is
 | 9 | Town map: "Into the dungeon" + Mail + status line overflowed once text grew. | Moderate | Fixed: status line wraps |
 | 10 | Menu: "Fullscreen" toggle shown on phones (meaningless); "Delete this hero" looks like every other button. | Minor | Fixed: hidden on mobile; red label |
 | 11 | Copy: Hero tab says "Stats marked SUGGESTED" but the cards show a star. | Minor | Fixed |
-| 12 | Battle view overlay text (weakness tag, HP numbers, unit names) is drawn in battle_view.gd at ~11 px. | Moderate | Open (battle_view is owned by the juice/art sessions; flagged) |
+| 12 | Battle view overlay text (weakness tag, HP numbers, unit names) was drawn at 12-14 design px with thin outlines; tier words ("Gilded ...", "CALAMITY:", "[Pack 2/3]") made names long. | Major | Fixed (follow-up): names/HP/chips 18 px (~15 pt) with 5 px dark outline + shadow, one line with "...", tier = coloured name + diamond pips, pack = dots, hero statuses moved to the left edge so they never cover the monster's name |
 | 13 | Fight skill buttons and some `refresh()` code build new StyleBoxFlat objects every tick. Cheap, but avoidable. | Minor | Open (perf note) |
 
 Contrast check (WCAG 1.4.3): bone text #e2dac6 on panel #15142a 12.9:1; dust #a89d84 on inset
@@ -32,8 +32,8 @@ Contrast check (WCAG 1.4.3): bone text #e2dac6 on panel #15142a 12.9:1; dust #a8
 button text #5a5670 on #13121f 2.7:1 (allowed for disabled controls, but it reads as broken; consider
 #6e6a86). Button edge #7a7493 on stone 3.6:1 passes 1.4.11.
 
-Touch targets (2.5.5): most buttons are 42-44 px tall (TAP 44). Sub-tabs are ~30 px tall: below 44.
-Skill slots were 34 px when empty (now 46/62 when filled; empty slots still 34). Bag grid cells 44.
+Touch targets (2.5.5): most buttons are 42-44 px tall (TAP 44). Sub-tabs were ~30 px tall: now 44.
+Skill slots were 34 px when empty: now 44 (46/62 when filled). Bag grid cells 44.
 
 Colour-blind: rarity and state are mostly backed by words (UNCOMMON, "+85", Colorblind labels
 setting). Stat cards no longer rely on hue at all (gold edge + star). Shop cards keep the rarity word.
@@ -82,13 +82,13 @@ setting). Stat cards no longer rely on hue at all (gold edge + star). Shop cards
   (elements, tags, rarity) and never for buttons, cards or frames.
 - Buttons by role: `UI.primary()` gold main action (legacy colours fold into gold via `UI.role_color`);
   `UI.danger()` red for diving, attacking, irreversible; plain stone theme button for everything else.
-- Type scale: CAPTION 15 (minimum), BODY 16, TITLE 20, DISPLAY 26 (`UI.FONT_*`); theme defaults follow it.
+- Type scale: CAPTION 15 (minimum), BODY 16, TITLE 20, DISPLAY 26 (`UI.FONT_*`); theme defaults follow it. UI.label/rich/wrap/chip default to 15 and clamp to MIN_FONT; no call site passes a smaller literal. In-scene (battle, town map) text is 18 design px with a dark outline.
 - Spacing 4/8/12/16 (`UI.SP_*`); touch targets >= `UI.TAP` 44.
 - Cards: inset stone, 6 px radius, 1 px iron edge (`UI.CARD_EDGE`); 2 px gold edge when selected/suggested.
 - Icons: chunky filled pixel shapes, 1 px near-black outline (`UiSkin.SOOT`), integer scale only.
 
 ## Next (not done in this pass)
-1. Battle overlay and town-map label text to 15 px (battle_view.gd / town_view.gd owners).
-2. Sub-tab and Codex list rows to 44 px tall.
+1. Codex list rows to 44 px tall.
+2. Party mini-plates in the battle view (names 10 px) still small.
 3. Replace remaining flat `UI.style()` panels in building pages with the card rule.
 4. Cache fight skill button styles instead of rebuilding each tick.
