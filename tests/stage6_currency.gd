@@ -61,7 +61,7 @@ func _initialize() -> void:
 	g.horde_left = 1
 	g.horde_pack = false
 	g._finish_horde()
-	check(g.scrap >= s0 + 4 and g.scrap <= s0 + 8 + 2 * GameData.SCRAP_VALUES[4], "a horde chest pays 4-8 scrap (plain chest, not materials)")
+	check(g.scrap >= s0 + Economy.CHEST_SCRAP[0] * Economy.MAT_TO_SCRAP and g.scrap <= s0 + Economy.CHEST_SCRAP[1] * Economy.MAT_TO_SCRAP + 2 * GameData.SCRAP_VALUES[4], "a horde chest pays 8-12 scrap (plain chest, not materials)")
 	d0 = g.dust
 	World.champion_reward(g)
 	check(g.dust >= d0 + Economy.CHAMPION_DUST[0], "a Champion's chest pays dust")

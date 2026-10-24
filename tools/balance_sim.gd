@@ -17,7 +17,9 @@ const MILESTONES := [25, 50, 100, 250, 500, 750]
 const SAMPLE_MIN := 10        # curve sample spacing, in play minutes
 const POTION_TARGET := 8
 const STALL_TURNS := 150
+const LONG_FIGHT := 300       # turns without a kill before the hero tries to run
 const SHOP_ROLLS := 8         # shop looks per town visit (the first is free)
+const RESTOCK_SPARE := 20     # re-roll the shop only with this many restocks' worth of gold to spare
 const REPORT_PATH := "res://claude/balance-report.md"
 const QUICK_REPORT_PATH := "res://claude/balance-report-quick.md"
 
@@ -74,17 +76,42 @@ func _initialize() -> void:
 	var started := Time.get_ticks_msec()
 	for i in n:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path("user://balance_sim_%d.txt" % i))
+	# At most BALANCE_PARALLEL heroes (default 3) play at once, so the PC stays usable
+	var parallel := 3
+	if OS.get_environment("BALANCE_PARALLEL") != "":
+		parallel = maxi(1, int(OS.get_environment("BALANCE_PARALLEL")))
 	var pids: Array = []
-	for i in n:
-		var cargs: Array = ["--headless", "--path", ProjectSettings.globalize_path("res://"), "-s", "tools/balance_sim.gd", "--", "child", str(i), str(hours), ("quick" if quick else "full")]
-		pids.append(OS.create_process(OS.get_executable_path(), cargs))
+	pids.resize(n)
+	pids.fill(-1)
+	var started_at: Array = []
+	started_at.resize(n)
+	started_at.fill(0.0)
 	var results: Array = []
 	var waited := 0.0
 	var pending: Array = range(n)
-	while not pending.is_empty() and waited < budget_s + 120.0:
+	while not pending.is_empty():
+		var running := 0
+		for i in pending:
+			if int(pids[i]) >= 0:
+				running += 1
+		for i in pending:
+			if running >= parallel:
+				break
+			if int(pids[i]) < 0:
+				var cargs: Array = ["--headless", "--path", ProjectSettings.globalize_path("res://"), "-s", "tools/balance_sim.gd", "--", "child", str(i), str(hours), ("quick" if quick else "full")]
+				pids[i] = OS.create_process(OS.get_executable_path(), cargs)
+				started_at[i] = waited
+				running += 1
 		OS.delay_msec(1000)
 		waited += 1.0
 		for i in pending.duplicate():
+			if int(pids[i]) < 0:
+				continue
+			if waited - float(started_at[i]) > budget_s + 120.0:
+				push_error("Hero %d never reported back" % i)
+				OS.kill(int(pids[i]))
+				pending.erase(i)
+				continue
 			var path := "user://balance_sim_%d.txt" % i
 			if FileAccess.file_exists(path) and not OS.is_process_running(int(pids[i])):
 				var r: Dictionary = str_to_var(FileAccess.get_file_as_string(path))
@@ -92,15 +119,15 @@ func _initialize() -> void:
 				pending.erase(i)
 				print("%s/%s: floor %d, level %d, %.1f h played, %d deaths (%.0f s real)" % [r["class"], r["race"], r["best_floor"], r["level"], r["minutes"] / 60.0, r["deaths"], r["real_s"]])
 				DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
-	for i in pending:
-		push_error("Hero %d never reported back" % i)
-		OS.kill(int(pids[i]))
 	if results.is_empty():
 		quit(1)
 		return
 	results.sort_custom(func(a, b): return HEROES.find([a["class"], a["race"]]) < HEROES.find([b["class"], b["race"]]))
 	var text := _report(results, hours, quick)
-	var f := FileAccess.open(QUICK_REPORT_PATH if quick else REPORT_PATH, FileAccess.WRITE)
+	var out_path := QUICK_REPORT_PATH if quick else REPORT_PATH
+	if OS.get_environment("BALANCE_REPORT") != "":
+		out_path = OS.get_environment("BALANCE_REPORT")   # e.g. res://claude/balance-before.md
+	var f := FileAccess.open(out_path, FileAccess.WRITE)
 	if f == null:
 		push_error("Cannot write %s" % REPORT_PATH)
 	else:
@@ -140,6 +167,8 @@ func _play(cls: String, race: String, hours: float, budget_s: float) -> Dictiona
 	var kills_mark := 0
 	var turn_mark := 0
 	var turn := 0
+	var last_kills := 0
+	var kill_turn := 0
 	while turn < max_turns:
 		turn += 1
 		var minutes := int(turn * TURN_SECONDS / 60.0)
@@ -149,6 +178,7 @@ func _play(cls: String, race: String, hours: float, budget_s: float) -> Dictiona
 			continue
 		if g.calamity_pending:
 			Calamity.fight(g)
+		var worn := g.equipped.size()
 		g.take_turn()
 		g.messages.clear()
 		g.events.clear()
@@ -156,12 +186,42 @@ func _play(cls: String, race: String, hours: float, budget_s: float) -> Dictiona
 		if d > deaths:
 			deaths = d
 			(res["death_floors"] as Array).append(last_floor)
+			# What killed us (for the "How heroes fall" table)
+			var ld: Dictionary = g.last_death
+			var top := ""
+			for k in ld.get("taken", {}):
+				if top == "" or int(ld["taken"][k]) > int(ld["taken"][top]):
+					top = k
+			if not res.has("killers"):
+				res["killers"] = []
+			(res["killers"] as Array).append({"floor": last_floor, "tier": int(ld.get("tier", 0)), "boss": bool(ld.get("boss", false)),
+				"turns": int(ld.get("turns", 0)), "top": top, "worn": worn, "left": float(ld.get("enemy_left", 0.0)),
+				"mods": (ld.get("mods", []) as Array).duplicate()})
 			_note_death(turn, last_floor)
 			if not g.in_town:
 				_go_home(g)
 		last_floor = g.floor_num
 		if not g.in_town and not g.go_home_after:
 			_check_home(g)
+		# A fight neither side can win (the hero heals faster than it hurts): a player
+		# would run, go home and come back a stretch higher up
+		var kn := g.codex.stat("kills")
+		if kn != last_kills or g.in_town:
+			last_kills = kn
+			kill_turn = turn
+		elif turn - kill_turn > LONG_FIGHT:
+			if turn - kill_turn == LONG_FIGHT + 1:
+				if not res.has("long_fights"):
+					res["long_fights"] = []
+				(res["long_fights"] as Array).append("floor %d: %s %s (tier %d, boss %s, mods %s)" % [g.floor_num, g.enemy_name, g.enemy_species, g.enemy_tier, str(g.enemy_is_boss), str(g.enemy_mods)])
+			if turn - kill_turn > LONG_FIGHT * 6:
+				(res["stalls"] as Array).append("no kill for %d turns on floor %d fight %d: enemy %s hp %d/%d atk %d boss %s mech %s, hero hp %d/%d, portal %s, path %s, doors %s, trial %s, down %s" % [turn - kill_turn, g.floor_num, g.fight, g.enemy_name, g.enemy_hp, g.enemy_max_hp, g.enemy_attack, str(g.enemy_is_boss), str(g.boss_mechanics), g.hero_hp, g.get_max_hp(), str(g.portal), str(g.path_offer), str(g.doors), str(g.trial_active), str(g.leader_down)])
+				res["stop"] = "stalled"
+				break
+			if (turn - kill_turn) % 5 == 0 and Lineage.try_escape(g):
+				kill_turn = turn
+				retreat_to = maxi(1, GameState.checkpoint_start(g.floor_num) - GameData.BOSS_EVERY)
+				_go_home(g)
 		# Milestones: first time the best floor reaches every 25 floors
 		while g.best_floor >= next_band and next_band <= 1000:
 			(res["snaps"] as Dictionary)[next_band] = _snap(g, turn)
@@ -205,6 +265,11 @@ func _play(cls: String, race: String, hours: float, budget_s: float) -> Dictiona
 	res["real_s"] = (Time.get_ticks_msec() - t0) / 1000.0
 	res["turns"] = turn
 	res["class_title"] = g.title()
+	res["pets"] = g.pets.size()
+	var lv := 0
+	for sl in g.equipped:
+		lv += int(g.equipped[sl]["level"])
+	res["upg"] = float(lv) / maxf(1.0, g.equipped.size())
 	return res
 
 ## Everything the report needs at one moment.
@@ -261,7 +326,7 @@ func _town_routine(g: GameState) -> void:
 				g.buy_shop(i)
 		if not g.featured.is_empty() and not g.bag_full() and g.is_upgrade(g.featured) and g.featured_price() <= g.gold * 0.5:
 			g.buy_featured()
-		if round < SHOP_ROLLS - 1 and g.gold > g.restock_cost() * 100:
+		if round < SHOP_ROLLS - 1 and g.gold > g.restock_cost() * RESTOCK_SPARE:
 			g.paid_restock()
 		else:
 			break
@@ -269,26 +334,40 @@ func _town_routine(g: GameState) -> void:
 		g.buy_bag_upgrade()
 	for set_name in GameData.SET_ORDER:
 		for slot in GameData.SETS[set_name]["pieces"]:
-			if g.set_block_reason(set_name) == "":
+			# only a piece that would beat what we wear (it used to re-craft every visit
+			# and salvage the copies, burning dust and scrap)
+			if g.set_block_reason(set_name) == "" and g.is_upgrade(GameData.make_set_item(set_name, slot, g.best_floor, -1)):
 				g.craft_set_piece(set_name, slot)
-	if g.bag_craft_block_reason() == "":
+				g.equip_best()
+	# scrap is for upgrades: sew a bigger bag only when the gold one is out of reach
+	if g.bag_craft_block_reason() == "" and g.next_bag_cost() > g.gold:
 		g.craft_bag()
 	g.equip_best()
-	# Scrap into the cheapest upgrades
-	for _i in 60:
+	# Scrap into the cheapest upgrade that can be paid now (one that needs dust we don't
+	# have is skipped, not a reason to stop)
+	for _i in 80:
 		var pick: Dictionary = {}
 		var best_cost := 1 << 60
 		for slot in g.equipped:
 			var it: Dictionary = g.equipped[slot]
-			if int(it["level"]) >= GameData.MAX_UPGRADE:
+			if int(it["level"]) >= GameData.MAX_UPGRADE or Economy.upgrade_short(g, it) != "":
 				continue
 			var c := GameData.upgrade_cost(it)
 			if c < best_cost:
 				best_cost = c
 				pick = it
-		if pick.is_empty() or Economy.upgrade_short(g, pick) != "":
+		if pick.is_empty():
 			break
+		var before := int(pick["level"])
 		g.upgrade(int(pick["id"]))
+		if int(pick["level"]) == before:
+			break
+	# 2.1 pets: take the strongest healthy pets along (they come from rare nests)
+	var healthy: Array = g.pets.filter(func(p): return int(p["hurt"]) <= 0)
+	healthy.sort_custom(func(a, b): return Menagerie.power(a) > Menagerie.power(b))
+	for p in healthy.slice(0, Menagerie.max_out(g)):
+		if not int(p["id"]) in g.pets_out:
+			Menagerie.toggle_out(g, int(p["id"]))
 	# 2.1: dust into skills (rank up the equipped ones, cheapest first)
 	for _i in 20:
 		var sk := ""
@@ -346,7 +425,7 @@ func _num(v: float) -> String:
 
 func _report(results: Array, hours: float, quick: bool) -> String:
 	var out := "# Balance report (headless simulator)\n\n"
-	out += "Made by `tools/balance_sim.gd` (%s mode). One turn = %.0f second at normal speed, so 3,600 turns = 1 hour of play. Heroes play on Auto like a sensible player: dive, go home when the bag is full or potions run low, buy potions, equip the best, upgrade gear, spend stats and pick classes automatically. They do not fetch graves on purpose (the dive does it by itself if the killer is beaten on the way), use no elixirs, pets, parties or realms. Fixed seeds, so a rerun gives the same numbers.\n\n" % ["quick" if quick else "full", TURN_SECONDS]
+	out += "Made by `tools/balance_sim.gd` (%s mode). One turn = %.0f second at normal speed, so 3,600 turns = 1 hour of play. Heroes play on Auto like a sensible player: dive, go home when the bag is full or potions run low, buy potions, equip the best, upgrade gear, spend stats and pick classes automatically. They do not fetch graves on purpose (the dive does it by itself if the killer is beaten on the way), take their strongest pets along when they find one (nests are rare), and use no elixirs, parties or realms. Fixed seeds, so a rerun gives the same numbers.\n\n" % ["quick" if quick else "full", TURN_SECONDS]
 	# --- Summary
 	out += "## In plain words\n\n"
 	var played: Array = []
@@ -385,11 +464,30 @@ func _report(results: Array, hours: float, quick: bool) -> String:
 	if stalled > 0:
 		out += "- %d hero(s) got stuck and stopped early (see Problems).\n" % stalled
 	out += _falling_behind(results)
+	# Deaths per hour spent on floors 51-100 (from reaching floor 50 to reaching 100, or the end)
+	var wall_deaths := 0
+	var wall_min := 0.0
+	for r in results:
+		var sn: Dictionary = r["snaps"]
+		if not sn.has(50):
+			continue
+		var end_min: float = float(sn[100]["min"]) if sn.has(100) else float(r["minutes"])
+		wall_min += end_min - float(sn[50]["min"])
+		for fl in r["death_floors"]:
+			if int(fl) > 50 and int(fl) <= 100:
+				wall_deaths += 1
+	if wall_min > 0.0:
+		out += "- Floors 51-100: %d deaths in %.1f hours there (%.2f per hour).\n" % [wall_deaths, wall_min / 60.0, wall_deaths / (wall_min / 60.0)]
+	var boss_deaths := 0
+	for fl in dfl:
+		if int(fl) % GameData.BOSS_EVERY == 0:
+			boss_deaths += 1
+	out += "- Of all deaths, %d were on boss floors (every %dth floor).\n" % [boss_deaths, GameData.BOSS_EVERY]
 	out += "\n"
 	# --- Heroes
-	out += "## The heroes\n\n| Hero | Final class | Floor | Level | Gear Score | Play time | Deaths | Home trips | Gold+bank | Scrap | Dust | Stopped |\n|---|---|---|---|---|---|---|---|---|---|---|---|\n"
+	out += "## The heroes\n\n| Hero | Final class | Floor | Level | Gear Score | Avg upgrade | Play time | Deaths | Home trips | Pets | Gold+bank | Scrap | Dust | Stopped |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n"
 	for r in results:
-		out += "| %s | %s | %d | %d | %d | %s | %d | %d | %s | %s | %s | %s |\n" % [_name(r), r["class_title"], r["best_floor"], r["level"], r["gs"], _hm(r["minutes"]), r["deaths"], r["trips"], _num(r["gold"]), _num(r["scrap"]), _num(r["dust"]), _stop_text(r["stop"])]
+		out += "| %s | %s | %d | %d | %d | +%.1f | %s | %d | %d | %d | %s | %s | %s | %s |\n" % [_name(r), r["class_title"], r["best_floor"], r["level"], r["gs"], float(r.get("upg", 0.0)), _hm(r["minutes"]), r["deaths"], r["trips"], int(r.get("pets", 0)), _num(r["gold"]), _num(r["scrap"]), _num(r["dust"]), _stop_text(r["stop"])]
 	out += "\n"
 	# --- Milestones
 	out += "## Time to reach each floor (play time, h:mm)\n\n| Hero |"
@@ -475,6 +573,40 @@ func _report(results: Array, hours: float, quick: bool) -> String:
 				names.append(nme)
 		out += "| %d-%d | %d | %s |\n" % [int(k) * 25 + 1, int(k) * 25 + 25, (bands[k] as Array).size(), ", ".join(names)]
 	out += "\n"
+	# --- How heroes fall
+	var ks: Array = []
+	for r in results:
+		ks.append_array(r.get("killers", []))
+	if not ks.is_empty():
+		var tiers := {}
+		var tops := {}
+		var turns: Array = []
+		var left: Array = []
+		var naked := 0
+		var bosses := 0
+		var modded := 0
+		var modc := {}
+		for kd in ks:
+			var tn: String = Monsters.TIER_NAMES[clampi(int(kd["tier"]), 0, 5)]
+			tiers[tn] = int(tiers.get(tn, 0)) + 1
+			var tp: String = kd["top"] if String(kd["top"]) != "" else "?"
+			tops[tp] = int(tops.get(tp, 0)) + 1
+			turns.append(int(kd["turns"]))
+			left.append(float(kd["left"]))
+			if int(kd["worn"]) <= 2:
+				naked += 1
+			if bool(kd["boss"]):
+				bosses += 1
+			for mname in kd["mods"]:
+				modc[mname] = int(modc.get(mname, 0)) + 1
+			if not (kd["mods"] as Array).is_empty():
+				modded += 1
+		out += "## How heroes fall\n\n"
+		out += "- %d deaths: %d with 2 or fewer gear pieces worn (re-gearing after a fall), %d to bosses, %d to monsters with modifiers.\n" % [ks.size(), naked, bosses, modded]
+		out += "- Fight length at death: median %d turns. Monster HP left when the hero fell: median %d%%.\n" % [int(_median(turns)), int(_median(left) * 100.0)]
+		out += "- Killer's tier: %s.\n" % ", ".join(tiers.keys().map(func(t): return "%s %d" % [t, tiers[t]]))
+		out += "- Biggest damage source in the fatal fight: %s.\n" % ", ".join(tops.keys().map(func(t): return "%s %d" % [t, tops[t]]))
+		out += "- Killer's modifiers: %s.\n\n" % ", ".join(modc.keys().map(func(t): return "%s %d" % [t, modc[t]]))
 	# --- Curves
 	out += "## Curves over play time\n\nEvery row is a play time; one column per hero.\n\n"
 	var longest := 0
@@ -505,6 +637,10 @@ func _report(results: Array, hours: float, quick: bool) -> String:
 	for r in results:
 		for s in r["stalls"]:
 			out += "- %s stuck for %d turns at %s\n" % [_name(r), STALL_TURNS, s]
+			any_prob = true
+		var lf: Array = r.get("long_fights", [])
+		if not lf.is_empty():
+			out += "- %s had %d fights with no kill for %d turns (then ran), first: %s\n" % [_name(r), lf.size(), LONG_FIGHT, lf[0]]
 			any_prob = true
 		if r["stop"] == "budget":
 			out += "- %s ran out of real-time budget at %s of play (floor %d); later milestones are unknown, not failed.\n" % [_name(r), _hm(r["minutes"]), r["best_floor"]]

@@ -1315,9 +1315,9 @@ func spawn_enemy() -> void:
 	enemy_tier = 0
 	enemy_mods = []
 	enemy_shield = 0
-	var growth := pow(GameData.ENEMY_GROWTH, floor_num - 1)
+	var growth := GameData.enemy_growth(floor_num)
 	var hp := int((15 + floor_num * 15) * growth)
-	var atk := int((3 + floor_num * 2) * growth)
+	var atk := int((3 + floor_num * 2) * GameData.enemy_attack_growth(floor_num))
 	var def: Dictionary
 	if enemy_is_boss:
 		enemy_goblin = false
@@ -1520,7 +1520,7 @@ func take_turn() -> void:
 			return
 	else:
 		Combat.tick_enemy(self)
-	if has_mod("Regenerating") and enemy_hp > 0:
+	if has_mod("Regenerating") and enemy_hp > 0 and int(cfight.get("turns", 0)) < Monsters.REGEN_TURNS:
 		enemy_hp = mini(enemy_max_hp, enemy_hp + int(enemy_max_hp * 0.03))
 
 	# Hero attacks (Agility: sometimes first, sometimes twice)
@@ -2175,7 +2175,7 @@ func _hero_died() -> void:
 	say("[color=#f87171]You fell on floor %d.[/color] You wake at the checkpoint on floor %d.%s" % [floor_num, back, (" Lost: " + lost) if lost != "" else ""])
 	floor_num = back
 	Town.start_dive(self)  # what you carried is gone: the dive counts again from here
-	tip("death", "Falling drops your bag and the gear you wore where you fell, guarded by your killer: beat it there to get them back. Half the gold on you goes with them; potions and scrolls are lost. The Bank, the Vault and the Mailbox are always safe.")
+	tip("death", "Falling drops your bag and the gear you wore where you fell, guarded by your killer: beat it there to get them back. Half the gold on you goes with them; scrolls and all but 2 potions are lost. The Bank, the Vault and the Mailbox are always safe.")
 	hero_hp = get_max_hp()
 	fight = 1
 	spawn_enemy()
@@ -2300,9 +2300,11 @@ func _death_losses() -> String:
 		parts.append("%d backpack%s" % [packs_carried, "" if packs_carried == 1 else "s"])
 		packs_carried = 0
 	# Potions and scrolls are carried too (Juzo, 0.12)
-	if potions > 0:
-		parts.append("%d potion%s" % [potions, "" if potions == 1 else "s"])
-		potions = 0
+	# ...but 2.1 (R5): you wake with a couple of them (Hardcore never gets here)
+	var kept_potions := mini(potions, GameData.DEATH_KEEP_POTIONS)
+	if potions > kept_potions:
+		parts.append("%d potion%s" % [potions - kept_potions, "" if potions - kept_potions == 1 else "s"])
+	potions = kept_potions
 	if return_scrolls > 0:
 		parts.append("%d Return Scroll%s" % [return_scrolls, "" if return_scrolls == 1 else "s"])
 		return_scrolls = 0
@@ -2751,8 +2753,10 @@ func restock_shop() -> void:
 	if favg > 0 and fgs < favg:
 		featured["bonus"] = int(ceil(int(featured["bonus"]) * float(favg) / maxf(1.0, fgs)))
 	shop.clear()
+	# 2.1 (R5): Marta always has something for a slot you're missing (after a fall)
+	var missing: Array = GameData.SLOT_ORDER.filter(func(s): return not equipped.has(s))
 	for _i in GameData.SHOP_SIZE:
-		var slot: String = GameData.SLOT_ORDER.pick_random()
+		var slot: String = missing.pop_front() if not missing.is_empty() else GameData.SLOT_ORDER.pick_random()
 		shop.append(Town.local_goods(self, GameData.make_item(slot, maxi(1, _rarity(GameData.SHOP_RARITY_BONUS, GameData.LEGENDARY_CHANCE_SHOP)), best_floor, _new_id())))
 	shop_zone = GameData.zone_index(maxi(1, floor_num))
 	shop_version += 1
@@ -4409,7 +4413,7 @@ func start_special_trial(info: Dictionary, kind: String, data: Dictionary) -> bo
 	horde_left = 0
 	enemy_goblin = false
 	var f := maxi(best_floor, floor_num)
-	var growth := pow(GameData.ENEMY_GROWTH, f - 1)
+	var growth := GameData.enemy_growth(f)
 	enemy_boss_kind = "trial"
 	enemy_is_boss = true
 	enemy_tier = 0
@@ -4423,7 +4427,7 @@ func start_special_trial(info: Dictionary, kind: String, data: Dictionary) -> bo
 	enemy_color = "#e8b14a"
 	enemy_max_hp = int((15 + f * 15) * growth * float(info.get("hp", 6.0)))
 	enemy_hp = enemy_max_hp
-	enemy_attack = int((3 + f * 2) * growth * float(info.get("atk", 1.5)))
+	enemy_attack = int((3 + f * 2) * GameData.enemy_attack_growth(f) * float(info.get("atk", 1.5)))
 	enemy_base_hp = enemy_max_hp
 	enemy_base_atk = enemy_attack
 	burn_turns = 0

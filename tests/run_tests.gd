@@ -436,7 +436,7 @@ func _initialize() -> void:
 	z.spawn_enemy()
 	var base_hp := z.enemy_base_hp
 	z._apply_tier(Monsters.MYTHIC)
-	check(z.enemy_mods.size() == 4 and z.enemy_max_hp >= int(base_hp * 6.5), "mythic: 4 mods, much tougher")
+	check(z.enemy_mods.size() == int(Monsters.TIERS[Monsters.MYTHIC]["mods"]) and z.enemy_max_hp >= int(base_hp * float(Monsters.TIERS[Monsters.MYTHIC]["hp"])), "mythic: 3 mods (R5), much tougher")
 	z._apply_tier(Monsters.MYTHIC)
 	check(z.enemy_max_hp <= int(base_hp * 6.5 * 1.5) + 1, "re-applying a tier doesn't stack")
 	check(z.enemy_scale() > 1.3, "mythic drawn bigger")
@@ -900,7 +900,7 @@ func _initialize() -> void:
 			break
 	check(wiped and pl.gold == 0 and pl.floor_num == GameState.checkpoint_start(pl.floor_num), "all three down: the run fails")
 	check(pl.hero_hp == pl.get_max_hp(), "wake at full HP after a wipe")
-	check(pl.potions == 0 and pl.return_scrolls == 0, "potions and scrolls are lost on death")
+	check(pl.potions == GameData.DEATH_KEEP_POTIONS and pl.return_scrolls == 0, "scrolls and all but 2 potions are lost on death")
 	check(GameData.MAX_HEROES == 5 and GameData.SLOT_UNLOCKS.size() == 5, "a town holds five heroes, all earned")
 	check(pl.meta().has("looks"), "save meta keeps looks for town walkers")
 	# ---------- 0.12 pets ----------

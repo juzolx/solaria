@@ -491,7 +491,7 @@ static func path_info(g: GameState, kind: String) -> Dictionary:
 ## How hard the next realm's monsters hit you, compared to your health.
 static func danger_text(g: GameState) -> String:
 	var f := g.floor_num
-	var atk := float(3 + f * 2) * pow(GameData.ENEMY_GROWTH, f - 1)
+	var atk := float(3 + f * 2) * GameData.enemy_attack_growth(f)
 	var hit := atk * atk / (atk + g.get_defense())
 	var pct := hit / maxf(1.0, g.get_max_hp()) * 100.0
 	if pct < 4.0:
