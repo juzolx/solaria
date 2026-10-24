@@ -13,6 +13,11 @@ func show_for(main_node, town_n: int) -> void:
 	t = town_n
 	var p: Profile = m.profile
 	open(m, "Found a town", 760.0)
+	var coach := Onboarding.menu_tip(p, "town")  # 2.1 G9: first-time players get one plain line
+	if coach != "":
+		var ct := UI.rich(17)
+		ct.text = "[color=#e8b14a]%s[/color]" % coach
+		content.add_child(ct)
 	content.add_child(UI.wrap("Name your town, then choose how it plays. You can't change Regular or Hardcore later.", 13, UI.DIM))
 	name_edit = LineEdit.new()
 	name_edit.placeholder_text = p.town_name(t)

@@ -33,6 +33,8 @@ var damage_numbers := false  # floating damage numbers (off by default since the
 var flashes := true          # accessibility: bright flashes
 var text_size := 1           # 0 small, 1 normal, 2 large
 var notes_seen := ""         # last patch notes version shown
+var whats_new_seen := ""     # 2.1 G9: the version whose What's New screen was shown (whats_new.gd)
+var onboard := {}            # 2.1 G9: first-time flow (onboarding.gd): {"on", "seen"}; empty = never asked
 var skill_book := {}         # the skill book every Regular hero shares
 var show_recap := true       # show what killed you after a defeat
 var mail_seen: Array = []  # news letters (mail.gd NEWS) already delivered
@@ -92,6 +94,8 @@ func _from(d: Dictionary) -> void:
 	flashes = bool(d.get("flashes", true))
 	text_size = int(d.get("text_size", 1))
 	notes_seen = str(d.get("notes_seen", ""))
+	whats_new_seen = str(d.get("whats_new_seen", ""))
+	onboard = d.get("onboard", {})
 	skill_book = d.get("skill_book", {})
 	show_recap = bool(d.get("show_recap", true))
 	colorblind = bool(d.get("colorblind", false))
@@ -182,7 +186,7 @@ func save() -> void:
 		"fullscreen": fullscreen, "dark_art": dark_art, "battery_saver": battery_saver, "low_graphics": low_graphics, "dev_mode": dev_mode, "hc_best": hc_best, "hc_runs": hc_runs,
 		"player_name": player_name, "online": online, "path_choice": path_choice,
 		"active_slot": active_slot, "max_floor": max_floor, "stash": stash, "stash_level": stash_level,
-		"shake": shake, "damage_numbers": damage_numbers, "dmgnum_v2": true, "flashes": flashes, "text_size": text_size, "notes_seen": notes_seen, "skill_book": skill_book, "show_recap": show_recap, "colorblind": colorblind, "reduce_motion": reduce_motion, "haptics": haptics, "high_contrast": high_contrast, "mail_seen": mail_seen, "calamities": calamities, "save_epoch": save_epoch,
+		"shake": shake, "damage_numbers": damage_numbers, "dmgnum_v2": true, "flashes": flashes, "text_size": text_size, "notes_seen": notes_seen, "whats_new_seen": whats_new_seen, "onboard": onboard, "skill_book": skill_book, "show_recap": show_recap, "colorblind": colorblind, "reduce_motion": reduce_motion, "haptics": haptics, "high_contrast": high_contrast, "mail_seen": mail_seen, "calamities": calamities, "save_epoch": save_epoch,
 	}, "profile")
 
 ## True when saves from an older epoch exist and must be wiped.

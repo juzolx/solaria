@@ -242,6 +242,9 @@ func _fill_side() -> void:
 		var pulse := up.create_tween().set_loops()
 		pulse.tween_property(up, "modulate", Color(1.15, 1.1, 0.95), 0.9)
 		pulse.tween_property(up, "modulate", Color(1, 1, 1), 0.9)
+	var wn := UI.button("What's new in v%s" % PatchNotes.VERSION, func(): WhatsNew.new().show_for(m))  # 2.1 G9
+	wn.custom_minimum_size = Vector2(0, UI.TAP)
+	side_box.add_child(wn)
 	var week := Realms.realm_of_week()
 	var wk := UI.rich(12)
 	wk.text = "[color=%s]REALM OF THE WEEK[/color]\n[color=%s][b]%s[/b][/color]: double reputation and better loot." % [UI.hex(UI.DIM), Realms.info(week)["color"], Realms.realm_name(week)]

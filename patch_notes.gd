@@ -19,6 +19,7 @@ const NOTES := [
 		"Codex rewards: defeat every monster of a region, fill the Collection and the Pet book, find secret classes and more to earn titles, name colors and plate frames. Looks only, never power. See Codex > Rewards, and pick your title on the Hero tab.",
 		"Share card: the Share button on the Hero tab makes a picture of your hero (name, title, class, depth, gear, pet and proudest trophies) to keep or share.",
 		"One portal system: rifts, realm gates and trials share one set of rules (see Codex > Guide > Portals). Rifts and Deep Rifts are now one rift with a depth you see on its card before you step through, and you can walk on. A trial waiting for you can also show up behind a door as a champion's gate. Rift and gate doors always show: three doors, your choice. A Return Scroll gets you out of any portal. Closing the game no longer loses a rift or a realm choice.",
+		"New players get a few short first-time tips (skip them any time, or turn them on again in Settings), and a What's New screen shows once after an update (also in Settings). Strangers at the Inn and by the fire now whisper about secret classes, and Character > Class collects their riddles as you go deeper.",
 		"Art cleanup across heroes, monsters and the dungeon, and a new Credits screen (Menu > Credits and licenses) thanking every artist.",
 	]},
 	{"version": "0.13", "name": "The Halls Below", "lines": [

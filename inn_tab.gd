@@ -74,12 +74,17 @@ func setup(m) -> void:
 	rumor = UI.label("", 13, Color("#d6c7a1"))
 	rumor.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(rumor)
-	rumor.text = RUMORS.pick_random()
+	rumor.text = _overheard()
+
+## What the regulars say; now and then a stranger's hint about secret classes (2.1 G7, class_hints.gd).
+func _overheard() -> String:
+	var h := ClassHints.inn_line(main.state) if main and main.state else ""
+	return h if h != "" else String(RUMORS.pick_random())
 
 func _rest() -> void:
 	if Town.rest(main.state):
 		main.sfx.play("heal")
-		rumor.text = RUMORS.pick_random()
+		rumor.text = _overheard()
 	main.refresh()
 
 func refresh() -> void:
