@@ -104,7 +104,7 @@ def buzz_rows():
             t = (x - a) / max(1, n - 1)
             s_ = 3 if t < 0.45 else 2
             if y <= 29 and 0.15 < t < 0.4: s_ = 4                      # one lit patch top-left
-            if y % 2 == 0 and (x + y // 2) % 5 in (0, 1) and 0 < i < n - 1: s_ = max(1, s_ - 1)   # cropped-hair dashes
+            if y % 3 == 0 and (x + y) % 6 in (0, 1) and t > 0.3 and 0 < i < n - 1: s_ = max(1, s_ - 1)   # sparse cropped-hair dashes, shadow side
             if i == 0 or i == n - 1 or t > 0.85: s_ = max(1, s_ - 1)
             if y >= 37: s_ = min(s_, 2)
             if y >= 39: s_ = 1

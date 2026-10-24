@@ -21,7 +21,7 @@ DIM = (160, 150, 160)
 
 SKINS = ["skin_fair", "skin_tan", "skin_brown", "skin_deep"]
 HAIRC = ["hair_brown", "hair_black", "hair_blond", "hair_red"]
-HAIRS = ["short", "long", "buzz", "tail"]
+HAIRS = ["mop", "long", "buzz", "ponytail"]
 RARITY = [("Common", "r_common"), ("Uncommon", "r_uncommon"), ("Rare", "r_rare"), ("Epic", "r_epic"),
           ("Legendary", "r_legendary"), ("Mythic", "r_mythic")]
 
@@ -41,7 +41,7 @@ def rarity_ramps(i):
 ARM = "A"   # chosen arm variant for the leather base (see 01c)
 
 
-def battle(outfit="leather", hair="short", weapon="sword", skin="skin_fair", hairc="hair_brown",
+def battle(outfit="leather", hair="mop", weapon="sword", skin="skin_fair", hairc="hair_brown",
            rarity=0, robe=None, plate_ramp=None, outfit_rarity=0, arm=None):
     """rarity = weapon (and shield) rarity; outfit_rarity = armour rarity. Each item keeps its own trim."""
     wr = rarity_ramps(rarity)
@@ -77,7 +77,7 @@ def port_outfits():
         for a, b in mp.items():
             m2[g == a] = b
         if name == "plate":                      # steel breastplate like the battle view; leather gorget strap
-            m2[:35][g[:35] == "W"] = "B"
+            m2[:44][g[:44] == "W"] = "B"
         if name == "plate":
             m2[(g == "V") & (s == "4")] = "R"
         p = os.path.join(hero.LAY, "port_outfit_" + name)
@@ -85,13 +85,13 @@ def port_outfits():
         open(p + ".shade.txt", "w").write("\n".join("".join(r) for r in s) + "\n")
 
 
-def portrait(face="determined", hair="short", outfit="leather", skin="skin_fair", hairc="hair_brown",
+def portrait(face="determined", hair="mop", outfit="leather", skin="skin_fair", hairc="hair_brown",
              iris="iris_brown", rarity=0):
     names = ["port_body", "port_outfit_" + outfit, "port_hair_" + hair, "port_face_" + face]
     ramps = {"S": skin, "H": hairc, "h": hairc, "E": iris}
     ramps.update(rarity_ramps(rarity))
     im = hero.render(names, ramps=ramps, pad=False)[0]
-    return im.crop((0, 0, 46, 48))
+    return im.crop((0, 0, 46, 57))
 
 
 def glow(im, rr="r_mythic", weapon_names=("w_sword",)):
@@ -165,7 +165,7 @@ def sheet_base():
     # layers
     S.panel(560, 820, 570, 420, "Layers (each recolours at runtime)")
     parts = [("body", ["base_body_noarms"]), ("outfit", ["outfit_leather_noarms"]), ("arms", ["arms_A"]),
-             ("hair", ["hair_short"]), ("weapon", ["w_sword_A"]), ("hand", ["fist_A"])]
+             ("hair", ["hair_mop"]), ("weapon", ["w_sword_A"]), ("hand", ["fist_A"])]
     x = 575
     for lab, n in parts:
         im = hero.render(n, ramps={})[0]
@@ -340,7 +340,7 @@ def sheet_weapons():
 
 
 def sheet_arms():
-    S = Sheet(1600, 1000, "01c  Arm variants - pick one (A is used in 01 and the mockup)",
+    S = Sheet(1600, 1000, "01c  Arms: Juzo picked A (default) and C (option: A's pose with rolled sleeves)",
               "Shoulder -> sleeve -> forearm -> hand as one shape; short, chunky, tapered for the chibi build.")
     labs = {"A": "A  relaxed: elbow bent, blade held out from the hip",
             "B": "B  on guard: sword arm raised, off arm braced",
@@ -357,16 +357,55 @@ def sheet_arms():
     S.save("01c_HERO_arms_ABC.png")
 
 
+HAIR_LIB = ["mop", "short", "shaggy", "spiky", "mohawk", "buzz", "bangs", "long", "ponytail", "bun", "braid", "afro"]
+HAIR_NAMES = {"mop": "Mop (base)", "short": "Short", "shaggy": "Shaggy", "spiky": "Spiky", "mohawk": "Mohawk", "buzz": "Buzz", "bangs": "Bangs",
+              "long": "Long", "ponytail": "Ponytail", "bun": "Bun", "braid": "Braid", "afro": "Afro"}
+
+
+def old_lpc_hair(style_file, anim):
+    lp = "C:/gamedev/solaria_dev/art/lpc/"
+    m = json.load(open(lp + "manifest.json"))["items"]
+    def lay(k):
+        fs = m[k]["layers"][0]["files"]
+        f = (fs.get("male") or list(fs.values())[0]).get(anim)
+        return Image.open(lp + f["file"]).convert("RGBA").crop((0, 0, 64, 64)) if f else None
+    im = Image.alpha_composite(lay("body"), lay("head_human_m"))
+    h = lay("hair_" + style_file) if style_file else None
+    if h is not None:
+        im = Image.alpha_composite(im, h)
+    return im.crop((12, 4, 52, 40))
+
+
+def sheet_hair():
+    import hairlib
+    S = Sheet(1600, 1260, "HAIR1  Hair library vs the old in-game styles (first 12)",
+              "Same names and ideas as the old LPC styles, redrawn in our pixels for the chibi head. Each card: old back | old front | new back | new portrait.")
+    for i, k in enumerate(HAIR_LIB):
+        col, row = i % 4, i // 4
+        x, y = 20 + col * 395, 110 + row * 380
+        S.panel(x, y, 380, 362, "%d  %s" % (i + 1, HAIR_NAMES[k]))
+        of = hairlib.OLD.get(k)
+        S.put(old_lpc_hair(of, "idle@up"), x + 10, y + 50, 2)
+        S.put(old_lpc_hair(of, "idle@down"), x + 10, y + 130, 2)
+        S.d.text((x + 10, y + 210), "old", font=F_S, fill=DIM)
+        b = battle(hair=k)
+        S.put(b.crop((hero.PADL + 6, 8, hero.PADL + 46, 62)), x + 100, y + 44, 3)
+        S.put(portrait(hair=k), x + 230, y + 50, 3)
+        S.d.text((x + 100, y + 320), "new back      new portrait", font=F_S, fill=TXT)
+    S.save("HAIR1_library_vs_old.png")
+
+
 def export_layers():
     """Runtime export: one PNG per layer, R = shade (0 line, 1-4), G = material id, B = 0, A = 255."""
     mats = sorted(set("SFeEhHWVBTKMGRUQJDC"))
     ex = os.path.join(OUT, "layers")
     os.makedirs(ex, exist_ok=True)
     names = ["base_body", "base_body_front", "base_body_noarms", "outfit_leather_noarms", "arms_A", "arms_B", "arms_C", "fist_A", "fist_B", "fist_C", "w_sword_A", "w_sword_B", "w_sword_C", "outfit_leather", "outfit_cloth", "outfit_plate",
-             "hair_short", "hair_long", "hair_buzz", "hair_tail", "w_sword", "w_staff", "w_bow", "w_shield",
+             "w_sword", "w_staff", "w_bow", "w_shield",
              "port_body", "port_outfit_leather", "port_outfit_cloth", "port_outfit_plate",
-             "port_hair_short", "port_hair_long", "port_hair_buzz", "port_hair_tail",
+             
              "port_face_determined", "port_face_fierce", "port_face_smile"]
+    names += ["hair_" + k for k in HAIR_LIB] + ["port_hair_" + k for k in HAIR_LIB]
     for n in names:
         g, s = hero.load(n)
         a = np.zeros((hero.H, hero.W, 4), np.uint8)
@@ -385,7 +424,7 @@ def export_layers():
 
 if __name__ == "__main__":
     port_outfits()
-    sheet_base(); sheet_arms(); export_layers()
+    sheet_base(); sheet_arms(); sheet_hair(); export_layers()
     # customisation sheets 02-05 come back once each piece is rebuilt on the pass-2 base
     if "--all" in sys.argv:
         sheet_skin_hair(); sheet_faces(); sheet_outfits(); sheet_weapons()

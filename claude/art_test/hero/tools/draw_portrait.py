@@ -196,13 +196,20 @@ def vest_tone(rows):
     return out
 
 
+PDY = 9   # portrait drawn 9 px lower so tall styles (spiky, mohawk, afro) fit above the head
+
+
+def sh(rows):
+    return [(y + PDY, x, t) for y, x, t in rows]
+
+
 def build():
-    body = D.blank(); D.draw(body, FACE_SKIN); D.save(body, "port_body")
+    body = D.blank(); D.draw(body, sh(FACE_SKIN)); D.save(body, "port_body")
     for k, rows in FACES.items():
-        D.save(D.draw(D.blank(), rows), "port_face_" + k)
+        D.save(D.draw(D.blank(), sh(rows)), "port_face_" + k)
     for k, rows in HAIRS.items():
-        D.save(D.denoise(D.draw(D.blank(), [(y, x, r.replace(" ", ".")) for y, x, r in rows])), "port_hair_" + k)
-    D.save(D.draw(D.blank(), vest_tone(vest_rows())), "port_outfit_leather")
+        D.save(D.denoise(D.draw(D.blank(), sh([(y, x, r.replace(" ", ".")) for y, x, r in rows]))), "port_hair_" + k)
+    D.save(D.draw(D.blank(), sh(vest_tone(vest_rows()))), "port_outfit_leather")
 
 
 if __name__ == "__main__":

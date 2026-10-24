@@ -1,3 +1,26 @@
+# Pass 2b: arms picked + hair library (HAIR1)
+
+- **Arms:** Juzo picked **A (default)** and **C (option)**. C is already A's pose with rolled sleeves
+  and bare forearms, so the two share one hand position and every weapon fits both (`01c_HERO_arms_ABC.png`).
+- **Hair library** (`HAIR1_library_vs_old.png`): the old in-game LPC styles, same names and ideas,
+  redrawn in our own pixels for the chibi head (no LPC pixels; several LPC parts are share-alike).
+  First 12: Mop (the base hand-drawn mop, = old "Mop"), Short, Shaggy, Spiky, Mohawk, Buzz, Bangs,
+  Long, Ponytail, Bun (two side bunches like the old "bunches"), Braid, Afro. Each has a battle back
+  view and a portrait layer, material H, so all hair colours are ramp swaps. Built by `tools/hairlib.py`
+  (silhouette per style + one strand/curl shading routine + speckle removal; Mop and Buzz hand-drawn).
+  The portrait canvas moved 9 px down so tall styles (spiky, mohawk, afro) fit.
+- **Fable check of HAIR1:** 6/10, FIX. Fixed: Shaggy now a tufted mop (was a copy of Short); Long
+  narrowed and shortened so the vest shows, uneven hem; Buzz and Afro texture changed from 1 px stipple
+  to sparse clusters on the shadow side; Spiky leans right in both views; Bangs fringe raised so the
+  brows show; taller portrait canvas. Not changed: Bun is two side bunches on purpose (the old style is
+  "bunches"); Braid hangs down the back in battle and over the shoulder in the portrait.
+- **Self-score HAIR1: 7/10.** Best: Mop, Short, Shaggy, Spiky, Bangs, Ponytail, Afro. Weakest: Mohawk
+  (bare skull reads a bit pale), Long (portrait side curtains are plain), Braid (pattern is regular).
+- **Next, after Juzo approves the look:** the remaining 25 styles in `lpc.gd HAIR_ORDER` (Side Swept,
+  Short Mohawk, Bald, Balding, Bedhead, Unkempt, Porcupine, Parted, Page, Long Bangs, Very Long, Wild,
+  Loose, Wavy, Tied Back, High Ponytail, Half Up, Pigtails, Bob, Pixie, Princess, Curly, Long Curls,
+  Cornrows, Dreadlocks).
+
 # HERO pass 2: chibi base seen from behind + customisation rebuilt on it (Oct 23 2026)
 
 | # | File | Shows |
