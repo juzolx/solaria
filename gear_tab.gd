@@ -64,7 +64,8 @@ func setup(m) -> void:
 		var ch := UI.hbox(8)
 		ch.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(ch)
-		var pic := ItemGrid.picture(36)
+		var pic := ItemGrid.picture(48)
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED   # whole pixels only (interface pass)
 		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		ch.add_child(pic)
 		slot_pics[s] = pic
@@ -155,8 +156,8 @@ func refresh() -> void:
 			extra += "  [color=#4ade80]UPGRADE![/color]"
 			ups += 1
 		var pic: TextureRect = slot_pics[s]
-		pic.texture = Sprites.item_icon(state.equipped[s]) if state.equipped.has(s) else _ghost(s)
-		pic.modulate = Color.WHITE if state.equipped.has(s) else Color(0.55, 0.6, 0.8, 0.22)  # empty: a faint outline of what goes here
+		pic.texture = UiIcons.big(Sprites.item_icon(state.equipped[s]) if state.equipped.has(s) else UiIcons.ghost(_ghost(s)), 48)
+		pic.modulate = Color.WHITE  # empty slots show a slate ghost of what goes here
 		if state.equipped.has(s):
 			var item: Dictionary = state.equipped[s]
 			var c := GameData.color_of(item["rarity"])

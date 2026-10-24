@@ -1414,7 +1414,7 @@ func _member_plate(m, g: GameState, c: Rect2, u: float) -> void:
 		var by := c.position.y + 8.0 * Sprites.HD * u
 		draw_rect(Rect2(bx, by, bw, 5), Color(0.03, 0.03, 0.05, 0.85))
 		draw_rect(Rect2(bx + 1, by + 1, (bw - 2) * clampf(float(m.hp) / maxf(1.0, m.max_hp()), 0.0, 1.0), 3), Color("#22c55e") if not m.knocked_out else Color("#64748b"))
-		var font := ThemeDB.fallback_font
+		var font := UI.game_font()   # interface pass: the game font everywhere
 		_outlined(font, Vector2(bx - 30, by - 4), _fit_text(font, m.name, NAME_FS, bw + 60), HORIZONTAL_ALIGNMENT_CENTER, bw + 60, NAME_FS, Color(g.class_info().get("color", "#ffffff")).lightened(0.4))
 
 ## The visible body part of the hero (for bars, effects and centering).
@@ -1502,7 +1502,7 @@ func _draw() -> void:
 	var h := size.y
 	var zone := GameData.zone_for_floor(state.floor_num)
 	var tint := Color(zone["color"])
-	var font := ThemeDB.fallback_font
+	var font := UI.game_font()   # interface pass: the game font everywhere
 
 	# Background (0.13): the room you walked into, first-person (HallsScene), same as between fights
 	if state.in_town or state.trial_active:
@@ -1996,7 +1996,7 @@ func _draw_shield(r: Rect2) -> void:
 
 ## Modifier names under the monster's feet.
 func _draw_mods(r: Rect2) -> void:
-	var font := ThemeDB.fallback_font
+	var font := UI.game_font()   # interface pass: the game font everywhere
 	var x := r.get_center().x
 	var y := _ground() - 6.0
 	var total := 0.0
@@ -2119,7 +2119,7 @@ func _pip(c: Vector2, rad: float, col: Color) -> void:
 	draw_colored_polygon(PackedVector2Array([c + Vector2(0, -rad), c + Vector2(rad, 0), c + Vector2(0, rad), c + Vector2(-rad, 0)]), col)
 
 func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color, label_color: Color, pips := 0, pack := Vector2i.ZERO) -> void:
-	var font := ThemeDB.fallback_font
+	var font := UI.game_font()   # interface pass: the game font everywhere
 	var b := _bar_rect(r)
 	var a := label_color.a
 	var pct := clampf(float(value) / maxf(1.0, max_value), 0.0, 1.0)

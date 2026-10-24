@@ -5,102 +5,89 @@ extends RefCounted
 ## frames with rivets on stone, bevelled stone buttons, and one warm torch
 ## light. Everything is drawn here in code (no extra art packs) and cached.
 
-const IRON := Color("#4b4e63")       # frame metal
-const IRON_HI := Color("#8a8ca3")    # the lit top-left edge of the metal
-const SOOT := Color("#06050d")       # outlines
-const TORCH := Color("#f9905e")      # the one warm light
-const PX := 2                        # frame art is drawn at 2x (crisp on phones)
+const IRON := Color("#3a4466")       # frame line: slate (art/palette.gpl)
+const IRON_HI := Color("#5a6988")    # the lit edge of a frame
+const SOOT := Color("#0e0812")       # outlines: the same ink as the hero and monster outlines
+const TORCH := Color("#f77622")      # the one warm light
+const SLATE := Color("#262b44")      # raised parts: buttons, tabs
+const STUD := Color("#c8a060")       # the small gold corner studs (dull gold)
+const PX := 2                        # frame art is drawn at 2x, the same grid as the sprites (Sprites.HD)
 
 static var _cache := {}
 
 static func _key(parts: Array) -> String:
 	return ",".join(parts.map(func(p): return str(p)))
 
-## An iron frame with corner rivets around a stone fill. accent tints the metal
-## (popups keep their colored edge); fill can be see-through over the backdrop.
+## Interface pass (claude/research/ui-research.md): a quiet frame, so the art is
+## the star. Ink outline, one slate line (or the accent colour for popups), a
+## shadow under the top edge, and tiny gold studs in the corners.
 static func frame(fill: Color, accent := IRON, margin := 12) -> StyleBoxTexture:
 	var key := _key(["frame", fill.to_html(), accent.to_html(), margin])
 	if _cache.has(key):
 		return (_cache[key] as StyleBoxTexture).duplicate() as StyleBoxTexture  # a copy: callers may change its margins
-	var n := 16   # art pixels per side
+	var n := 8   # art pixels per side
 	var img := Image.create(n * PX, n * PX, false, Image.FORMAT_RGBA8)
-	var metal := IRON.lerp(accent, 0.45)
-	var lit := metal.lerp(IRON_HI, 0.6)
-	var dark := metal.darkened(0.5)
-	var plate := metal.lightened(0.12)
+	var line := accent
 	for y in n:
 		for x in n:
 			var c := fill
 			var ring := mini(mini(x, y), mini(n - 1 - x, n - 1 - y))
 			var cx := x if x < n / 2 else n - 1 - x   # distance into the nearest corner
 			var cy := y if y < n / 2 else n - 1 - y
-			var top_left := x + y < n - 1
 			if ring == 0:
 				c = SOOT
 			elif ring == 1:
-				c = lit if top_left else dark   # the band catches light top-left
-			elif ring == 2:
-				c = metal
-			elif ring == 3:
-				c = dark
-			elif ring == 4:
-				c = SOOT.lerp(fill, 0.45)   # a shadow just inside the frame
-			if cx <= 5 and cy <= 5 and ring >= 1:
-				c = plate if ring < 5 or (cx <= 4 and cy <= 4) else c   # corner plates
-				if cx == 5 or cy == 5:
-					c = dark
-				if cx == 2 and cy == 2:
-					c = IRON_HI.lightened(0.4)   # the rivet
-				elif (cx == 3 and cy == 3) or (cx == 3 and cy == 2) or (cx == 2 and cy == 3):
-					c = SOOT.lerp(metal, 0.3)   # its shadow
-			if ring >= 5 and not (cx <= 4 and cy <= 4):
-				c = fill
+				c = line
+			elif ring == 2 and y == 2:
+				c = SOOT.lerp(fill, 0.5)   # a shadow just under the top line
+			if cx <= 2 and cy <= 2:
+				c = SOOT                    # the stud: a 3x3 ink block...
+				if cx == 1 and cy == 1:
+					c = STUD                # ...with one gold pixel
 			_px(img, x, y, c)
 	var st := StyleBoxTexture.new()
 	st.texture = ImageTexture.create_from_image(img)
 	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
-		st.set_texture_margin(side, 6 * PX)
+		st.set_texture_margin(side, 3 * PX)
 		st.set_content_margin(side, margin)
 	_cache[key] = st
 	return st.duplicate() as StyleBoxTexture
 
-## A stone button: light on top, shadow underneath, a dark outline in the edge color.
+## A slate block: ink outline with chipped corners, a 1 px edge in the button's
+## role colour (slate, gold = selected / main action, red = danger), a lit lip
+## under the top edge. Pressed: darker, no lip, text sits 1 px lower.
 static func bevel(fill: Color, edge: Color, margin := 6, pressed := false) -> StyleBoxTexture:
 	var key := _key(["bevel", fill.to_html(), edge.to_html(), margin, pressed])
 	if _cache.has(key):
 		return (_cache[key] as StyleBoxTexture).duplicate() as StyleBoxTexture  # a copy: callers may change its margins
 	var n := 8
 	var img := Image.create(n * PX, n * PX, false, Image.FORMAT_RGBA8)
-	var top := fill.lightened(0.3) if not pressed else fill.darkened(0.3)
-	var bottom := fill.darkened(0.55) if not pressed else fill.lightened(0.1)
+	var face := fill if not pressed else fill.darkened(0.25)
+	var lip := fill.lerp(edge, 0.35) if not pressed else face
 	for y in n:
 		for x in n:
-			var c := fill
+			var c := face
 			if x == 0 or y == 0 or x == n - 1 or y == n - 1:
-				c = edge.darkened(0.15)
+				c = SOOT
 				if (x == 0 or x == n - 1) and (y == 0 or y == n - 1):
-					c = Color(0, 0, 0, 0)   # clipped corners, chiselled
-			elif y == 1:
-				c = top
-			elif y >= n - 2:
-				c = bottom
-			elif x == 1:
-				c = fill.lerp(top, 0.5)
-			elif x == n - 2:
-				c = fill.lerp(bottom, 0.5)
+					c = Color(0, 0, 0, 0)   # chipped corners
+			elif x == 1 or y == 1 or x == n - 2 or y == n - 2:
+				c = edge
+			elif y == 2:
+				c = lip
 			_px(img, x, y, c)
 	var st := StyleBoxTexture.new()
 	st.texture = ImageTexture.create_from_image(img)
 	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
 		st.set_texture_margin(side, 3 * PX)
 		st.set_content_margin(side, margin + 2)
-	st.set_content_margin(SIDE_TOP, margin + (1 if pressed else 0))
+	st.set_content_margin(SIDE_TOP, margin + (2 if pressed else 0))
 	_cache[key] = st
 	return st.duplicate() as StyleBoxTexture
 
 ## The wall behind the menus and town pages: ink-dark stone blocks, a warm torch
 ## glow from above and a vignette. tint shifts it toward a region's mood.
-static func backdrop(tint := Color("#0b0a1d")) -> ImageTexture:
+static func backdrop(tint := Color("#181425")) -> ImageTexture:
 	var key := _key(["bg", tint.to_html()])
 	if _cache.has(key):
 		return _cache[key]

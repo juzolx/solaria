@@ -3,6 +3,9 @@ extends ScrollContainer
 ## Character > Hero: who you are, your 8 stats, your special stat, your saved
 ## builds and the numbers it all adds up to. Laid out as one column of cards
 ## so it reads well on a phone.
+## Interface pass: the top is a "stage": name plate, the hero big on a stone
+## plinth, a paper doll of the six main gear slots (tap = Gear page), XP. Stats
+## are compact icon + number cells (tap one to read what it does).
 
 var main
 var state: GameState
@@ -29,6 +32,12 @@ var respec_button: Button
 var _look_key := ""
 var title_pick: OptionButton  # 2.1 G4: the title you show (shared with the Guild Hall picker)
 var _title_key := ""
+var doll := {}       # slot -> [Button, caption Label]
+const DOLL_LEFT := ["Weapon", "Helmet", "Chest"]
+const DOLL_RIGHT := ["Off Hand", "Legs", "Feet"]
+const DOLL_SIZE := 64
+var _doll_key := ""
+var _ghosts := {}
 
 func setup(m) -> void:
 	main = m
@@ -39,38 +48,70 @@ func setup(m) -> void:
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_child(v)
 
-	# ---- Character card ----
+	# ---- The stage: name plate, hero on a plinth, paper doll, XP ----
 	var card := PanelContainer.new()
-	card_style = UI.style(UI.INSET, UI.CARD_EDGE, 6, 12, 1)   # design system: one iron edge; the class colour lives in the name
-	card.add_theme_stylebox_override("panel", card_style)
+	card_style = UI.style(UI.INSET, UI.CARD_EDGE, 6, 12, 1)   # kept for refresh(); the stage itself wears the frame
+	card.add_theme_stylebox_override("panel", UiSkin.frame(UI.INSET, UiSkin.IRON, 12))
 	v.add_child(card)
-	var ch := UI.hbox(12)
-	card.add_child(ch)
+	var sv := UI.vbox(8)
+	card.add_child(sv)
+	var plate := PanelContainer.new()
+	plate.add_theme_stylebox_override("panel", UiSkin.bevel(UiSkin.SLATE, UI.EDGE, 6))
+	plate.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	sv.add_child(plate)
+	var pv0 := UI.vbox(0)
+	plate.add_child(pv0)
+	title_label = UI.label("", 21, UI.GOLD)
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_label.clip_text = true   # a long name never widens the screen
+	title_label.custom_minimum_size = Vector2(220, 0)
+	pv0.add_child(title_label)
+	level_label = UI.label("", UI.FONT_CAPTION, UI.DIM_CONTRAST)
+	level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	level_label.clip_text = true
+	pv0.add_child(level_label)
+	role_label = UI.wrap("", UI.FONT_CAPTION, UI.DIM)   # the class blurb lives in the plate's tap-tip now (fewer words)
+	role_label.visible = false
+	sv.add_child(role_label)
+	var mid := UI.hbox(4)
+	sv.add_child(mid)
+	var left := UI.vbox(6)
+	mid.add_child(left)
+	var center := Control.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.custom_minimum_size = Vector2(0, 3 * (DOLL_SIZE + 24) - 6)
+	center.clip_contents = false
+	mid.add_child(center)
+	var right := UI.vbox(6)
+	mid.add_child(right)
+	for col in [[left, DOLL_LEFT], [right, DOLL_RIGHT]]:
+		for slot in col[1]:
+			col[0].add_child(_doll_slot(slot))
+	var pl := TextureRect.new()
+	pl.texture = UiIcons.plinth(64)
+	pl.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	center.add_child(pl)
 	portrait = TextureRect.new()
 	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	portrait.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT) * 2
+	portrait.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT) * 3   # the hero is the centrepiece: 3x, whole pixels
+	portrait.size = portrait.custom_minimum_size
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	ch.add_child(portrait)
-	var cv := UI.vbox(4)
-	cv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	ch.add_child(cv)
-	var top := UI.hbox(8)
-	cv.add_child(top)
-	title_label = UI.label("", 21, UI.TEXT)
-	title_label.clip_text = true
-	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(title_label)
-	level_label = UI.label("", 17, UI.GOLD)
-	top.add_child(level_label)
-	role_label = UI.wrap("", UI.FONT_CAPTION, UI.DIM)
-	cv.add_child(role_label)
+	center.add_child(portrait)
+	center.resized.connect(func():   # centre the hero and its plinth in whatever width the phone gives
+		var cw := center.size.x
+		var ph := portrait.custom_minimum_size
+		portrait.position = Vector2(roundf((cw - ph.x) / 2.0), center.size.y - ph.y - 14)
+		pl.position = Vector2(roundf((cw - pl.texture.get_width()) / 2.0), center.size.y - pl.texture.get_height() - 2))
 	chips = UI.hbox(6)
-	cv.add_child(chips)
-	xp_bar = UI.bar(UI.GOLD, 8)
-	cv.add_child(xp_bar)
+	chips.alignment = BoxContainer.ALIGNMENT_CENTER
+	sv.add_child(chips)
+	xp_bar = UI.bar(UI.GOLD, 10)
+	sv.add_child(xp_bar)
 	xp_label = UI.label("", UI.FONT_CAPTION, UI.DIM)
-	cv.add_child(xp_label)
+	xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sv.add_child(xp_label)
+	UI.tip(plate, "Your hero. Tap a gear slot to change what you wear.")
 
 	# ---- 2.1 G4 + G8: your title, and a picture of your hero to share ----
 	var trow := UI.hbox(8)
@@ -116,7 +157,7 @@ func setup(m) -> void:
 		prow.add_child(b)
 
 	# ---- The 8 stats ----
-	UI.section(v, "Stats", "Each stat has one job. Gold cards with a ★ are the ones your class wants most.")
+	UI.section(v, "Stats", "Gold = your class wants it. Tap a stat to see what it does.")
 	# Small boxes side by side: 2 across on phones, 4 on wider screens (see _fit_stat_grid)
 	stat_grid = GridContainer.new()
 	stat_grid.columns = 2
@@ -165,30 +206,37 @@ func setup(m) -> void:
 
 func _stat_row(st: String) -> PanelContainer:
 	var info: Dictionary = GameData.STAT_INFO[st]
-	var c := UI.card(UI.CARD_EDGE, UI.INSET, 4)   # design system: no rainbow; suggested stats get a gold edge (refresh)
+	var c := UI.card(UI.CARD_EDGE, UI.INSET, 4)   # suggested stats get a gold edge (refresh)
 	var box: PanelContainer = c[0]
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var bv: VBoxContainer = c[1]
 	bv.add_theme_constant_override("separation", 2)
 	UI.tip(box, "%s: %s" % [info["name"], info["text"]])
-	# STR  Strength          ★
-	var nh := UI.hbox(5)
+	# [icon] STR            87 ★
+	var nh := UI.hbox(8)
 	bv.add_child(nh)
-	nh.add_child(UI.label(st, UI.FONT_BODY, UI.TEXT))
-	var nm := UI.label(info["name"], UI.FONT_CAPTION, UI.DIM)
-	nm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	nm.clip_text = true
-	nh.add_child(nm)
+	var ic := TextureRect.new()
+	ic.texture = UiIcons.big(UiIcons.stat(st), 56)
+	ic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	ic.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	ic.custom_minimum_size = Vector2(48, 56)
+	ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	nh.add_child(ic)
+	var ab := UI.label(st, UI.FONT_BODY, UI.TEXT)
+	ab.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	nh.add_child(ab)
+	var sp := UI.spacer()
+	nh.add_child(sp)
+	var val := UI.label("0", UI.FONT_DISPLAY, Color("#f4e6c4"))
+	val.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	nh.add_child(val)
 	var chip := UI.label("★", UI.FONT_CAPTION, UI.GOLD)
+	chip.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	UI.tip(chip, "Suggested for your class")
 	nh.add_child(chip)
-	# The number, big
-	var val := UI.label("0", UI.FONT_DISPLAY, UI.TEXT)
-	bv.add_child(val)
-	# What it gives (wraps to at most a few short lines)
+	# What it gives: in the tap-tip and the numbers below; shown here only while you spend points
 	var gives := UI.rich(UI.FONT_CAPTION)
-	gives.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	gives.visible = false
 	bv.add_child(gives)
 	var br := UI.hbox(4)
 	bv.add_child(br)
@@ -198,8 +246,50 @@ func _stat_row(st: String) -> PanelContainer:
 		b.custom_minimum_size = Vector2(0, UI.TAP)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		br.add_child(b)
-	rows[st] = {"value": val, "gives": gives, "p1": p1, "p5": p5, "chip": chip, "box": box, "name": nh.get_child(0)}
+	rows[st] = {"value": val, "gives": gives, "p1": p1, "p5": p5, "chip": chip, "box": box, "name": ab}
 	return box
+
+## One paper-doll slot: the worn item's picture (or a slate ghost of what goes there) and its name.
+func _doll_slot(slot: String) -> Control:
+	var col := UI.vbox(2)
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(DOLL_SIZE, DOLL_SIZE)
+	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+	b.expand_icon = false
+	b.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	b.pressed.connect(func(): main.show_tab(1, 0))
+	b.tooltip_text = slot
+	col.add_child(b)
+	var cap := UI.label(slot.replace("Off Hand", "Off-hand").replace("Helmet", "Head"), UI.FONT_CAPTION, UI.DIM)
+	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(cap)
+	doll[slot] = [b, cap]
+	return col
+
+## The slot's usual gear picture as a slate shape (no random item roll, so the game's RNG is untouched).
+const GHOST_ART := {"Weapon": ["sword", "steel"], "Off Hand": ["buckler", "wood"], "Helmet": ["helm", "steel"],
+	"Chest": ["plate_masc", "steel"], "Legs": ["greaves_masc", "steel"], "Feet": ["boots_masc", "leather"]}
+
+func _ghost(s: String) -> Texture2D:
+	if not _ghosts.has(s):
+		var spec: Array = GHOST_ART.get(s, ["sword", "steel"])
+		_ghosts[s] = UiIcons.ghost(UiIcons.gear(spec[0], spec[1]))
+	return _ghosts[s]
+
+func _refresh_doll() -> void:
+	var key := str(state.equipped)
+	if key == _doll_key:
+		return
+	_doll_key = key
+	for slot in doll:
+		var b: Button = doll[slot][0]
+		var worn: bool = state.equipped.has(slot)
+		b.icon = UiIcons.big(Sprites.item_icon(state.equipped[slot]) if worn else _ghost(slot), DOLL_SIZE - 12)
+		var edge := Color(GameData.color_of(int(state.equipped[slot].get("rarity", 0)))) if worn else UI.EMPTY
+		for st_name in ["normal", "hover", "pressed", "focus"]:
+			var sb: StyleBox = UiSkin.bevel(UI.INSET, edge if st_name != "hover" else UI.GOLD_DULL, 2, st_name == "pressed")
+			b.add_theme_stylebox_override(st_name, sb)
 
 func _fit_stat_grid() -> void:
 	var cols := 4 if stat_grid.size.x >= 680.0 else 2
@@ -241,11 +331,13 @@ func refresh() -> void:
 	if key != _look_key:
 		_look_key = key
 		portrait.texture = Sprites.portrait(state.appearance, state.hero_looks())
-	title_label.text = (state.hero_name + ", " if state.hero_name != "" else "") + state.title()
-	title_label.add_theme_color_override("font_color", color.lightened(0.3))
+	title_label.text = state.hero_name if state.hero_name != "" else state.title()
+	title_label.add_theme_color_override("font_color", UI.GOLD)
 	var cur := ClassTree.current(state)
 	role_label.text = String(cur["role_text"]) if not cur.is_empty() else String(state.class_info().get("blurb", ""))
-	level_label.text = "Lv %d" % state.level
+	level_label.text = "%s  ·  Lv %d" % [state.title(), state.level]
+	level_label.add_theme_color_override("font_color", color.lightened(0.3))   # the class colour lives in the class name
+	_refresh_doll()
 	_fill_titles()
 	for c in chips.get_children():
 		c.queue_free()
