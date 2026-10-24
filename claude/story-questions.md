@@ -38,3 +38,4 @@ store description. Mechanics stay; only names and text change (unless Juzo asks)
 - Later update idea (Juzo): an ASCENDED HEROES town at the top/end, for heroes who make it out.
 - Hardcore towns get an ACTIVE GRAVEYARD (fallen Hardcore heroes are buried there; grows over time).
 - Oct 24 2026 DEATH: Regular towns are a world with gods: a fallen hero wakes at the CHURCH, saved by the GODDESS. Hardcore towns: "there is no goddess to save you" (death is final). Use in death screens, Church text, Hardcore town mood.
+- Oct 24 2026 WORLD: the world is DYING, cause unknown to the people. The GODDESS is mysterious; she may be tied to why the world is dying (players never learn it outright). The TOWNS are SAFE ZONES in a dying world. DUNGEONS opened all over the world: some spread, some did not. Each town descends its own dungeon in hope of escape (explains several towns per player).
