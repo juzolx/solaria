@@ -1608,13 +1608,13 @@ func _handle_events() -> void:
 			"boss_intro":
 				moment_queue.append(["boss", e["name"], e["lore"], Color(e["color"]), e.get("sub", ""), null])
 			"hatch_moment":
-				var hart := Sprites.enemy_by_key(String(e["art"]))
+				var htex := Menagerie.species_texture(String(e.get("species", "")), String(e["art"]))
 				moment_queue.append(["first" if e.get("first", false) else "hatch", ("Cherished " if e["cherished"] else "") + "Baby " + String(e["name"]),
-					("%s pet, a kind you've never had. It's in your Codex now." if e.get("first", false) else "%s pet. It already looks at you like you're its whole world.") % Monsters.tier_name(int(e["tier"])), Color(Monsters.tier_color(int(e["tier"]))), "", hart.get("tex", null)])
+					("%s pet, a kind you've never had. It's in your Codex now." if e.get("first", false) else "%s pet. It already looks at you like you're its whole world.") % Monsters.tier_name(int(e["tier"])), Color(Monsters.tier_color(int(e["tier"]))), "", htex])
 			"first_find":  # next update: the first pet of a kind, the first of a Unique or Set piece
 				if e["kind"] == "pet":
-					var fart := Sprites.enemy_by_key(String(e["art"]))
-					moment_queue.append(["first", String(e["name"]), "%s pet, a kind you've never had. It's in your Codex now." % Monsters.tier_name(int(e["tier"])), Color(Monsters.tier_color(int(e["tier"]))), "", fart.get("tex", null)])
+					var ftex := Menagerie.species_texture(String(e.get("species", "")), String(e["art"]))
+					moment_queue.append(["first", String(e["name"]), "%s pet, a kind you've never had. It's in your Codex now." % Monsters.tier_name(int(e["tier"])), Color(Monsters.tier_color(int(e["tier"]))), "", ftex])
 				else:
 					var fi: Dictionary = e["item"]
 					moment_queue.append(["first", String(e["name"]), ("Your first piece of this set. Wear more of it for its bonuses." if e["kind"] == "set" else "A Unique item. There's only one like it, and now it's in your collection."), Color(GameData.color_of(int(fi["rarity"]))), "", Sprites.item_icon(fi)])

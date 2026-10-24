@@ -75,3 +75,9 @@ first element): saves, the Codex, pets, requirement keys (`boss:<id>`, `path:<id
 mechanics, signatures and art all point at the id, so they keep working. A new entry needs a new
 unique snake_case id (`ClassTree.slug(name)` makes one); tests/stage6_ids.gd checks that ids are
 unique and that every key that names a boss, monster or class exists.
+
+## Pet art (Pets 2, Oct 24 2026)
+
+Pet pictures are keyed by id too: `art/pets/32/<species id>.png` (+ `_idle.png`), Calamity pets
+`calamity_N_pet`, companions `<class>_<stage>`, eggs `egg_<region id>` (Pets.art / Pets.idle /
+Pets.egg). A new hatchable monster needs its baby art there; tests/run_tests.gd lists any missing.

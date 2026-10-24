@@ -1909,11 +1909,11 @@ func _draw_summon() -> void:
 		draw_texture_rect(white, Rect2(r.position + off, r.size), false, Color(glow, (0.35 + 0.15 * sin(bob * 4.0)) * a))
 	draw_texture_rect(tex, r, false, Color(0.7, 0.75, 1.0, 0.7 * a))
 
-## The companion stands behind the hero (art/pets, tools/art_pets.py), a size smaller.
+## The companion stands behind the hero (art/pets/32, Pets 2), a size smaller, breathing (2-frame idle).
 func _draw_pet() -> void:
 	if state == null or not state.pet_on or World.pet_stage(state) < 0:
 		return
-	var tex := Pets.portrait(state)
+	var tex := Pets.portrait_frame(state, bob)
 	if tex == null:
 		return
 	var pu := float(maxi(1, _unit() - 1)) / _scr()

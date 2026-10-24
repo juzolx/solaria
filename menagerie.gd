@@ -91,7 +91,7 @@ static func make_pet(g: GameState, monster: String, art: String, tier: int, from
 		if from == "egg":
 			p["new_kind"] = true  # hatch() shows the fanfare itself
 		else:
-			g.events.append({"type": "first_find", "kind": "pet", "name": Monsters.name_of(str(p["species"])), "tier": int(p["tier"]), "art": art})
+			g.events.append({"type": "first_find", "kind": "pet", "name": Monsters.name_of(str(p["species"])), "tier": int(p["tier"]), "art": art, "species": str(p["species"])})
 	return p
 
 static func power(p: Dictionary) -> float:
@@ -256,7 +256,7 @@ static func hatch(g: GameState, egg := {}) -> Dictionary:
 		p["cherished"] = true
 		g.codex.add("cherished_pets")
 	g.say("[color=#fde68a]Your egg hatches: a %sbaby %s![/color]" % ["Cherished " if cherished else "", p["name"]])
-	g.events.append({"type": "hatch_moment", "name": String(p["name"]), "art": art, "cherished": cherished, "tier": tier, "first": p.has("new_kind")})
+	g.events.append({"type": "hatch_moment", "name": String(p["name"]), "art": art, "species": species, "cherished": cherished, "tier": tier, "first": p.has("new_kind")})
 	p.erase("new_kind")
 	g.events.append({"type": "mini_event", "kind": "pet", "title": "IT HATCHED!", "sub": ("A Cherished baby %s" if cherished else "A baby %s") % String(p["name"])})
 	return p
@@ -292,9 +292,15 @@ static func rename(g: GameState, id: int, new_name: String) -> void:
 static func has_any(g: GameState) -> bool:
 	return not g.pets.is_empty() or not g.eggs.is_empty()
 
-## The picture for a pet (its monster art), or null.
+## The picture for a pet: its own baby art (Pets 2), else its monster art, or null.
 static func texture(p: Dictionary) -> Texture2D:
-	var e := Sprites.enemy_by_key(String(p.get("art", "")))
+	return species_texture(String(p.get("species", "")), String(p.get("art", "")))
+
+static func species_texture(species: String, art: String) -> Texture2D:
+	var own := Pets.art(species)
+	if own != null:
+		return own
+	var e := Sprites.enemy_by_key(art)
 	return e.get("tex", null)
 
 const TIER_NAMES := ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"]
