@@ -1,0 +1,14 @@
+dcdc03e9-983c-4d8f-99b0-c15ab5f9a17e m_robe_north
+ce718567-b097-4ddb-ba1e-444cde266b02 m_robe_south
+a8662538-8ace-4ab7-afd1-bc242ce3d631 m_ranger_north
+005cd4f9-6742-4839-808e-5427c9ec645a m_ranger_south_hoodup
+f277db5b-1af0-48ab-ace0-f5dcc61705f1 f_robe_north
+f2e23d3b-4b29-4faa-a86e-ed154153615d f_robe_south
+2be5c7e5-7b6c-4279-86f6-5e2e8f756bc4 f_ranger_north_hoodup
+4484208c-49dc-442c-9e49-3e7f9b1dfd36 f_ranger_south_hoodup
+364cacd5-baa1-44e0-a85a-5d1dec3a9523 m_ranger_south_hoodup2
+349482d9-debd-43aa-84b9-a6a651746450 f_ranger_north_hoodup2
+9b845c4f-b448-4813-aefe-33e14670f7ac f_ranger_south_hoodup2
+43a021e8-0ece-455d-b9dc-b3c264e68c81 m_ranger_south
+7fb70374-b104-4c8b-866f-8bfdbdda557b f_ranger_north
+deba88b9-95f8-4ccc-b158-d20c7a2d27cb f_ranger_south
