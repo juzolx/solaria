@@ -57,7 +57,7 @@ const OTHER := [
 	{"id": "sig_25", "track": "signatures", "need": 25, "pct": true, "title": "Trophy Hunter"},
 	{"id": "sig_50", "track": "signatures", "need": 50, "pct": true, "frame": ["c_keepsake", "Keepsake Case", "#ff6b9d", true]},
 	{"id": "sig_100", "track": "signatures", "need": 100, "pct": true, "title": "The Thousandfold"},
-	{"id": "slots_all", "track": "slots", "need": 6, "title": "Fully Kitted"},
+	{"id": "slots_all", "track": "slots", "need": 8, "title": "Fully Kitted"},  # 2.1: 8 slots (Ring and Necklace)
 	{"id": "sets_3", "track": "sets", "need": 3, "color": ["c_smith", "Smith's Bronze", "#d6a35c"]},
 	{"id": "sets_all", "track": "sets", "need": 10, "title": "Master of Sets", "frame": ["c_anvil", "Anvil-Struck", "#b8a07a", true]},
 	{"id": "pets_5", "track": "pets", "need": 5, "color": ["c_kennel", "Kennel Tan", "#d9b38c"]},
@@ -394,16 +394,16 @@ static func track_card(codex: Codex, track: String) -> PanelContainer:
 	card.add_child(v)
 	var top := UI.hbox(8)
 	v.add_child(top)
-	var nl := UI.label(track_name(track), 13, UI.TEXT)
+	var nl := UI.label(track_name(track), UI.FONT_CAPTION, UI.TEXT)
 	nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	nl.clip_text = true
+	nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # QA: long names ("A rare find for every slot") were cut off on phones
 	top.add_child(nl)
-	top.add_child(UI.label(("%d / %d" % [have, goal]) if goal > 0 else str(have), 12, UI.GOLD))
+	top.add_child(UI.label(("%d / %d" % [have, goal]) if goal > 0 else str(have), UI.FONT_CAPTION, UI.GOLD))
 	var bar := UI.bar(UI.GOLD, 6)
 	bar.max_value = maxi(1, goal)
 	bar.value = mini(have, maxi(1, goal))
 	v.add_child(bar)
-	var nt := UI.wrap(("Next at %s: %s" % [need_text(nxt), reward_text(nxt)]) if not nxt.is_empty() else "Every reward here is yours.", 11, UI.DIM)
+	var nt := UI.wrap(("Next at %s: %s" % [need_text(nxt), reward_text(nxt)]) if not nxt.is_empty() else "Every reward here is yours.", UI.FONT_CAPTION, UI.DIM)
 	v.add_child(nt)
 	return card
 

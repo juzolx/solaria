@@ -385,7 +385,7 @@ func _initialize() -> void:
 	check(w.hero_looks().has("Helmet"), "transmog look shows")
 	var hero_pic := Sprites.hero(w.appearance, w.hero_looks())
 	check(hero_pic["body"] != null, "hero picture builds")
-	check(ItemPool.count() == 300, "300 hand-made items (got %d)" % ItemPool.count())
+	check(ItemPool.count() == 360, "360 hand-made items: 300 body gear + 60 rings and necklaces (got %d)" % ItemPool.count())
 	for mname in Monsters.all_monsters():
 		check(not Sprites.enemy_by_key(String(Monsters.by_id(mname).get("art", mname))).is_empty(), "art for " + mname)
 	for zi in GameData.ZONES.size():
@@ -991,6 +991,27 @@ func _initialize() -> void:
 	check(eg.eggs.is_empty() and eg.pets.size() == 1 and String(eg.pets[0]["from"]) == "egg", "an egg hatches into a random pet")
 	check(Menagerie.max_out(eg) == 1 and eg.pets_out.size() == 1, "non-tamers bring one pet")
 	check(Menagerie.texture(eg.pets[0]) != null, "hatched pet has art")
+	# Pets 2: every species an egg can hatch has its own baby art and idle, every region its egg,
+	# every Calamity pet and companion stage its art (art/pets/32)
+	var missing: Array = []
+	for pz in GameData.ZONES:
+		if Pets.art("egg_" + String(pz["id"])) == null:
+			missing.append("egg_" + String(pz["id"]))
+		var hatch_pool: Array = pz["enemies"].duplicate()
+		for ps in pz["subs"]:
+			hatch_pool.append(ps["monster"])
+		for pm in hatch_pool:
+			if Pets.art(String(pm["id"])) == null or Pets.idle(String(pm["id"])).size() != 2:
+				missing.append(String(pm["id"]))
+	for pc in Calamity.LIST:
+		if Pets.art(Calamity.pet_id(pc)) == null:
+			missing.append(Calamity.pet_id(pc))
+	for pcls in World.PETS:
+		for pst in 4:
+			if Pets.art("%s_%d" % [pcls.to_lower(), pst]) == null:
+				missing.append("%s_%d" % [pcls.to_lower(), pst])
+	check(missing.is_empty(), "every pet has its own art (missing: %s)" % ", ".join(missing))
+	check(Menagerie.texture(eg.pets[0]) == Pets.art(String(eg.pets[0]["species"])), "a hatched pet shows its baby art, not the monster")
 	eg.slot = 7
 	eg.save_game()
 	var eg2 := GameState.new()

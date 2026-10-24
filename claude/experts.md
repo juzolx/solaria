@@ -28,6 +28,7 @@ claude/stable-ids.md and its research document.
 | Final Checker (Fable) | reviews every change before merge | critique every mistake; VERDICT line |
 
 ## Rules for every expert
+- PHONE FIRST (Juzo): everything must run well on an iPhone: small textures (nearest filter, chunks <= 2048 px), runtime recolours over baked copies, cheap tweens over particles, no heavy shaders, portrait 430x932 UI with big touch targets; check `tools/check.sh perf` when visuals change.
 - Work only in your own worktree `C:\gamedev\solaria_wt_<name>` with its own override.cfg.
 - `tools/check.sh` must end ALL GOOD (own log file name); never commit override.cfg.
 - Never kill Godot processes you didn't start; never touch C:\gamedev\solaria or real saves.

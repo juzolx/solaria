@@ -43,7 +43,7 @@ func show_for(main_node) -> void:
 			b.custom_minimum_size = Vector2(0, UI.TAP)
 			quick.add_child(b)
 		# How much gold to take down: the rest stays safe in the Bank
-		content.add_child(UI.label("GOLD TO CARRY", 11, UI.DIM))
+		content.add_child(UI.label("GOLD TO CARRY", UI.FONT_CAPTION, UI.DIM))
 		var carry := UI.hbox(6)
 		content.add_child(carry)
 		carry_buttons.clear()
@@ -54,34 +54,34 @@ func show_for(main_node) -> void:
 			cb.toggle_mode = true
 			carry.add_child(cb)
 			carry_buttons.append(cb)
-		carry_note = UI.label("", 11, UI.DIM)
+		carry_note = UI.label("", UI.FONT_CAPTION, UI.DIM)
 		carry_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		content.add_child(carry_note)
 		# 2.1: quick swap to a saved preset (gear, skills, team, supplies) right before the dive
-		content.add_child(UI.label("PRESET", 13, UI.DIM))
+		content.add_child(UI.label("PRESET", UI.FONT_CAPTION, UI.DIM))
 		preset_box = GridContainer.new()
 		preset_box.columns = 2
 		preset_box.add_theme_constant_override("h_separation", 8)
 		preset_box.add_theme_constant_override("v_separation", 8)
 		content.add_child(preset_box)
-		preset_note = UI.wrap("", 13, UI.GOLD)
+		preset_note = UI.wrap("", UI.FONT_CAPTION, UI.GOLD)
 		preset_note.visible = false
 		content.add_child(preset_note)
 		_fill_presets()
 		# Next update (Juzo): pick your team and where they stand, and what to bring
-		content.add_child(UI.wrap("YOUR TEAM: the front row draws the attacks, the back row is hit less", 11, UI.DIM))
+		content.add_child(UI.wrap("YOUR TEAM: the front row draws the attacks, the back row is hit less", UI.FONT_CAPTION, UI.DIM))
 		team_box = UI.vbox(6)
 		content.add_child(team_box)
-		content.add_child(UI.wrap("SUPPLIES TO BRING: what you carry is lost if you fall; what stays home is safe", 11, UI.DIM))
+		content.add_child(UI.wrap("SUPPLIES TO BRING: what you carry is lost if you fall; what stays home is safe", UI.FONT_CAPTION, UI.DIM))
 		supply_box = UI.vbox(4)
 		content.add_child(supply_box)
 		_fill_team()
 		_fill_supplies()
-		risk_note = UI.label("", 12, Color("#fca5a5"))
+		risk_note = UI.label("", UI.FONT_CAPTION, Color("#fca5a5"))
 		risk_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		content.add_child(risk_note)
 		_show_carry()
-	var sub := UI.rich(13)
+	var sub := UI.rich(UI.FONT_CAPTION)
 	if from_town:
 		sub.text = "[color=%s]Dives start at a checkpoint: floor 1, or the floor after any boss you've beaten (26, 51, 76...). Bright floors are checkpoints you can start from.[/color]" % UI.hex(UI.DIM)
 	else:
@@ -142,8 +142,8 @@ func _build() -> void:
 		row.add_child(name_box)
 		var floors_box: Container = row
 		var local: String = area["monster"]["id"]
-		var lbls := [UI.label(str(area["name"]), 13, Color(GameData.zone_for_floor(start)["color"]).lightened(0.45)),
-			UI.label("Home of: " + (Monsters.name_of(local) if state.codex.seen(local) else "???"), 11, UI.DIM)]
+		var lbls := [UI.label(str(area["name"]), UI.FONT_CAPTION, Color(GameData.zone_for_floor(start)["color"]).lightened(0.45)),
+			UI.label("Home of: " + (Monsters.name_of(local) if state.codex.seen(local) else "???"), UI.FONT_CAPTION, UI.DIM)]
 		for lbl in lbls:
 			lbl.clip_text = true
 			lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -249,7 +249,7 @@ static func _fill_curses(mm, o: Overlay, st: GameState) -> void:
 	for c in o.content.get_children():
 		if c != o.content.get_child(0):
 			c.queue_free()
-	o.content.add_child(UI.wrap("Turn on curses to make every fight harder. Each one makes loot rarer and gold richer. They stay on until you turn them off.", 13, UI.DIM))
+	o.content.add_child(UI.wrap("Turn on curses to make every fight harder. Each one makes loot rarer and gold richer. They stay on until you turn them off.", UI.FONT_CAPTION, UI.DIM))
 	o.content.add_child(UI.label("Now: +%d loot luck, +%d%% gold" % [World.curse_loot(st), int(World.curse_gold(st))], 15, UI.PURPLE))
 	for id in World.CURSE_ORDER:
 		var cu: Dictionary = World.CURSES[id]
@@ -347,7 +347,7 @@ func _fill_team() -> void:
 				state.set_party(slots)
 				_fill_team()))
 	if state.hardcore:
-		team_box.add_child(UI.wrap("Hardcore heroes go down alone.", 11, UI.DIM))
+		team_box.add_child(UI.wrap("Hardcore heroes go down alone.", UI.FONT_CAPTION, UI.DIM))
 		return
 	if state.party_slots.size() >= Party.MAX_COMPANIONS:
 		return
@@ -368,7 +368,7 @@ func _fill_team() -> void:
 			m.sfx.play("equip")
 			_fill_team()))
 	if add.get_child_count() == 0:
-		add.add_child(UI.wrap("Going alone. Recruit more heroes at the Inn as your town grows.", 11, UI.DIM))
+		add.add_child(UI.wrap("Going alone. Recruit more heroes at the Inn as your town grows.", UI.FONT_CAPTION, UI.DIM))
 
 func _fill_supplies() -> void:
 	OnlineUI.clear(supply_box)
@@ -399,4 +399,4 @@ func _fill_supplies() -> void:
 		plus.custom_minimum_size = Vector2(UI.TAP, UI.TAP)
 		h.add_child(plus)
 	if state.supply_home("potion") + state.potions == 0:
-		supply_box.add_child(UI.wrap("No potions. Buy some at the Inn first.", 11, Color("#fca5a5")))
+		supply_box.add_child(UI.wrap("No potions. Buy some at the Inn first.", UI.FONT_CAPTION, Color("#fca5a5")))

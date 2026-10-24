@@ -1,0 +1,166 @@
+[
+ {
+  "name": "bld_gate",
+  "seeds": [
+   21,
+   22,
+   23,
+   24
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, landscape, gradient background, close-up, cropped, people, characters, isometric grid",
+  "prompt": "pixel art, top-down three-quarter view rpg game building sprite, a dungeon cave entrance with a heavy iron-bound wooden gate set into a rocky cliff wall, two torches, dark fantasy village at dusk, warm glowing windows, single building isolated on a plain white background, whole building visible, crisp pixels, dark outline"
+ },
+ {
+  "name": "bld_guild",
+  "seeds": [
+   21,
+   22,
+   23,
+   24
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, landscape, gradient background, close-up, cropped, people, characters, isometric grid",
+  "prompt": "pixel art, top-down three-quarter view rpg game building sprite, a large stone guild hall with a dark red tiled roof and hanging banners, dark fantasy village at dusk, warm glowing windows, single building isolated on a plain white background, whole building visible, crisp pixels, dark outline"
+ },
+ {
+  "name": "bld_inn",
+  "seeds": [
+   21,
+   22,
+   23,
+   24
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, landscape, gradient background, close-up, cropped, people, characters, isometric grid",
+  "prompt": "pixel art, top-down three-quarter view rpg game building sprite, a two-story half-timbered inn with a slate blue roof, chimney, hanging inn sign, dark fantasy village at dusk, warm glowing windows, single building isolated on a plain white background, whole building visible, crisp pixels, dark outline"
+ },
+ {
+  "name": "bld_shop",
+  "seeds": [
+   21,
+   22,
+   23,
+   24
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, landscape, gradient background, close-up, cropped, people, characters, isometric grid",
+  "prompt": "pixel art, top-down three-quarter view rpg game building sprite, a small general store cottage with a red tiled roof and a striped awning over the door, dark fantasy village at dusk, warm glowing windows, single building isolated on a plain white background, whole building visible, crisp pixels, dark outline"
+ },
+ {
+  "name": "bld_smith",
+  "seeds": [
+   21,
+   22,
+   23,
+   24
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, landscape, gradient background, close-up, cropped, people, characters, isometric grid",
+  "prompt": "pixel art, top-down three-quarter view rpg game building sprite, a blacksmith forge workshop with a brick chimney, an anvil and glowing furnace at the open front, dark fantasy village at dusk, warm glowing windows, single building isolated on a plain white background, whole building visible, crisp pixels, dark outline"
+ },
+ {
+  "name": "bld_tavern",
+  "seeds": [
+   21,
+   22,
+   23,
+   24
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, landscape, gradient background, close-up, cropped, people, characters, isometric grid",
+  "prompt": "pixel art, top-down three-quarter view rpg game building sprite, a wooden tavern with a big carved fortune wheel mounted on its front wall, dark fantasy village at dusk, warm glowing windows, single building isolated on a plain white background, whole building visible, crisp pixels, dark outline"
+ },
+ {
+  "name": "bld_vault",
+  "seeds": [
+   21,
+   22,
+   23,
+   24
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, landscape, gradient background, close-up, cropped, people, characters, isometric grid",
+  "prompt": "pixel art, top-down three-quarter view rpg game building sprite, a small fortified stone vault bank with an iron door and a gold coin sign, dark fantasy village at dusk, warm glowing windows, single building isolated on a plain white background, whole building visible, crisp pixels, dark outline"
+ },
+ {
+  "name": "bld_clinic",
+  "seeds": [
+   21,
+   22,
+   23,
+   24
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, landscape, gradient background, close-up, cropped, people, characters, isometric grid",
+  "prompt": "pixel art, top-down three-quarter view rpg game building sprite, a small cottage animal clinic with a green roof and a fenced pen with hay, dark fantasy village at dusk, warm glowing windows, single building isolated on a plain white background, whole building visible, crisp pixels, dark outline"
+ },
+ {
+  "name": "bld_church",
+  "seeds": [
+   21,
+   22,
+   23,
+   24
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, landscape, gradient background, close-up, cropped, people, characters, isometric grid",
+  "prompt": "pixel art, top-down three-quarter view rpg game building sprite, a small gothic stone chapel with a bell tower, pointed arch door and stained glass window, dark fantasy village at dusk, warm glowing windows, single building isolated on a plain white background, whole building visible, crisp pixels, dark outline"
+ },
+ {
+  "name": "bld_trophy",
+  "seeds": [
+   21,
+   22,
+   23,
+   24
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, landscape, gradient background, close-up, cropped, people, characters, isometric grid",
+  "prompt": "pixel art, top-down three-quarter view rpg game building sprite, a log cabin trophy hall with antlers and a skull above the door, dark fantasy village at dusk, warm glowing windows, single building isolated on a plain white background, whole building visible, crisp pixels, dark outline"
+ },
+ {
+  "name": "bld_market",
+  "seeds": [
+   21,
+   22,
+   23,
+   24
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, landscape, gradient background, close-up, cropped, people, characters, isometric grid",
+  "prompt": "pixel art, top-down three-quarter view rpg game building sprite, a market stall with a cream canvas awning and crates of goods, dark fantasy village at dusk, warm glowing windows, single building isolated on a plain white background, whole building visible, crisp pixels, dark outline"
+ },
+ {
+  "name": "bld_bounty",
+  "seeds": [
+   21,
+   22,
+   23,
+   24
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, landscape, gradient background, close-up, cropped, people, characters, isometric grid",
+  "prompt": "pixel art, top-down three-quarter view rpg game building sprite, a wooden bounty notice board with parchment posters pinned to it, dark fantasy village at dusk, warm glowing windows, single building isolated on a plain white background, whole building visible, crisp pixels, dark outline"
+ },
+ {
+  "name": "bld_fountain",
+  "seeds": [
+   21,
+   22,
+   23,
+   24
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, landscape, gradient background, close-up, cropped, people, characters, isometric grid",
+  "prompt": "pixel art, top-down three-quarter view rpg game building sprite, a round stone town fountain with water, dark fantasy village at dusk, warm glowing windows, single building isolated on a plain white background, whole building visible, crisp pixels, dark outline"
+ },
+ {
+  "name": "tree_sheet",
+  "seeds": [
+   21,
+   22
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, landscape, gradient background, close-up, cropped, people, characters, isometric grid",
+  "prompt": "pixel art sprite sheet of top-down rpg trees and bushes, dark pine trees, round oak trees, shrubs, dusk lighting, isolated on plain white background, crisp pixels, dark outline"
+ },
+ {
+  "name": "town_full",
+  "seeds": [
+   21,
+   22,
+   23
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border",
+  "w": 832,
+  "h": 1216,
+  "prompt": "pixel art, top-down three-quarter view map of a small dark fantasy village at dusk, dirt roads, cobblestone plaza with a fountain, inn, blacksmith, stone church with a graveyard, cave gate in a cliff at the top, pine forest edges, warm torchlight and lit windows, rpg game map"
+ }
+]

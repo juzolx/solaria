@@ -8,6 +8,7 @@ const VERSION := "2.1"
 const NOTES := [
 	{"version": "2.1", "name": "Gods and Nests", "lines": [
 		"A fresh start: every town and hero begins again under the new rules. Your settings are kept.",
+		"Easier to read: bigger text everywhere, calmer colours (gold marks what matters), clearer skill and menu icons, and no more screens cut off at the edge of a phone.",
 		"New class rules: your class evolves at levels 15, 35 and 75, and you pick one of two paths each time. Level 75 classes have a rank from C to SS.",
 		"God classes: above every rank stand the God classes. Nobody knows how to reach one; some say a God answers those who have done exactly the right things.",
 		"Hidden classes are earned by how you play and appear at level 15, 35 or 75.",
@@ -19,7 +20,13 @@ const NOTES := [
 		"Codex rewards: defeat every monster of a region, fill the Collection and the Pet book, find secret classes and more to earn titles, name colors and plate frames. Looks only, never power. See Codex > Rewards, and pick your title on the Hero tab.",
 		"Share card: the Share button on the Hero tab makes a picture of your hero (name, title, class, depth, gear, pet and proudest trophies) to keep or share.",
 		"One portal system: rifts, realm gates and trials share one set of rules (see Codex > Guide > Portals). Rifts and Deep Rifts are now one rift with a depth you see on its card before you step through, and you can walk on. A trial waiting for you can also show up behind a door as a champion's gate. Rift and gate doors always show: three doors, your choice. A Return Scroll gets you out of any portal. Closing the game no longer loses a rift or a realm choice.",
+		"New players get a few short first-time tips (skip them any time, or turn them on again in Settings), and a What's New screen shows once after an update (also in Settings). Strangers at the Inn and by the fire now whisper about secret classes, and Character > Class collects their riddles as you go deeper.",
+		"Fairer elites and real upgrades: an elite door always shows deep claw marks, even without a door reader, and the elite pays scrap and dust on top of its loot. Epic and stronger monsters hit a little softer, the floors past 50 take a little longer. Salvage pays more scrap for deeper gear and gives back half of what its upgrades cost, so upgrading your gear is worth it.",
 		"Art cleanup across heroes, monsters and the dungeon, and a new Credits screen (Menu > Credits and licenses) thanking every artist.",
+		"Fights feel punchier: a crisp one-frame hit flash, a squash on whoever gets hit, a golden flourish on level up and a burst of light when a hidden or God class answers. Reduce motion, Screen shake and Flashing effects in the Menu turn these down.",
+		"Menu > Copy debug info: copies your device, version and recent errors so you can paste them into a bug report. It stays on your phone; nothing is ever sent on its own.",
+		"Two new gear slots: Ring and Necklace (8 in all). They give a little Attack or HP plus a small charm from Uncommon up: rings lean to crits, luck and gold, necklaces to healing and wisdom. Six new Uniques to hunt, and Fully Kitted now needs all 8 slots.",
+		"Past floor 50 levels come a little slower and monsters take a little longer to beat, so the road to floor 100 lasts longer. Epic ring and necklace charms are a step smaller (crit 4%, stones and potions 15%).",
 	]},
 	{"version": "0.13", "name": "The Halls Below", "lines": [
 		"Every monster, boss and companion has new dark fantasy art (Dungeon Crawl Stone Soup, CC0).",

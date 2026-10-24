@@ -13,6 +13,7 @@ var dark_toggle: Button
 var battery_toggle: Button
 var graphics_toggle: Button
 var path_toggle: Button
+var tips_toggle: Button
 var a11y_buttons := {}
 var cloud_label: Label
 var dev_info: Label
@@ -71,6 +72,7 @@ func show_for(m) -> void:
 	for b in [path_toggle, fullscreen_toggle]:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grow.add_child(b)
+	fullscreen_toggle.visible = not OS.has_feature("mobile")   # a phone is always full screen
 	dark_toggle = UI.button("", func():
 		profile.dark_art = not profile.dark_art
 		main.apply_settings()
@@ -106,10 +108,27 @@ func show_for(m) -> void:
 		arow.add_child(b)
 		a11y_buttons[key] = b
 
+	content.add_child(UI.heading("Help"))  # 2.1 G9
+	var help_row := UI.hbox(8)
+	content.add_child(help_row)
+	var wn := UI.button("What's new", func(): WhatsNew.new().show_for(main))
+	tips_toggle = UI.button("", func():
+		Onboarding.set_on(profile, not Onboarding.active(profile))
+		_update())
+	tips_toggle.tooltip_text = "Short first-time tips as you play. Turning them on starts them again from the beginning."
+	for b in [wn, tips_toggle]:
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size = Vector2(0, UI.TAP)
+		help_row.add_child(b)
+
 	content.add_child(UI.heading("Credits"))
 	var cr := UI.button("Credits and licenses", func(): CreditsScreen.new().show_for(main))
 	cr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_child(cr)
+	# R6: errors kept on this phone only; the player copies them into a bug report
+	var dbg := UI.button("Copy debug info", _show_debug_info)
+	dbg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(dbg)
 
 	if Store.ENABLED:
 		content.add_child(UI.heading("Supporter store"))
@@ -127,7 +146,7 @@ func show_for(m) -> void:
 		b.disabled = not main.online.is_configured()
 		crow.add_child(b)
 	var off_text := "Online isn't set up yet (see ONLINE_SETUP.md)." if OS.is_debug_build() else "Cloud backup arrives with online features in a later update."
-	cloud_label = UI.label(off_text if not main.online.is_configured() else "Saves your heroes to your online account, so you can get them back on a new device.", 11, UI.DIM)
+	cloud_label = UI.label(off_text if not main.online.is_configured() else "Saves your heroes to your online account, so you can get them back on a new device.", UI.FONT_CAPTION, UI.DIM)
 	cloud_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(cloud_label)
 	# Apple rule: the online account can be deleted from inside the game
@@ -142,7 +161,7 @@ func show_for(m) -> void:
 	var reset := UI.button("Delete this hero...", func():
 		main.confirm("Delete this hero?", "This wipes this %s hero's gear, levels, gold and progress. It can't be undone. Your other heroes, the Codex and the stash are not touched." % mode_name, "Delete hero", func(): main.reset_save()))
 	reset.disabled = not main.started
-	reset.add_theme_color_override("font_color", UI.DIM)
+	reset.add_theme_color_override("font_color", UI.BAD)   # design system: red marks what cannot be undone
 	reset.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	content.add_child(reset)
 
@@ -180,7 +199,7 @@ func show_for(m) -> void:
 		["Hidden classes", [["Unlock all hidden classes", "hidden_all"], ["Next stage (current)", "hidden_stage"], ["+50 special stat", "hidden_stat"]]],
 	]
 	for sec in sections:
-		dev_box.add_child(UI.label(str(sec[0]).to_upper(), 11, UI.PINK))
+		dev_box.add_child(UI.label(str(sec[0]).to_upper(), UI.FONT_CAPTION, UI.PINK))
 		var grid := GridContainer.new()
 		grid.columns = 3
 		grid.add_theme_constant_override("h_separation", 6)
@@ -206,7 +225,7 @@ func show_for(m) -> void:
 		_update())
 	slots_b.add_theme_color_override("font_color", UI.PINK)
 	dev_box.add_child(slots_b)
-	dev_info = UI.label("", 11, UI.DIM)
+	dev_info = UI.label("", UI.FONT_CAPTION, UI.DIM)
 	dev_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	dev_box.add_child(dev_info)
 	_update()
@@ -216,7 +235,7 @@ func show_for(m) -> void:
 func _slider(label_text: String, value: float, on_change: Callable) -> HBoxContainer:
 	var row := UI.hbox(8)
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var l := UI.label(label_text, 13, UI.TEXT)
+	var l := UI.label(label_text, UI.FONT_CAPTION, UI.TEXT)
 	l.custom_minimum_size = Vector2(60, 0)
 	row.add_child(l)
 	var s := HSlider.new()
@@ -230,6 +249,21 @@ func _slider(label_text: String, value: float, on_change: Callable) -> HBoxConta
 	s.drag_ended.connect(func(_changed): profile.save())
 	row.add_child(s)
 	return row
+
+## R6: the device, version and recent errors as text, copied for a bug report. Stays on
+## the phone until the player pastes it somewhere (no analytics, nothing sent).
+func _show_debug_info() -> void:
+	DebugLog.flush()
+	var text := DebugLog.report()
+	DisplayServer.clipboard_set(text)
+	var o := Overlay.new().open(main, "Debug info (copied)", 420.0, UI.GOLD)
+	o.content.add_child(UI.wrap("Copied. Paste it into your TestFlight feedback or a message to the developer. It never leaves your phone on its own.", UI.FONT_CAPTION, UI.DIM))
+	var box := UI.wrap(text, UI.FONT_CAPTION, UI.TEXT)
+	o.content.add_child(box)
+	var clr := UI.button("Clear the log", func():
+		DebugLog.clear()
+		box.text = DebugLog.report())
+	o.content.add_child(clr)
 
 func _toggle_a11y(key: String) -> void:
 	match key:
@@ -266,7 +300,7 @@ func _cloud_backup() -> void:
 
 func _restore_popup() -> void:
 	var o := Overlay.new().open(main, "Restore from the cloud", 460.0, UI.RED)
-	var t := UI.label("Enter your backup code. Every town in the backup gets back its heroes and stash, and the Codex is replaced. Towns that aren't in the backup are kept as they are. The game restarts after.", 13, UI.TEXT)
+	var t := UI.label("Enter your backup code. Every town in the backup gets back its heroes and stash, and the Codex is replaced. Towns that aren't in the backup are kept as they are. The game restarts after.", UI.FONT_CAPTION, UI.TEXT)
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	o.content.add_child(t)
 	var edit := LineEdit.new()
@@ -300,6 +334,7 @@ func _update() -> void:
 	battery_toggle.text = "Battery saver: %s" % ("ON" if profile.battery_saver else "OFF")
 	graphics_toggle.text = "Graphics: %s" % ("Low" if profile.low_graphics else "Normal")
 	path_toggle.text = "Choose-your-path rooms: %s" % ("ON" if profile.path_choice == "ask" else "OFF")
+	tips_toggle.text = "Beginner tips: %s" % ("ON" if Onboarding.active(profile) else "OFF")
 	dev_toggle.text = "Dev Mode: %s" % ("ON" if profile.dev_mode else "OFF")
 	dev_toggle.add_theme_color_override("font_color", UI.PINK if profile.dev_mode else UI.TEXT)
 	dev_box.visible = profile.dev_mode

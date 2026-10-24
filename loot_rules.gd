@@ -113,7 +113,7 @@ static func carry_out(g: GameState, item: Dictionary, action: String) -> String:
 		g.gold += p  # carried gold, like any gold found down there
 		ClassTree.count(g, "sold")
 		return "Auto-sold %s (+%d gold)" % [g._tag(item), p]
-	var s := int(GameData.scrap_value(item) * g.scrap_mult())
+	var s := GameData.scrap_value(item, g.scrap_mult())
 	g.scrap += s
 	ClassTree.count(g, "scrapped")
 	g._salvage_dust(item)

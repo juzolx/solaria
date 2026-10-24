@@ -1,0 +1,110 @@
+mossy_hollows|kobold|Kobold|humanoid|#b45309
+mossy_hollows|redcap|Redcap|humanoid|#dc2626
+mossy_hollows|boggart|Boggart|brute|#8a7f72
+mossy_hollows|will_o_wisp|Will-o'-Wisp|spirit|#7dd3fc
+mossy_hollows|barghest|Barghest|beast|#57534e
+mossy_hollows|hobyah|Hobyah|humanoid|#a16207
+mossy_hollows|jack_in_irons|Jack-in-Irons|brute|#6b7280
+mossy_hollows|spriggan|Spriggan|brute|#6b8e3a
+mossy_hollows|pooka|Pooka|beast|#2b2b3a
+mossy_hollows|wolpertinger|Wolpertinger|beast|#b08a5a
+mossy_hollows|leshy|Leshy|humanoid|#4a6b3a
+mossy_hollows|woodwose|Woodwose|brute|#7a5a3a
+sunken_catacombs|ghoul|Ghoul|humanoid|#a3a3a3
+sunken_catacombs|draugr|Draugr|brute|#64748b
+sunken_catacombs|barrow_wight|Barrow-Wight|spirit|#cbd5e1
+sunken_catacombs|banshee|Banshee|spirit|#e9d5ff
+sunken_catacombs|strigoi|Strigoi|humanoid|#9f1239
+sunken_catacombs|ankou|Ankou|spirit|#e5e7eb
+sunken_catacombs|bog_body|Bog Body|humanoid|#78716c
+sunken_catacombs|revenant|Revenant|humanoid|#8a8f7a
+sunken_catacombs|gashadokuro|Gashadokuro|brute|#e8e4d8
+sunken_catacombs|vetala|Vetala|spirit|#9a7fb0
+sunken_catacombs|moroi|Moroi|spirit|#c0cbdc
+sunken_catacombs|garmr|Garmr|beast|#6a2a2a
+flooded_depths|kappa|Kappa|humanoid|#16a34a
+flooded_depths|kelpie|Kelpie|beast|#0891b2
+flooded_depths|nuckelavee|Nuckelavee|brute|#be123c
+flooded_depths|bunyip|Bunyip|beast|#a16207
+flooded_depths|umibozu|Umibozu|spirit|#4c6ef5
+flooded_depths|ningyo|Ningyo|serpent|#5eead4
+flooded_depths|afanc|Afanc|beast|#365314
+flooded_depths|selkie|Selkie|beast|#7a8a9a
+flooded_depths|vodyanoy|Vodyanoy|humanoid|#5a7a4a
+flooded_depths|merrow|Merrow|humanoid|#3fa29a
+flooded_depths|grindylow|Grindylow|spirit|#4a7a5a
+flooded_depths|ahuizotl|Ahuizotl|beast|#2a4a6a
+ember_halls|salamander|Salamander|serpent|#ea580c
+ember_halls|ifrit|Ifrit|spirit|#f97316
+ember_halls|hellhound|Hellhound|beast|#b91c1c
+ember_halls|chimera|Chimera|beast|#ca8a04
+ember_halls|manticore|Manticore|beast|#d9480f
+ember_halls|gullinbursti|Gullinbursti|beast|#f59e0b
+ember_halls|div|Div|spirit|#9ca3af
+ember_halls|cherufe|Cherufe|brute|#6a3a2a
+ember_halls|cyclops|Cyclops|brute|#8a7a6a
+ember_halls|firebird|Firebird|beast|#feae34
+ember_halls|tatzelwurm|Tatzelwurm|serpent|#a87a4a
+ember_halls|basilisk|Basilisk|serpent|#5a8a3a
+the_shadow_deep|wendigo|Wendigo|brute|#d6d3d1
+the_shadow_deep|jorogumo|Jorogumo|humanoid|#8b5cf6
+the_shadow_deep|rakshasa|Rakshasa|humanoid|#f59e0b
+the_shadow_deep|lamia|Lamia|serpent|#65a30d
+the_shadow_deep|gorgon|Gorgon|serpent|#4d7c0f
+the_shadow_deep|mare|Mare|spirit|#4c1d95
+the_shadow_deep|baku|Baku|beast|#334155
+the_shadow_deep|kitsune|Kitsune|beast|#e07a3a
+the_shadow_deep|tikbalang|Tikbalang|humanoid|#5a3a2a
+the_shadow_deep|doppelganger|Doppelganger|humanoid|#3a3a5a
+the_shadow_deep|krampus|Krampus|brute|#3a2a2a
+the_shadow_deep|bakunawa|Bakunawa|serpent|#3a5a8a
+elf|hollow_sentinel|Hollow Sentinel|humanoid|#9fd8c4
+elf|grief_wisp|Grief Wisp|spirit|#c8f2ee
+elf|barkhusk|Barkhusk|brute|#6b5a4a
+elf|pale_stag|Pale Stag|beast|#dfe6f0
+elf|rootstrangler|Rootstrangler|serpent|#5d7a3a
+elf|mourning_dryad|Mourning Dryad|humanoid|#8aa878
+elf|owlwraith|Owlwraith|beast|#a9b3c6
+elf|lantern_keeper|Lantern Keeper|humanoid|#fee761
+elf|blightcap|Blightcap|brute|#8a5a9a
+elf|heartrot_treant|Heartrot Treant|brute|#4a3a2a
+fairy|pixie_swarm|Pixie Swarm|spirit|#ffc6de
+fairy|thornling|Thornling|humanoid|#75a743
+fairy|mushroom_knight|Mushroom Knight|humanoid|#e43b44
+fairy|glimmermoth|Glimmermoth|beast|#c4b5fd
+fairy|changeling|Changeling|humanoid|#a9c6ee
+fairy|moonhare|Moonhare|beast|#eef2f8
+fairy|mirror_nymph|Mirror Nymph|spirit|#a4dddb
+fairy|bogle|Bogle|humanoid|#5a6b3a
+fairy|briar_knight|Briar Knight|humanoid|#468232
+fairy|gilded_fae|Gilded Fae|spirit|#fee761
+dwarf|forge_sentry|Forge Sentry|humanoid|#c0cbdc
+dwarf|slag_golem|Slag Golem|brute|#5a4a3e
+dwarf|rune_hound|Rune Hound|beast|#7fd0f0
+dwarf|cinder_miner|Cinder Miner|humanoid|#c28569
+dwarf|steamcrawler|Steamcrawler|serpent|#8b9bb4
+dwarf|ash_raider|Ash Raider|humanoid|#8a5444
+dwarf|rune_wraith|Rune Wraith|spirit|#73bed3
+dwarf|anvil_brute|Anvil Brute|brute|#3a4466
+dwarf|gem_crawler|Gem Crawler|beast|#c27ad8
+dwarf|stoneguard|Stoneguard|humanoid|#8b9bb4
+angel|choir_sentinel|Choir Sentinel|humanoid|#fde68a
+angel|halo_wisp|Halo Wisp|spirit|#fff4a3
+angel|gilded_lion|Gilded Lion|beast|#feae34
+angel|eye_of_judgement|Eye of Judgement|spirit|#ffffff
+angel|sky_serpent|Sky Serpent|serpent|#a9c6ee
+angel|cherub|Cherub|spirit|#ffc6de
+angel|hymnbird|Hymnbird|beast|#7fb2e0
+angel|executor|Executor|humanoid|#c0cbdc
+angel|sun_golem|Sun Golem|brute|#fee761
+angel|throne_warden|Throne Warden|humanoid|#e8b14a
+demon|imp|Imp|humanoid|#e43b44
+demon|hellmaw|Hellmaw|beast|#8e2e38
+demon|chainwraith|Chainwraith|spirit|#8b9bb4
+demon|brimstone_brute|Brimstone Brute|brute|#be4a2f
+demon|abyssal_worm|Abyssal Worm|serpent|#68386c
+demon|ash_fiend|Ash Fiend|spirit|#5a4a3e
+demon|chain_warden|Chain Warden|humanoid|#5a6988
+demon|soul_broker|Soul Broker|humanoid|#9a4fc0
+demon|obsidian_knight|Obsidian Knight|humanoid|#262b44
+demon|hellborn_duke|Hellborn Duke|brute|#a22633

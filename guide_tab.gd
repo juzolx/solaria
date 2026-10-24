@@ -19,6 +19,8 @@ func setup(m) -> void:
 	list = ItemList.new()
 	list.custom_minimum_size = Vector2(190, 0)
 	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	list.add_theme_font_size_override("font_size", UI.MIN_FONT)
+	list.add_theme_constant_override("v_separation", UI.TAP - 20)  # rows about 44 px tall: a comfortable tap
 	list.item_selected.connect(func(i: int):
 		if ids[i] != "":
 			selected = ids[i]
@@ -33,7 +35,7 @@ func setup(m) -> void:
 	scroll.add_child(v)
 	title_label = UI.label("", 18, Color("#f6d88f"))
 	v.add_child(title_label)
-	text = UI.rich(14)
+	text = UI.rich(UI.FONT_CAPTION)
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_child(text)
 

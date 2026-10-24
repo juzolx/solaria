@@ -86,9 +86,10 @@ the balance sim); at 1,030 gold at best floor 100 it is now a real choice.
 
 | Source | Amount |
 |---|---|
-| Salvage | Common 1, Uncommon 2, Rare 4, Epic 8, Legendary 16, Unique 40, Set 20, Signature 80; +2 per upgrade level; x Dwarf / forge-heat bonus |
+| Salvage | base Common 1, Uncommon 2, Rare 4, Epic 8, Legendary 16, Unique 40, Set 20, Signature 80, x (1 + item floor / 40) (R6: Epic on floor 100 = 28); x Dwarf / forge-heat bonus on that base only; plus half the scrap really paid for its upgrades (`item.upg_scrap`, never multiplied, so upgrade-and-salvage always loses scrap; R6, was +2 per level, which items upgraded before R6 keep) |
 | Auto-salvage and bag overflow | same values |
 | Plain chests (goblin, horde) | 8-12 (was 1-2 materials; 4-8 before the R5 balance pass) |
+| Elite room monster (R6) | a plain chest x (1 + floor / 40): 8-12 on floor 1, 28-42 on floor 100; plus 1 dust |
 | Benched heroes | 10% per hero per kill, 1 + zone each, by class |
 | Rewards (deeds, login day 3) | base x (1 + best/50) (login 40: 60 at best 25, 640 at best 750) |
 | Traveler "hone" refund | gives the price back if it can't help |
@@ -105,8 +106,11 @@ the balance sim); at 1,030 gold at best floor 100 it is now a real choice.
 | Crafted bag | 30 + 10L + 4 x (5 + floor(L/4)) | 50 / 158 / 256 |
 | Traveler hone | 4 x (1 + zone) | |
 
-Scrap stays tight (the sim ends most checkpoints with under 20): it is the gear
-currency and every bit goes into upgrades.
+Scrap (R6 pass, Oct 24): before, salvage paid the same on floor 100 as on floor 1 and upgrades were lost
+with the item, so worn gear sat at +0 to +1. Salvage now grows with the item floor and refunds half of
+the upgrades, so the sim reaches about +3 on worn gear around floor 100 while still ending most visits
+with under ~100 scrap (every bit still goes into upgrades). Numbers: `Economy.SALVAGE_FLOOR_STEP`,
+`SALVAGE_UPGRADE_REFUND`, `ELITE_DUST`.
 
 ## Dust
 
@@ -140,6 +144,20 @@ sinks all game long.
 | Set piece | 10 + 5 x zone (10 ... 55) + 40 scrap | 3 pieces per set |
 | **Upgrade past +5 (new)** | 2 per level past +5: +6 2, +7 4, +8 6, +9 8, +10 10 | 30 dust to take one item from +5 to +10 |
 | **Reroll Rare / Epic (new)** | 3 / 10 per try (plus the scrap) | Epic to Legendary is 5% a try: ~200 dust on average |
+
+## Ring and Necklace (2.1, `gear_slots.gd`): for the balance helper to re-check
+
+- 8 gear slots. Jewelry weighs about half a slot: a Ring gives Attack at 15% of a weapon's
+  (`base 0.45, per_floor 0.3`), a Necklace HP at 25% of a helmet's (`base 1.25, per_floor 1.0`).
+  The weapon is the only other Attack slot, so a "half weapon" ring (+50% gear Attack) would be far too much.
+- Charm from Uncommon up (`GearSlots.CHARMS`, Uncommon/Rare/Epic): rings crit 2/3/4, gold find 5/8/12,
+  stones 8/12/15, double strike 2/3/4; necklaces regen -/-/1, lifesteal 1/2/3, XP 3/5/8, potions 8/12/15 (R7: Epic crit, stones and potions one step lower).
+  Legendary jewelry rolls from `GearSlots.LEGENDARY_POOL`. A blessed ring or necklace gives +1.5% (half).
+- Sell, scrap, dust, upgrade, reroll and Wheel costs are by rarity, the same as every slot (unchanged).
+- Drops: uniform slot picks now spread over 8 slots, so body gear drops a little less often (each 1/8 of
+  the non-favored share instead of 1/6). No monster favors jewelry; the shop always stocks a missing slot.
+- Quick sim (3 heroes, before/after): about 50 floors per hour both times; deaths per hour 5.7 -> 6.0. Noise-level.
+  Needs a full `balance_sim.gd` run to confirm floor 100 still lands in 4-6 h.
 
 ## Floor bands at a glance
 

@@ -8,7 +8,7 @@ const RATE := 22050
 const VOICES := 12
 const SOUND_DIR := "res://sounds/"
 const MUSIC_FADE := 1.2
-const EXPECTED_FILES := 61  # sound + music files in the sounds folder
+const EXPECTED_FILES := 73  # sound + music files in the sounds folder
 
 var enabled := true
 var sfx_db := 0.0

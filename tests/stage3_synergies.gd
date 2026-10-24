@@ -8,6 +8,7 @@ func check(c: bool, m: String) -> void:
 		print("FAIL: ", m)
 
 func _initialize() -> void:
+	seed(7)  # fixed: the monster spawned below rolls its species and modifiers at random
 	if not TestHero.safe():
 		quit(1)
 		return
@@ -44,6 +45,8 @@ func _initialize() -> void:
 	g.cfight["turns"] = Synergies.STRIKE_EVERY
 	g.enemy_hp = g.enemy_max_hp * 10
 	g.enemy_max_hp = g.enemy_hp
+	g.enemy_shield = 0  # a Shielded monster or boss minions would soak the whole strike (the old flake)
+	g.boss_minions = 0
 	var hp0 := g.enemy_hp
 	var line := Synergies.team_strike(g)
 	check(line.contains("TEAM STRIKE") and g.enemy_hp < hp0, "every %d turns the team strikes together" % Synergies.STRIKE_EVERY)

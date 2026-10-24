@@ -34,7 +34,7 @@ func _ready() -> void:
 	sun.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	sun.size = size
 	cover.add_child(sun)
-	var tip := UI.wrap(TIPS.pick_random(), 13, UI.DIM)
+	var tip := UI.wrap(TIPS.pick_random(), UI.FONT_CAPTION, UI.DIM)
 	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tip.position = Vector2(24, size.y * 0.78)
 	tip.size = Vector2(size.x - 48, 60)

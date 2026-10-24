@@ -173,7 +173,7 @@ func _build() -> void:
 	_fit()
 	_fill_menu()
 	_fill_side()
-	var ver := UI.label("v" + PatchNotes.VERSION, 11, UI.DIM)
+	var ver := UI.label("v" + PatchNotes.VERSION, UI.FONT_CAPTION, UI.DIM)
 	ver.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	col.add_child(ver)
 
@@ -224,7 +224,7 @@ func _hero_line(meta: Dictionary) -> Control:
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	row.add_child(pic)
-	var info := UI.rich(13)
+	var info := UI.rich(UI.FONT_CAPTION)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.text = HeroSelect.describe(meta)
 	row.add_child(info)
@@ -236,14 +236,17 @@ func _fill_side() -> void:
 	if m.profile.notes_seen != PatchNotes.VERSION:
 		var up := UI.panel(Color("#2a1a2e"), Color("#e8b14a"), 8, 10, 2)
 		side_box.add_child(up)
-		var ut := UI.rich(13)
+		var ut := UI.rich(UI.FONT_CAPTION)
 		ut.text = "[color=#e8b14a][b]%s[/b][/color]  [color=%s]v%s[/color]\nNew class rules with God classes, pets from region nests, three currencies, the Legendary Wheel and safer saves." % [String(PatchNotes.NOTES[0]["name"]).to_upper(), UI.hex(UI.DIM), PatchNotes.VERSION]
 		up.add_child(ut)
 		var pulse := up.create_tween().set_loops()
 		pulse.tween_property(up, "modulate", Color(1.15, 1.1, 0.95), 0.9)
 		pulse.tween_property(up, "modulate", Color(1, 1, 1), 0.9)
+	var wn := UI.button("What's new in v%s" % PatchNotes.VERSION, func(): WhatsNew.new().show_for(m))  # 2.1 G9
+	wn.custom_minimum_size = Vector2(0, UI.TAP)
+	side_box.add_child(wn)
 	var week := Realms.realm_of_week()
-	var wk := UI.rich(12)
+	var wk := UI.rich(UI.FONT_CAPTION)
 	wk.text = "[color=%s]REALM OF THE WEEK[/color]\n[color=%s][b]%s[/b][/color]: double reputation and better loot." % [UI.hex(UI.DIM), Realms.info(week)["color"], Realms.realm_name(week)]
 	side_box.add_child(wk)
 	var ev := GameData.active_events()
@@ -251,10 +254,10 @@ func _fill_side() -> void:
 		var names := []
 		for id in ev:
 			names.append("[color=#f472b6][b]%s[/b][/color]: %s" % [GameData.EVENTS[id]["name"], GameData.EVENTS[id]["text"]])
-		var banner := UI.rich(13)
+		var banner := UI.rich(UI.FONT_CAPTION)
 		banner.text = "[color=#f472b6]EVENT NOW[/color]\n" + "\n".join(names)
 		side_box.add_child(banner)
-	var tip := UI.rich(13)
+	var tip := UI.rich(UI.FONT_CAPTION)
 	tip.text = "[color=%s]TIP OF THE DAY[/color]\n%s" % [UI.hex(UI.DIM), PatchNotes.tip_of_the_day()]
 	side_box.add_child(tip)
 	side_box.add_child(UI.heading("What's new"))
@@ -262,7 +265,7 @@ func _fill_side() -> void:
 	scroll.custom_minimum_size = Vector2(0, 150)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	side_box.add_child(scroll)
-	var notes := UI.rich(12)
+	var notes := UI.rich(UI.FONT_CAPTION)
 	notes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var lines := []
 	for n in PatchNotes.NOTES:

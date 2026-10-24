@@ -29,6 +29,7 @@ func setup(m) -> void:
 	list.custom_minimum_size = Vector2(200, 0)
 	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	list.add_theme_font_size_override("font_size", UI.MIN_FONT)
+	list.add_theme_constant_override("v_separation", UI.TAP - 20)  # rows about 44 px tall: a comfortable tap (15 px text is ~20 px a line)
 	list.item_selected.connect(func(i: int):
 		if i >= 0 and i < keys.size() and keys[i] != "":
 			selected = keys[i]
@@ -65,7 +66,7 @@ func setup(m) -> void:
 	pic.offset_bottom = -10
 	backdrop.add_child(pic)
 	list.fixed_icon_size = Vector2i(22, 22)
-	text = UI.rich(13)
+	text = UI.rich(UI.FONT_CAPTION)
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	detail.add_child(text)
 
@@ -100,7 +101,7 @@ func refresh() -> void:
 			if ia.has("tex"):
 				list.set_item_icon(i, ia["tex"] if met else ia["white"])
 				if not met:
-					list.set_item_icon_modulate(i, Color(0.32, 0.32, 0.42))  # a dark shape until you meet it
+					list.set_item_icon_modulate(i, Color(0.5, 0.48, 0.6))  # a shape until you meet it (UX pass: brighter, so the outline reads on a phone)
 			list.set_item_custom_fg_color(i, UI.TEXT if met else UI.DIM)
 			if boss and met:
 				list.set_item_custom_fg_color(i, Color("#fca5a5"))
@@ -194,7 +195,7 @@ func _show() -> void:
 				lines.append("%s %s: %s" % [sig["slot"], str(sig["type"]).capitalize(), GameData.effect_text(sig["effect"], int(sig["value"]))])
 				lines.append("[color=%s][i]%s[/i][/color]" % [dim, sig.get("flavor", "")])
 			else:
-				lines.append("[color=#ff6b9d][b]Signature: ???[/b][/color]  [color=%s]A %s, 1 in %s kills. No pity: every kill is a fresh chance.[/color]" % [dim, str(sig["slot"]).to_lower(), _num(Monsters.SIGNATURE_CHANCE)])
+				lines.append("[color=#ff6b9d][b]Signature: ???[/b][/color]  [color=%s]%s, 1 in %s kills. No pity: every kill is a fresh chance.[/color]" % [dim, a_slot(str(sig["slot"])), _num(Monsters.SIGNATURE_CHANCE)])
 	else:
 		lines.append("")
 		lines.append("[b]Drops[/b]: %d items, %d-%d dust, and sometimes a Unique (your chance right now: %d%%)" % [
@@ -221,6 +222,11 @@ func _odds_line(label: String, odds: Array) -> String:
 		var v: float = odds[r]
 		parts.append("[color=%s]%s%%[/color]" % [GameData.color_of(r), ("%.1f" % v) if v < 10.0 else str(int(round(v)))])
 	return "  %s: %s" % [label, " / ".join(parts)]
+
+## "A helmet", "An off hand" (QA: the Signature line said "A off hand").
+static func a_slot(slot: String) -> String:
+	var s := slot.to_lower()
+	return ("An " if s.left(1) in ["a", "e", "i", "o", "u"] else "A ") + s
 
 func _num(n: int) -> String:
 	var s := str(n)

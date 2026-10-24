@@ -192,6 +192,8 @@ var enemy_lpc_anim := "combat_idle"  # LPC monsters: the animation playing
 var enemy_lpc_t := 0.0
 var recoil := 0.0        # hero knocked back when hit
 var enemy_recoil := 0.0
+var hero_squash := 0.0   # A6: hit squash (see _squash)
+var enemy_squash := 0.0
 var projectiles: Array[Dictionary] = []
 const MELEE_REST := 45.0
 # Pose animation: a queue of [pose name, seconds]; idle breathing when empty
@@ -673,6 +675,7 @@ func _hero_attack(e: Dictionary) -> void:
 	enemy_flash = 1.0
 	create_tween().tween_property(self, "enemy_flash", 0.0, 0.1)
 	var target := _enemy_center()
+	_squash("enemy_squash", 1.4 if e["crit"] else 1.0)
 	var wt := _weapon_type()
 	var hit_fx := "pierce" if wt in ["spear", "bow"] else ("impact" if wt in ["staff", "mace"] else "slash")
 	_later(0.06 if not ranged else 0.16, func():
@@ -715,6 +718,7 @@ func _enemy_attack(e: Dictionary) -> void:
 	hero_flash = 1.0
 	create_tween().tween_property(self, "hero_flash", 0.0, 0.1)
 	shake = maxf(shake, 4.0)
+	_squash("hero_squash")
 	_burst(_hero_center(), Color("#f87171"), 8, 200.0)
 	_fx("claw", _hero_center(), 1.0, true)
 	_float("-%d" % e["dmg"], _hero_center(), Color("#f87171"), 20)
@@ -754,6 +758,12 @@ func _level_up_fx(e: Dictionary) -> void:
 	banner_alpha = 2.0
 	_burst(_hero_center(), Color("#fbbf24"), 30, 300.0)
 	_float("LEVEL %d" % e["level"], _hero_center() + Vector2(0, -30), Color("#fbbf24"), 22)
+	# A6: a short flourish: a crouch-and-rise, a golden glow and a ring of light
+	_pose_hero([["crouch", 0.08], ["cast", 0.3], ["follow", 0.1]])
+	cast_color = Color("#fbbf24")
+	cast_glow = 1.0
+	create_tween().tween_property(self, "cast_glow", 0.0, 0.7)
+	rings.append({"pos": _hero_center(), "life": 0.55, "max": 0.55, "grow": 74.0, "color": Color("#fde68a")})
 
 
 var halls := HallsScene.new()
@@ -816,7 +826,41 @@ func _hit_stop(seconds: float) -> void:
 		return
 	freeze_left = maxf(freeze_left, seconds)
 
+## A6: true unless the player turned on Reduce motion.
+func _motion_ok() -> bool:
+	return profile == null or not profile.reduce_motion
+
+## A6: a hit flash is one hard frame (white on monsters, hot red on the team) instead
+## of a fading pink tint (art critique). Flashing effects OFF: a soft, dim blink instead.
+func _flash_col(v: float, red: bool, a := 1.0) -> Color:
+	var c := Color(1.0, 0.3, 0.22) if red else Color(1, 1, 1)
+	if profile != null and not profile.flashes:
+		return Color(c, v * 0.25 * a)
+	return Color(c, a if v > 0.55 else 0.0)
+
+## A6: a quick squash on whoever got hit ("hero_squash" / "enemy_squash"). Pose-frame
+## art squashes by whole pixel rows (Sprites.POSES hit1); frame-animated (LPC) art
+## squashes its rect here, so any sprite gets it. Off with Reduce motion.
+func _squash(prop: String, amount := 1.0) -> void:
+	if not _motion_ok():
+		return
+	set(prop, amount)
+	create_tween().tween_property(self, prop, 0.0, 0.16).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+
+## The rect squashed wider and shorter, feet kept on the ground.
+static func squashed(r: Rect2, amount: float) -> Rect2:
+	if amount == 0.0:
+		return r
+	var sx := 1.0 + 0.12 * amount
+	var sy := 1.0 - 0.10 * amount
+	var ns := Vector2(r.size.x * sx, r.size.y * sy)
+	return Rect2(Vector2(r.position.x - (ns.x - r.size.x) * 0.5, r.end.y - ns.y), ns)
+
+const MAX_PARTICLES := 140  # R6: bursts never pile up past this (half with Low graphics)
+
 func _burst(pos: Vector2, color: Color, count: int, speed: float) -> void:
+	var cap := int(MAX_PARTICLES * 0.5) if profile != null and profile.low_graphics else MAX_PARTICLES
+	count = mini(count, cap - particles.size())
 	for i in count:
 		var angle := randf() * TAU
 		var v := Vector2(cos(angle), sin(angle)) * speed * randf_range(0.4, 1.0)
@@ -1127,6 +1171,17 @@ func _float(text: String, pos: Vector2, color: Color, font_size: int) -> void:
 # Drawing
 # =====================================================================
 
+## R6: drops finished effects in place (filter() made a new array for each list every
+## frame). With "t" and "life": gone when t >= life; only "life": when life <= 0;
+## only "t": when t >= 1.
+static func _prune(arr: Array, t_key: String, life_key: String) -> void:
+	for i in range(arr.size() - 1, -1, -1):
+		var d: Dictionary = arr[i]
+		var t := float(d[t_key]) if t_key != "" else 0.0
+		var gone := t >= float(d[life_key]) if life_key != "" and t_key != "" else (float(d[life_key]) <= 0.0 if life_key != "" else t >= 1.0)
+		if gone:
+			arr.remove_at(i)
+
 func _process(delta: float) -> void:
 	_intro_step(delta)
 	if freeze_left > 0.0:
@@ -1135,7 +1190,7 @@ func _process(delta: float) -> void:
 	if profile == null or not profile.reduce_motion:
 		bob += delta  # idle breathing and bobbing (frozen with Reduce motion)
 	shake = move_toward(shake * exp(-delta * 6.0), 0.0, delta * 8.0)  # quick fade with a short tail
-	for key in bar_ghost.keys():
+	for key in bar_ghost:  # R6: no keys() copy every frame
 		bar_ghost[key] = move_toward(float(bar_ghost[key]), float(bar_target.get(key, 0.0)), delta * 0.8)
 	lpc_t += delta
 	if chest_t >= 0.0:
@@ -1144,19 +1199,22 @@ func _process(delta: float) -> void:
 			chest_t = -1.0
 	if state != null:
 		summon_in = move_toward(summon_in, 1.0 if state.summon_turns > 0 else 0.0, delta * 3.0)
-	for k in pet_hits.keys():
-		pet_hits[k] = float(pet_hits[k]) - delta
-		if float(pet_hits[k]) <= 0.0:
-			pet_hits.erase(k)
+	if not pet_hits.is_empty():
+		for k in pet_hits.keys():
+			pet_hits[k] = float(pet_hits[k]) - delta
+			if float(pet_hits[k]) <= 0.0:
+				pet_hits.erase(k)
 	for dp in drops:
 		dp["t"] = float(dp["t"]) + delta
-	drops = drops.filter(func(dp): return float(dp["t"]) < float(dp["life"]))
+	_prune(drops, "t", "life")
 	for bm in beams:
 		bm["t"] = float(bm["t"]) + delta
-	beams = beams.filter(func(bm): return float(bm["t"]) < float(bm["life"]))
+	_prune(beams, "t", "life")
 	for fx in fx_sprites:
 		fx["t"] = float(fx["t"]) + delta
-	fx_sprites = fx_sprites.filter(func(fx): return float(fx["t"]) * FX_FPS < float(_fx_frames.get(fx["name"], 1)))
+	for i in range(fx_sprites.size() - 1, -1, -1):
+		if float(fx_sprites[i]["t"]) * FX_FPS >= float(_fx_frames.get(fx_sprites[i]["name"], 1)):
+			fx_sprites.remove_at(i)
 	enemy_lpc_t += delta
 	if enemy_lpc_anim != "combat_idle":
 		var ea: Dictionary = _enemy_art(state.enemy_is_boss).get("lpc", {}).get(enemy_lpc_anim, {}) if state != null else {}
@@ -1185,19 +1243,19 @@ func _process(delta: float) -> void:
 		var rise := 26.0 * (1.0 - pow(1.0 - minf(ft / 0.22, 1.0), 3.0)) + maxf(0.0, ft - 0.5) * 34.0
 		var side := float(f.get("vx", 0.0)) * minf(ft, 0.9)
 		f["pos"] = (f["base"] as Vector2) - Vector2(-side, rise)
-	floaters = floaters.filter(func(f): return f["life"] > 0.0)
+	_prune(floaters, "", "life")
 	for p in particles:
 		p["life"] -= delta
 		p["vel"] += Vector2(0, 600 * delta)
 		p["pos"] += p["vel"] * delta
-	particles = particles.filter(func(p): return p["life"] > 0.0)
+	_prune(particles, "", "life")
 	for r in rings:
 		r["life"] -= delta
-	rings = rings.filter(func(r): return r["life"] > 0.0)
+	_prune(rings, "", "life")
 	for pr in projectiles:
 		pr["t"] += delta / 0.16
 		pr["pos"] = (pr["from"] as Vector2).lerp(pr["to"], minf(pr["t"], 1.0))
-	projectiles = projectiles.filter(func(pr): return pr["t"] < 1.0)
+	_prune(projectiles, "t", "")
 	if toast_life > 0.0:
 		toast_life -= delta
 	elif not toasts.is_empty():
@@ -1330,7 +1388,7 @@ func _draw_members() -> void:
 				draw_texture_rect(an["white"][fi], Rect2(r.position + Vector2(0, -u), r.size), false, Color(_rim_color(), 0.42 * a))
 				draw_texture_rect(an["tex"][fi], r, false, Color(1, 1, 1, a))
 				if float(fx0.get("flash", 0.0)) > 0.0:
-					draw_texture_rect(an["white"][fi], r, false, Color(1.0, 0.2, 0.2, float(fx0["flash"]) * 0.75))
+					draw_texture_rect(an["white"][fi], r, false, _flash_col(float(fx0["flash"]), true))
 			_member_plate(m, g, c, u)
 			continue
 		var poses := Sprites.poses_for("m" + str((str(g.appearance) + str(g.hero_looks())).hash()), art["body_img"], 1, int(art["hand"].y))
@@ -1339,7 +1397,7 @@ func _draw_members() -> void:
 		var pose: Dictionary = poses[pose_name]
 		draw_texture_rect(pose["tex"], c, false, Color(1, 1, 1, a))
 		if float(fx.get("flash", 0.0)) > 0.0:
-			draw_texture_rect(pose["white"], c, false, Color(1.0, 0.2, 0.2, float(fx["flash"]) * 0.75))
+			draw_texture_rect(pose["white"], c, false, _flash_col(float(fx["flash"]), true))
 		if art["weapon"] != null and not m.knocked_out:
 			var hand: Vector2 = c.position + ((art["hand"] as Vector2) + Vector2(int(pose["dx"]), int(pose["dy"]))) * u
 			var ang := deg_to_rad(MELEE_REST - 40.0 * float(fx.get("lunge", 0.0)) if not art["weapon_type"] in ["bow", "staff"] else 12.0)
@@ -1356,9 +1414,8 @@ func _member_plate(m, g: GameState, c: Rect2, u: float) -> void:
 		var by := c.position.y + 8.0 * Sprites.HD * u
 		draw_rect(Rect2(bx, by, bw, 5), Color(0.03, 0.03, 0.05, 0.85))
 		draw_rect(Rect2(bx + 1, by + 1, (bw - 2) * clampf(float(m.hp) / maxf(1.0, m.max_hp()), 0.0, 1.0), 3), Color("#22c55e") if not m.knocked_out else Color("#64748b"))
-		var font := ThemeDB.fallback_font
-		draw_string_outline(font, Vector2(bx - 20, by - 3), m.name, HORIZONTAL_ALIGNMENT_CENTER, bw + 40, 13, 3, Color(0, 0, 0, 0.9))
-		draw_string(font, Vector2(bx - 20, by - 3), m.name, HORIZONTAL_ALIGNMENT_CENTER, bw + 40, 13, Color(g.class_info().get("color", "#ffffff")).lightened(0.4))
+		var font := UI.game_font()   # interface pass: the game font everywhere
+		_outlined(font, Vector2(bx - 30, by - 4), _fit_text(font, m.name, NAME_FS, bw + 60), HORIZONTAL_ALIGNMENT_CENTER, bw + 60, NAME_FS, Color(g.class_info().get("color", "#ffffff")).lightened(0.4))
 
 ## The visible body part of the hero (for bars, effects and centering).
 func _hero_rect() -> Rect2:
@@ -1445,7 +1502,7 @@ func _draw() -> void:
 	var h := size.y
 	var zone := GameData.zone_for_floor(state.floor_num)
 	var tint := Color(zone["color"])
-	var font := ThemeDB.fallback_font
+	var font := UI.game_font()   # interface pass: the game font everywhere
 
 	# Background (0.13): the room you walked into, first-person (HallsScene), same as between fights
 	if state.in_town or state.trial_active:
@@ -1461,7 +1518,7 @@ func _draw() -> void:
 			halls.draw_scenery(self, th)
 		halls.vignette(self, size)
 		_draw_mood(w, h, _ground())
-	draw_string(font, Vector2(14, 24), "%s  -  %s  -  Floor %d" % [zone["name"], GameData.sub_name(state.floor_num), state.floor_num], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 1, 1, 0.55))
+	_outlined(font, Vector2(12, 26), _fit_text(font, "%s  -  %s" % [zone["name"], GameData.sub_name(state.floor_num)], SCENE_FS, size.x - 24.0), HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS, Color(1, 1, 1, 0.7))
 	_draw_status(font)
 
 	# Shake as "trauma": strength grows faster than linearly (small taps barely move the
@@ -1527,6 +1584,7 @@ func _draw() -> void:
 				var fs := float(an["size"])
 				var uu := er.size.x / (art["size"] as Vector2).x
 				local = Rect2(er.position - Vector2(fs - (art["size"] as Vector2).x, fs - (art["size"] as Vector2).y) * 0.5 * uu, Vector2(fs, fs) * uu)
+				local = squashed(local, enemy_squash)
 		else:
 			var epose: Dictionary = _enemy_poses(art).get(enemy_pose, {})
 			if not epose.is_empty():
@@ -1571,28 +1629,32 @@ func _draw() -> void:
 			draw_string_outline(fnt, ex, "!", HORIZONTAL_ALIGNMENT_CENTER, 80, 48, 10, Color(0, 0, 0, enemy_alpha))
 			draw_string(fnt, ex, "!", HORIZONTAL_ALIGNMENT_CENTER, 80, 48, Color(1.0, 0.7 + 0.3 * wp, 0.2, enemy_alpha))
 		if enemy_flash > 0.0:
-			draw_texture_rect(ewhite, local, false, Color(1, 1, 1, enemy_flash * 0.85 * enemy_alpha))
+			draw_texture_rect(ewhite, local, false, _flash_col(enemy_flash, false, enemy_alpha))
 		var name_color := Color("#fbbf24") if boss else Color("#fca5a5")
 		if not boss and state.enemy_tier > 0:
 			name_color = Color(Monsters.tier_color(state.enemy_tier)).lightened(0.15)
 		if state.enemy_goblin:
 			name_color = Color("#fde68a")
-		var bar_color := Color("#d97706") if boss else Color("#ef4444")
+		var bar_color := Color("#f77622") if boss else Color("#e43b44")   # interface pass: palette.gpl torch / blood
+		# UX pass (Juzo: names easy for everyone to read): just the name, coloured by
+		# tier, with small diamond pips for elite tiers and dots for a pack, not extra words
 		var label := state.enemy_name
+		var pips := 0
 		var veiled := Realms.hides_tier(state) and not boss
 		if veiled:
 			name_color = Color("#f9a8d4")
 			label = "??? " + state.enemy_name
 		elif state.enemy_calamity > 0:
-			label = "CALAMITY: " + state.enemy_name
 			name_color = Color("#ff6b6b")
+			pips = 3
 		elif state.enemy_tier > 0 and not boss and not state.enemy_wanderer:
-			label = "%s %s" % [Monsters.tier_name(state.enemy_tier), state.enemy_name]
+			pips = clampi(state.enemy_tier, 1, 3)
 		if state.enemy_goblin:
-			label += "  (%d turns)" % state.goblin_turns
+			label += " (%d)" % state.goblin_turns
+		var pack := Vector2i.ZERO
 		if state.horde_left > 0 and not boss:
-			label += "  [%s %d/%d]" % ["Pack" if state.horde_pack else "Horde", state.horde_total - state.horde_left + 1, state.horde_total]
-		_draw_bar(er, label, state.enemy_hp, state.enemy_max_hp, bar_color, Color(name_color, enemy_alpha))
+			pack = Vector2i(state.horde_total - state.horde_left + 1, state.horde_total)
+		_draw_bar(er, label, state.enemy_hp, state.enemy_max_hp, bar_color, Color(name_color, enemy_alpha), pips, pack)
 		if state.enemy_shield > 0:
 			_draw_shield(er)
 		if not state.enemy_mods.is_empty() and not veiled:
@@ -1613,7 +1675,7 @@ func _draw() -> void:
 	_draw_hero()
 	var hero_name := "HERO" if state.hero_class == "" else "%s  Lv %d" % [state.title(), state.level]
 	Cosmetics.draw_frame(self, _bar_rect(hr), state.codex, bob)
-	_draw_bar(hr, hero_name, state.hero_hp, state.get_max_hp(), Color("#22c55e"), Cosmetics.name_color(state.codex))
+	_draw_bar(hr, hero_name, state.hero_hp, state.get_max_hp(), Color("#63c74d"), Cosmetics.name_color(state.codex))
 	# Thin XP bar under the health bar
 	var xbr := _bar_rect(hr)
 	var xbw := xbr.size.x
@@ -1655,8 +1717,8 @@ func _draw() -> void:
 		var ps: float = p["size"]
 		draw_rect(Rect2(p["pos"] - Vector2(ps, ps) / 2.0, Vector2(ps, ps)), Color(pc, clampf(p["life"] * 2.0, 0.0, 1.0)))
 	for r in rings:
-		var t: float = 1.0 - r["life"] / 0.25
-		draw_arc(r["pos"], 8.0 + t * 26.0, 0.0, TAU, 24, Color(0.58, 0.77, 0.99, 1.0 - t), 3.0)
+		var t: float = 1.0 - r["life"] / float(r.get("max", 0.25))
+		draw_arc(r["pos"], 8.0 + t * float(r.get("grow", 26.0)), 0.0, TAU, 24, Color(r.get("color", Color(0.58, 0.77, 0.99)), 1.0 - t), 3.0)
 
 	# Arrows and magic bolts
 	for pr in projectiles:
@@ -1803,7 +1865,7 @@ func _draw_hero() -> void:
 	draw_texture_rect(pose.get("white", hero_art["body_white"]), Rect2(c.position + Vector2(0, -u), c.size), false, Color(_rim_color(), 0.42 * a))
 	draw_texture_rect(pose.get("tex", hero_art["body"]), c, false, Color(1, 1, 1, a))
 	if hero_flash > 0.0:
-		draw_texture_rect(pose.get("white", hero_art["body_white"]), c, false, Color(1.0, 0.2, 0.2, hero_flash * 0.75))
+		draw_texture_rect(pose.get("white", hero_art["body_white"]), c, false, _flash_col(hero_flash, true))
 	if fists:
 		# The demon road fights barehanded: a burst of red qi around the fist
 		var pulse := 0.5 + 0.5 * sin(bob * 6.0)
@@ -1815,7 +1877,7 @@ func _draw_hero() -> void:
 		draw_set_transform(_off + hand, angle, Vector2(u, u))
 		draw_texture(wtex, -piv, Color(1, 1, 1, a))
 		if hero_flash > 0.0:
-			draw_texture(hero_art["weapon_white"], -piv, Color(1.0, 0.2, 0.2, hero_flash * 0.75))
+			draw_texture(hero_art["weapon_white"], -piv, _flash_col(hero_flash, true))
 		draw_set_transform(_off)
 
 ## A called helper (Raise Dead's skeleton, Call of the Wild's wolf) stands at the hero's
@@ -1847,11 +1909,11 @@ func _draw_summon() -> void:
 		draw_texture_rect(white, Rect2(r.position + off, r.size), false, Color(glow, (0.35 + 0.15 * sin(bob * 4.0)) * a))
 	draw_texture_rect(tex, r, false, Color(0.7, 0.75, 1.0, 0.7 * a))
 
-## The companion stands behind the hero (art/pets, tools/art_pets.py), a size smaller.
+## The companion stands behind the hero (art/pets/32, Pets 2), a size smaller, breathing (2-frame idle).
 func _draw_pet() -> void:
 	if state == null or not state.pet_on or World.pet_stage(state) < 0:
 		return
-	var tex := Pets.portrait(state)
+	var tex := Pets.portrait_frame(state, bob)
 	if tex == null:
 		return
 	var pu := float(maxi(1, _unit() - 1)) / _scr()
@@ -1873,7 +1935,7 @@ func _draw_lpc_hero(c: Rect2, u: float, a: float, glow: Color) -> void:
 	fi = fi % n if lpc_anim == "combat_idle" else mini(fi, n - 1)
 	var s: int = an["size"]
 	var off := Vector2(Sprites.BODY_OFFSET) - Vector2((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2)
-	var r := Rect2(c.position + off * u, Vector2(s, s) * u)
+	var r := squashed(Rect2(c.position + off * u, Vector2(s, s) * u), hero_squash)
 	var white: Texture2D = an["white"][fi]
 	if glow.a > 0.0:
 		var pulse := 0.22 + 0.1 * sin(bob * 4.0)
@@ -1882,7 +1944,7 @@ func _draw_lpc_hero(c: Rect2, u: float, a: float, glow: Color) -> void:
 	draw_texture_rect(white, Rect2(r.position + Vector2(0, -u), r.size), false, Color(_rim_color(), 0.42 * a))
 	draw_texture_rect(tex[fi], r, false, Color(1, 1, 1, a))
 	if hero_flash > 0.0:
-		draw_texture_rect(white, r, false, Color(1.0, 0.2, 0.2, hero_flash * 0.75))
+		draw_texture_rect(white, r, false, _flash_col(hero_flash, true))
 
 ## God rank: a slow ring of golden motes circling the hero and a soft halo.
 func _draw_god_aura(r: Rect2, c: Color, a: float) -> void:
@@ -1934,23 +1996,23 @@ func _draw_shield(r: Rect2) -> void:
 
 ## Modifier names under the monster's feet.
 func _draw_mods(r: Rect2) -> void:
-	var font := ThemeDB.fallback_font
+	var font := UI.game_font()   # interface pass: the game font everywhere
 	var x := r.get_center().x
 	var y := _ground() - 6.0
 	var total := 0.0
 	var widths: Array = []
 	for m in state.enemy_mods:
-		var wdt := font.get_string_size(str(m), HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 12.0
+		var wdt := font.get_string_size(str(m), HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS).x + 12.0
 		widths.append(wdt)
 		total += wdt + 4.0
 	var cx := clampf(x - total / 2.0, 4.0, size.x - total - 4.0)
 	for i in state.enemy_mods.size():
 		var m: String = state.enemy_mods[i]
 		var c := Color(Monsters.MODS[m]["color"])
-		var box := Rect2(cx, y - 13.0, widths[i], 17.0)
+		var box := Rect2(cx, y - 18.0, widths[i], 24.0)
 		draw_rect(box, Color(0.03, 0.04, 0.08, 0.85 * enemy_alpha))
 		draw_rect(box, Color(c, 0.8 * enemy_alpha), false, 1.0)
-		draw_string(font, Vector2(cx + 6.0, y), m, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(c, enemy_alpha))
+		draw_string(font, Vector2(cx + 6.0, y), m, HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS, Color(c, enemy_alpha))
 		cx += widths[i] + 4.0
 
 ## Small status chips: shrine curse, scroll of luck, hunter's scroll.
@@ -1964,10 +2026,10 @@ func _draw_status(font: Font) -> void:
 		chips.append(["Hunting %d" % state.hunt_spawns, Color("#fb923c")])
 	var x := 14.0
 	for c in chips:
-		var wdt := font.get_string_size(c[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 12.0
-		draw_rect(Rect2(x, 32, wdt, 18), Color(0.03, 0.04, 0.08, 0.8))
-		draw_rect(Rect2(x, 32, wdt, 18), c[1], false, 1.0)
-		draw_string(font, Vector2(x + 6, 46), c[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, c[1])
+		var wdt := font.get_string_size(c[0], HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS).x + 12.0
+		draw_rect(Rect2(x, 34, wdt, 24), Color(0.03, 0.04, 0.08, 0.8))
+		draw_rect(Rect2(x, 34, wdt, 24), c[1], false, 1.0)
+		draw_string(font, Vector2(x + 6, 52), c[0], HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS, c[1])
 		x += wdt + 6.0
 
 ## The light color of the current zone (for rim lights).
@@ -2028,17 +2090,50 @@ func _bar_rect(r: Rect2) -> Rect2:
 	var bx := clampf(r.get_center().x - bw / 2.0, 6.0, size.x - bw - 6.0)
 	# Monsters (at the back) get theirs under their feet; your team (in front) above their heads
 	if r.get_center().y > size.y * 0.62:
-		return Rect2(bx, minf(r.end.y + 8.0, size.y - 34.0), bw, 12.0)
-	return Rect2(bx, _ground() + 9.0, bw, 12.0)
+		return Rect2(bx, minf(r.end.y + 8.0, size.y - 68.0), bw, 14.0)   # room for the name above the message strip
+	return Rect2(bx, _ground() + 9.0, bw, 14.0)
 
-func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color, label_color: Color) -> void:
-	var font := ThemeDB.fallback_font
+## In-scene text sizes (design px; x0.85 on a 430 pt phone): names and numbers 18 (~15 pt).
+const NAME_FS := 18
+const SCENE_FS := 18
+
+## Text with a dark outline and a soft drop shadow: readable on any background.
+func _outlined(font: Font, pos: Vector2, text: String, align: HorizontalAlignment, width: float, fs: int, col: Color) -> void:
+	var a := col.a
+	draw_string_outline(font, pos + Vector2(0, 2), text, align, width, fs, 5, Color(0, 0, 0, 0.5 * a))
+	draw_string_outline(font, pos, text, align, width, fs, 5, Color(0.04, 0.03, 0.06, 0.95 * a))
+	draw_string(font, pos, text, align, width, fs, col)
+
+## Shortens a name with "..." so it never wraps or runs off the plate.
+func _fit_text(font: Font, text: String, fs: int, max_w: float) -> String:
+	if font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x <= max_w:
+		return text
+	var t := text
+	while t.length() > 3 and font.get_string_size(t + "...", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > max_w:
+		t = t.left(t.length() - 1)
+	return t.strip_edges() + "..."
+
+## A small outlined diamond (an elite tier pip).
+func _pip(c: Vector2, rad: float, col: Color) -> void:
+	draw_colored_polygon(PackedVector2Array([c + Vector2(0, -rad - 1.5), c + Vector2(rad + 1.5, 0), c + Vector2(0, rad + 1.5), c + Vector2(-rad - 1.5, 0)]), Color(0.04, 0.03, 0.06, col.a))
+	draw_colored_polygon(PackedVector2Array([c + Vector2(0, -rad), c + Vector2(rad, 0), c + Vector2(0, rad), c + Vector2(-rad, 0)]), col)
+
+func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color, label_color: Color, pips := 0, pack := Vector2i.ZERO) -> void:
+	var font := UI.game_font()   # interface pass: the game font everywhere
 	var b := _bar_rect(r)
 	var a := label_color.a
 	var pct := clampf(float(value) / maxf(1.0, max_value), 0.0, 1.0)
+	# Interface pass: a plate behind the bar and the name, so both read on any backdrop
+	# (ink fill, slate line, #0e0812 outline: the same frame as every panel)
+	var pextra := (pips * 12.0 + 6.0 if pips > 0 else 0.0) + (pack.y * 10.0 + 8.0 if pack.y > 0 else 0.0)
+	var pw := maxf(b.size.x, font.get_string_size(_fit_text(font, label, NAME_FS, minf(b.size.x + 100.0, size.x - 12.0) - pextra), HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FS).x + pextra) + 16.0
+	var plate := Rect2(clampf(b.get_center().x - pw / 2.0, 2.0, maxf(2.0, size.x - pw - 2.0)), b.position.y - 6.0, pw, b.size.y + NAME_FS + 16.0)
+	draw_rect(plate, Color(UiSkin.SOOT, 0.9 * a))
+	draw_rect(plate.grow(-2.0), Color(UiSkin.IRON, 0.9 * a))
+	draw_rect(plate.grow(-4.0), Color(Color("#181425"), 0.88 * a))
 	# frame, track, fill with a lighter top line, then a recent-damage ghost
-	draw_rect(b.grow(1.0), Color(0.0, 0.0, 0.0, 0.85 * a))
-	draw_rect(b, Color(0.08, 0.09, 0.14, 0.95 * a))
+	draw_rect(b.grow(2.0), Color(UiSkin.SOOT, a))
+	draw_rect(b, Color(Color("#120e1c"), a))
 	var fw := (b.size.x) * pct
 	# The ghost: health just lost stays as a pale strip that drains away (_process),
 	# so every hit reads clearly. Healing moves it straight up.
@@ -2049,11 +2144,23 @@ func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color,
 		draw_rect(Rect2(b.position + Vector2(fw, 0), Vector2(b.size.x * (ghost - pct), b.size.y)), Color(1.0, 0.92, 0.7, 0.75 * a))
 	draw_rect(Rect2(b.position, Vector2(fw, b.size.y)), Color(fill.darkened(0.15), a))
 	draw_rect(Rect2(b.position, Vector2(fw, 3.0)), Color(fill.lightened(0.35), a))
-	draw_string_outline(font, Vector2(b.position.x, b.end.y - 2.0), "%s / %s" % [_short(maxi(value, 0)), _short(max_value)], HORIZONTAL_ALIGNMENT_CENTER, b.size.x, 12, 3, Color(0, 0, 0, a))
-	draw_string(font, Vector2(b.position.x, b.end.y - 2.0), "%s / %s" % [_short(maxi(value, 0)), _short(max_value)], HORIZONTAL_ALIGNMENT_CENTER, b.size.x, 12, Color(1, 1, 1, a))
-	var ny := b.end.y + 15.0
-	draw_string_outline(font, Vector2(b.position.x - 60, ny), label, HORIZONTAL_ALIGNMENT_CENTER, b.size.x + 120, 13, 4, Color(0, 0, 0, a))
-	draw_string(font, Vector2(b.position.x - 60, ny), label, HORIZONTAL_ALIGNMENT_CENTER, b.size.x + 120, 13, label_color)
+	_outlined(font, Vector2(b.position.x, b.position.y + b.size.y * 0.5 + SCENE_FS * 0.36), "%s / %s" % [_short(maxi(value, 0)), _short(max_value)], HORIZONTAL_ALIGNMENT_CENTER, b.size.x, SCENE_FS, Color(1, 1, 1, a))
+	# The name on its own line under the bar (never over the sprite), one line only
+	var extra := (pips * 12.0 + 6.0 if pips > 0 else 0.0) + (pack.y * 10.0 + 8.0 if pack.y > 0 else 0.0)
+	var max_w := minf(b.size.x + 100.0, size.x - 12.0) - extra
+	var shown := _fit_text(font, label, NAME_FS, max_w)
+	var tw := font.get_string_size(shown, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FS).x
+	var total := tw + extra
+	var x0 := clampf(b.get_center().x - total / 2.0, 6.0, maxf(6.0, size.x - total - 6.0))
+	var ny := b.end.y + 5.0 + NAME_FS
+	for i in pips:
+		_pip(Vector2(x0 + 5.0 + i * 12.0, ny - NAME_FS * 0.36), 4.0, label_color)
+	var tx := x0 + (pips * 12.0 + 6.0 if pips > 0 else 0.0)
+	_outlined(font, Vector2(tx, ny), shown, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FS, label_color)
+	for i in pack.y:   # a pack: one dot per monster, filled up to this one
+		var dc := Vector2(tx + tw + 10.0 + i * 10.0, ny - NAME_FS * 0.36)
+		draw_circle(dc, 4.5, Color(0.04, 0.03, 0.06, a))
+		draw_circle(dc, 3.0, Color(label_color, a) if i < pack.x else Color(0.35, 0.33, 0.42, a))
 
 ## 1234567 -> "1.23M" so bars stay readable.
 func _short(v: int) -> String:
@@ -2119,7 +2226,7 @@ func _pixel_color(ch: String, tint: Color) -> Color:
 # =====================================================================
 
 ## A row of small chips: [label, color]. Centered on x, at y (top).
-func _chip_row(chips: Array, x: float, y: float, font: Font, fs := 13) -> void:
+func _chip_row(chips: Array, x: float, y: float, font: Font, fs := SCENE_FS) -> void:
 	if chips.is_empty():
 		return
 	# Too many for one line: the rest wrap onto lines ABOVE (the row below stays clear)
@@ -2194,8 +2301,8 @@ func _draw_enemy_info(r: Rect2, font: Font) -> void:
 	if state.boss_minions > 0:
 		st.append(["Minions x%d" % state.boss_minions, Color("#d4d4d4")])
 	var top := maxf(34.0, r.position.y - 6.0)
-	_chip_row(st, r.get_center().x, top - 22.0, font)
-	_chip_row(chips, r.get_center().x, top, font, 12)
+	_chip_row(st, r.get_center().x, top - 30.0, font)
+	_chip_row(chips, r.get_center().x, top, font)
 
 ## Your statuses (poison, burns, chill) over your head.
 func _draw_hero_status(r: Rect2, font: Font) -> void:
@@ -2207,7 +2314,9 @@ func _draw_hero_status(r: Rect2, font: Font) -> void:
 			chips.append(["%s%s %d" % [info["name"], (" x%d" % stk) if stk > 1 else "", int(state.hero_status[k])], Color(info["color"])])
 	if state.bag_full() and not state.in_town:
 		chips.append(["BAG FULL: sell to use new drops" if state.bag.size() < state.bag_capacity() + GameState.OVERFLOW_MAX else "BAG OVERFLOWING: drops become scrap", Color("#f87171")])
-	_chip_row(chips, r.get_center().x, maxf(34.0, r.position.y - 4.0), font)
+	# UX pass: down the left edge at chest height, so they never sit on the monster's name plate
+	for i in chips.size():
+		_chip_row([chips[i]], 0.0, r.position.y + 12.0 + i * (SCENE_FS + 10.0), font)
 
 ## Your menagerie pets on the run (caught or hatched), at the hero's right. They grow
 ## with their level: a baby is small, a level 30 pet stands tall. Cherished ones glow.
@@ -2259,26 +2368,25 @@ func _draw_team_strip(font: Font) -> void:
 		var key: String = r[4]
 		if not _strip_pics.has(key):
 			_strip_pics[key] = Sprites.portrait(g.appearance, g.hero_looks())
-		var box := Rect2(x, y, cw, 28)
+		var box := Rect2(x, y, cw, 36)  # UX: 15 px name (was 10 px in a 28 px plate)
 		draw_rect(box, Color(0.03, 0.04, 0.08, 0.78))
 		draw_rect(box, Color(Color(g.class_info().get("color", "#94a3b8")), 0.7), false, 1.0)
 		var pic: Texture2D = _strip_pics[key]
 		var down: bool = r[3]
 		if pic:
-			draw_texture_rect(pic, Rect2(x + 2, y + 2, 24, 24), false, Color(1, 1, 1, 0.4 if down else 1.0))
+			draw_texture_rect(pic, Rect2(x + 4, y + 4, 28, 28), false, Color(1, 1, 1, 0.4 if down else 1.0))
 		var pct := clampf(float(r[1]) / maxf(1.0, float(r[2])), 0.0, 1.0)
-		var bw := cw - 34.0
-		draw_string(font, Vector2(x + 30, y + 11), g.hero_name if g.hero_name != "" else g.hero_class, HORIZONTAL_ALIGNMENT_LEFT, bw, 10, Color(1, 1, 1, 0.5 if down else 0.9))
-		draw_rect(Rect2(x + 30, y + 16, bw, 6), Color(0.1, 0.1, 0.14))
+		var bw := cw - 38.0
+		var nm: String = "DOWN" if down else (g.hero_name if g.hero_name != "" else g.hero_class)  # knocked out: the plate says so in place of the name
+		draw_string(font, Vector2(x + 36, y + 16), _fit_text(font, nm, UI.MIN_FONT, bw), HORIZONTAL_ALIGNMENT_LEFT, bw, UI.MIN_FONT, Color("#f87171") if down else Color(1, 1, 1, 0.9))
+		draw_rect(Rect2(x + 36, y + 23, bw, 7), Color(0.1, 0.1, 0.14))
 		var col := Color("#22c55e") if pct > 0.5 else (Color("#eab308") if pct > 0.25 else Color("#ef4444"))
-		draw_rect(Rect2(x + 30, y + 16, bw * pct, 6), Color(0.4, 0.4, 0.4) if down else col)
-		if down:
-			draw_string(font, Vector2(x + 30, y + 27), "DOWN", HORIZONTAL_ALIGNMENT_LEFT, bw, 9, Color("#f87171"))
+		draw_rect(Rect2(x + 36, y + 23, bw * pct, 7), Color(0.4, 0.4, 0.4) if down else col)
 		x += cw + 4.0
 	var tsl := Synergies.strike_left(state)
 	if tsl > 0:
-		draw_string_outline(font, Vector2(6, y + 41), "Team Strike in %d" % tsl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, 3, Color(0, 0, 0, 0.9))
-		draw_string(font, Vector2(6, y + 41), "Team Strike in %d" % tsl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#fbbf24"))
+		draw_string_outline(font, Vector2(6, y + 54), "Team Strike in %d" % tsl, HORIZONTAL_ALIGNMENT_LEFT, -1, UI.MIN_FONT, 3, Color(0, 0, 0, 0.9))
+		draw_string(font, Vector2(6, y + 54), "Team Strike in %d" % tsl, HORIZONTAL_ALIGNMENT_LEFT, -1, UI.MIN_FONT, Color("#fbbf24"))
 
 static var _dissolves := {}
 const DISSOLVE_FRAMES := 8

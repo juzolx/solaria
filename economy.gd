@@ -20,6 +20,10 @@ const BOX_DUST := 4                     # Mystery Box, the dust prize
 const RAID_DUST_PER_ZONE := 2           # weekly raid: 2 per zone you have reached
 const MAT_TO_SCRAP := 4                 # plain chests (treasure goblin, horde): 1 old material = 4 scrap
 const CHEST_SCRAP := [2, 3]             # ...so 8-12 scrap (R5: was 4-8; scrap was the starved currency)
+# ---- Scrap for upgrades (R6 balance pass: worn gear sat at +0-1, scrap was always gone) ----
+const SALVAGE_FLOOR_STEP := 40          # salvage scrap grows with the item's floor: x(1 + floor/40), x3.5 on floor 100
+const SALVAGE_UPGRADE_REFUND := 0.5     # salvaging gives back half the scrap its upgrades cost (was +2 per level)
+const ELITE_DUST := 1                   # an elite room's monster pays a plain chest of scrap (x the floor step) and 1 dust
 
 # ---- Sinks ----
 const SET_PIECE_DUST := 10              # a Set piece of the first zone's set (was 10 Grendel's Claws)
@@ -57,6 +61,36 @@ static func give_scrap(g: GameState, n: int) -> void:
 ## A plain chest's scrap (what 1-2 materials used to be).
 static func chest_scrap() -> int:
 	return randi_range(CHEST_SCRAP[0], CHEST_SCRAP[1]) * MAT_TO_SCRAP
+
+## How much deeper scrap is worth: x1 on floor 0, x3.5 on floor 100 (salvage and elite chests).
+static func scrap_floor_mult(floor_num: int) -> float:
+	return 1.0 + maxi(0, floor_num) / float(SALVAGE_FLOOR_STEP)
+
+## Scrap from salvaging an item: its rarity's base grown with its floor (times your scrap
+## bonus, `mult`), plus half the scrap really spent upgrading it. The refund is never
+## multiplied, so upgrading and salvaging always loses scrap (no loop).
+static func salvage_scrap(item: Dictionary, mult := 1.0) -> int:
+	return int(salvage_base(item) * mult) + salvage_refund(item)
+
+## The salvage base: rarity value x (1 + item floor / 40).
+static func salvage_base(item: Dictionary) -> float:
+	return float(GameData.SCRAP_VALUES[int(item["rarity"])]) * scrap_floor_mult(int(item.get("floor", 1)))
+
+## Half the scrap actually paid for this item's upgrades (item["upg_scrap"]). Items upgraded
+## before R6 have no record: they keep the old +2 per level.
+static func salvage_refund(item: Dictionary) -> int:
+	if item.has("upg_scrap"):
+		return int(int(item["upg_scrap"]) * SALVAGE_UPGRADE_REFUND)
+	return int(item.get("level", 0)) * 2
+
+## Record scrap paid to upgrade an item (smith upgrades, a traveler's hone).
+static func note_upgrade_scrap(item: Dictionary, paid: int) -> void:
+	item["upg_scrap"] = int(item.get("upg_scrap", 0)) + maxi(0, paid)
+
+## An elite room's monster fell: a plain chest of scrap (worth more deeper) and a little dust.
+static func elite_reward(g: GameState) -> void:
+	give_scrap(g, int(chest_scrap() * scrap_floor_mult(g.floor_num)))
+	give_dust(g, ELITE_DUST)
 
 ## Dust for one Set piece: deeper zones' sets cost more.
 static func set_piece_dust(set_id: String) -> int:

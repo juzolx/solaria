@@ -1,0 +1,35 @@
+[
+ {
+  "name": "pet2_1",
+  "seeds": [
+   761,
+   762
+  ],
+  "init": "C:/ai/art_work2/petinit_1.png",
+  "denoise": 0.5,
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, scenery, gradient background, multiple characters, cropped",
+  "prompt": "tiny pixel art chibi pet sprite, cute round little bat holding a tiny glowing lantern, big expressive eyes, chunky readable silhouette, clean dark outline, simple three-tone shading, few colors, dark fantasy, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "pet2_2",
+  "seeds": [
+   761,
+   762
+  ],
+  "init": "C:/ai/art_work2/petinit_2.png",
+  "denoise": 0.5,
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, scenery, gradient background, multiple characters, cropped",
+  "prompt": "tiny pixel art chibi pet sprite, cute moss-green slime blob with a lit candle on its head, big expressive eyes, chunky readable silhouette, clean dark outline, simple three-tone shading, few colors, dark fantasy, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "pet2_3",
+  "seeds": [
+   761,
+   762
+  ],
+  "init": "C:/ai/art_work2/petinit_3.png",
+  "denoise": 0.5,
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, scenery, gradient background, multiple characters, cropped",
+  "prompt": "tiny pixel art chibi pet sprite, cute little puppy with a bone-white skull mask, big expressive eyes, chunky readable silhouette, clean dark outline, simple three-tone shading, few colors, dark fantasy, plain white background, 32x32 sprite"
+ }
+]

@@ -65,9 +65,9 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 		var v0 := UI.vbox(6)
 		v0.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(v0)
-		v0.add_child(UI.label("SLOT %d" % n, 11, UI.DIM))
-		v0.add_child(UI.label("Empty slot" if open_slot else "Locked", 14, UI.TEXT if open_slot else UI.DIM))
-		v0.add_child(UI.wrap("Recruit a new hero at the Inn in town." if open_slot else m.profile.slot_lock_note(n), 12, UI.DIM))
+		v0.add_child(UI.label("SLOT %d" % n, UI.FONT_CAPTION, UI.DIM))
+		v0.add_child(UI.label("Empty slot" if open_slot else "Locked", UI.FONT_CAPTION, UI.TEXT if open_slot else UI.DIM))
+		v0.add_child(UI.wrap("Recruit a new hero at the Inn in town." if open_slot else m.profile.slot_lock_note(n), UI.FONT_CAPTION, UI.DIM))
 		return card
 	var pic := TextureRect.new()
 	pic.texture = Sprites.portrait(meta.get("appearance", {}), meta.get("looks", {}))
@@ -82,10 +82,10 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 	h.add_child(v)
 	var top := UI.hbox(6)
 	v.add_child(top)
-	top.add_child(UI.label("SLOT %d" % n, 11, UI.DIM))
+	top.add_child(UI.label("SLOT %d" % n, UI.FONT_CAPTION, UI.DIM))
 	if m.started and m.state != null and n in m.state.party_slots:
-		top.add_child(UI.chip("IN TEAM", UI.GREEN, 10))
-	var info := UI.rich(13)
+		top.add_child(UI.chip("IN TEAM", UI.GREEN, UI.FONT_CAPTION))
+	var info := UI.rich(UI.FONT_CAPTION)
 	info.text = describe(meta)
 	v.add_child(info)
 	var row := UI.hbox(6)

@@ -478,7 +478,7 @@ static func recap(g: GameState) -> Dictionary:
 		if top == "" or int(by[k]) > int(by[top]):
 			top = k
 	var dealt := g.enemy_max_hp - maxi(0, g.enemy_hp)
-	var r := {"enemy": g.enemy_name, "tier": g.enemy_tier, "boss": g.enemy_is_boss, "mods": g.enemy_mods.duplicate(),
+	var r := {"enemy": g.enemy_name, "tier": g.enemy_tier, "boss": g.enemy_is_boss, "elite": g.enemy_elite, "mods": g.enemy_mods.duplicate(),
 		"turns": int(g.cfight.get("turns", 0)), "taken": by.duplicate(), "total": total, "biggest": int(g.cfight.get("biggest", 0)),
 		"dealt": dealt, "enemy_left": float(maxi(0, g.enemy_hp)) / maxf(1.0, g.enemy_max_hp), "floor": g.floor_num,
 		"weak": g.enemy_weak.duplicate(), "resist": g.enemy_resist.duplicate(), "mechanics": g.boss_mechanics.duplicate()}

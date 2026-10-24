@@ -1,0 +1,231 @@
+[
+ {
+  "name": "weapon_sword",
+  "seeds": [
+   11,
+   12,
+   13
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, scenery, landscape, gradient background, close-up, big character, cropped",
+  "prompt": "pixel art game item icons sheet, steel longswords and broadswords, each drawn diagonally, low resolution, few colors, thick dark outline, plain white background, dark fantasy rpg inventory"
+ },
+ {
+  "name": "weapon_staff",
+  "seeds": [
+   11,
+   12,
+   13
+  ],
+  "neg": "3d render, realistic, photo, blurry, text, watermark, signature, frame, border, scenery, landscape, gradient background, close-up, big character, cropped",
+  "prompt": "pixel art game item icons sheet, wooden wizard staffs with glowing crystals, each drawn diagonally, low resolution, few colors, thick dark outline, plain white background, dark fantasy rpg inventory"
+ },
+ {
+  "name": "r2_human_d60",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_tall.png",
+  "denoise": 0.6,
+  "prompt": "tiny pixel art battle sprite, chibi bald human man in a plain linen shirt and brown trousers, bare hands, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "r2_human_d72",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_tall.png",
+  "denoise": 0.72,
+  "prompt": "tiny pixel art battle sprite, chibi bald human man in a plain linen shirt and brown trousers, bare hands, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "r2_elf_d60",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_tall.png",
+  "denoise": 0.6,
+  "prompt": "tiny pixel art battle sprite, chibi elf man with long pointed ears and long blond hair, pale skin, plain linen shirt and brown trousers, bare hands, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "r2_elf_d72",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_tall.png",
+  "denoise": 0.72,
+  "prompt": "tiny pixel art battle sprite, chibi elf man with long pointed ears and long blond hair, pale skin, plain linen shirt and brown trousers, bare hands, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "r2_orc_d60",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_tall.png",
+  "denoise": 0.6,
+  "prompt": "tiny pixel art battle sprite, chibi muscular green-skinned orc with tusks and a black topknot, plain linen shirt and brown trousers, bare hands, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "r2_orc_d72",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_tall.png",
+  "denoise": 0.72,
+  "prompt": "tiny pixel art battle sprite, chibi muscular green-skinned orc with tusks and a black topknot, plain linen shirt and brown trousers, bare hands, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "r2_dwarf_d60",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_short.png",
+  "denoise": 0.6,
+  "prompt": "tiny pixel art battle sprite, chibi stocky dwarf with a big braided red beard, plain linen shirt and brown trousers, bare hands, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "r2_dwarf_d72",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_short.png",
+  "denoise": 0.72,
+  "prompt": "tiny pixel art battle sprite, chibi stocky dwarf with a big braided red beard, plain linen shirt and brown trousers, bare hands, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "r2_goblin_d60",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_short.png",
+  "denoise": 0.6,
+  "prompt": "tiny pixel art battle sprite, chibi small green goblin with huge pointed ears and yellow eyes, plain linen shirt and brown trousers, bare hands, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "r2_goblin_d72",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_short.png",
+  "denoise": 0.72,
+  "prompt": "tiny pixel art battle sprite, chibi small green goblin with huge pointed ears and yellow eyes, plain linen shirt and brown trousers, bare hands, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "o2_warrior_tall_d55",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_tall.png",
+  "denoise": 0.55,
+  "prompt": "tiny pixel art battle sprite, chibi human knight wearing dark steel plate armor with pauldrons, gauntlets and greaves, no helmet, bald, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "o2_warrior_tall_d68",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_tall.png",
+  "denoise": 0.68,
+  "prompt": "tiny pixel art battle sprite, chibi human knight wearing dark steel plate armor with pauldrons, gauntlets and greaves, no helmet, bald, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "o2_warrior_short_d68",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_short.png",
+  "denoise": 0.68,
+  "prompt": "tiny pixel art battle sprite, chibi human knight wearing dark steel plate armor with pauldrons, gauntlets and greaves, no helmet, bald, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "o2_mage_tall_d55",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_tall.png",
+  "denoise": 0.55,
+  "prompt": "tiny pixel art battle sprite, chibi human mage wearing a long deep purple robe with gold trim and a hood down, bald, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "o2_mage_tall_d68",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_tall.png",
+  "denoise": 0.68,
+  "prompt": "tiny pixel art battle sprite, chibi human mage wearing a long deep purple robe with gold trim and a hood down, bald, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "o2_mage_short_d68",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_short.png",
+  "denoise": 0.68,
+  "prompt": "tiny pixel art battle sprite, chibi human mage wearing a long deep purple robe with gold trim and a hood down, bald, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "o2_ranger_tall_d55",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_tall.png",
+  "denoise": 0.55,
+  "prompt": "tiny pixel art battle sprite, chibi human ranger wearing brown leather armor, bracers, and a short green hooded cloak, hood down, bald, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "o2_ranger_tall_d68",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_tall.png",
+  "denoise": 0.68,
+  "prompt": "tiny pixel art battle sprite, chibi human ranger wearing brown leather armor, bracers, and a short green hooded cloak, hood down, bald, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ },
+ {
+  "name": "o2_ranger_short_d68",
+  "seeds": [
+   51,
+   52,
+   53
+  ],
+  "init": "C:/ai/art_work/base_short.png",
+  "denoise": 0.68,
+  "prompt": "tiny pixel art battle sprite, chibi human ranger wearing brown leather armor, bracers, and a short green hooded cloak, hood down, bald, fighting stance, three-quarter view facing right, full body, dark fantasy, thick dark outline, plain white background, 32x32 sprite"
+ }
+]

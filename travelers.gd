@@ -91,6 +91,7 @@ static func choose(g: GameState, p: Dictionary, n: int) -> String:
 		"hone":
 			if g.equipped.has("Weapon") and int(g.equipped["Weapon"]["level"]) < GameData.MAX_UPGRADE:
 				g.equipped["Weapon"]["level"] = int(g.equipped["Weapon"]["level"]) + 1
+				Economy.note_upgrade_scrap(g.equipped["Weapon"], price(g, o))  # R6: counts toward the salvage refund
 				g.bag_version += 1
 				out = "Gilda hones your %s on her travel stone. It's +%d now." % [GameData.display_name(g.equipped["Weapon"]), int(g.equipped["Weapon"]["level"])]
 			else:
@@ -144,5 +145,6 @@ static var _faces := {}
 ## Their face (made once, then kept).
 static func portrait(id: String) -> Texture2D:
 	if not _faces.has(id):
-		_faces[id] = Sprites.portrait({"race": info(id)["race"]})
+		var path := "res://art/people/%s.png" % id   # their own full figure; a race portrait if missing
+		_faces[id] = load(path) if ResourceLoader.exists(path) else Sprites.portrait({"race": info(id)["race"]})
 	return _faces[id]

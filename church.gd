@@ -62,7 +62,10 @@ static func bonus_sources(g: GameState) -> Array:
 			if UPS.has(String(c.get("up", ""))):
 				out.append(UPS[String(c["up"])]["bonus"])
 		if it.get("blessed", false) and STAT_KEYS.has(String(it.get("stat", ""))):
-			out.append({STAT_KEYS[String(it["stat"])]: Economy.BLESS_POWER})
+			var bp := Economy.BLESS_POWER
+			if GearSlots.is_jewelry(String(slot)):
+				bp = 1.0 + (bp - 1.0) * GearSlots.HALF  # 2.1: a ring or necklace is half a slot
+			out.append({STAT_KEYS[String(it["stat"])]: bp})
 	return out
 
 ## "Cursed " in front of the name while the curse holds (game_data.display_name).

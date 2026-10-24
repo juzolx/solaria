@@ -25,9 +25,9 @@ func show_for(main_node) -> void:
 	if who == "":
 		var mood := UI.label("Snik sees you as: %s  (%d purchases)" % [Snik.friendship_name(state), state.codex.stat("merchant_buys")], 12, Color("#a3e635"))
 		content.add_child(mood)
-	gold_label = UI.label("", 14, UI.GOLD)
+	gold_label = UI.label("", UI.FONT_CAPTION, UI.GOLD)
 	content.add_child(gold_label)
-	say_label = UI.label("", 13, UI.TEXT)
+	say_label = UI.label("", UI.FONT_CAPTION, UI.TEXT)
 	say_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(say_label)
 	grid = UI.vbox(6)
@@ -45,7 +45,7 @@ static func rows(main_node, parent: Control, on_change: Callable) -> void:
 		parent.add_child(row)
 		var h := UI.hbox(10)
 		row.add_child(h)
-		var t := UI.rich(13)
+		var t := UI.rich(UI.FONT_CAPTION)
 		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		if e["kind"] == "item":
 			var item: Dictionary = e["item"]
