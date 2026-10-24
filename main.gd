@@ -1802,7 +1802,8 @@ func _refresh_fight() -> void:
 ## Tall (phone) screens get a bottom bar: one big button per section, and the
 ## fight or the chosen section fills the screen. Wide screens keep both side by side.
 func _build_nav(parent: Control) -> void:
-	nav_bar = UI.panel(Color("#111829"), UI.BORDER, 10, 4, 1)
+	nav_bar = PanelContainer.new()
+	nav_bar.add_theme_stylebox_override("panel", UiSkin.frame(UI.PANEL, UiSkin.IRON, 6))
 	parent.add_child(nav_bar)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
@@ -1814,7 +1815,7 @@ func _build_nav(parent: Control) -> void:
 		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 		b.expand_icon = false
-		b.custom_minimum_size = Vector2(0, 58)
+		b.custom_minimum_size = Vector2(0, 72)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.add_theme_font_size_override("font_size", UI.MIN_FONT)
 		for st in ["normal", "hover", "pressed", "focus"]:
@@ -1866,37 +1867,43 @@ func _apply_nav() -> void:
 		nav_buttons[i].add_theme_color_override("font_hover_color", UI.GOLD if on else UI.TEXT)
 		nav_buttons[i].modulate = Color.WHITE
 		nav_buttons[i].self_modulate = Color(1, 1, 1, 1)
-		nav_buttons[i].add_theme_color_override("icon_normal_color", UI.GOLD if on else UI.DIM)
-		nav_buttons[i].add_theme_color_override("icon_hover_color", UI.GOLD if on else UI.TEXT)
-		nav_buttons[i].add_theme_color_override("icon_pressed_color", UI.GOLD)
-		nav_buttons[i].add_theme_color_override("icon_focus_color", UI.GOLD if on else UI.DIM)
+		var idle := Color(0.55, 0.6, 0.72)   # idle icons sink toward the slate; the open page is full colour
+		nav_buttons[i].add_theme_color_override("icon_normal_color", Color.WHITE if on else idle)
+		nav_buttons[i].add_theme_color_override("icon_hover_color", Color.WHITE)
+		nav_buttons[i].add_theme_color_override("icon_pressed_color", Color.WHITE)
+		nav_buttons[i].add_theme_color_override("icon_focus_color", Color.WHITE if on else idle)
+		var face: StyleBox = UiSkin.bevel(UiSkin.SLATE, UI.GOLD_DULL, 2) if on else UI.style(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 2, 0)
+		nav_buttons[i].add_theme_stylebox_override("normal", face)
+		nav_buttons[i].add_theme_stylebox_override("hover", face)
 
-## Bottom bar icons (UX pass): chunky filled 14x14 pixel shapes with a 1 px
-## near-black outline added in code, shown at 2x like the rest of the pixel art.
-## The white fill is tinted by the button (gold = this page); the outline stays dark.
+## Bottom bar icons (interface pass): small full-colour pixel icons on the
+## sprites' grid (2x), every colour from art/palette.gpl, ink outline #0e0812.
+## Idle pages are dimmed by the button's icon colour; the open page is lit.
 const NAV_ICONS := {
-	"sword": ["..........XXXX", ".........XXXXX", "........XXXXX.", ".......XXXXX..", "......XXXXX...", ".XX..XXXXX....", ".XXXXXXXX.....", "..XXXXXX......", "...XXXX.......", "..XXXXXX......", ".XXX.XXXX.....", "XXX...XX......", "XX............", ".............."],
-	"person": ["....XXXXXX....", "...XXXXXXXX...", "...XXXXXXXX...", "...XX.XX.XX...", "...XXXXXXXX...", "....XXXXXX....", ".....XXXX.....", ".XXXXXXXXXXXX.", "XXXXXXXXXXXXXX", "XXXXXXXXXXXXXX", "XXXXXXXXXXXXXX", "XXXXXXXXXXXXXX", "XXXXXXXXXXXXXX", "XXXXXXXXXXXXXX"],
-	"bag": ["..............", "....XX..XX....", ".....XXXX.....", "......XX......", "....XXXXXX....", "...XXXXXXXX...", "..XXXXXXXXXX..", ".XXXXXXXXXXXX.", ".XXXXX..XXXXX.", ".XXXXX..XXXXX.", "XXXXXXXXXXXXXX", "XXXXXXXXXXXXXX", ".XXXXXXXXXXXX.", "..XXXXXXXXXX.."],
-	"house": ["......XX......", ".....XXXX.....", "....XXXXXX....", "...XXXXXXXX...", "..XXXXXXXXXX..", ".XXXXXXXXXXXX.", "XXXXXXXXXXXXXX", "..XXXXXXXXXX..", "..XXXXXXXXXX..", "..XXXX..XXXX..", "..XXXX..XXXX..", "..XXXX..XXXX..", "..XXXX..XXXX..", "..XXXX..XXXX.."],
-	"book": ["...XXXXXXXXXX.", "..XXXXXXXXXXX.", ".XXXXXXXXXXXX.", ".XXXXXXXXXXXX.", ".XXXXX..XXXXX.", ".XXXX....XXXX.", ".XXXX....XXXX.", ".XXXXX..XXXXX.", ".XXXXXXXXXXXX.", ".XXXXXXXXXXXX.", ".XXXXXXXXXXXX.", ".XXXXXXXXXXXX.", "..XXXXXXXXXXX.", ".............."],
-	"globe": [".....XXXX.....", "...XXXXXXXX...", "..XXX.XX.XXX..", ".XXX..XX..XXX.", ".XXXXXXXXXXXX.", "XXX...XX...XXX", "XXX...XX...XXX", "XXXXXXXXXXXXXX", "XXX...XX...XXX", ".XXX..XX..XXX.", ".XXXXXXXXXXXX.", "..XXX.XX.XXX..", "...XXXXXXXX...", ".....XXXX....."],
+	"sword": ["...o...", "..obo..", "..obd..", "..obd..", "..obd..", "..obd..", ".ooooo.", "oyGGGyo", ".ooLoo.", "..oLo..", "..oyo..", "...o..."],
+	"person": ["...ooooo...", "..obbbbso..", ".obbssssdo.", ".obsssssdo.", "obssssssddo", "ooooooooooo", "obsoooooddo", "obssssssddo", "obsso.osddo", ".ooo...ooo."],
+	"bag": ["....ooo....", "...oLmLo...", "....oLo....", "..oommmoo..", ".omlllmmmo.", "omlllgmmmLo", "omllmmmmmLo", "ommmmmmmLLo", "oLmmmmmLLLo", ".oLLLLLLLo.", "..ooooooo.."],
+	"house": ["......o......", ".....oLo.....", "....oLLLo....", "...oLmmmLo...", "..oLmmmmmLo..", ".oLmmmmmmmLo.", "ooooooooooooo", ".osssssssssso", ".osgsooosgso.", ".osGsoLosGso.", ".ossso.ossso.", ".ooooooooooo."],
+	"book": [".ooooooooo.", "oLmmmmmmmLo", "oLmGGGGGmLo", "oLmGyyyGmLo", "oLmGGGGGmLo", "oLmmmmmmmLo", "oLmmmmmmmLo", "oLmmmmmmmLo", "oLLLLLLLLLo", "owwwwwwwwwo", "ooooooooooo"],
+	"globe": ["...ooo...", "..ocwco..", ".occccCo.", ".occcCCo.", ".oCcCCCo.", "..oCCCo..", "...ooo...", "..ososo..", ".osssddo.", ".ooooooo."],
 }
+const NAV_INK := {"o": "#0e0812", "b": "#c0cbdc", "s": "#8b9bb4", "d": "#5a6988", "g": "#feae34", "G": "#c8a060", "y": "#9a7040",
+	"L": "#733e39", "m": "#a8624a", "l": "#c28569", "w": "#f4e6c4", "c": "#73bed3", "C": "#4f8fba"}
 
 static func _nav_icon(icon_name: String) -> ImageTexture:
 	var rows: Array = NAV_ICONS.get(icon_name, NAV_ICONS["book"])
-	var img := Image.create(16, 16, false, Image.FORMAT_RGBA8)
-	var on := func(x: int, y: int) -> bool:
-		var ry := y - 1
-		var rx := x - 1
-		return ry >= 0 and ry < rows.size() and rx >= 0 and rx < String(rows[ry]).length() and String(rows[ry])[rx] == "X"
-	for y in 16:
-		for x in 16:
-			if on.call(x, y):
-				img.set_pixel(x, y, Color.WHITE)
-			elif on.call(x - 1, y) or on.call(x + 1, y) or on.call(x, y - 1) or on.call(x, y + 1):
-				img.set_pixel(x, y, UiSkin.SOOT)   # the 1 px dark outline of the style bible
-	img.resize(32, 32, Image.INTERPOLATE_NEAREST)
+	var w := 0
+	for r in rows:
+		w = maxi(w, String(r).length())
+	var img := Image.create(13, 12, false, Image.FORMAT_RGBA8)   # one 13x12 cell, the glyph centred on the bottom
+	var ox := (13 - w) / 2
+	var oy := 12 - rows.size()
+	for y in rows.size():
+		var row := String(rows[y])
+		for x in row.length():
+			if NAV_INK.has(row[x]):
+				img.set_pixel(ox + x, oy + y, Color(NAV_INK[row[x]]))
+	img.resize(13 * 2 * UiSkin.PX, 12 * 2 * UiSkin.PX, Image.INTERPOLATE_NEAREST)   # icons at twice the grid: readable on a phone
 	return ImageTexture.create_from_image(img)
 
 func _refresh_tabs() -> void:
