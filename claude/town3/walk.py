@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw
 from layout import N, GROUND, LOTS, HOUSES, MARKET, PLATEAU, PLATEAU_Z, POINTS
 from compose import at, dusk, compose, phone
 
-WALK = {"road", "square", "bridge", "plateau", "path", "dirt"}
+WALK = {"road", "square", "bridge", "plateau", "path", "dirt", "planks"}
 
 
 def grid():

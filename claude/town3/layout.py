@@ -21,7 +21,7 @@ GROUND = [
     ("road", 7, 8, 8, 37),        # west lane
     ("road", 32, 8, 33, 26),      # east lane
     ("water", 1, 27, 38, 28),     # river
-    ("road", 1, 35, 38, 36),      # wall lane (one row clear of the wall so the wall never hides it)
+    ("road", 1, 35, 38, 35),      # wall lane: one row, clear of the wall so the wall never hides it
     ("square", 7, 11, 8, 15),     # Church forecourt (pale stone)
     ("square", 9, 14, 12, 14),    # Inn yard in front of the lodging wing
     ("garden", 34, 10, 37, 18),   # orchard where the east houses were
@@ -30,7 +30,7 @@ GROUND = [
     ("square", 27, 15, 28, 15),   # the square reaches the Tavern door
     ("garden", 28, 16, 31, 19),   # small public garden with a well (the Vault moved)
     ("bridge", 17, 26, 22, 29),   # stone bridge on the main street
-    ("bridge", 6, 27, 9, 28),     # footbridge west
+    ("planks", 7, 27, 8, 28),     # wooden footbridge on the west lane
     ("field", 2, 29, 5, 34),
     ("dirt", 13, 16, 13, 19),     # forge apron: crafts ground in front of the Blacksmith
     ("pen", 28, 29, 31, 34),      # pet pen (fenced), beside the Clinic

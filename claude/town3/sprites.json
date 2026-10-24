@@ -61,25 +61,25 @@
   ]
  },
  "tower0": {
-  "file": "tower.png"
+  "file": "tower_short.png"
  },
  "tower1": {
-  "file": "tower.png"
+  "file": "tower_short.png"
  },
  "tower2": {
-  "file": "tower.png"
+  "file": "tower_short.png"
  },
  "tower3": {
-  "file": "tower.png"
+  "file": "tower_short.png"
  },
  "tower4": {
-  "file": "tower.png"
+  "file": "tower_short.png"
  },
  "tower5": {
-  "file": "tower.png"
+  "file": "tower_short.png"
  },
  "tower6": {
-  "file": "tower.png"
+  "file": "tower_short.png"
  },
  "house0": {
   "file": "house_b.png"
