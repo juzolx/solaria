@@ -38,17 +38,15 @@ func refresh() -> void:
 				continue  # a surprise: these rewards show up once you find your first one
 			var ms := Collections.on_track(t)
 			if ms.size() == 1:
-				box.add_child(_row(ms[0], true))  # one reward: a single line with its own progress
+				box.add_child(_wrap_card(_row(ms[0], true), Collections.has(codex, String(ms[0]["id"]))))  # one reward: a single line with its own progress
 				continue
-			box.add_child(Collections.track_card(codex, t))
-			for m in ms:
-				box.add_child(_row(m, false))
+			box.add_child(_track_card(t, ms))
 
 ## One milestone: done (with its date) or what's still needed.
 func _row(m: Dictionary, with_track: bool) -> Control:
 	var got := Collections.has(codex, String(m["id"]))
 	var h := UI.hbox(8)
-	var mark := UI.label("✓" if got else "•", UI.FONT_CAPTION, UI.GREEN if got else UI.DIM)
+	var mark := UI.label("✓" if got else "◆", UI.FONT_CAPTION, UI.GOLD if got else UI.DIM)
 	mark.custom_minimum_size = Vector2(16, 0)
 	h.add_child(mark)
 	var t := String(m["track"])
@@ -59,9 +57,43 @@ func _row(m: Dictionary, with_track: bool) -> Control:
 			what += "  (%d / %d)" % [mini(Collections.count(codex, t), Collections.total(t)), Collections.total(t)]
 		elif not got:
 			what += "  (have %d)" % Collections.count(codex, t)
-	var l := UI.wrap("%s  -  %s" % [what, Collections.reward_text(m)], 12, UI.TEXT if got else UI.DIM)
+	var l := UI.wrap("%s  -  %s" % [what, Collections.reward_text(m)], UI.FONT_CAPTION, UI.TEXT if got else UI.DIM)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(l)
 	if got:
 		h.add_child(UI.label(str(codex.coll_earned[m["id"]]), UI.FONT_CAPTION, UI.DIM))
 	return h
+
+## Interface pass (approved mockup 15): one framed card per track: its name and count, a gold
+## progress bar, then its milestones (gold check = earned). A finished track gets a gold edge.
+func _track_card(t: String, ms: Array) -> PanelContainer:
+	var have := Collections.count(codex, t)
+	var tot := Collections.total(t)
+	var all_got := true
+	for m in ms:
+		all_got = all_got and Collections.has(codex, String(m["id"]))
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", UiSkin.frame(UI.INSET, UI.GOLD_DULL if all_got else UiSkin.IRON, 10))
+	var v := UI.vbox(4)
+	p.add_child(v)
+	var head := UI.hbox(8)
+	v.add_child(head)
+	var nm := UI.label(Collections.track_name(t), UI.FONT_BODY, UI.GOLD)
+	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(nm)
+	if tot > 0:
+		head.add_child(UI.label("%d / %d" % [mini(have, tot), tot], UI.FONT_CAPTION, UI.DIM))
+		var bar := UI.bar(UI.GOLD, 8)
+		bar.max_value = tot
+		bar.value = mini(have, tot)
+		v.add_child(bar)
+	for m in ms:
+		v.add_child(_row(m, false))
+	return p
+
+## A single-reward line in the same frame.
+func _wrap_card(row: Control, got: bool) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", UiSkin.frame(UI.INSET, UI.GOLD_DULL if got else UiSkin.IRON, 10))
+	p.add_child(row)
+	return p
