@@ -146,7 +146,7 @@ func _draw_prop(i: int, font: Font) -> void:
 			rect = scene.sprite(self, SpriteLight.lit(sn["tex"], scene.zone), x, z, 1.4, Color.WHITE, bob)
 	elif kind == "campfire":
 		rect = _draw_campfire(x, z)
-	elif kind == "rift":
+	elif kind in ["rift", "gate"]:  # a champion's gate is drawn as a portal too
 		rect = _draw_rift(x, z)
 	elif kind == "camp":
 		rect = _draw_camp(x, z)

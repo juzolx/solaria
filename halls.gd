@@ -106,6 +106,8 @@ static func team_sense(g: GameState) -> int:
 
 ## What your reader senses behind door i: {"color", "label", "text"} ("" color = nothing sensed).
 static func read_door(g: GameState, i: int) -> Dictionary:
+	if i < g.doors.size() and String(g.doors[i]) in Portals.DOOR_KINDS:
+		return Portals.read_door(g, String(g.doors[i]))  # portal doors always show
 	var lvl := team_sense(g)
 	if lvl == 0 or i >= g.doors.size():
 		return {"color": "", "label": "?", "text": "A blank door. Who knows what's behind it."}
@@ -136,13 +138,13 @@ static func on_doors_shown(g: GameState) -> void:
 
 ## door kind -> the one thing standing in that room
 const EVENT_ROOMS := {"treasure": "chest", "rest": "campfire", "merchant": "merchant", "altar": "altar",
-	"nest": "nest", "stranger": "npc", "beast": "beast", "rift": "rift", "camp": "camp", "traveler": "traveler"}
+	"nest": "nest", "stranger": "npc", "beast": "beast", "rift": "rift", "trial": "gate", "camp": "camp", "traveler": "traveler"}
 const ROOM_NAMES := {"fight": "Monsters", "elite": "Elite monster", "treasure": "Treasure room", "rest": "Campfire",
-	"merchant": "Goblin trader", "altar": "Shrine", "nest": "Nest", "stranger": "A stranger", "beast": "Dying beast", "rift": "A shimmer in the air", "camp": "Descenders' Camp", "traveler": "A traveler"}
+	"merchant": "Goblin trader", "altar": "Shrine", "nest": "Nest", "stranger": "A stranger", "beast": "Dying beast", "rift": "Rift", "trial": "A champion's gate", "camp": "Descenders' Camp", "traveler": "A traveler"}
 const MIMIC_CHANCE := 12.5         # % of chests (about 1 in 8)
 const PROP_NAMES := {"chest": "Chest", "altar": "Shrine", "nest": "Nest", "npc": "Wounded adventurer",
-	"beast": "Dying beast", "merchant": "Snik", "campfire": "Campfire", "rift": "Rift", "camp": "Camp", "traveler": "Traveler"}
-const PROP_HINTS := {"chest": "Tap the chest", "camp": "Tap the camp to trade or send gold home", "rift": "Tap the rift to step through", "altar": "Tap the shrine to pray", "nest": "Tap the nest",
+	"beast": "Dying beast", "merchant": "Snik", "campfire": "Campfire", "rift": "Rift", "gate": "Champion's gate", "camp": "Camp", "traveler": "Traveler"}
+const PROP_HINTS := {"chest": "Tap the chest", "camp": "Tap the camp to trade or send gold home", "rift": "Tap the rift to step through", "gate": "Tap the gate to face the champion", "altar": "Tap the shrine to pray", "nest": "Tap the nest",
 	"npc": "Tap to help them", "beast": "Tap to go to it", "merchant": "Tap Snik to trade", "campfire": "You rest by the fire", "traveler": "Tap to talk"}
 
 ## Walk into a room that holds one thing instead of monsters.
@@ -160,6 +162,8 @@ static func enter_event_room(g: GameState, kind: String) -> void:
 		p["who"] = Travelers.pick()  # next update: someone else is down here
 	if kind == "rift":
 		p["depth"] = Rifts.roll_depth(g)  # 2.1 F3: one rift type, its depth shown on its card
+	if kind == "trial":
+		p["trial"] = Portals.trial_offer(g)  # which champion waits here (fixed now)
 	g.room_props = [p]
 	g.exploring = true
 	g.explore_wait = 0
@@ -178,6 +182,11 @@ static func enter_event_room(g: GameState, kind: String) -> void:
 		"treasure":
 			if p["spotted"]:
 				_done(g)   # you can leave it be: the doors are open already
+		"trial":
+			if p["trial"].is_empty():  # nothing waits for you any more: the gate is dark
+				p["used"] = true
+				g.say("The gate is dark. Whoever waited here is gone.")
+				_done(g)
 
 ## The room's one thing is dealt with: on to the doors.
 static func _done(g: GameState) -> void:
@@ -258,6 +267,9 @@ static func interact(g: GameState, i: int) -> String:
 		"rift":
 			Portals.offer_rift(g)  # the portal card: step through, or walk on
 			return "A rift hangs in the air."
+		"gate":
+			Portals.offer_trial(g)  # the portal card: face the champion, or walk on
+			return "A champion's gate."
 		"nest":
 			p["used"] = true
 			Menagerie.give_egg(g, "nest")

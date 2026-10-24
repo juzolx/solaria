@@ -18,7 +18,7 @@ const NOTES := [
 		"Safer saves: every save is checked before it replaces the old one, with rolling backups and a daily copy. A damaged save is repaired from the newest backup, and you are told gently. Cloud backups now bring back every town.",
 		"Codex rewards: defeat every monster of a region, fill the Collection and the Pet book, find secret classes and more to earn titles, name colors and plate frames. Looks only, never power. See Codex > Rewards, and pick your title on the Hero tab.",
 		"Share card: the Share button on the Hero tab makes a picture of your hero (name, title, class, depth, gear, pet and proudest trophies) to keep or share.",
-		"One portal system: rifts, realm gates and trials share one set of rules (see Codex > Guide > Portals). Rifts and Deep Rifts are now one rift with a depth you see on its card before you step through, and you can walk on. A Return Scroll gets you out of any portal. Closing the game no longer loses a rift or a realm choice.",
+		"One portal system: rifts, realm gates and trials share one set of rules (see Codex > Guide > Portals). Rifts and Deep Rifts are now one rift with a depth you see on its card before you step through, and you can walk on. A trial waiting for you can also show up behind a door as a champion's gate. Rift and gate doors always show: three doors, your choice. A Return Scroll gets you out of any portal. Closing the game no longer loses a rift or a realm choice.",
 		"Art cleanup across heroes, monsters and the dungeon, and a new Credits screen (Menu > Credits and licenses) thanking every artist.",
 	]},
 	{"version": "0.13", "name": "The Halls Below", "lines": [

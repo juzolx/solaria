@@ -50,10 +50,10 @@ Bugs found on the way (all fixed, all tested):
 
 | | Rift | Realm gate | Trial |
 |---|---|---|---|
-| Found | ~1 door in 70 from floor 10, never before a boss | Floors 251-500, after each ruler | Its page (Race awakening, Vampire cure, champion hidden class) |
+| Found | ~1 door in 70 from floor 10, never before a boss | Floors 251-500, after each ruler | A champion's gate (~1 door in 70 while a trial waits for you) or its page |
 | Opens | In the dungeon, one portal at a time | — | In the dungeon only, one portal at a time, not during a boss fight |
 | Cost | Free | Free | Free |
-| You choose | Step through or Walk on (Auto steps through) | One of up to 3 gates (Auto takes the first) | Press its button |
+| You choose | The door (always shown), then step through or Walk on (Auto: at half health+) | One of up to 3 gates (Auto takes the first) | The gate door, then its card, or its page button (Auto: awakening/cure only, 75%+ health, never Hardcore) |
 | Inside | Depth 1: 3 fights; depth 3: 3 floors of 3, +15% HP per floor, 25% heal between | The next 50 floors (normal floors) | One fight |
 | Run / spare | No / no | As usual | No / no |
 | Go home | Return Scroll only (rift closes, no vault) | As usual | Return Scroll only (trial ends, try again later) |
@@ -95,13 +95,32 @@ Bugs found on the way (all fixed, all tested):
 - New guide page **Portals** (Codex > Guide, unlocks the first time a portal card shows).
 - Loading tip: "A shimmer in the air might be a rift. Its depth tells you how far down it goes."
 
-## Open questions (Juzo)
+## Juzo's answers (Oct 23) and what was built (wt/portals2)
 
-1. **Depth 2?** Today a rift is depth 1 or 3 (the old Rift / Deep Rift odds). Option: depth grows
-   with the floor (1 from 10, 2 from 30, 3 from 100). Kept as is until you decide.
-2. **Hardcore trials.** A lost trial is free for normal heroes but ends a Hardcore hero (unchanged).
-   Keep, or make trials safe in Hardcore?
-3. **Trials as portal cards.** They stay as buttons on their pages. Should they also appear as a
-   portal card in the dungeon (e.g. a champion's gate after a boss)?
-4. **Should a trial survive closing the game?** Now it ends with no loss and you start it again.
-5. **Walk on.** Rifts can now be skipped (new). OK, or should a found rift always pull you in?
+1. Rift depth stays 1 or 3. 2. A lost trial stays final for Hardcore. 4. A trial does not survive
+closing the game (ends with no loss). 5. Walk on is OK. 3 was built:
+
+**Champion's gates: trials as portal cards among the doors ("three doors, your choice").**
+- While a trial waits for you, about 1 door in 70 (1.5% per door, same as a rift, from floor 3,
+  never before a boss) is a champion's gate. At most one portal door (rift or gate) per set of three.
+- Which trial (`Portals.trial_offer`, same order as the pages): your next race awakening when only
+  its trial is left; a Vampire cure you started and finished hunting for; a champion's hidden class
+  (Gladiator) on offer at 15/35/75. Fixed when you walk into the room; if nothing waits any more the
+  gate is dark and the doors open.
+- **Portal doors always show** (`Portals.read_door`): "Rift" / "Trial" in portal violet, even for
+  heroes who can't read doors (before: a rift door was blank unless a reader saw it). You pick that
+  door or another one; in the room the card offers step through / Walk on.
+- The card: **Trial: <champion>** "Win: awaken as X." / "Win: the cure." / "Win: become X, for good."
+  + "Lose: no losses." (Hardcore: "Lose: your run ends."). Panel title "A champion's gate".
+- Entering starts the trial exactly like its page (`start_race_trial`, `Lineage.finish_cure`,
+  `Hidden.take`), marked `trial_data.gate`; win or lose, you come back out to your doors.
+- The page buttons still work (no conflict: one portal at a time, `Portals.open_block`).
+- **Auto** (`Portals.auto_wants/auto_pick/auto_door_score`, used by `auto_path` and `auto_door`):
+  rifts when at half health or better (before: always); trials only for an awakening or a cure you
+  started, at 75%+ health, never as Hardcore, never a class (that choice is for good). Otherwise
+  Auto picks another door / Walk on.
+- Save/load at a gate: the same trial card comes back.
+- Test: tests/stage6_portals.gd (trial door only when eligible, door always shows, card -> trial
+  through Portals -> back to doors, Auto rules, lost gate trial, Walk on, load at the gate, page still works).
+
+No open questions left.
