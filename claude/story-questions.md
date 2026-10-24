@@ -37,3 +37,4 @@ store description. Mechanics stay; only names and text change (unless Juzo asks)
 - Oct 24 2026: why they believe the dungeon is the way out: ALL of these (a) an old prophecy/carving at the dungeon entrance, (b) the first descenders who went deep never came back and people choose to believe they escaped, (c) strange things come up from below (light, wind, items from outside), (d) it is the only thing left to try.
 - Later update idea (Juzo): an ASCENDED HEROES town at the top/end, for heroes who make it out.
 - Hardcore towns get an ACTIVE GRAVEYARD (fallen Hardcore heroes are buried there; grows over time).
+- Oct 24 2026 DEATH: Regular towns are a world with gods: a fallen hero wakes at the CHURCH, saved by the GODDESS. Hardcore towns: "there is no goddess to save you" (death is final). Use in death screens, Church text, Hardcore town mood.
