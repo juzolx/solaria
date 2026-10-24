@@ -20,6 +20,10 @@ const BOX_DUST := 4                     # Mystery Box, the dust prize
 const RAID_DUST_PER_ZONE := 2           # weekly raid: 2 per zone you have reached
 const MAT_TO_SCRAP := 4                 # plain chests (treasure goblin, horde): 1 old material = 4 scrap
 const CHEST_SCRAP := [2, 3]             # ...so 8-12 scrap (R5: was 4-8; scrap was the starved currency)
+# ---- Scrap for upgrades (R6 balance pass: worn gear sat at +0-1, scrap was always gone) ----
+const SALVAGE_FLOOR_STEP := 40          # salvage scrap grows with the item's floor: x(1 + floor/40), x3.5 on floor 100
+const SALVAGE_UPGRADE_REFUND := 0.5     # salvaging gives back half the scrap its upgrades cost (was +2 per level)
+const ELITE_DUST := 1                   # an elite room's monster pays a plain chest of scrap (x the floor step) and 1 dust
 
 # ---- Sinks ----
 const SET_PIECE_DUST := 10              # a Set piece of the first zone's set (was 10 Grendel's Claws)
@@ -57,6 +61,26 @@ static func give_scrap(g: GameState, n: int) -> void:
 ## A plain chest's scrap (what 1-2 materials used to be).
 static func chest_scrap() -> int:
 	return randi_range(CHEST_SCRAP[0], CHEST_SCRAP[1]) * MAT_TO_SCRAP
+
+## How much deeper scrap is worth: x1 on floor 0, x3.5 on floor 100 (salvage and elite chests).
+static func scrap_floor_mult(floor_num: int) -> float:
+	return 1.0 + maxi(0, floor_num) / float(SALVAGE_FLOOR_STEP)
+
+## Scrap from salvaging an item: its rarity's base, grown with its floor, plus half the
+## scrap its upgrades cost (so upgrading worn gear isn't wasted when a better drop comes).
+static func salvage_scrap(item: Dictionary) -> int:
+	var base := float(GameData.SCRAP_VALUES[int(item["rarity"])]) * scrap_floor_mult(int(item.get("floor", 1)))
+	return int(base) + int(upgrade_scrap_spent(item) * SALVAGE_UPGRADE_REFUND)
+
+## Scrap all of an item's upgrades cost at the plain smith price (5 x L x rarity step each).
+static func upgrade_scrap_spent(item: Dictionary) -> int:
+	var lvl := int(item["level"])
+	return int(2.5 * lvl * (lvl + 1)) * (mini(int(item["rarity"]), GameData.LEGENDARY) + 1)
+
+## An elite room's monster fell: a plain chest of scrap (worth more deeper) and a little dust.
+static func elite_reward(g: GameState) -> void:
+	give_scrap(g, int(chest_scrap() * scrap_floor_mult(g.floor_num)))
+	give_dust(g, ELITE_DUST)
 
 ## Dust for one Set piece: deeper zones' sets cost more.
 static func set_piece_dust(set_id: String) -> int:

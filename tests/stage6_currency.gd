@@ -216,5 +216,22 @@ func _initialize() -> void:
 	by.shop.append(GameData.make_item("Feet", 3, 40, by._new_id()))
 	check(by.buy_shop(0) and bool(by.bag[-1].get("bought", false)), "shop purchases are marked bought")
 
+	# R6: salvage scrap grows with the item's floor and refunds half of the upgrades
+	var e1 := GameData.make_item("Weapon", 3, 1, by._new_id())
+	var e100 := GameData.make_item("Weapon", 3, 100, by._new_id())
+	check(GameData.scrap_value(e1) == 8 and GameData.scrap_value(e100) == 28, "Epic salvage: 8 on floor 1, 28 on floor 100 (got %d, %d)" % [GameData.scrap_value(e1), GameData.scrap_value(e100)])
+	e100["level"] = 3
+	check(Economy.upgrade_scrap_spent(e100) == 20 + 40 + 60, "Epic +3 cost 120 scrap in upgrades")
+	check(GameData.scrap_value(e100) == 28 + 60, "salvaging Epic +3 on floor 100 gives back half the upgrade scrap")
+	var el := _hero()
+	el.floor_num = 100
+	el.enemy_elite = true
+	var s_el := el.scrap
+	var d_el := el.dust
+	Economy.elite_reward(el)
+	check(el.scrap - s_el >= 28 and el.scrap - s_el <= 42 and el.dust - d_el == Economy.ELITE_DUST, "an elite pays 28-42 scrap and 1 dust on floor 100")
+	el.spawn_enemy()
+	check(not el.enemy_elite, "a new monster is never left flagged elite")
+
 	print("STAGE6 CURRENCY TESTS DONE, failures: ", fails)
 	quit()

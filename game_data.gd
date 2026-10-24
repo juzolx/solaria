@@ -58,7 +58,7 @@ const ENEMY_GROWTH := 1.025  # legacy flat 2.5% per floor: only Calamity HP stil
 ## [last floor of the band, growth per floor]. Before 2.1 it was 2.5% all the way down.
 ## HP (how long a fight takes) and Attack (how likely you fall) have their own tables:
 ## Attack eases off sooner, so the deep floors ask for patience more than for luck.
-const ENEMY_GROWTH_BANDS := [[25, 1.027], [50, 1.034], [75, 1.034], [100, 1.030], [150, 1.012], [250, 1.008], [100000, 1.006]]
+const ENEMY_GROWTH_BANDS := [[25, 1.027], [50, 1.034], [75, 1.044], [100, 1.043], [150, 1.012], [250, 1.008], [100000, 1.006]]
 const ENEMY_ATK_GROWTH_BANDS := [[25, 1.027], [50, 1.032], [75, 1.014], [100, 1.011], [150, 1.006], [250, 1.006], [100000, 1.005]]
 
 ## The extra (on top of linear) monster HP scaling for a floor: the product of each
@@ -127,7 +127,7 @@ const PATHS := {
 	"fight": {"name": "Fight on", "text": "Business as usual.", "color": "#cbd5e1"},
 	"treasure": {"name": "Treasure room", "text": "A chest with gold and an item (better odds).", "color": "#fbbf24"},
 	"rest": {"name": "Campfire", "text": "Heal to full, abilities ready, +15% Attack for 20 turns.", "color": "#4ade80"},
-	"elite": {"name": "Elite monster", "text": "The next monster is at least Epic: tougher, with modifiers, and much better loot.", "color": "#f87171"},
+	"elite": {"name": "Elite monster", "text": "The next monster is at least Epic: tougher, with modifiers, and much better loot, plus scrap and dust.", "color": "#f87171"},
 	"merchant": {"name": "Goblin trader", "text": "Snik sells cheap gear, potions and Return Scrolls for the gold you carry, and buys your junk.", "color": "#a3e635"},
 	"shrine": {"name": "Touch the shrine", "text": "Cursed for 40 turns: monsters 30% tougher, but double gold and much better loot.", "color": "#c084fc"},
 	"leave": {"name": "Walk past", "text": "Leave it alone and keep going.", "color": "#cbd5e1"},
@@ -756,7 +756,7 @@ static func sell_value(item: Dictionary) -> int:
 	return maxi(1, int(int(SELL_MULTS[r]) * (2.0 + f * 0.5) * (1.0 + 0.2 * int(item["level"]))))
 
 static func scrap_value(item: Dictionary) -> int:
-	return int(SCRAP_VALUES[int(item["rarity"])]) + int(item["level"]) * 2
+	return Economy.salvage_scrap(item)  # R6: grows with the item floor, refunds half its upgrades
 
 static func upgrade_cost(item: Dictionary) -> int:
 	var base := 5 * (int(item["level"]) + 1) * (mini(int(item["rarity"]), LEGENDARY) + 1)

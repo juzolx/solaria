@@ -86,9 +86,10 @@ the balance sim); at 1,030 gold at best floor 100 it is now a real choice.
 
 | Source | Amount |
 |---|---|
-| Salvage | Common 1, Uncommon 2, Rare 4, Epic 8, Legendary 16, Unique 40, Set 20, Signature 80; +2 per upgrade level; x Dwarf / forge-heat bonus |
+| Salvage | base Common 1, Uncommon 2, Rare 4, Epic 8, Legendary 16, Unique 40, Set 20, Signature 80, x (1 + item floor / 40) (R6: Epic on floor 100 = 28); plus half the scrap its upgrades cost (R6, was +2 per level); x Dwarf / forge-heat bonus |
 | Auto-salvage and bag overflow | same values |
 | Plain chests (goblin, horde) | 8-12 (was 1-2 materials; 4-8 before the R5 balance pass) |
+| Elite room monster (R6) | a plain chest x (1 + floor / 40): 8-12 on floor 1, 28-42 on floor 100; plus 1 dust |
 | Benched heroes | 10% per hero per kill, 1 + zone each, by class |
 | Rewards (deeds, login day 3) | base x (1 + best/50) (login 40: 60 at best 25, 640 at best 750) |
 | Traveler "hone" refund | gives the price back if it can't help |
@@ -105,8 +106,11 @@ the balance sim); at 1,030 gold at best floor 100 it is now a real choice.
 | Crafted bag | 30 + 10L + 4 x (5 + floor(L/4)) | 50 / 158 / 256 |
 | Traveler hone | 4 x (1 + zone) | |
 
-Scrap stays tight (the sim ends most checkpoints with under 20): it is the gear
-currency and every bit goes into upgrades.
+Scrap (R6 pass, Oct 24): before, salvage paid the same on floor 100 as on floor 1 and upgrades were lost
+with the item, so worn gear sat at +0 to +1. Salvage now grows with the item floor and refunds half of
+the upgrades, so the sim reaches about +3 on worn gear around floor 100 while still ending most visits
+with under ~100 scrap (every bit still goes into upgrades). Numbers: `Economy.SALVAGE_FLOOR_STEP`,
+`SALVAGE_UPGRADE_REFUND`, `ELITE_DUST`.
 
 ## Dust
 
