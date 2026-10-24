@@ -12,6 +12,8 @@ HAIR = {  # dark -> light ramps
     "blond": [(92, 62, 30), (150, 108, 52), (196, 154, 82), (226, 194, 120), (246, 226, 168)],
     "red": [(70, 20, 14), (118, 38, 22), (164, 62, 34), (204, 96, 50), (232, 140, 86)],
     "ash": [(52, 50, 56), (88, 86, 92), (128, 126, 130), (170, 168, 170), (210, 208, 206)],
+    "pink": [(92, 34, 64), (150, 64, 108), (204, 108, 152), (232, 154, 190), (248, 200, 222)],
+    "white": [(96, 100, 116), (150, 154, 168), (196, 200, 210), (228, 230, 236), (250, 250, 252)],
 }
 SKIN = {
     "fair": None,
@@ -90,11 +92,15 @@ def masks(im):
     return out
 
 
-def recolour(im, hair=None, skin=None, ranges=None):
-    """ranges = {material: (lo, hi)} luminance range of the ORIGINAL art, shared by all frames (from ref_ranges)."""
+def recolour(im, hair=None, skin=None, ranges=None, hair_px=None):
+    """ranges = {material: (lo, hi)} luminance range of the ORIGINAL art, shared by all frames (from ref_ranges).
+    hair_px: exact hair pixels (from headswap.swap(return_mask=True)) so long hair below the head recolours too."""
     im = im.copy()
     px = im.load()
-    for (x, y), k in masks(im).items():
+    m = masks(im)
+    if hair_px is not None:
+        m = {p: ("hair" if p in hair_px else ("face" if k == "hair" else k)) for p, k in m.items()}
+    for (x, y), k in m.items():
         ramp = {"hair": hair, "skin": skin}.get(k)
         if not ramp:
             continue

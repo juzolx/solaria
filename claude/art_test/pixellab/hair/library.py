@@ -17,28 +17,32 @@ def tight(im): return im.crop(im.getbbox())
 BN, BS = L(os.path.join(PL, "rotations", "north.png")), L(os.path.join(PL, "rotations", "south.png"))
 RG = R.ref_ranges([BN, BS])
 os.makedirs(os.path.join(HERE, "lib"), exist_ok=True)
+
 CARDS = []
 for i, n in enumerate(ORDER):
     k = key(n)
     if k == "shaggy":  # the base hero's own hair
         n_im, s_im = BN, BS
+        nm = {p for p, t in R.masks(BN).items() if t == "hair"}; sm = {p for p, t in R.masks(BS).items() if t == "hair"}
     else:
-        n_im = HS.swap(BN, BN, L(os.path.join(HERE, "raw", f"{k}_north.png")))
-        s_im = HS.swap(BS, BS, L(os.path.join(HERE, "raw", f"{k}_south.png")), keep_face=BS)
-    n_im.save(os.path.join(HERE, "lib", f"{k}_north.png")); s_im.save(os.path.join(HERE, "lib", f"{k}_south.png"))
-    CARDS.append((i + 1, n, n_im, s_im))
+        n_im, nm = HS.swap(BN, BN, L(os.path.join(HERE, "raw", f"{k}_north.png")), return_mask=True)
+        s_im, sm = HS.swap(BS, BS, L(os.path.join(HERE, "raw", f"{k}_south.png")), keep_face=BS, return_mask=True)
+    for d, im, mk in (("north", n_im, nm), ("south", s_im, sm)):
+        im.save(os.path.join(HERE, "lib", f"{k}_{d}.png"))
+        HS.save_mask(mk, im.size, os.path.join(HERE, "lib", f"{k}_{d}_hairmask.png"))
+    CARDS.append((i + 1, n, n_im, s_im, sm))
 COLS, CW, CH = 4, 400, 300
 for part, cards in ((1, CARDS[:20]), (2, CARDS[20:])):
     rows = (len(cards) + COLS - 1) // COLS
     S = MS.Sheet(20 + COLS * CW, 110 + rows * CH, f"HAIR {part}/2 - old styles on the PixelLab hero",
                  "Battle view (back) + portrait (front), 3x. Numbers follow the old in-game list. Every style takes every hair colour.")
-    for j, (num, n, ni, si) in enumerate(cards):
+    for j, (num, n, ni, si, sm) in enumerate(cards):
         x0, y0 = 20 + (j % COLS) * CW, 110 + (j // COLS) * CH
         S.panel(x0, y0, CW - 20, CH - 20, f"{num}  {n}")
         w, _ = S.put(tight(ni), x0 + 14, y0 + 44, 3)
         S.put(tight(si), x0 + 14 + w + 14, y0 + 44, 3)
         if num % 3 == 0:  # a few cards show a code colour so the range is visible
-            c = ["black", "blond", "red", "ash"][(num // 3) % 4]
-            S.put(tight(R.recolour(si, hair=R.HAIR[c], ranges=RG)), x0 + CW - 92, y0 + 150, 2)
+            c = ["black", "blond", "red", "ash", "pink", "white"][(num // 3) % 6]
+            S.put(tight(R.recolour(si, hair=R.HAIR[c], ranges=RG, hair_px=sm)), x0 + CW - 92, y0 + 150, 2)
             S.d.text((x0 + CW - 92, y0 + 250), c, font=MS.F_S, fill=MS.DIM)
     S.im.convert("RGB").save(os.path.join(HERE, f"03_HAIR_library_{part}.png"))

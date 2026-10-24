@@ -19,11 +19,23 @@ def head_patch(src, base):
     edit changed from the base rotation (long hair, ponytails and braids falling over the back and shoulders)."""
     hb, px, bp, m = head_bottom(src), src.load(), base.load(), R.masks(src)
     out = {p: px[p] for p, k in m.items() if p[1] < hb}
+    changed = set()
     for y in range(hb, src.height):
         for x in range(src.width):
             a, b = px[x, y], bp[x, y]
             if a[3] and (not b[3] or sum(abs(a[i] - b[i]) for i in range(3)) > 24):
-                out[(x, y)] = a
+                changed.add((x, y))
+    # keep only changes that hang off the head (hair), not stray edit noise on the legs or sword
+    todo = [p for p in changed if any((p[0] + dx, p[1] - 1) in out for dx in (-1, 0, 1))]
+    seen = set(todo)
+    while todo:
+        x, y = todo.pop()
+        out[(x, y)] = px[x, y]
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                q = (x + dx, y + dy)
+                if q in changed and q not in seen:
+                    seen.add(q); todo.append(q)
     return out
 
 
@@ -57,9 +69,10 @@ def face_box(base_south):
     return xs[len(xs) // 20] + 1, ys[len(ys) // 4], xs[-len(xs) // 20 - 1] - 1, ys[-1]
 
 
-def swap(frame, base, hair_img, keep_face=None):
+def swap(frame, base, hair_img, keep_face=None, return_mask=False):
     """frame: target RGBA frame. base: unedited base rotation for that direction. hair_img: base rotation
-    with the new hair. keep_face: base SOUTH image -> keep its face pixels (front view only)."""
+    with the new hair. keep_face: base SOUTH image -> keep its face pixels (front view only).
+    return_mask: also return the set of hair pixels in the result (for recolouring long hair too)."""
     dx, dy = find_offset(base, frame)
     out = frame.copy()
     op = out.load()
@@ -74,6 +87,8 @@ def swap(frame, base, hair_img, keep_face=None):
         elif k == "hair" or (x, y) in old_head:
             op[x, y] = (0, 0, 0, 0)
     patch = head_patch(hair_img, base)
+    hb_src, hm_src = head_bottom(hair_img), R.masks(hair_img)
+    hair_src = {p for p in patch if p[1] >= hb_src or hm_src.get(p) == "hair"}
     if keep_face is not None:  # base face, with the new style's hair (bangs) still on top of it
         x0, y0, x1, y1 = face_box(keep_face)
         kp = keep_face.load()
@@ -84,10 +99,18 @@ def swap(frame, base, hair_img, keep_face=None):
                 bangs = hm.get((x, y)) == "hair" and y < y0 + 3  # below the eyes 'hair' is stubble: not part of a style
                 if kp[x, y][3] and km.get((x, y)) != "hair" and not bangs:
                     patch[(x, y)] = kp[x, y]
+                    hair_src.discard((x, y))
+    top = {}
     for (x, y), c in patch.items():
         X, Y = x + dx, y + dy
         if 0 <= X < out.width and 0 <= Y < out.height and c[3]:
             op[X, Y] = c
+            top[X] = min(top.get(X, Y), Y)
+    # a bigger old head (another body type) must not peek out above the new hair
+    for X, t in top.items():
+        for Y in range(max(0, fhb - 40), t):
+            if (X, Y) not in front:
+                op[X, Y] = (0, 0, 0, 0)
     for p, c in front.items():
         op[p] = c
     # drop orphan pixels left from the old hair outline around the head
@@ -98,4 +121,40 @@ def swap(frame, base, hair_img, keep_face=None):
                         and 0 <= x + ddx < out.width and 0 <= y + ddy < out.height and op[x + ddx, y + ddy][3])
                 if n <= 1:
                     op[x, y] = (0, 0, 0, 0)
+    if return_mask:
+        return out, {(x + dx, y + dy) for x, y in hair_src
+                     if 0 <= x + dx < out.width and 0 <= y + dy < out.height and op[x + dx, y + dy][3]}
     return out
+
+
+def put_face(frame, base_south, face_img):
+    """Lay the face (eyes to chin) of `face_img` (an expression edit of the base SOUTH rotation) onto a
+    front-facing frame with any hair style; the frame's own bangs stay on top of the brows."""
+    dx, dy = find_offset(base_south, frame)
+    x0, y0, x1, y1 = face_box(base_south)
+    y1 = max(y1, head_bottom(base_south) + 3)
+    out = frame.copy()
+    op, fp = out.load(), face_img.load()
+    fm = R.masks(frame)
+    for x in range(x0, x1 + 1):
+        for y in range(y0 - 3, y1 + 1):  # 3 rows above the eyes = the brows
+            X, Y = x + dx, y + dy
+            if not (0 <= X < out.width and 0 <= Y < out.height) or not fp[x, y][3]:
+                continue
+            if fm.get((X, Y)) == "hair" and y < y0 + 3:
+                continue
+            op[X, Y] = fp[x, y]
+    return out
+
+
+def save_mask(mk, size, path):
+    """White = hair pixel: the game recolours exactly these with the chosen hair ramp."""
+    m = Image.new("L", size, 0)
+    for p in mk:
+        m.putpixel(p, 255)
+    m.save(path)
+
+
+def load_mask(path):
+    m = Image.open(path).convert("L")
+    return {(x, y) for y in range(m.height) for x in range(m.width) if m.getpixel((x, y))}
