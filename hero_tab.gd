@@ -63,9 +63,12 @@ func setup(m) -> void:
 	plate.add_child(pv0)
 	title_label = UI.label("", 21, UI.GOLD)
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_label.clip_text = true   # a long name never widens the screen
+	title_label.custom_minimum_size = Vector2(220, 0)
 	pv0.add_child(title_label)
 	level_label = UI.label("", UI.FONT_CAPTION, UI.DIM_CONTRAST)
 	level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	level_label.clip_text = true
 	pv0.add_child(level_label)
 	role_label = UI.wrap("", UI.FONT_CAPTION, UI.DIM)   # the class blurb lives in the plate's tap-tip now (fewer words)
 	role_label.visible = false
@@ -264,13 +267,14 @@ func _doll_slot(slot: String) -> Control:
 	doll[slot] = [b, cap]
 	return col
 
+## The slot's usual gear picture as a slate shape (no random item roll, so the game's RNG is untouched).
+const GHOST_ART := {"Weapon": ["sword", "steel"], "Off Hand": ["buckler", "wood"], "Helmet": ["helm", "steel"],
+	"Chest": ["plate_masc", "steel"], "Legs": ["greaves_masc", "steel"], "Feet": ["boots_masc", "leather"]}
+
 func _ghost(s: String) -> Texture2D:
 	if not _ghosts.has(s):
-		var keep := randi()
-		seed(hash(s))
-		var it: Dictionary = GameData.make_item(s, 0, 1, 0)
-		seed(keep)
-		_ghosts[s] = UiIcons.ghost(Sprites.item_icon(it))
+		var spec: Array = GHOST_ART.get(s, ["sword", "steel"])
+		_ghosts[s] = UiIcons.ghost(UiIcons.gear(spec[0], spec[1]))
 	return _ghosts[s]
 
 func _refresh_doll() -> void:
