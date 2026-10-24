@@ -84,3 +84,5 @@ D7 Split game_state.gd: after release / Oct 27 / Nov 4-5.
 D8 Story timing: before Nov 3 / Nov 4-7 / after release; artist town: ship current town for 2.1?
 D9 Apple Developer account paid and approved? App Store Connect API key into Codemagic (Juzo).
 D10 Balance target: floor 100 in ~2 hours / ~5 hours / ~1 day of play.
+
+Decisions (Juzo, Oct 24): balance stays where it is (floor 100 ~3 h, no more tuning for now); new collection look types (aura/banner/tint) later; share-card plugin later; unmet monsters stay hidden silhouettes in the Codex; Shop 2 cards per row on phones OK.
