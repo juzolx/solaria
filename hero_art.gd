@@ -20,8 +20,8 @@ const FACES := ["neutral", "smile", "laughing", "determined", "fierce", "grim", 
 const FACE_NAMES := ["Calm", "Smile", "Laugh", "Determined", "Fierce", "Grim", "Wary", "Surprised", "Sleepy", "Battle cry"]
 ## Weapon types without their own drawing are held as the closest one.
 const WEAPON_AS := {"orb": "staff", "tome": "staff", "wand": "staff", "fist": ""}
-## Races with no drawn body of their own yet: they use the human body with their skin tones.
-const DRAWN_RACES := ["Human"]
+## Races on the standard body get a signature layer (heroes.json "races"); the other builds
+## (Goblin, Dwarf, Orc, Werewolf, Golem, Fairy) use the human body with their skin tones until drawn.
 
 static var _info := {}
 static var _imgs := {}
@@ -149,6 +149,9 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 	var hair := _ramp(hc[clampi(int(app.get("hair_color", 1)), 0, hc.size() - 1)])
 	var data := PackedByteArray()
 	data.resize(CELL * 9 * CELL * 4)
+	var race := race_key(app, b)
+	if race != "":
+		_lay(data, race + "_back", skin, hair, cells)  # wings / tail behind the body on the portrait
 	_lay(data, outfit_key(cls, tier, b), skin, hair, cells)
 	var head := "%s/hair_%s" % [b, style_key(app)]
 	_lay(data, head, skin, hair, cells)
@@ -158,6 +161,8 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 	if not back:
 		_lay(data, "%s/face_%s" % [b, face], skin, hair, cells, false, PORTRAIT[0] * CELL)
 		_lay(data, head, skin, hair, cells, true)  # the hair (bangs) stays over the face
+	if race != "":
+		_lay(data, race, skin, hair, cells)  # ears, horns, halo, wings from behind...
 	var w := WEAPON_AS.get(weapon, weapon) as String
 	if w != "" and w in info().get("weapons", []):
 		_lay(data, "%s/weapon_%s" % [b, w], PackedColorArray(), PackedColorArray(), cells)
@@ -187,6 +192,13 @@ static func anims(fr: Dictionary, back: bool) -> Dictionary:
 	var swing: Dictionary = pick.call(ATTACK, ATTACK_FPS)
 	return {"combat_idle": pick.call(IDLE, 2.0), "slash": swing, "thrust": swing, "spellcast": swing, "shoot": swing,
 		"hurt": pick.call(HIT, 3.0)}
+
+## The race's signature layer ("m/race_elf"), or "" for races without one (Human, or not drawn yet).
+static func race_key(app: Dictionary, b: String) -> String:
+	var r := str(app.get("race", "Human"))
+	if b in (info().get("races", {}).get(r, []) as Array):
+		return "%s/race_%s" % [b, r.to_lower()]
+	return ""
 
 ## Class and tier a game state shows (tier 15/35/75 once the line picked that far).
 static func class_of(looks: Dictionary) -> Array:

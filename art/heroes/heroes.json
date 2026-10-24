@@ -258,5 +258,39 @@
     64
    ]
   ]
+ },
+ "races": {
+  "Elf": [
+   "m",
+   "f"
+  ],
+  "Angel": [
+   "m",
+   "f"
+  ],
+  "Demon": [
+   "m",
+   "f"
+  ],
+  "Beastkin": [
+   "m",
+   "f"
+  ],
+  "Dragonkin": [
+   "m",
+   "f"
+  ],
+  "Undead": [
+   "m",
+   "f"
+  ],
+  "Vampire": [
+   "m",
+   "f"
+  ],
+  "Lich": [
+   "m",
+   "f"
+  ]
  }
 }

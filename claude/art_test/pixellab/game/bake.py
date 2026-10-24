@@ -184,6 +184,8 @@ def body_cell(im, b, k):
 
 def index_of(c, hair_pts=()):
     idx = Image.new("RGB", c.size); ip = idx.load(); cp = c.load()
+    if c.getbbox() is None:
+        return idx
     m = R.masks(c)
     for (x, y), kd in m.items():
         if (x, y) in hair_pts:
@@ -302,8 +304,60 @@ def main():
             if wt not in info["weapons"]:
                 info["weapons"].append(wt)
         print(b, "weapons done")
+        # ---- race signature features (standard-body races) ----
+        for race in RACES:
+            paths = {k: os.path.join(FEATURES, f"{race.lower()}_{b}_{k}.png") for k in K}
+            if not all(os.path.exists(p) for p in paths.values()):
+                continue
+            front, back = race_cells(b, paths)
+            save(f"{b}/race_{race.lower()}", front, [index_of(c) for c in front])
+            if any(c.getbbox() for c in back):
+                save(f"{b}/race_{race.lower()}_back", back, [index_of(c) for c in back])
+            info.setdefault("races", {}).setdefault(race, []).append(b)
+        print(b, "races done")
     with open(os.path.join(OUT, "heroes.json"), "w") as f:
         json.dump(info, f, indent=1)
+
+
+RACES = ["Elf", "Angel", "Demon", "Beastkin", "Dragonkin", "Undead", "Vampire", "Lich"]
+FEATURES = os.path.abspath(os.path.join(REPO, "..", "solaria_dev", "claude", "art_test", "races", "features", "raw"))
+
+
+def race_cells(b, paths):
+    """A race's signature feature (PixelLab edits of the base frames, 'add only ...'): the pixels the edit
+    changed, minus edit noise on the hair (the hair is its own layer) and specks. Front view: what sticks
+    out below the head (wings, tail) goes to a layer drawn BEHIND the body; the rest is drawn on top."""
+    front, back = [], []
+    for k in K:
+        base = CELL[b][k]
+        ed = cell(L(paths[k]), b, k)
+        bp, ep = base.load(), ed.load()
+        bm = R.masks(base)
+        hair_cols = {bp[p][:3] for p, kd in bm.items() if kd == "hair"}
+        def hairlike(c):
+            return any(sum(abs(c[i] - h[i]) for i in range(3)) < 45 for h in hair_cols)
+        pts = set()
+        for y in range(C):
+            for x in range(C):
+                e, o = ep[x, y], bp[x, y]
+                if not e[3] or (o[3] and sum(abs(e[i] - o[i]) for i in range(3)) <= 40):
+                    continue
+                if o[3] and bm.get((x, y)) == "hair" and hairlike(e):
+                    continue  # the edit redrew some hair: not part of the feature
+                if (x, y) in SW[b][k][0]:
+                    continue  # nor the sword
+                pts.add((x, y))
+        pts = set().union(*[c for c in comps(pts) if len(c) >= 6]) if pts else set()
+        hl = (OFF_OWN[b][k][1] + HS.head_bottom(ROT[b][d_of(k)]))
+        f = Image.new("RGBA", (C, C)); bk = Image.new("RGBA", (C, C))
+        for (x, y) in pts:
+            if k.startswith("s") and y > hl:
+                if not bp[x, y][3]:
+                    bk.putpixel((x, y), ep[x, y])  # wings / tail peeking out from behind
+            else:
+                f.putpixel((x, y), ep[x, y])
+        front.append(f); back.append(bk)
+    return front, back
 
 
 def mirrored(w):

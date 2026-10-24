@@ -243,6 +243,14 @@ func _initialize() -> void:
 	var tinted := HeroArt.frames({"body": "masc", "skin": 6, "hair_color": 8}, "Mage", 0, "", false)["img"][7] as Image
 	check(plain.get_data() != tinted.get_data(), "skin and hair colours recolour the hero")
 	check(HeroArt.outfit_key("Warrior", 80, "m").ends_with("_t75") and HeroArt.outfit_key("Mage", 75, "m") == "m/outfit_mage", "tier outfits only where drawn")
+	# Standard-body races wear their signature on both bodies (ears, wings, horns...), recoloured with the race skin
+	for race in ["Elf", "Angel", "Demon", "Beastkin", "Dragonkin", "Undead", "Vampire", "Lich"]:
+		for b in ["m", "f"]:
+			check(HeroArt.race_key({"race": race}, b) != "", "%s signature on body %s" % [race, b])
+	check(HeroArt.race_key({"race": "Human"}, "m") == "", "humans have no race layer")
+	var elf := HeroArt.frames({"body": "masc", "race": "Elf"}, "Warrior", 0, "", true)["img"][0] as Image
+	var hum := HeroArt.frames({"body": "masc", "race": "Human"}, "Warrior", 0, "", true)["img"][0] as Image
+	check(elf.get_used_rect().size.x > hum.get_used_rect().size.x, "elf ears widen the silhouette from behind")
 	# ONE scale: battle draws every art pixel at the same whole number of screen pixels
 	check(ArtStyle.unit(1.0) == 3 and ArtStyle.unit(2.0) == 6 and ArtStyle.unit(1.0 / 3.0) == 1, "one integer battle scale (3 pt per art pixel)")
 	print("ART RULES DONE, failures: ", fails)
