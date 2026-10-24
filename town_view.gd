@@ -54,8 +54,9 @@ var walk_doors: Array = []  # iso: door cells people walk between
 var inn_doors: Array = []  # iso: the Inn and its lodging wing - everyone lives at the Inn, so most trips start or end here
 var walk_stops: Array = []  # iso: cells beside stalls, the well and the boards where people stop a while
 var raised := {}        # iso: Vector2i cell -> true on the plateau path (people stand higher there)
-var occluders: Array = []  # iso: [texture name, x, y, sort y, tag(, look)] - drawn again over a walker behind them
-var occ_tex := {}
+var occluders: Array = []  # iso: {"tex", "rect", "y", "tag", "look"} sorted by y (front-most last) - drawn again over a walker behind them
+var occ_state := ""     # iso: which Church / Trophy Cabin occluders are active ("church:holy|cabin" style key)
+var occ_live: Array = []  # iso: occluders for the current state, sorted by y
 var up_tex := {}        # iso: level-prop name -> Texture2D
 var touches := {}       # iso: finger index -> position, for the pinch
 var pinch_from := 0.0
@@ -117,7 +118,29 @@ func _ready() -> void:
 			walk_stops.append(Vector2i(int(c[0]), int(c[1])))
 		for c in data.get("raised", []):
 			raised[Vector2i(int(c[0]), int(c[1]))] = true
-		occluders = data.get("occluders", [])
+		# keep only the street network reachable from the Inn, and doors / stops on it (no stuck walkers)
+		if not inn_doors.is_empty():
+			var seen := {inn_doors[0]: true}
+			var q: Array = [inn_doors[0]]
+			while not q.is_empty():
+				var c: Vector2i = q.pop_front()
+				for dv in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+					var nb: Vector2i = c + dv
+					if walk.has(nb) and not seen.has(nb):
+						seen[nb] = true
+						q.append(nb)
+			walk = seen
+			walk_doors = walk_doors.filter(func(c): return walk.has(c))
+			inn_doors = inn_doors.filter(func(c): return walk.has(c))
+			walk_stops = walk_stops.filter(func(c): return walk.has(c))
+		# occluders: textures loaded once here, sorted by depth so _cover can stop early
+		for o in data.get("occluders", []):
+			var t: Texture2D = load("res://art/town/iso/occ/%s.png" % String(o[0]))
+			if t == null:
+				continue
+			occluders.append({"tex": t, "rect": Rect2(float(o[1]), float(o[2]), t.get_width(), t.get_height()), "y": float(o[3]),
+				"tag": String(o[4]), "look": String(o[5]) if o.size() > 5 else ""})
+		occluders.sort_custom(func(a, b): return float(a["y"]) < float(b["y"]))
 	map = TextureRect.new()
 	map.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	map.stretch_mode = TextureRect.STRETCH_SCALE
@@ -160,8 +183,21 @@ func _iso_tex() -> Texture2D:
 	var cabin := "built" if Buildings.built("cabin") else "lot"
 	var path := String(data["art"]) % [church, cabin]
 	if not tex.has(path):
+		tex.clear()                    # one town picture in memory at a time (~6 MB each)
 		tex[path] = load(path)
 	return tex[path]
+
+## The occluders for this town's state (built Church holy or ruined, Trophy Cabin), rebuilt only when it changes.
+func _live_occluders() -> Array:
+	var key := "%s:%s:%s" % [Buildings.built("church"), hardcore, Buildings.built("cabin")]
+	if key != occ_state:
+		occ_state = key
+		occ_live = occluders.filter(func(o):
+			var tag := String(o["tag"])
+			if (tag == "church" or tag == "cabin") and not Buildings.built(tag):
+				return false
+			return tag != "church" or String(o["look"]) == "" or String(o["look"]) == ("ruin" if hardcore else "holy"))
+	return occ_live
 
 ## Regular or Hardcore town; call again after the Church or Trophy Cabin is built.
 func set_mode(hc: bool) -> void:
@@ -594,22 +630,16 @@ func _draw_people() -> void:
 ## Iso: redraw whatever stands in front of a walker (sorts lower on screen) and overlaps it,
 ## so people pass behind buildings, walls and trees instead of over their roofs.
 func _cover(r: Rect2, foot_y: float) -> void:
-	for o in occluders:
-		if float(o[3]) <= foot_y:
-			continue
-		var tag := String(o[4])
-		if tag == "church" or tag == "cabin":
-			if not Buildings.built(tag):
-				continue
-			if tag == "church" and o.size() > 5 and String(o[5]) != ("ruin" if hardcore else "holy"):
-				continue
-		var n := String(o[0])
-		if not occ_tex.has(n):
-			occ_tex[n] = load("res://art/town/iso/occ/%s.png" % n)
-		var t: Texture2D = occ_tex[n]
-		var orect := Rect2(float(o[1]), float(o[2]), t.get_width(), t.get_height())
+	var live := _live_occluders()
+	# sorted back to front: find the first one in front of the walker, then draw those back to front
+	var first := live.size()
+	while first > 0 and float(live[first - 1]["y"]) > foot_y:
+		first -= 1
+	for k in range(first, live.size()):
+		var o: Dictionary = live[k]
+		var orect: Rect2 = o["rect"]
 		if orect.intersects(r):
-			people.draw_texture(t, orect.position)
+			people.draw_texture(o["tex"], orect.position)
 
 ## Iso: each building's level props (L1 scaffolding + piles, L2 lantern + upgrade, L3 banners + showpiece).
 func _draw_levels() -> void:

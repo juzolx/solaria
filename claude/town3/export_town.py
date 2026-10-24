@@ -122,6 +122,37 @@ def main(root):
     ok -= stuff
     for lid, cell in doors().items():
         ok.add(cell)
+    # keep one connected street network: any door cut off by props gets the shortest way back through them
+    from collections import deque
+    def component(start, cells):
+        seen, q = {start}, deque([start])
+        while q:
+            c = q.popleft()
+            for di, dj in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                n = (c[0] + di, c[1] + dj)
+                if n in cells and n not in seen:
+                    seen.add(n)
+                    q.append(n)
+        return seen
+    hub = tuple(doors()["market"])
+    for cell in doors().values():
+        main = component(hub, ok)
+        if cell in main:
+            continue
+        prev, q = {cell: None}, deque([cell])
+        while q:
+            c = q.popleft()
+            if c in main:
+                while c is not None:
+                    ok.add(c)
+                    c = prev[c]
+                break
+            for di, dj in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                n = (c[0] + di, c[1] + dj)
+                if n not in prev and (n in ok or n in stuff):
+                    prev[n] = c
+                    q.append(n)
+    ok = component(hub, ok)                   # drop islands (e.g. the church-garden path)
     stop_props = {("props48", n) for n in (0, 1, 2, 3, 4, 5, 6, 8)}
     stops = set()
     for e in deco:
@@ -152,7 +183,8 @@ def main(root):
         "walls": {"towers": [[x, y, x + 2, y + 2] for x, y in TOWERS], "gatehouse": list(GATEHOUSE), "ring": [0, 0, N - 1, N - 1]},
         # map-only pins with no page to open (town_view doesn't make them tappable)
         "landmarks": [{"id": pid, "label": label, "cells": [i, j, i, j]} for pid, label, i, j in POINTS if pid not in point_prop],
-        "houses": [list(h[:4]) for h in HOUSES], "plateau": list(PLATEAU), "plateau_z": PLATEAU_Z,
+        "houses": [],                 # no generic homes (everyone lives at the Inn)
+        "inn_wing": [list(h[:4]) for h in HOUSES],   # the Inn's lodging wing: part of the Inn on the town map "plateau": list(PLATEAU), "plateau_z": PLATEAU_Z,
     }
     with open(os.path.join(art, "town.json"), "w", newline="\n") as f:
         json.dump(data, f, indent=1)

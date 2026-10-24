@@ -96,8 +96,8 @@ def decor():
     # street lamps along the main street and lanes
     d += [lamp(17, 11), lamp(22, 25), lamp(22, 31), *([] if HARDCORE else [lamp(8, 12)]), lamp(8, 26), lamp(31, 22), lamp(13, 9)]
     # the Inn's yard (everyone lives at the Inn): benches, barrels, lantern, cart
-    d += [(P32, 3, 10, 14), (P32, 0, 9, 14), (P32, 0, 12, 14), (UP, 5, 11, 14), (P48, 9, 8, 14)]
-    LIGHTS.append((11.5, 14.5, 34, (255, 190, 110), 40))
+    d += [(P32, 3, 10, 14), (P32, 0, 9, 14), (P32, 0, 12, 14), (UP, 5, 12, 13)]
+    LIGHTS.append((12.5, 13.5, 34, (255, 190, 110), 40))
     # inn / tavern fronts
     d += [(P32, 3, 14, 15), (P32, 0, 16, 15), (P32, 14, 13, 15), (P32, 0, 22, 15), (P32, 0, 23, 15),
           (P32, 3, 25, 15), (P32, 59, 26, 15)]
