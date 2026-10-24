@@ -35,7 +35,10 @@ func refresh() -> void:
 		box.add_child(UI.label("Hardcore heroes fight alone. One life, no backup.", UI.FONT_CAPTION, UI.RED))
 		return
 	_preset_rows()
-	box.add_child(note)
+	# interface pass (fewer words): one line here, the full rules on a tap
+	var short := UI.wrap("You plus up to 2 of your Regular heroes. Tap here for how teams work.", UI.FONT_CAPTION, UI.DIM)
+	UI.tip(short, note.text)
+	box.add_child(short)
 	box.add_child(_card_for_leader())
 	if state.party != null:
 		for mem in state.party.members:
@@ -56,11 +59,11 @@ func refresh() -> void:
 		box.add_child(t)
 	for o in options:
 		var meta: Dictionary = o[1]
-		var row := UI.panel(UI.INSET, UI.BORDER, 8, 8, 1)
+		var row := _frame(UiSkin.IRON)
 		box.add_child(row)
 		var h := UI.hbox(8)
 		row.add_child(h)
-		h.add_child(_pic(meta.get("appearance", {})))
+		h.add_child(_slot(_pic(meta.get("appearance", {}))))
 		var r := UI.rich(UI.FONT_CAPTION)
 		r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		r.text = HeroSelect.describe(meta)
@@ -71,7 +74,7 @@ func refresh() -> void:
 			state.set_party(slots)
 			main.sfx.play("equip")
 			shown = ""
-			main.refresh(), UI.GREEN)
+			main.refresh())
 		add.disabled = state.party_slots.size() >= Party.MAX_COMPANIONS
 		add.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(add)
@@ -114,10 +117,10 @@ func _pic(app: Dictionary, looks := {}) -> TextureRect:
 	return pic
 
 func _card_for_leader() -> PanelContainer:
-	var p := UI.panel(Color("#2a2010"), UI.GOLD, 8, 8, 2)
+	var p := _frame(UI.GOLD_DULL)   # the leader: gold-edged
 	var h := UI.hbox(8)
 	p.add_child(h)
-	h.add_child(_pic(state.appearance, state.hero_looks()))
+	h.add_child(_slot(_pic(state.appearance, state.hero_looks())))
 	var r := UI.rich(UI.FONT_CAPTION)
 	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	r.text = "[b]%s[/b]  [color=#e8b14a](you, the leader)[/color]\nLv %d %s  -  %s\nHP %d / %d" % [
@@ -127,10 +130,10 @@ func _card_for_leader() -> PanelContainer:
 
 func _member_card(mem) -> PanelContainer:
 	var g: GameState = mem.hero
-	var p := UI.panel(UI.INSET, Color(g.class_info().get("color", "#ffffff")).darkened(0.2), 8, 8, 2)
+	var p := _frame(Color("#a22633") if mem.knocked_out else UiSkin.IRON)   # red edge while knocked out
 	var h := UI.hbox(8)
 	p.add_child(h)
-	h.add_child(_pic(g.appearance, g.hero_looks()))
+	h.add_child(_slot(_pic(g.appearance, g.hero_looks())))
 	var v := UI.vbox(4)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
@@ -164,9 +167,23 @@ func _synergy_rows() -> void:
 	for id in Synergies.LIST:
 		var s: Dictionary = Synergies.LIST[id]
 		var got: bool = id in on
-		var l := UI.label(("%s  -  %s" % [s["name"], s["text"]]), UI.FONT_CAPTION, Color(String(s["color"])) if got else UI.DIM)
+		var l := UI.label(("%s%s  -  %s" % ["◆ " if got else "", s["name"], s["text"]]), UI.FONT_CAPTION, UI.GOLD if got else UI.DIM)   # one accent: gold = active
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(l)
 	var ts := UI.label("Team Strike: with companions standing, your whole team hits together every %d turns of a fight." % Synergies.STRIKE_EVERY, UI.FONT_CAPTION, UI.DIM)
 	ts.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(ts)
+
+## Interface pass (approved mockup 05): a party card wears the panel frame.
+func _frame(edge: Color) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", UiSkin.frame(UI.INSET, edge, 10))
+	return p
+
+## A hero picture in a dark slot (ink fill, slate edge).
+func _slot(pic: TextureRect) -> PanelContainer:
+	var sl := PanelContainer.new()
+	sl.add_theme_stylebox_override("panel", UiSkin.bevel(Color("#120e1c"), UI.EMPTY, 2))
+	sl.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	sl.add_child(pic)
+	return sl
