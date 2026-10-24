@@ -23,6 +23,10 @@ static func restock(g: GameState) -> void:
 		var gs := GameData.gear_score(item)
 		if avg > 0 and gs < avg:
 			item["bonus"] = int(ceil(int(item["bonus"]) * float(avg) / maxf(1.0, gs)))
+			for _n in 20:  # Gear Score isn't exactly linear in bonus (jewelry, rounding): top up until it's at least the average
+				if GameData.gear_score(item) >= avg:
+					break
+				item["bonus"] = int(item["bonus"]) + 1
 		item["forged"] = true
 		g.smith_stock.append({"item": item, "price": g.price(int(GameData.shop_price(item) * PRICE_MULT)), "sold": false})
 
