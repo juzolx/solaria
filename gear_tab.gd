@@ -16,6 +16,12 @@ var doll_key := ""
 var slot := "Weapon"
 var shown := ""
 var equip_best_button: Button
+var slot_caps := {}           # slot -> the small name under its square
+var slot_cards := {}          # slot -> its square (tap-tip = the full line)
+var slot_info := {}           # slot -> "RING: Bone Band  +12 Defense  (2 in bag)  UPGRADE!" (the tap-tip, tests read it)
+var slot_detail: RichTextLabel  # the picked slot's item, one line under the hero
+var pills := {}               # "ATK"/"DEF"/"HP"/"Score" -> value Label
+const SLOT_PX := 64
 
 func setup(m) -> void:
 	main = m
@@ -35,47 +41,82 @@ func setup(m) -> void:
 	equip_best_button.tooltip_text = "Wear whatever makes your whole build strongest, counting set bonuses and special effects"
 	head.add_child(equip_best_button)
 
-	# 0.13+: a paper doll: your hero in the middle wearing it all, slots on either side
+	# 0.13+: a paper doll: your hero in the middle wearing it all, slots on either side.
+	# Interface pass (approved mockup 08): square slots with their name under them, the hero
+	# big in the middle on a plinth, and the picked slot's item on one line underneath.
 	var doll := UI.hbox(6)
 	add_child(doll)
-	var left := UI.vbox(6)
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var left := UI.vbox(4)
 	doll.add_child(left)
+	var center := Control.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.custom_minimum_size = Vector2(0, 4 * (SLOT_PX + 22) - 4)
+	doll.add_child(center)
+	var right := UI.vbox(4)
+	doll.add_child(right)
+	var pl := TextureRect.new()
+	pl.texture = UiIcons.plinth(64)
+	pl.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	center.add_child(pl)
 	doll_pic = TextureRect.new()
 	doll_pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	doll_pic.custom_minimum_size = Vector2(124, 0)
+	doll_pic.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT) * 3
+	doll_pic.size = doll_pic.custom_minimum_size
 	doll_pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	doll_pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	doll.add_child(doll_pic)
-	var right := UI.vbox(6)
-	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	doll.add_child(right)
+	center.add_child(doll_pic)
+	center.resized.connect(func():
+		var cw := center.size.x
+		var ph := doll_pic.custom_minimum_size
+		doll_pic.position = Vector2(roundf((cw - ph.x) / 2.0), center.size.y - ph.y - 14)
+		pl.position = Vector2(roundf((cw - pl.texture.get_width()) / 2.0), center.size.y - pl.texture.get_height() - 2))
 	for s in GameData.SLOT_ORDER:
 		var grid: VBoxContainer = left if s in ["Weapon", "Helmet", "Chest", "Ring"] else right  # 2.1: four a side, jewelry at the bottom
+		var col := UI.vbox(2)
+		grid.add_child(col)
 		var card := PanelContainer.new()
-		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		card.custom_minimum_size = Vector2(0, 66)
+		card.custom_minimum_size = Vector2(SLOT_PX, SLOT_PX)
 		card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		var st := UI.style(UI.INSET, UI.EMPTY, 8, 6)
 		card.add_theme_stylebox_override("panel", st)
 		card.mouse_filter = Control.MOUSE_FILTER_STOP
 		card.gui_input.connect(_on_card_input.bind(s))
 		Drag.wire(card, {"kind": "worn", "slot": s}, func(): return slot_pics[s].texture, _takes.bind(s), _dropped_on_slot.bind(s))  # next update: drag and drop
-		var ch := UI.hbox(8)
-		ch.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		card.add_child(ch)
 		var pic := ItemGrid.picture(48)
 		pic.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED   # whole pixels only (interface pass)
 		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		ch.add_child(pic)
+		card.add_child(pic)
 		slot_pics[s] = pic
-		var r := UI.rich(UI.FONT_CAPTION)
-		r.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		ch.add_child(r)
-		grid.add_child(card)
-		slot_labels[s] = r
+		col.add_child(card)
+		var cap := UI.label(s.replace("Off Hand", "Off-hand").replace("Helmet", "Head").replace("Necklace", "Neck"), UI.FONT_CAPTION, UI.DIM)
+		cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cap.custom_minimum_size = Vector2(SLOT_PX, 0)
+		col.add_child(cap)
+		slot_caps[s] = cap
+		slot_labels[s] = cap
+		slot_cards[s] = card
+		UI.tip(card, s)
 		slot_styles[s] = st
+	slot_detail = UI.rich(UI.FONT_CAPTION)
+	slot_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(slot_detail)
+	# Your numbers as four pills (icon-free words, big values): Attack, Defense, HP, Gear Score
+	var prow := UI.hbox(6)
+	add_child(prow)
+	for k in ["ATK", "DEF", "HP", "Score"]:
+		var pp := PanelContainer.new()
+		pp.add_theme_stylebox_override("panel", UiSkin.bevel(UiSkin.SLATE, UI.EDGE, 4))
+		pp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		prow.add_child(pp)
+		var pv := UI.vbox(0)
+		pp.add_child(pv)
+		var kl := UI.label(k, UI.FONT_CAPTION, UI.DIM)
+		kl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		pv.add_child(kl)
+		var vl := UI.label("0", UI.FONT_TITLE, Color("#f4e6c4"))
+		vl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		pv.add_child(vl)
+		pills[k] = vl
 
 	stats_label = UI.rich(UI.FONT_CAPTION)
 	add_child(stats_label)
@@ -148,34 +189,48 @@ func refresh() -> void:
 		doll_key = dk
 		doll_pic.texture = Sprites.portrait(state.appearance, state.hero_looks())
 	for s in GameData.SLOT_ORDER:
-		var r: RichTextLabel = slot_labels[s]
 		var st: StyleBoxFlat = slot_styles[s]
-		var n := _count(s)
-		var extra := "[color=%s]%d in bag[/color]" % [UI.hex(UI.DIM), n] if n > 0 else ""
-		if state.has_upgrade(s):
-			extra += "  [color=#4ade80]UPGRADE![/color]"
+		var cap: Label = slot_caps[s]
+		var upg := state.has_upgrade(s)
+		if upg:
 			ups += 1
 		var pic: TextureRect = slot_pics[s]
 		pic.texture = UiIcons.big(Sprites.item_icon(state.equipped[s]) if state.equipped.has(s) else UiIcons.ghost(_ghost(s)), 48)
 		pic.modulate = Color.WHITE  # empty slots show a slate ghost of what goes here
-		if state.equipped.has(s):
-			var item: Dictionary = state.equipped[s]
-			var c := GameData.color_of(item["rarity"])
-			r.text = "[color=%s]%s[/color]   %s\n[color=%s]%s[/color]\n+%d %s" % [
-				UI.hex(UI.DIM), s.to_upper(), extra, c, GameData.display_name(item), GameData.item_power(item), item["stat"]]
-			st.border_color = Color.html(c)
-		else:
-			r.text = "[color=%s]%s[/color]   %s\n[color=#555566]Empty[/color]" % [UI.hex(UI.DIM), s.to_upper(), extra]
-			st.border_color = UI.EMPTY
 		var picked: bool = s == slot
-		st.set_border_width_all(4 if picked else 2)
-		st.bg_color = UI.HILITE if picked else UI.INSET
+		st.border_color = UI.GOLD if picked else (Color.html(GameData.color_of(state.equipped[s]["rarity"])) if state.equipped.has(s) else UI.EMPTY)
+		st.set_border_width_all(3 if picked else 2)
+		st.bg_color = UI.INSET   # the gold frame marks the picked slot; a slate fill would hide its ghost
+		var nm: String = String(s).replace("Off Hand", "Off-hand").replace("Helmet", "Head").replace("Necklace", "Neck")
+		cap.text = nm + (" !" if upg else "")   # "!" = an upgrade is waiting in your bag
+		cap.add_theme_color_override("font_color", UI.GREEN if upg else (UI.GOLD if picked else UI.DIM))
+		var cnt := _count(s)
+		var info := "%s: %s" % [String(s).to_upper(), (GameData.display_name(state.equipped[s]) + "  +%d %s" % [GameData.item_power(state.equipped[s]), state.equipped[s]["stat"]]) if state.equipped.has(s) else "Empty"]
+		if cnt > 0:
+			info += "  (%d in bag)" % cnt
+		if upg:
+			info += "  UPGRADE!"
+		slot_info[s] = info
+		(slot_cards[s] as Control).tooltip_text = info
+	# the picked slot, in one line: what's worn there and what's waiting in the bag
+	var n := _count(slot)
+	var extra := ("   [color=%s]%d in bag[/color]" % [UI.hex(UI.DIM), n]) if n > 0 else ""
+	if state.has_upgrade(slot):
+		extra += "  [color=%s]upgrade![/color]" % UI.hex(UI.GREEN)
+	if state.equipped.has(slot):
+		var item: Dictionary = state.equipped[slot]
+		slot_detail.text = "[color=%s]%s[/color]  [color=%s]%s[/color]  +%d %s%s" % [UI.hex(UI.GOLD), slot.to_upper(), GameData.color_of(item["rarity"]),
+			GameData.display_name(item), GameData.item_power(item), item["stat"], extra]
+	else:
+		slot_detail.text = "[color=%s]%s[/color]  [color=%s]Empty[/color]%s" % [UI.hex(UI.GOLD), slot.to_upper(), UI.hex(UI.DIM), extra]
 	equip_best_button.text = "Equip Best (%d)" % ups if ups > 0 else "Equip Best"
 	equip_best_button.disabled = ups == 0
 
-	var text := "Attack [color=#fbbf24]%d[/color]     Defense [color=#60a5fa]%d[/color]     Max HP [color=#4ade80]%d[/color]" % [
-		state.get_attack(), state.get_defense(), state.get_max_hp()]
-	text += "     Gear Score [color=#e8b14a]%d[/color]" % state.average_gear_score()  # the average of what you wear
+	(pills["ATK"] as Label).text = UI.short(state.get_attack())
+	(pills["DEF"] as Label).text = UI.short(state.get_defense())
+	(pills["HP"] as Label).text = UI.short(state.get_max_hp())
+	(pills["Score"] as Label).text = UI.short(state.average_gear_score())  # the average of what you wear
+	var text := ""
 	var effects: Array[String] = []
 	for effect in ["lifesteal", "regen", "double_strike", "crit", "dodge", "thorns", "gold_find"]:
 		var total := state.effect_total(effect)
@@ -186,12 +241,13 @@ func refresh() -> void:
 		if t2 > 0:
 			effects.append(GameData.effect_text(effect, t2))
 	if not effects.is_empty():
-		text += "\n[color=#fbbf24]%s[/color]" % ", ".join(effects)
+		text += "[color=%s]%s[/color]" % [UI.hex(UI.GOLD), ", ".join(effects)]
 	var counts := state.set_counts()
 	for set_name in counts:
 		if int(counts[set_name]) >= 2:
-			text += "\n[color=#2dd4bf]%s set: %d pieces active[/color]" % [GameData.set_name_of(set_name), counts[set_name]]
+			text += ("\n" if text != "" else "") + "[color=%s]%s set: %d pieces active[/color]" % [UI.hex(UI.GOLD_DULL), GameData.set_name_of(set_name), counts[set_name]]
 	stats_label.text = text
+	stats_label.visible = text != ""
 
 	var key := "%s|%d" % [slot, state.bag_version]
 	if key != shown:
