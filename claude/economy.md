@@ -32,6 +32,7 @@ one per zone and realm. They are gone (no field in the save, no constants).
 | Mystery Box: 4 | 4 dust | reward |
 | Weekly raid: 2 of each zone reached | 2 dust per zone reached | reward |
 | Old mail letter holding "mats" | paid as dust (no crash) | 2.0 leftovers |
+| A 2.0 hero's saved materials | 1 dust per 10, all zones added up, rounded up (`SaveMigrate.MATS_PER_DUST`) | one-time move of 2.0 saves |
 
 | Old cost (materials) | 2.1 cost |
 |---|---|

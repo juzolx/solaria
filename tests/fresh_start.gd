@@ -1,5 +1,7 @@
 extends SceneTree
-## The one-time 0.12 save reset: old saves are wiped once, settings are kept,
+const TestHero := preload("res://tests/test_hero.gd")
+## The one-time save reset for saves from before 0.12 (2.0 saves are moved instead:
+## tests/stage6_migrate.gd): old saves are wiped once, settings are kept,
 ## and saves made after the reset are left alone.
 ## godot --headless --path . -s tests/fresh_start.gd
 var fails := 0
@@ -10,6 +12,9 @@ func check(cond: bool, msg: String) -> void:
 		print("FAIL: ", msg)
 
 func _initialize() -> void:
+	if not TestHero.safe():  # this file deletes every save: only ever in the test folder
+		quit(1)
+		return
 	GameState.delete_saves()
 	Profile.delete()
 	Codex.delete()
@@ -62,7 +67,7 @@ func _initialize() -> void:
 	check(GameState.has_slot(2) and not main4.fresh_start_notice and main4.profile.save_epoch == Profile.SAVE_EPOCH, "a missing profile doesn't wipe 2.1 heroes")
 	main4.queue_free()
 	await process_frame
-	# ...but heroes from before 2.1 (no "save_kind") with no settings file are still reset
+	# 2.0 town heroes (no "save_kind") with no settings file are moved into 2.1, never wiped (Juzo, Oct 24)
 	GameState.delete_saves()
 	Profile.delete()
 	var f := FileAccess.open(GameState.slot_paths(1)[0], FileAccess.WRITE)
@@ -71,7 +76,7 @@ func _initialize() -> void:
 	var main5 = load("res://main.tscn").instantiate()
 	root.add_child(main5)
 	await process_frame
-	check(not GameState.has_slot(1) and main5.profile.save_epoch == Profile.SAVE_EPOCH, "pre-2.1 heroes with no settings file are reset")
+	check(GameState.has_slot(1) and main5.profile.save_epoch == Profile.SAVE_EPOCH and int(SaveMigrate.report.get("heroes", 0)) == 1, "2.0 heroes with no settings file are moved, not reset")
 	main5.queue_free()
 	await process_frame
 	# A brand-new player gets no reset notice

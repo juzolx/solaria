@@ -18,7 +18,7 @@ extends RefCounted
 ## change a format in 3.0: bump VERSIONS[kind] and add a step to MIGRATIONS,
 ## e.g. MIGRATIONS["hero"][1] = func(d): d["new_key"] = 0; return d
 ## Each step takes a file at version N and returns it at N + 1.
-## (2.1 is a deliberate fresh start at Profile.SAVE_EPOCH 13: no steps yet.)
+## (2.0 -> 2.1, Profile.SAVE_EPOCH 12 -> 13, is a one-time step in save_migrate.gd, run by main.)
 ##
 ## Throttle: GameState.save_game() is called after almost every fight. In the
 ## real game (`coalesce` on, set by main) a hero writes at most once every

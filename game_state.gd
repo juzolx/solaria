@@ -3455,6 +3455,7 @@ static func delete_saves() -> void:
 	for n in range(1, GameData.MAX_HEROES + 1):
 		for path in [OLD_SLOT_PATH % n, OLD_SLOT_BACKUP % n, OLD_SLOT_TEMP % n]:
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+		SaveIO.delete_all(OLD_SLOT_PATH % n)  # with any daily copy or older backups
 		for t in range(1, GameData.MAX_TOWNS + 1):
 			SaveIO.delete_all(town_slot_paths(t, n)[0])
 	for path in [SAVE_PATH, HC_SAVE_PATH]:

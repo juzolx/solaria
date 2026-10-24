@@ -18,8 +18,12 @@ const SUMMARY := {
 		["Collections and share card", "Fill your Codex for titles and looks (never power). Make a picture of your hero to share."],
 		["Portals", "Rifts, realm gates and champion trial gates now share one simple set of rules."],
 		["Safer saves", "Every save is checked first, with backups. If one breaks, it's quietly repaired."],
+		["Your heroes came along", "Every town, hero, pet and item from 2.0 is here. Old zone materials became dust."],
 	],
 }
+
+## Shown once to players whose 2.0 heroes were moved into 2.1.
+const MIGRATED_TEXT := "Your heroes made it into 2.1! Every town, hero, pet and item came along, and your old zone materials were turned into dust. Classes now evolve at levels 15, 35 and 75, so a hero whose class pick came earlier than that can choose it again when they get there."
 
 ## Words a friendly update screen never uses (store age-rating rule: no casino feel).
 const CASINO_WORDS := ["gamble", "gambling", "casino", "jackpot", "bet ", "bets", "slot machine", "loot box", "lucky spin", "odds"]
@@ -39,8 +43,9 @@ static func due(p: Profile, first_run: bool) -> bool:
 static func summary() -> Array:
 	return SUMMARY.get(String(PatchNotes.NOTES[0]["version"]), [])
 
-## Opens the screen and marks it seen. fresh: also say that saves were reset (2.1).
-func show_for(main_node, fresh := false, on_done := Callable()) -> WhatsNew:
+## Opens the screen and marks it seen. fresh: also say that saves were reset (only saves
+## from before 0.12). migrated: say that 2.0 heroes were moved into 2.1 (save_migrate.gd).
+func show_for(main_node, fresh := false, on_done := Callable(), migrated := false) -> WhatsNew:
 	m = main_node
 	var n: Dictionary = PatchNotes.NOTES[0]
 	open(m, "What's new", 480.0, UI.GOLD)
@@ -49,6 +54,8 @@ func show_for(main_node, fresh := false, on_done := Callable()) -> WhatsNew:
 	content.add_child(head)
 	if fresh:
 		content.add_child(UI.wrap("A fresh start: every town and hero begins again under the new rules. Your settings are kept.", 15, UI.TEXT))
+	if migrated:
+		content.add_child(UI.wrap(MIGRATED_TEXT, 15, UI.GOLD.lightened(0.2)))
 	var items := summary()
 	if items.is_empty():
 		for l in (n["lines"] as Array).slice(0, 6):

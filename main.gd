@@ -173,18 +173,26 @@ func _ready() -> void:
 	_show_save_notices.call_deferred()
 
 var fresh_start_notice := false
+var migrate_notice := false  # 2.0 heroes were just moved into 2.1 (save_migrate.gd)
 var first_run := false
 
-## A new save epoch (0.12): every hero is wiped once. Settings and the online login stay.
+## A new save epoch: 2.0 saves (epoch 12) are moved into 2.1 once (Juzo, Oct 24:
+## no wipe; save_migrate.gd). Saves from before 0.12 are still wiped once.
+## Settings and the online login always stay.
 func _fresh_start_check() -> void:
 	if not profile.fresh_start_due():
 		return
-	if not SaveIO.exists(Profile.PATH) and _has_current_heroes():
+	var no_profile := not SaveIO.exists(Profile.PATH)
+	if no_profile and _has_current_heroes():
 		# The settings file is gone but the heroes were saved by this version
 		# (2.1 SaveIO files carry "save_kind"): never wipe them, just mark the epoch.
 		profile.save_epoch = Profile.SAVE_EPOCH
 		profile.save()
 		return
+	if SaveMigrate.due(profile, no_profile):
+		SaveMigrate.run(profile, codex)
+		migrate_notice = bool(SaveMigrate.report.get("ok", false)) and int(SaveMigrate.report.get("heroes", 0)) > 0
+		return  # (if it failed, nothing is wiped: save_epoch stays 12 and it runs again next launch)
 	var had_saves := FileAccess.file_exists(Profile.PATH) or FileAccess.file_exists(GameState.SAVE_PATH) \
 		or FileAccess.file_exists(GameState.HC_SAVE_PATH) or FileAccess.file_exists(Codex.PATH)
 	for n in range(1, GameData.MAX_HEROES + 1):
@@ -213,9 +221,11 @@ func _title_popups() -> void:
 	if started or not is_inside_tree() or is_queued_for_deletion():
 		return
 	var fresh := fresh_start_notice
+	var moved := migrate_notice
 	fresh_start_notice = false
-	if fresh or WhatsNew.due(profile, first_run):
-		WhatsNew.new().show_for(self, fresh, _maybe_welcome)
+	migrate_notice = false
+	if fresh or moved or WhatsNew.due(profile, first_run):
+		WhatsNew.new().show_for(self, fresh, _maybe_welcome, moved)
 	else:
 		_maybe_welcome()
 
