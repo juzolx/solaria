@@ -14,10 +14,17 @@ def head_bottom(im):
     return int(bb[1] + (bb[3] - bb[1]) * R.HEAD_FRAC)
 
 
-def head_patch(src):
-    """{(x, y): rgba} of the head: everything above the head line plus hair below it (long hair, ponytail)."""
-    hb, px, m = head_bottom(src), src.load(), R.masks(src)
-    return {p: px[p] for p, k in m.items() if p[1] < hb or k == "hair"}
+def head_patch(src, base):
+    """{(x, y): rgba} of the head: everything above the head line, plus every pixel below it that the
+    edit changed from the base rotation (long hair, ponytails and braids falling over the back and shoulders)."""
+    hb, px, bp, m = head_bottom(src), src.load(), base.load(), R.masks(src)
+    out = {p: px[p] for p, k in m.items() if p[1] < hb}
+    for y in range(hb, src.height):
+        for x in range(src.width):
+            a, b = px[x, y], bp[x, y]
+            if a[3] and (not b[3] or sum(abs(a[i] - b[i]) for i in range(3)) > 24):
+                out[(x, y)] = a
+    return out
 
 
 def find_offset(base, frame, r=10):
@@ -66,14 +73,14 @@ def swap(frame, base, hair_img, keep_face=None):
             front[(x, y)] = op[x, y]  # sword stays on top of the new head
         elif k == "hair" or (x, y) in old_head:
             op[x, y] = (0, 0, 0, 0)
-    patch = head_patch(hair_img)
+    patch = head_patch(hair_img, base)
     if keep_face is not None:  # base face, with the new style's hair (bangs) still on top of it
         x0, y0, x1, y1 = face_box(keep_face)
         kp = keep_face.load()
         hm = R.masks(hair_img)
         km = R.masks(keep_face)
         for x in range(x0, x1 + 1):
-            for y in range(y0, y1 + 1):
+            for y in range(y0, max(y1, head_bottom(keep_face) + 3) + 1):  # down to the chin
                 bangs = hm.get((x, y)) == "hair" and y < y0 + 3  # below the eyes 'hair' is stubble: not part of a style
                 if kp[x, y][3] and km.get((x, y)) != "hair" and not bangs:
                     patch[(x, y)] = kp[x, y]
