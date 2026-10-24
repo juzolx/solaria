@@ -10,6 +10,9 @@ Every art session (hero, races, 3D rooms, town, pets, monsters, icons, effects) 
   - bosses: about 96-128 px; Calamities up to 160 px;
   - 3D room textures 32x32 tiles; town tiles 32x32 (3/4 view), buildings sized so a door is ~hero height.
 
+## The base hero is the reference
+The PixelLab base hero stays exactly as drawn (Juzo, Oct 24). Where this bible's outline or shading notes differ from the hero, THE HERO WINS: match its outline colour, outline thickness and shading style.
+
 ## One look
 - Dark fantasy mood: muted, desaturated base colours, dusk light, one bright accent per sprite (eyes, flame, gem, rarity trim).
 - Clean 1 px dark outline (near-black #0e0812 on the outside; may lighten to a darker local colour inside).
