@@ -575,6 +575,25 @@
     ]
    },
    "skin": false
+  },
+  "Werewolf": {
+   "key": "orc",
+   "bodies": {
+    "m": [
+     "plate",
+     "robe",
+     "leather",
+     "cloth"
+    ],
+    "f": [
+     "plate",
+     "robe",
+     "leather",
+     "cloth"
+    ]
+   },
+   "skin": false,
+   "feature": "race_werewolf"
   }
  },
  "family_of": {
