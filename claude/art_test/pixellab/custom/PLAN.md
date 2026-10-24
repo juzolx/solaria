@@ -46,6 +46,11 @@ Check `get_balance` before each batch; show a sample before any batch over ~30 g
   (an edit per frame per item: ~50 gens per item, too expensive); (c) PixelLab frames for the base body only
   and gear frozen on top (looks broken in the attack). Recommendation: (a).
 
+## Style (Juzo, 2026-10-24): the hero is the reference, the style bible follows it
+- Keep the PixelLab hero as drawn: its near-black outline (#000000-#070207) and its richer shading
+  (~12-14 shades in hair, ~18-20 across the browns) are the target look, not 3-5 shade ramps.
+- Runtime recolours keep each pixel's relative brightness (recolour.py), so they work on the full shading.
+
 ## iPhone budget (Juzo's rule: must run well on iPhone) - measured 2026-10-24
 - One body, battle + portrait clips (idle 4 + attack 9 frames, N + S = 26 frames): ~235 KB RGBA once
   frames are cropped and packed into one sheet (~620 KB if left on full canvases). Pack per body, never per look.
