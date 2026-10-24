@@ -1,0 +1,16 @@
+bf0a56e3-595e-4690-998e-a4cf9623969e determined
+038946c9-3675-44eb-b823-3569086f5104 smile
+fcb0c91a-197f-469a-81cc-eb0fa60b62f2 battle_cry
+31d8e8db-a47c-45e9-bd0b-f74538673ddd fierce_v2
+aa3639d5-abc4-4cf8-bef3-df6dc0d6e2d2 wary
+67166eda-a416-478a-8f69-01ef230a8d4e female_south_v1
+d9b59f96-9fcb-4a49-810f-698a42911541 smirk
+9f270c38-84af-44c1-837d-5700defc8bde sad
+b190dcb2-6d4a-4258-a44a-600c4e3eb883 surprised
+87c2e642-1e6b-4dd4-8133-c2f02291474b hurt
+3df9b660-6220-4eda-a3e7-4e806c0edb91 fierce
+3c4833e9-2ae1-4813-a6e5-a6b0e512f45d female_south_v2
+4051a53e-e22d-475e-bcd9-f4ae86dbb852 female_south
+ae41db97-4bd2-46a9-8fc0-748ba1aa8275 sleepy
+5781511f-b722-4da0-b1b9-2c74f553bc7e laughing
+b220e532-082c-475c-8fde-35e078bc5336 grim
