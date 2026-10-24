@@ -65,27 +65,28 @@ def build(body, v, kit, style=None, col=None):
     pcs.setdefault("weapon", PIECES[(body, "base", v)]["weapon"])
     return LY.compose(v, pcs, head(body, v, style, col))
 
-def kit(chest, legs, feet, gloves=None, back=None, helmet=None):
-    k = {"chest": chest, "legs": legs, "feet": feet, "gloves": gloves or chest}
-    if back:
-        k["back"] = back
+def kit(chest, legs, feet, helmet=None):
+    """The 6 visible slots. Arms/hands and any cape are parts of the chest item."""
+    k = {"chest": chest, "legs": legs, "feet": feet, "gloves": chest}
+    if chest == "ranger":
+        k["back"] = "ranger"
     if helmet:
         k["helmet"] = helmet
     return k
 
-MIXES = [
+MIXES = [  # chest / legs / feet / helmet; weapon is the base sword (step 4 swaps it)
     ("m", "plate helmet + robe + leather boots", kit("robe", "base", "base", helmet="plate"), None, None),
-    ("m", "ranger top + cape, plate legs, feet, gloves", kit("ranger", "plate", "plate", gloves="plate", back="ranger"), "short", None),
-    ("m", "leather top, ranger legs + boots, cape", kit("base", "ranger", "ranger", back="ranger"), "long", "white"),
-    ("m", "plate chest, leather legs, ranger boots", kit("plate", "base", "ranger"), "mohawk", "red"),
-    ("f", "robe + ranger cape + leather boots", kit("robe", "base", "base", back="ranger"), "bun", "pink"),
-    ("f", "ranger top + cape, leather legs, robe shoes", kit("ranger", "base", "robe", back="ranger"), "ponytail", None),
-    ("f", "leather top + ranger gloves, ranger legs", kit("base", "ranger", "base", gloves="ranger"), None, None),
-    ("f", "ranger chest, no cape, leather legs", kit("ranger", "base", "ranger"), "long", "black"),
+    ("m", "ranger chest + plate legs + plate feet", kit("ranger", "plate", "plate"), "short", None),
+    ("m", "leather chest + ranger legs + ranger feet", kit("base", "ranger", "ranger"), "long", "white"),
+    ("m", "plate chest + leather legs + ranger feet", kit("plate", "base", "ranger"), "mohawk", "red"),
+    ("f", "robe + leather feet", kit("robe", "base", "base"), "bun", "pink"),
+    ("f", "ranger chest + leather legs + robe feet", kit("ranger", "base", "robe"), "ponytail", None),
+    ("f", "leather chest + ranger legs + leather feet", kit("base", "ranger", "base"), None, None),
+    ("f", "ranger chest + ranger legs + leather feet", kit("ranger", "ranger", "base"), "long", "black"),
 ]
 COLS, CW, CH = 4, 380, 330
 S = MS.Sheet(20 + COLS * CW, 110 + 2 * CH + 300, "GEAR LAYERS - mix and match (code, 2 generations for the helmet)",
-             "Each slot piece comes from any outfit; pieces stack in a fixed order. Battle view (back) + portrait (front), 3x.")
+             "6 visible slots (weapon, off hand, helmet, chest, legs, feet) from any outfit; ring = no layer, necklace = portrait pendant. 3x.")
 for i, (body, label, k, style, col) in enumerate(MIXES):
     x0, y0 = 20 + (i % COLS) * CW, 110 + (i // COLS) * CH
     S.panel(x0, y0, CW - 20, CH - 20, f"{i + 1}  {'He' if body == 'm' else 'She'}")
@@ -94,7 +95,7 @@ for i, (body, label, k, style, col) in enumerate(MIXES):
         w, _ = S.put(tight(build(body, v, k, style, col)), x, y0 + 44, 3); x += w + 14
     S.d.text((x0 + 14, y0 + 262), label, font=MS.F_S, fill=MS.TXT)
 y0 = 110 + 2 * CH
-S.panel(20, y0, COLS * CW - 20, 280, "The pieces: ranger chest | gloves | legs | feet | back (cape), plus the sword (weapon slot), battle view, 3x")
+S.panel(20, y0, COLS * CW - 20, 280, "Ranger cut into pieces (battle view): chest body | chest arms | legs | feet | chest cape, + weapon, 3x")
 x = 40
 for s, src in (("chest", "ranger"), ("gloves", "ranger"), ("legs", "ranger"), ("feet", "ranger"), ("back", "ranger"), ("weapon", "base")):
     p = PIECES[("m", src, "north")][s]
@@ -102,5 +103,5 @@ for s, src in (("chest", "ranger"), ("gloves", "ranger"), ("legs", "ranger"), ("
         continue
     t = tight(p)
     box = Image.new("RGBA", (t.width + 4, t.height + 4), (52, 48, 60, 255)); box.alpha_composite(t, (2, 2))
-    w, _ = S.put(box, x, y0 + 50, 3, label=s); x += w + 26
+    w, _ = S.put(box, x, y0 + 50, 3, label={"chest": "chest body", "gloves": "chest arms", "back": "chest cape"}.get(s, s)); x += w + 26
 S.im.convert("RGB").save(os.path.join(HERE, "01_LAYERS_mix.png"))

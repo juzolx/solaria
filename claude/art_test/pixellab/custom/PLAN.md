@@ -24,8 +24,10 @@ Check `get_balance` before each batch; show a sample before any batch over ~30 g
 - Total ~400, leaving most of the month free.
 
 ## Gear layers (Juzo: everything interchangeable, 8 slots) - proof in ../layers/01_LAYERS_mix.png
-- Slots: helmet, chest, gloves, legs, feet, back (cape), weapon, off hand (game code has 6 today; gloves and
-  back are the likely new two - just more layers).
+- Slots (Juzo, confirmed): Weapon, Off Hand, Helmet, Chest, Legs, Feet, Ring, Necklace. Visible layers = the
+  6 main slots. Necklace = optional small pendant on the portrait (south), at most a 1-2 px hint in battle.
+  Ring = no layer (at most a 1 px glint on the weapon hand for Mythic). A chest item owns its arms/hands and
+  any cape; the cape is drawn at its own depth (over the back in battle view, behind the body in portrait).
 - Every item is a piece cut from a PixelLab edit of the SAME base pose, so pieces line up on the base body.
   Regions per view come from the base body's landmarks (neck line, belt 63%, boot tops 90%, torso columns);
   code: ../layers/layers.py.

@@ -2,7 +2,11 @@
 
 Every outfit is a PixelLab edit of the SAME base pose, so pixels line up between outfits. This cuts each
 outfit image into per-slot pieces by body region (measured on the base body of that view), and stacks any
-pieces from any outfits in a fixed draw order. 8 slots: helmet, chest, gloves, legs, feet, back, weapon, offhand.
+pieces from any outfits in a fixed draw order.
+Juzo's 8 gear slots: Weapon, Off Hand, Helmet, Chest, Legs, Feet, Ring, Necklace. Visible layers are the 6 main
+slots; the necklace is a small pendant on the portrait (south) only; the ring has no layer. A chest item owns
+three parts drawn at different depths: its body ("chest"), its arms/hands ("gloves" part) and an optional cape
+("back" part).
 
 Regions (rows measured on the base figure, top..bottom = H):
   head   : above the head line (hair / face / helmet live here, not outfit pieces)
@@ -23,10 +27,12 @@ import recolour as R
 import headswap as HS
 import colorsys
 
-SLOTS = ["helmet", "chest", "gloves", "legs", "feet", "back", "weapon", "offhand"]
+SLOTS = ["helmet", "chest", "gloves", "legs", "feet", "back", "weapon", "offhand"]  # cut parts
+GEAR_SLOTS = ["weapon", "offhand", "helmet", "chest", "legs", "feet", "ring", "necklace"]  # the game's slots
+PART_OF = {"gloves": "chest", "back": "chest"}  # parts that come with the chest item
 # draw order per view: from behind (north) the cape covers the back; from the front it hangs behind the body
 ORDER = {"north": ["legs", "feet", "chest", "gloves", "back", "head", "helmet", "weapon", "offhand"],
-         "south": ["back", "legs", "feet", "chest", "gloves", "head", "helmet", "weapon", "offhand"]}
+         "south": ["back", "legs", "feet", "chest", "gloves", "head", "necklace", "helmet", "weapon", "offhand"]}
 LONG = {"robe"}  # skirts that cover the legs band
 
 
