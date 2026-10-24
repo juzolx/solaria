@@ -50,11 +50,11 @@ def ground_kind():
 
 
 TILE_OF = {"grass": "grass", "yard": "grass", "plateau": "flag", "grave": "grave", "road": "cobble",
-           "square": "flag", "water": "water", "bridge": "cobble", "path": "cobble", "field": "dirt", "pen": "grass"}
+           "square": "flag", "water": "water", "bridge": "cobble", "path": "cobble", "dirt": "dirt", "garden": "grass", "planks": "planks", "field": "dirt", "pen": "grass"}
 
 
 def load_tiles():
-    t = {}
+    t = {"planks": [load("tiles_extra_planks.png")]}
     for name in os.listdir(os.path.join(ROOT, "art", "tiles")):
         key = name.split("_")[0]
         t.setdefault(key, []).append(load("tiles/" + name))
@@ -69,6 +69,8 @@ def draw_ground(img, tiles):
             if not 0 <= j < N:
                 continue
             k = TILE_OF[g[i][j]]
+            if k == "grave" and not HARDCORE:
+                k = "grass"
             var = tiles[k]
             t = var[(i * 7 + j * 13 + (i * j) % 5) % len(var)]
             x, y = at(i, j)
@@ -196,7 +198,7 @@ def shadows(img):
 def put(sprites, im, foot_xy, anchor, key=None):
     """Queue a sprite so its anchor pixel lands on foot_xy; sorted by key (screen y of its front)."""
     x, y = int(round(foot_xy[0] - anchor[0])), int(round(foot_xy[1] - anchor[1]))
-    sprites.append((key if key is not None else foot_xy[1], x, y, im))
+    sprites.append((key if key is not None else foot_xy[1], x, y, im, TAG[0]))
 
 
 def place_lot(sprites, lid, x0, y0, x1, y1, z=0):
@@ -215,13 +217,17 @@ def place_lot(sprites, lid, x0, y0, x1, y1, z=0):
         im = level1_look(im)
     dx, dy = spec.get("nudge", (0, 0))
     front = at(x1 + 1, y1 + 1)[1] + spec.get("sort", 0)
-    if "origin" in spec:
+    if "pin" in spec:                  # a known sprite pixel on a known grid point (the gate arch on the street)
+        px_, py_, pi_, pj_ = spec["pin"]
+        put(sprites, im, at(pi_, pj_, z), (px_, py_), front)
+    elif "origin" in spec:
         fx, fy = at(x0, y0, z)
         put(sprites, im, (fx + dx, fy + dy), tuple(spec["origin"]), front)
     else:
         fx, fy = at(x1 + 1, y1 + 1, z)
         put(sprites, im, (fx + dx, fy + dy), base_corner(im), front)
-    _, x, y, _ = sprites[-1]
+    _, x, y, _, _ = sprites[-1]
+    sprites[-1] = sprites[-1][:4] + (lid,)
     b = im.getbbox()
     BOXES[lid] = (x + b[0], y + b[1], b[2] - b[0], b[3] - b[1])
 
@@ -278,7 +284,7 @@ def place_walls(sprites):
 
 def shadow(img, sprites):
     sh = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    for _, x, y, im in sprites:
+    for _, x, y, im, _ in sprites:
         a = im.getchannel("A").point(lambda v: 90 if v > 100 else 0)
         blk = Image.new("RGBA", im.size, (10, 6, 20, 255))
         blk.putalpha(a)
@@ -286,6 +292,8 @@ def shadow(img, sprites):
     img.alpha_composite(sh)
 
 
+TAG = [""]         # tag put() gives the next sprites (a lot id for buildings)
+LAST_SPRITES = []  # the sorted sprites of the last compose (export_town builds walker occluders from them)
 BOXES = {}      # sprite id -> opaque box on the town canvas (tap areas for town.json)
 NO_OVERLAYS = []  # [True] -> leave out walkers and level props (the game draws those itself)
 EMPTY = set()   # lot ids drawn as empty building plots (Church / Trophy Cabin before they're built)
@@ -321,7 +329,7 @@ def compose():
     cache = {}
     def sheet(name, n):
         if (name, n) not in cache:
-            im = load(f"folk/{n}.png" if name == "folk" else f"{name}/{'t' if name == 'trees' else 'p'}{n}.png")
+            im = load("reeds.png" if name == "reeds" else f"folk/{n}.png" if name == "folk" else f"{name}/{'t' if name == 'trees' else 'p'}{n}.png")
             if name == "props32" and n in SMALL:   # clutter at half size: a barrel is half a walker
                 im = im.resize((16, 16), Image.NEAREST)
             cache[(name, n)] = im
@@ -337,6 +345,12 @@ def compose():
     deco = [e for e in decor() if not any(inside(e, built_only[l]) for l in EMPTY)] + extra
     if NO_OVERLAYS:
         deco = [e for e in deco if e[0] not in ("folk", "props_up")]
+    bed = load("tiles_extra_flowerbed.png")
+    for e in [e for e in deco if e[0] == "bed"]:      # flowerbeds are ground: drawn before every sprite
+        x, y = at(e[2], e[3])
+        img.alpha_composite(bed, (int(x) - 16, int(y)))
+    GROUND_IMG[:] = [img.copy()] if GROUND_IMG else []
+    deco = [e for e in deco if e[0] != "bed"]
     for e in deco:
         if e[0] == "fence":
             _, kind, i, j, axis = e
@@ -350,7 +364,7 @@ def compose():
         im = sheet(name, n)
         x, y = at(i + .5, j + .5, z)
         put(sprites, im, (x, y + 3), bottom(im), at(i + .5, j + .5)[1] + 4)
-        _, px, py, _ = sprites[-1]
+        _, px, py, _, _ = sprites[-1]
         b = im.getbbox()
         BOXES[(name, n, i, j)] = (px + b[0], py + b[1], b[2] - b[0], b[3] - b[1])
     for n, i, j, dx, dy in trees():
@@ -358,8 +372,11 @@ def compose():
         x, y = at(i + .5, j + .5)
         put(sprites, im, (x + dx, y + dy + 4), bottom(im), y + dy + 6)
     sprites.sort(key=lambda s: s[0])
-    for _, x, y, im in sprites:
+    LAST_SPRITES[:] = sprites
+    for _, x, y, im, tag in sprites:
         img.alpha_composite(im, (x, y))
+        if tag == "plateau" and GROUND_IMG:   # the plateau's paving and stairs take ground light like the streets
+            GROUND_IMG[0].alpha_composite(im, (x, y))
     return img
 
 
@@ -384,20 +401,64 @@ def dusk(img):
         for k, f in ((3, .10), (2, .16), (1, .24)):     # three hard bands, pixel-art style
             rr = r * .75 * k / 3
             gd.ellipse([x - rr, y - rr * .5, x + rr, y + rr * .5], fill=tuple(int(c * f) for c in col))
+    gd2 = ImageDraw.Draw(glow)
+    for k, f in ((3, .10), (2, .16), (1, .22)):   # the portal's light spills down the stairs and onto the lane (ground only)
+        sx, sy = at(20, 8.4)
+        gd2.ellipse([sx - 30 * k, sy - 12 * k, sx + 30 * k, sy + 12 * k], fill=(int(70 * f * 2), int(180 * f * 2), int(230 * f * 2)))
+    same = None
     if GROUND_IMG:                     # light pools land on the visible ground only
         ground = GROUND_IMG[0].convert("RGB")
         same = ImageChops.difference(ground, rgb).convert("L").point(lambda v: 255 if v < 3 else 0)
         glow = ImageChops.multiply(glow, Image.merge("RGB", (same, same, same)))
+    beam = Image.new("RGB", rgb.size, (0, 0, 0))
+    bd = ImageDraw.Draw(beam)
+    bx, by = at(19.9, 4.0, PLATEAU_Z + 30)
+    for w, f in ((26, .10), (16, .16), (8, .24)):
+        bd.polygon([(bx - w, by), (bx + w, by), (bx + w * .6, by - 95), (bx - w * .6, by - 95)], fill=(int(90 * f * 2), int(210 * f * 2), int(255 * f * 2)))
+
+    glow = ImageChops.add(glow, beam)
     out = ImageChops.add(dark, glow)
     if HARDCORE:                       # the whole town colder and greyer...
         out = ImageEnhance.Color(out).enhance(0.85)
-        out = ImageChops.multiply(ImageEnhance.Brightness(out).enhance(0.95), Image.new("RGB", out.size, (225, 232, 255)))
+        out = ImageChops.multiply(ImageEnhance.Brightness(out).enhance(1.05), Image.new("RGB", out.size, (225, 232, 255)))
+        fog = Image.new("RGB", out.size, (0, 0, 0))
+        fd = ImageDraw.Draw(fog)
+        for i, j, r in ((4, 3, 70), (8, 5, 60), (5, 6, 50), (10, 2, 44)):   # low hard-edged fog banks over the graves
+            fx, fy = at(i, j)
+            fd.ellipse([fx - r, fy - r * .28, fx + r, fy + r * .28], fill=(26, 30, 38))
+        if same is not None:
+            fog = ImageChops.multiply(fog, Image.merge("RGB", (same, same, same)))
+        out = ImageChops.add(out, fog)
     if HARDCORE:                       # ...and a cold, dead corner around the ruined church and graveyard
         mask = Image.new("L", out.size, 0)
         ImageDraw.Draw(mask).polygon([at(0, 0), at(13, 0), at(13, 19), at(0, 19)], fill=128)
         blue = ImageChops.multiply(out, Image.new("RGB", out.size, (150, 165, 200)))
         out = Image.composite(blue, out, mask)
     return out
+
+
+def plateau_mask(size):
+    """Where the plateau sprite shows (its paving and stairs take ground light)."""
+    m = Image.new("L", size, 0)
+    for key, x, y, im, tag in LAST_SPRITES:
+        if tag == "plateau":
+            m.paste(im.getchannel("A").point(lambda v: 255 if v > 128 else 0), (x, y), im.getchannel("A"))
+    return m
+
+
+def day(img):
+    """Day: brighter ground, roofs and walls, windows unlit, a lighter sky behind the walls."""
+    rgb = img.convert("RGB")
+    px = rgb.load()
+    for y in range(rgb.height):
+        for x in range(rgb.width):
+            r, g, b = px[x, y]
+            if r > 215 and g > 140 and b < 110 and r - b > 130:      # lit glass -> daylight glass
+                px[x, y] = (96, 104, 118)
+            elif (r, g, b) == (20, 18, 30):
+                px[x, y] = (58, 70, 92)
+    rgb = ImageEnhance.Brightness(rgb).enhance(1.22)
+    return ImageEnhance.Color(rgb).enhance(1.1)
 
 
 def phone(img, cx, cy, scale=2, size=(430, 932)):

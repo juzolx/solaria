@@ -1,0 +1,296 @@
+{
+ "cell": 96,
+ "foot": 80,
+ "frames": [
+  "n_idle0",
+  "n_idle1",
+  "n_atk0",
+  "n_atk1",
+  "n_atk2",
+  "n_atk3",
+  "n_hit",
+  "s_idle0",
+  "s_idle1"
+ ],
+ "classes": {
+  "warrior": {
+   "m": [
+    0,
+    15,
+    35,
+    75
+   ],
+   "f": [
+    0
+   ]
+  },
+  "knight": {
+   "m": [
+    0
+   ],
+   "f": [
+    0
+   ]
+  },
+  "wanderer": {
+   "m": [
+    0
+   ],
+   "f": [
+    0
+   ]
+  },
+  "cleric": {
+   "m": [
+    0
+   ],
+   "f": [
+    0
+   ]
+  },
+  "acolyte": {
+   "m": [
+    0
+   ],
+   "f": [
+    0
+   ]
+  },
+  "mage": {
+   "m": [
+    0
+   ],
+   "f": [
+    0
+   ]
+  },
+  "trickster": {
+   "m": [
+    0
+   ],
+   "f": [
+    0
+   ]
+  },
+  "ranger": {
+   "m": [
+    0
+   ],
+   "f": [
+    0
+   ]
+  },
+  "bard": {
+   "m": [
+    0
+   ],
+   "f": [
+    0
+   ]
+  },
+  "sentinel": {
+   "m": [
+    0
+   ],
+   "f": [
+    0
+   ]
+  },
+  "ironbark": {
+   "m": [
+    0
+   ],
+   "f": [
+    0
+   ]
+  },
+  "nightstalker": {
+   "m": [
+    0
+   ],
+   "f": [
+    0
+   ]
+  },
+  "conjurer": {
+   "m": [
+    0
+   ],
+   "f": [
+    0
+   ]
+  }
+ },
+ "styles": {
+  "Short": "short",
+  "Spiky": "spiky",
+  "Side Swept": "side_swept",
+  "Shaggy": "shaggy",
+  "Mohawk": "mohawk",
+  "Short Mohawk": "short_mohawk",
+  "Buzz": "buzz",
+  "Bald": "bald",
+  "Balding": "balding",
+  "Bedhead": "bedhead",
+  "Unkempt": "unkempt",
+  "Porcupine": "porcupine",
+  "Mop": "mop",
+  "Parted": "parted",
+  "Page": "page",
+  "Bangs": "bangs",
+  "Long Bangs": "long_bangs",
+  "Long": "long",
+  "Very Long": "very_long",
+  "Wild": "wild",
+  "Loose": "loose",
+  "Wavy": "wavy",
+  "Tied Back": "tied_back",
+  "Ponytail": "ponytail",
+  "High Ponytail": "high_ponytail",
+  "Half Up": "half_up",
+  "Pigtails": "pigtails",
+  "Bun": "bun",
+  "Braid": "braid",
+  "Bob": "bob",
+  "Pixie": "pixie",
+  "Princess": "princess",
+  "Curly": "curly",
+  "Long Curls": "long_curls",
+  "Afro": "afro",
+  "Cornrows": "cornrows",
+  "Dreadlocks": "dreadlocks"
+ },
+ "faces": [
+  "neutral",
+  "smile",
+  "laughing",
+  "determined",
+  "fierce",
+  "grim",
+  "wary",
+  "surprised",
+  "sleepy",
+  "battle_cry"
+ ],
+ "weapons": [
+  "sword",
+  "dagger",
+  "axe",
+  "mace",
+  "spear",
+  "bow",
+  "staff"
+ ],
+ "hand": {
+  "m": [
+   [
+    64,
+    62
+   ],
+   [
+    62,
+    61
+   ],
+   [
+    66,
+    50
+   ],
+   [
+    64,
+    41
+   ],
+   [
+    31,
+    58
+   ],
+   [
+    31,
+    59
+   ],
+   [
+    63,
+    66
+   ],
+   [
+    34,
+    64
+   ],
+   [
+    34,
+    63
+   ]
+  ],
+  "f": [
+   [
+    64,
+    62
+   ],
+   [
+    63,
+    63
+   ],
+   [
+    63,
+    48
+   ],
+   [
+    57,
+    37
+   ],
+   [
+    31,
+    52
+   ],
+   [
+    31,
+    58
+   ],
+   [
+    63,
+    60
+   ],
+   [
+    35,
+    64
+   ],
+   [
+    34,
+    64
+   ]
+  ]
+ },
+ "races": {
+  "Elf": [
+   "m",
+   "f"
+  ],
+  "Angel": [
+   "m",
+   "f"
+  ],
+  "Demon": [
+   "m",
+   "f"
+  ],
+  "Beastkin": [
+   "m",
+   "f"
+  ],
+  "Dragonkin": [
+   "m",
+   "f"
+  ],
+  "Undead": [
+   "m",
+   "f"
+  ],
+  "Vampire": [
+   "m",
+   "f"
+  ],
+  "Lich": [
+   "m",
+   "f"
+  ]
+ }
+}

@@ -70,7 +70,7 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 		v0.add_child(UI.wrap("Recruit a new hero at the Inn in town." if open_slot else m.profile.slot_lock_note(n), UI.FONT_CAPTION, UI.DIM))
 		return card
 	var pic := TextureRect.new()
-	pic.texture = Sprites.portrait(meta.get("appearance", {}), meta.get("looks", {}))
+	pic.texture = Sprites.portrait(meta.get("appearance", {}), HeroArt.meta_looks(meta))
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	pic.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE

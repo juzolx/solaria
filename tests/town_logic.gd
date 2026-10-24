@@ -122,6 +122,28 @@ func _initialize() -> void:
 	check(tg2.in_town and tg2.contracts.size() == tg.contracts.size(), "town state saved")
 	Town.leave(tg)
 	check(not tg.in_town and tg.enemy_hp > 0, "leaving town starts a fight")
+	# The iso town's walk grid: every door, Inn door and stop is reachable from the Inn (no stuck walkers)
+	var j := load("res://art/town/town.json") as JSON
+	if j and j.data.get("iso", false):
+		var d: Dictionary = j.data
+		var walk := {}
+		for c in d["walk"]:
+			walk[Vector2i(int(c[0]), int(c[1]))] = true
+		var start := Vector2i(int(d["inn_doors"][0][0]), int(d["inn_doors"][0][1]))
+		var seen := {start: true}
+		var q: Array = [start]
+		while not q.is_empty():
+			var c: Vector2i = q.pop_front()
+			for dv in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var nb: Vector2i = c + dv
+				if walk.has(nb) and not seen.has(nb):
+					seen[nb] = true
+					q.append(nb)
+		var cells: Array = d["inn_doors"] + d["stops"]
+		for sp in d["spots"]:
+			cells.append(sp["door"])
+		var lost: Array = cells.filter(func(c): return not seen.has(Vector2i(int(c[0]), int(c[1]))))
+		check(lost.is_empty(), "every town door and stop can be walked to from the Inn (unreachable: %s)" % [lost])
 	GameState.delete_saves()
 	print("TOWN TESTS DONE, failures: ", fails)
 	quit()

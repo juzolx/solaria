@@ -36,7 +36,7 @@ func show_for(main_node) -> void:
 		bg_keys.append((start_zone + zi) % GameData.ZONES.size())
 	bg_tex = _bg(bg_keys[0])
 	if not meta.is_empty():
-		hero_tex = Sprites.portrait(meta.get("appearance", {}))
+		hero_tex = Sprites.portrait(meta.get("appearance", {}), HeroArt.meta_looks(meta))
 	else:
 		hero_tex = Sprites.portrait({"body": "masc", "skin": 1, "hair": "Short", "hair_color": 1, "eyes": 0, "race": "Human"})
 	_pick_monster()
@@ -223,7 +223,7 @@ func _fill_menu() -> void:
 func _hero_line(meta: Dictionary) -> Control:
 	var row := UI.hbox(10)
 	var pic := TextureRect.new()
-	pic.texture = Sprites.portrait(meta.get("appearance", {}))
+	pic.texture = Sprites.portrait(meta.get("appearance", {}), HeroArt.meta_looks(meta))
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	pic.custom_minimum_size = Vector2(64, 64)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE

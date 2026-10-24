@@ -16,7 +16,8 @@
   "file": "smith.png"
  },
  "stash": {
-  "file": "stash_warm.png"
+  "file": "stash_warm.png",
+  "flip": true
  },
  "clinic": {
   "file": "clinic.png"
@@ -51,45 +52,36 @@
   "sort": -40
  },
  "gatehouse": {
-  "file": "gatehouse.png"
+  "file": "gatehouse.png",
+  "pin": [
+   80,
+   133,
+   20,
+   40
+  ]
  },
  "tower0": {
-  "file": "tower.png"
+  "file": "tower_short.png"
  },
  "tower1": {
-  "file": "tower.png"
+  "file": "tower_short.png"
  },
  "tower2": {
-  "file": "tower.png"
+  "file": "tower_short.png"
  },
  "tower3": {
-  "file": "tower.png"
+  "file": "tower_short.png"
+ },
+ "tower4": {
+  "file": "tower_short.png"
+ },
+ "tower5": {
+  "file": "tower_short.png"
+ },
+ "tower6": {
+  "file": "tower_short.png"
  },
  "house0": {
   "file": "house_b.png"
- },
- "house1": {
-  "file": "house_a.png"
- },
- "house2": {
-  "file": "house_a.png",
-  "flip": true
- },
- "house3": {
-  "file": "house_b.png",
-  "flip": true
- },
- "house4": {
-  "file": "house_a.png",
-  "flip": false
- },
- "tower4": {
-  "file": "tower.png"
- },
- "tower5": {
-  "file": "tower.png"
- },
- "tower6": {
-  "file": "tower.png"
  }
 }
