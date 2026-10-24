@@ -1,4 +1,53 @@
-# HERO: one base hero, fully customizable (Oct 23 2026)
+# HERO pass 2: chibi base seen from behind (Oct 23 2026)
+
+**Status:** pass 2 delivers the BASE only (back view + portrait + mockup), as Juzo asked ("buff it
+out one thing at a time; base first"). Customisation sheets 02-05 are from pass 1 and live in
+`pass1/`; each piece (hair styles, faces, outfits) will be rebuilt on this base next.
+
+| # | File | Shows |
+|---|---|---|
+| 01 | `01_HERO_base.png` | back view 1x/2x/3x/7x, portrait with chiselled cheekbones, layers, old in-game hero vs new at 3x |
+| 01b | `01b_HERO_base_mockup_430x932.png` | phone mockup laid out like the current game (hero centred low, monster above) |
+
+### What changed after Juzo's critique of pass 1
+- **Chibi like the old heroes.** Proportions measured from the in-game LPC heroes (body + head
+  layers, `idle@up`): 47 px tall, head ~20 px (43 %), short legs, arms at the sides, seen straight
+  from behind. The new hero is 53 px: head 23 px (43 %), torso 11, legs + boots 16, drawn as our own
+  pixels (LPC parts are partly CC-BY-SA/GPL, so nothing is copied; the old sprite appears on sheet 01
+  only as a comparison).
+- **Battle view straight from behind** (like the game's `hero_back`), not three-quarter.
+- New AI guide `v2_back_s71` -> density pass `v2_d56_s82` (56 px) used for the head/hair mass and
+  the shirt + vest layout; every pixel then placed by hand (`tools/draw_v2.py`).
+- Hair: a big clumped mop with partings, small tufts, ears sticking out; no horn-like spike.
+- Body: white shirt shoulders and puffed sleeves, short leather vest lit from the top-left, belt +
+  pouch, compact trousers, chunky boots, near leg one step back (weight on the left leg).
+- Weapons kept as they were (Juzo: good); the hand moved to the new arm.
+- Portrait: male cheekbones chiselled: the temple steps in 1 px and the cheekbone back out with a lit
+  ridge, a shade run under each cheekbone, straighter jaw planes, flatter chin.
+- Downloads: none were needed (no external assets used).
+
+### Fable check on the pass-2 base (1 pass so far)
+Scores: back view 7, portrait 4 (cheekbones looked unchanged), mockup 7; VERDICT FIX. Fixed: portrait
+cheekbones redone with a real outline step + planes; sword hand no longer floats (forearm added
+between cuff and fist); vest pillow shading replaced by one top-left light; trouser/boot banding broken
+up with staggered folds and a darker near leg; hair spike removed; mockup hero moved so the shadow sits
+on the floor and the blade clears the torch, shadow given a lighter edge. Not changed: the blade stripes
+(the weapons were approved as they are).
+
+### Self-score (vs Juzo's references)
+| Piece | Score | Why |
+|---|---|---|
+| Back view | 7.5 | chibi build matches the old heroes, clean clusters; hair is good, could be fluffier |
+| Portrait | 6.5 | cheekbones now read at 3x+, but the portrait hair is still the pass-1 helmet-like crop |
+| Mockup | 7.5 | same layout as the current game, scale right against the ghoul |
+
+### Next pieces (in order)
+1. Portrait hair to match the new mop; 2. hair styles (long, close crop, tail) on the new head;
+3. faces; 4. cloth and plate outfits on the new body; 5. sheets 02-05 again.
+
+---
+
+# Pass 1 notes (kept for history)
 
 Style test for Juzo. Nothing here is wired into the game (`claude/art_test` has a `.gdignore`).
 

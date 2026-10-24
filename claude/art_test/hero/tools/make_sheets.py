@@ -45,7 +45,7 @@ def battle(outfit="leather", hair="short", weapon="sword", skin="skin_fair", hai
     orr = rarity_ramps(outfit_rarity)
     names = []
     if weapon == "sword_shield":
-        names.append(("w_shield", -9, wr))
+        names.append(("w_shield", 1, wr))
     o = {}
     if outfit == "plate":
         o.update(Q="steel", J="steel")
@@ -143,8 +143,8 @@ def head_crop(im):
 def sheet_base():
     base = battle()
     por = portrait()
-    S = Sheet(1600, 1500, "01  HERO base - Human, dark chibi, 64 px",
-              "Battle view (three-quarter from behind) + front portrait. Game size, then zoomed. Right: in-battle mockup 430x932.")
+    S = Sheet(1600, 1500, "01  HERO base (pass 2) - Human chibi, seen from behind, 54 px",
+              "Battle view straight from behind like the old heroes + front portrait (chiselled cheekbones). Right: mockup 430x932.")
     S.panel(20, 110, 1110, 690, "Battle view")
     S.put(base, 40, 160, 1, label="1x"); S.put(base, 40, 300, 2, label="2x")
     S.put(base, 200, 160, 3, label="3x (phone)")
@@ -162,20 +162,38 @@ def sheet_base():
     S.d.text((575, 1130), "Stacked bottom to top. Each pixel stores (material, shade 1-4);", font=F_S, fill=DIM)
     S.d.text((575, 1156), "the game swaps the 4-step ramp per material (skin, hair, cloth,", font=F_S, fill=DIM)
     S.d.text((575, 1182), "leather, metal, trim, gem) - no redraws for colours.", font=F_S, fill=DIM)
-    # 48 vs 64
-    S.panel(20, 1260, 1110, 220, "Size test: 48 px vs 64 px (64 chosen)")
-    sys.path.insert(0, os.path.join(ROOT, "claude", "art_test", "tools"))
-    import pixlib as P
-    small = P.shrink_mode(base, height=round(base.height * 0.75), max_colors=40)
-    S.put(small, 40, 1330, 1, label="48"); S.put(base, 120, 1310, 1, label="64")
-    S.put(small, 220, 1330, 2); S.put(base, 340, 1300, 2)
-    S.d.text((500, 1320), "48 px is the same drawing reduced by code: the face, ear, belt", font=F_S, fill=DIM)
-    S.d.text((500, 1346), "and grip blur together. 64 px keeps clean clusters and a readable", font=F_S, fill=DIM)
-    S.d.text((500, 1372), "face, so all customisation is built at 64.", font=F_S, fill=DIM)
+    # old in-game hero (LPC, the proportion reference) next to the new one, same 3x scale
+    S.panel(20, 1260, 1110, 220, "Proportion reference: the old in-game hero (left) vs the new hero (right), 3x")
+    old = old_lpc_back()
+    if old is not None:
+        S.put(old, 40, 1300, 3)
+    S.put(base, 260, 1300 - 3 * 18, 3) if False else S.put(base.crop((0, 18, base.width, base.height)), 250, 1296, 3)
+    S.d.text((520, 1310), "Same chibi build as the old heroes: head about 43 % of the height,", font=F_S, fill=DIM)
+    S.d.text((520, 1336), "compact limbs, seen straight from behind. New: our own pixels,", font=F_S, fill=DIM)
+    S.d.text((520, 1362), "clumped hair, white shirt + leather vest, outline and 4-shade ramps.", font=F_S, fill=DIM)
+    S.d.text((520, 1388), "(Old LPC art shown for comparison only; nothing is copied from it.)", font=F_S, fill=DIM)
     mock = mockup(base)
     S.put(mock, 1150, 110)
     S.save("01_HERO_base.png")
     mock.convert("RGB").save(os.path.join(OUT, "01b_HERO_base_mockup_430x932.png"))
+
+
+def old_lpc_back():
+    """The current game's hero from behind (LPC parts), only to compare proportions on the sheet."""
+    lp = "C:/gamedev/solaria_dev/art/lpc"
+    try:
+        m = json.load(open(os.path.join(lp, "manifest.json")))["items"]
+        im = None
+        for k in ["body", "legs_pants", "feet_boots", "shirt_long", "vest_m", "head_human_m", "hair_messy1"]:
+            f = m[k]["layers"][0]["files"]["male"].get("idle@up")
+            if not f:
+                continue
+            l = Image.open(os.path.join(lp, f["file"])).convert("RGBA").crop((0, 0, 64, 64))
+            im = l if im is None else Image.alpha_composite(im, l)
+        return im
+    except Exception as e:
+        print("old lpc:", e)
+        return None
 
 
 def mockup(base):
@@ -188,13 +206,13 @@ def mockup(base):
     d.text((16, 44), "hero and monster at the same 3x pixel scale", font=F_S, fill=GOLD)
     ghoul = Image.open(os.path.join(ROOT, "art", "enemies", "ghoul.png")).convert("RGBA")
     ghoul = ghoul.resize((34, 34), Image.NEAREST)
-    gx, gy = 236, 470 - 34 * 3 + 6
+    gx, gy = 164, 322
     sh = Image.new("RGBA", (90, 16), (0, 0, 0, 0)); ImageDraw.Draw(sh).ellipse([0, 0, 89, 15], fill=(0, 0, 0, 90))
     m.alpha_composite(sh, (gx + 6, gy + 34 * 3 - 14))
     m.alpha_composite(hero.zoom(ghoul, 3), (gx, gy))
-    sh2 = Image.new("RGBA", (138, 24), (0, 0, 0, 0)); ImageDraw.Draw(sh2).ellipse([0, 0, 137, 23], fill=(0, 0, 0, 150))
-    hx, hy = 40, 600 - 82 * 3
-    m.alpha_composite(sh2, (hx + 3 * (hero.PADL + 4), hy + 80 * 3 - 4))
+    sh2 = Image.new("RGBA", (138, 24), (0, 0, 0, 0)); ImageDraw.Draw(sh2).ellipse([0, 0, 137, 23], fill=(40, 46, 70, 150)); ImageDraw.Draw(sh2).ellipse([6, 3, 131, 20], fill=(8, 8, 16, 150))
+    hx, hy = 203 - 3 * (hero.PADL + 27), 606 - 74 * 3
+    m.alpha_composite(sh2, (203 - 69, hy + 73 * 3 - 12))
     m.alpha_composite(hero.zoom(base, 3), (hx, hy))
     y = 640
     for lab, f, c in [("Hero", 0.8, (70, 140, 80)), ("Ally", 0.55, (70, 140, 80)), ("Pet", 0.9, (70, 140, 80))]:
@@ -338,5 +356,8 @@ def export_layers():
 
 if __name__ == "__main__":
     port_outfits()
-    sheet_base(); sheet_skin_hair(); sheet_faces(); sheet_outfits(); sheet_weapons(); export_layers()
+    sheet_base(); export_layers()
+    # customisation sheets 02-05 come back once each piece is rebuilt on the pass-2 base
+    if "--all" in sys.argv:
+        sheet_skin_hair(); sheet_faces(); sheet_outfits(); sheet_weapons()
     print("ok")
