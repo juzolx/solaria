@@ -112,6 +112,7 @@ func rebuild(zone_i: int, seed_value: int, mood: Dictionary) -> void:
 		"Root-choked passage": _root_choked()
 	_moss_patches(3 if zone == 0 else 1)
 	_cobwebs()
+	_zone_props()
 	_region_particles()
 
 # =====================================================================
@@ -251,6 +252,13 @@ func _mat(path: String, tint := Color.WHITE) -> StandardMaterial3D:
 	m.uv1_triplanar = true
 	return m
 
+## This zone's own hall art (art/halls/z<zone>_<name>.png), or the shared fallback.
+func _zart(name: String, fallback := "") -> Texture2D:
+	var path := "res://art/halls/z%d_%s.png" % [zone, name]
+	if ResourceLoader.exists(path):
+		return load(path)
+	return load(fallback) if fallback != "" else null
+
 func _wall_mat(tint := Color.WHITE) -> StandardMaterial3D:
 	return _mat("res://art/halls/z%d_wall.png" % zone, tint)
 
@@ -382,7 +390,7 @@ func _shaft(x: float, z: float, top: float, bottom: float, strength: float) -> v
 	root3.add_child(shaft)
 
 func _torch(pos: Vector3) -> void:
-	var flame := _sprite(load("res://art/dungeon/torch.png"), pos - Vector3(0, 0.3, 0), 0.6, false)
+	var flame := _sprite(_zart("torch", "res://art/dungeon/torch.png"), pos - Vector3(0, 0.3, 0), 0.6, false)
 	flame.modulate = Color(1.4, 1.2, 1.0)
 	var push := Vector3(-signf(pos.x) * 0.3, 0.1, 0.0) if absf(pos.x) > 1.5 else Vector3(0, 0.1, 0.3)
 	_light(pos + push, light_col, 2.2, 4.5, true)
@@ -509,7 +517,7 @@ func _shell() -> void:
 		arch.position = Vector3(x, dh - dw / 2.0, -RD - 0.1)
 		arch.material = dark
 		far.add_child(arch)
-		_sprite(load("res://art/halls/door.png"), Vector3(x, 0.0, -RD - 0.25), dh * 0.98, true, false)
+		_sprite(_zart("door", "res://art/halls/door.png"), Vector3(x, 0.0, -RD - 0.25), dh * 0.98, true, false)
 
 func _pillars(rows: Array, mat: Material, with_beams: bool) -> void:
 	for zz in rows:
@@ -560,6 +568,25 @@ func _rubble(center: Vector3, spread: float, count: int, mat: Material) -> void:
 		var off := Vector3(rng.randf_range(-spread, spread), 0, rng.randf_range(-spread * 0.7, spread * 0.7))
 		var height := maxf(0.0, (1.0 - off.length() / spread)) * 0.3
 		_box(Vector3(s, s * 0.7, s * 0.9), center + off + Vector3(0, height + s * 0.3, 0), mat, Vector3(rng.randf_range(0, 40), rng.randf_range(0, 360), rng.randf_range(0, 40)))
+
+## The zone's own props (chest, altar, statue) where it has them, at the room's sides.
+func _zone_props() -> void:
+	var side := -1.0 if rng.randf() < 0.5 else 1.0
+	var chest := _zart("chest")
+	var altar := _zart("altar")
+	var statue := _zart("statue")
+	match kind:
+		"Overgrown hall":
+			if statue:
+				_sprite(statue, Vector3(side * (HW - 0.6), 0, -RD + 0.8), 1.5)
+			if chest:
+				_sprite(chest, Vector3(-side * (HW - 0.65), 0, -RD + 1.1), 0.5)
+		"Collapsed chamber":
+			if chest:
+				_sprite(chest, Vector3(-HW + 0.8, 0, -RD + 0.7), 0.5)
+		"Forgotten shrine":
+			if altar:
+				_sprite(altar, Vector3(side * (HW - 0.55), 0, -3.1), 0.7)
 
 ## Drifting particles in the region's mood (HallsScene.MOODS kinds).
 func _region_particles() -> void:
@@ -653,8 +680,8 @@ func _forgotten_shrine() -> void:
 		var flame := _sprite(load("res://art/dungeon/torch.png"), base + Vector3(0, 0.75, 0), 0.5, false)
 		flame.modulate = Color(1.5, 1.2, 1.0)
 		_light(base + Vector3(0, 1.2, 0.1), light_col, 1.8, 4.0, true)
-	_sprite(load("res://art/dungeon/statue_0.png"), Vector3(-HW + 0.7, 0, -RD + 0.9), 1.6)
-	_sprite(load("res://art/dungeon/statue_2.png"), Vector3(HW - 0.7, 0, -RD + 0.9), 1.6)
+	_sprite(_zart("statue", "res://art/dungeon/statue_0.png"), Vector3(-HW + 0.7, 0, -RD + 0.9), 1.6)
+	_sprite(_zart("statue", "res://art/dungeon/statue_2.png"), Vector3(HW - 0.7, 0, -RD + 0.9), 1.6)
 	for i in 5:
 		var c := _sprite(candle_tex(), Vector3(rng.randf_range(-HW + 0.3, -1.4) if i % 2 == 0 else rng.randf_range(1.4, HW - 0.3), 0, -RD + rng.randf_range(0.3, 0.8)), rng.randf_range(0.16, 0.26), false)
 		c.modulate = Color(1.2, 1.15, 1.1)

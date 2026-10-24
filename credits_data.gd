@@ -20,8 +20,7 @@ const SOURCES := [
 	{"group": "Art", "name": "LPC Tile Atlas", "author": "Lanea Zimmerman (Sharm) and others", "license": "CC-BY-SA 3.0 / GPL 3.0", "link": "opengameart.org/content/lpc-tile-atlas", "used": "Town: gravestones."},
 	{"group": "Art", "name": "Dungeon Crawl Stone Soup tiles (32x32)", "author": "The DCSS tile artists", "license": "CC0", "link": "opengameart.org/content/dungeon-crawl-32x32-tiles (artists: github.com/crawl/tiles)", "used": "Every monster, boss, Calamity and companion; dungeon props; scroll, key and other item icons. Recolored, outlined and upscaled."},
 	{"group": "Art", "name": "cc0 potion icons", "author": "Dungeon Crawl Stone Soup artists, collected by AntumDeluge", "license": "CC0", "link": "opengameart.org/content/cc0-potion-icons", "used": "Potion icons."},
-	{"group": "Art", "name": "Tiny Texture Packs 1, 2 and 3", "author": "Screaming Brain Studios", "license": "CC0", "link": "opengameart.org/content/tiny-texture-pack-1", "used": "First-person room walls, floors and ceilings. Shrunk and recolored."},
-	{"group": "Art", "name": "Solaria original art", "author": "Juzo", "license": "All rights reserved (Solaria)", "link": "-", "used": "Gear, backgrounds, hit and spell effects, doors, icons, logo and everything else not listed above."},
+	{"group": "Art", "name": "Solaria original art", "author": "Juzo", "license": "All rights reserved (Solaria)", "link": "-", "used": "Gear, backgrounds, hit and spell effects, doors, icons, logo, the 3D room walls, floors, ceilings and torches (made with PixelLab) and everything else not listed above."},
 	# Sound
 	{"group": "Sound", "name": "Solaria sound effects and ambience", "author": "Juzo", "license": "All rights reserved (Solaria)", "link": "-", "used": "Every sound effect and ambience loop. Made from scratch in code, no third-party samples."},
 	# Music

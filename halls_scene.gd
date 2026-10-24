@@ -3,8 +3,8 @@ extends RefCounted
 ## 0.13 The Halls Below: the room you stand in, first-person from the doorway.
 ## Shared by the room view (between fights) and the battle view (its backdrop), so
 ## fights happen in the same room you walked into.
-## Walls, floors, ceilings: Screaming Brain Studios Tiny Texture Packs (CC0),
-## pixelized by tools/fp_textures.py into art/halls. Scenery: Dungeon Crawl Stone Soup (CC0).
+## Walls, floors, ceilings: art/halls/z<zone>_*.png, made for Solaria with PixelLab
+## (the old Tiny Texture versions came from tools/fp_textures.py). Scenery: Dungeon Crawl Stone Soup (CC0).
 
 const W := 6.0            # room width (world units); side walls at x = -3 and +3
 const D := 5.5            # depth of the far wall
