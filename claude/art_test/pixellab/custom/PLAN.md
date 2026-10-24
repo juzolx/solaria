@@ -46,6 +46,22 @@ Check `get_balance` before each batch; show a sample before any batch over ~30 g
   (an edit per frame per item: ~50 gens per item, too expensive); (c) PixelLab frames for the base body only
   and gear frozen on top (looks broken in the attack). Recommendation: (a).
 
+## DIRECTION (Juzo, 2026-10-24) - replaces the per-slot gear layers below
+- Armour (helmet, chest, legs, feet, off hand, ring, necklace) changes NO look, only stats.
+- Each CLASS has its own outfit (13 base classes in classes.gd ORDER), drawn for both bodies (later every
+  race) and worn with every hair style. Suggestion for Juzo (not decided): small upgrade touches at class
+  levels 15 / 35 / 75 (trim, colour, one accessory); hidden and God classes may get special outfits later.
+- WEAPONS still show: the equipped weapon type (10 types, the weapon style Juzo liked) drawn in the hand.
+- Creator: race, body type, skin, face, hair (all old styles), colours - highly customizable.
+- Structure = the old creator: fixed frame set (battle: idle 2, attack 4, hit 1; portrait: idle 2), every
+  part drawn on exactly those frames, fixed layer order: body+outfit (one image per class per frame),
+  hair (per frame, placed on the head), weapon (per frame, drawn in the hand), colours by recolour masks.
+- How the parts are made: base frames = picked from the approved PixelLab animations (+ a hit frame);
+  sword removed from the base frames (1 edit each) so weapons are their own layer; each class outfit =
+  1 PixelLab edit per frame of the weaponless frame; each weapon = 1 edit per frame ("add a mace in the
+  right hand"), its layer = the pixels that changed. ~9 gens per outfit per body, ~7 per weapon per body.
+- Sample first: Warrior (plate, sword) + Cleric (robe, mace) on both bodies, then batch after Juzo rates.
+
 ## Plan review (2026-10-24): go back to the old system's structure, with the new art
 Why the old LPC paper doll (lpc.gd, sprites.gd, character_creator.gd) was clean:
 - ONE shared frame set: every body, hair and gear part is drawn on the same frames (lpc.gd: combat_idle,
