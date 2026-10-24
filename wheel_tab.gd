@@ -54,13 +54,14 @@ class Wheel:
 		var r := minf(area.x, area.y) * 0.44
 		if glow > 0.0:
 			draw_circle(c, r * 1.12, Color(glow_color, 0.25 * glow))
-		draw_circle(c, r + 6.0, Color("#2a2010"))
+		draw_circle(c, r + 6.0, UiSkin.SOOT)   # interface pass (approved mockup 13): ink rim, palette colours
+		draw_circle(c, r + 4.0, Color("#9a7040"))
 		var segs := 20
 		for i in segs:
 			var a0 := -PI / 2.0 + TAU * i / segs
 			var a1 := -PI / 2.0 + TAU * (i + 1) / segs
 			var win := i * 100.0 / segs < float(chance)
-			var col := Color("#2f8f4e") if win else Color("#8f2f3a")
+			var col := Color("#3e8948") if win else Color("#a22633")
 			if i % 2 == 1:
 				col = col.darkened(0.18)
 			var pts := PackedVector2Array([c])
@@ -68,16 +69,19 @@ class Wheel:
 				var a := lerpf(a0, a1, k / 8.0)
 				pts.append(c + Vector2(cos(a), sin(a)) * r)
 			draw_colored_polygon(pts, col)
-		draw_arc(c, r, 0.0, TAU, 64, Color("#e8b14a"), 3.0)
-		draw_circle(c, r * 0.18, Color("#e8b14a"))
-		draw_circle(c, r * 0.12, Color("#2a2010"))
+		draw_arc(c, r, 0.0, TAU, 64, UiSkin.SOOT, 2.0)
+		draw_circle(c, r * 0.2, UiSkin.SOOT)
+		draw_circle(c, r * 0.17, Color("#c8a060"))
+		draw_circle(c, r * 0.1, Color("#9a7040"))
 		# Pointer
 		var dir := Vector2(sin(angle), -cos(angle))
 		var tip := c + dir * r * 0.95
 		var side := Vector2(-dir.y, dir.x)
-		draw_colored_polygon(PackedVector2Array([tip, c + side * r * 0.07, c - side * r * 0.07]), Color("#f6d88f"))
+		var ptr := PackedVector2Array([tip, c + side * r * 0.08, c - side * r * 0.08])
+		draw_colored_polygon(ptr, Color("#feae34"))
+		draw_polyline(ptr + PackedVector2Array([ptr[0]]), UiSkin.SOOT, 2.0)
 		var font := UI.game_font()   # interface pass: the game font everywhere
-		draw_string(font, Vector2(0, size.y - 4), "%d%% win" % chance, HORIZONTAL_ALIGNMENT_CENTER, size.x, UI.MIN_FONT, Color("#4ade80"))
+		draw_string(font, Vector2(0, size.y - 4), "%d%% win" % chance, HORIZONTAL_ALIGNMENT_CENTER, size.x, UI.MIN_FONT, UI.GREEN)
 
 func setup(m) -> void:
 	main = m
@@ -149,7 +153,7 @@ func setup(m) -> void:
 	leg_box = UI.vbox(6)
 	leg_box.visible = false
 	right.add_child(leg_box)
-	leg_box.add_child(UI.label("LEGENDARY TABLE", 16, Color("#facc15")))
+	leg_box.add_child(UI.label("LEGENDARY TABLE", 16, UI.GOLD))
 	leg_info = UI.rich(UI.FONT_CAPTION)
 	leg_box.add_child(leg_info)
 	for r in [0, 1, 2]:
@@ -293,11 +297,11 @@ func _spin() -> void:
 		var it: Dictionary = res["item"]
 		if res["win"]:
 			main.sfx.play("legendary" if int(it["rarity"]) >= GameData.LEGENDARY else "level_up")
-			wheel.glow_color = Color("#4ade80")
+			wheel.glow_color = UI.GREEN
 			result_label.text = "[color=#4ade80][b]WIN![/b][/color] It's now [color=%s]%s[/color]." % [GameData.color_of(int(it["rarity"])), GameData.display_name(it)]
 		else:
 			main.sfx.play("death")
-			wheel.glow_color = Color("#f87171")
+			wheel.glow_color = Color("#e43b44")
 			result_label.text = "[color=#f87171][b]LOST.[/b][/color] The wheel keeps %s." % GameData.display_name(it)
 			selected_id = -1
 		wheel.glow = 1.0
@@ -422,7 +426,7 @@ func _spin_all() -> void:
 				wins += 1
 			if i < minis.size():
 				var w: Wheel = minis[i]
-				w.glow_color = Color("#4ade80") if res["win"] else Color("#f87171")
+				w.glow_color = UI.GREEN if res["win"] else Color("#e43b44")
 				w.glow = 1.0
 				create_tween().tween_property(w, "glow", 0.0, 1.0)
 		var text := "[color=#4ade80][b]%d won[/b][/color]  [color=#f87171][b]%d lost[/b][/color]" % [wins, played - wins]
@@ -510,7 +514,7 @@ func show_odds() -> void:
 		lines.append("[color=%s]%s[/color] to %s: [b]%d%%[/b]" % [GameData.color_of(int(row["rarity"])), row["name"], row["to"], int(row["pct"])])
 	nt.text = "\n".join(lines)
 	o.content.add_child(nt)
-	o.content.add_child(UI.label("LEGENDARY TABLE", 15, Color("#facc15")))
+	o.content.add_child(UI.label("LEGENDARY TABLE", 15, UI.GOLD))
 	var fort := WheelTables.fortune(state)
 	if not WheelTables.legendary_unlocked(state):
 		o.content.add_child(UI.wrap(WheelTables.lock_text(state), UI.FONT_CAPTION, UI.RED))
