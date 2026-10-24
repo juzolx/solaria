@@ -141,7 +141,7 @@ def smooth(mat, sh, it=2):
                 nb = [sh[y + dy, x + dx] for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1))
                       if 0 <= y + dy < H and 0 <= x + dx < W and mat[y + dy, x + dx] == mat[y, x]]
                 if nb and sh[y, x] not in nb:
-                    new[y, x] = max(set(nb), key=nb.count)
+                    new[y, x] = max(sorted(set(nb)), key=nb.count)
         sh = new
     return sh
 

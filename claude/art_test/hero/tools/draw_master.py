@@ -49,7 +49,7 @@ def denoise(layer, mats="H"):
             nb = [s[y + dy][x + dx] for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1))
                   if 0 <= y + dy < H_ and 0 <= x + dx < W_ and m[y + dy][x + dx] == m[y][x]]
             if nb and s[y][x] not in nb:
-                new[y][x] = max(set(nb), key=nb.count)
+                new[y][x] = max(sorted(set(nb)), key=nb.count)
     layer[1][:] = new
     return layer
 
