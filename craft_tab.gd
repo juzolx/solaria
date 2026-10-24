@@ -42,6 +42,7 @@ func setup(m) -> void:
 	smith_pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	smith_pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	who.add_child(smith_pic)
+	smith_pic.visible = false  # 2.1: Hilde's picture is on the town page above
 	who.add_child(UI.wrap("%s, dwarf smith of the town forge" % Smith.NAME, UI.FONT_CAPTION, UI.GOLD))
 	var tabs_row := UI.hbox(6)
 	v.add_child(tabs_row)

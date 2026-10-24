@@ -61,9 +61,14 @@ const KEEPERS := {
 const KEEPER_ART := {0: "marta", 1: "hilde", 2: "pip", 3: "mother_wren", 4: "ledger", 5: "roe",
 	6: "aldous", 7: "tobin", 8: "fen", 9: "aubrey", 10: "gus"}
 
+static var _keeper_cache := {}
 static func keeper_art(page: int) -> Texture2D:
+	if _keeper_cache.has(page):
+		return _keeper_cache[page]
 	var path := "res://art/people/%s.png" % String(KEEPER_ART.get(page, ""))
-	return load(path) if KEEPER_ART.has(page) and ResourceLoader.exists(path) else null
+	var tex: Texture2D = load(path) if KEEPER_ART.has(page) and ResourceLoader.exists(path) else null
+	_keeper_cache[page] = tex  # once per page, not on every town refresh
+	return tex
 
 ## What the keeper of a town page says right now (steady until you next come home).
 static func talk(g: GameState, page: int) -> String:
