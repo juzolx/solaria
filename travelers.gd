@@ -144,5 +144,6 @@ static var _faces := {}
 ## Their face (made once, then kept).
 static func portrait(id: String) -> Texture2D:
 	if not _faces.has(id):
-		_faces[id] = Sprites.portrait({"race": info(id)["race"]})
+		var path := "res://art/people/%s.png" % id   # their own full figure; a race portrait if missing
+		_faces[id] = load(path) if ResourceLoader.exists(path) else Sprites.portrait({"race": info(id)["race"]})
 	return _faces[id]

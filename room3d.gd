@@ -620,7 +620,11 @@ func _mushroom_grotto() -> void:
 	_mist_layer(0.1, 0.03)
 
 func _forgotten_shrine() -> void:
-	_flat(load("res://art/traps/circle.png"), Vector3(0.0, 0.02, -2.9), Vector2(2.2, 2.2), Vector3(-90, rng.randf_range(0, 45), 0), Color(0.35, 1.0, 1.1, 1.0))
+	# the same magic circle as the traps, cut out (not additive: the import fills see-through pixels with colour)
+	var rune := _flat(load("res://art/traps/circle.png"), Vector3(0.0, 0.02, -2.9), Vector2(2.2, 2.2), Vector3(-90, rng.randf_range(0, 45), 0))
+	var rm := rune.material_override as StandardMaterial3D
+	rm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	rm.albedo_color = Color(0.45, 1.15, 1.3)
 	_light(Vector3(0.0, 0.3, -2.9), Color("#5ad1e6"), 0.9, 2.6, false, false)
 	for side in [-1.0, 1.0]:
 		var base := Vector3(side * 2.0, 0, -1.8)

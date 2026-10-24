@@ -94,6 +94,19 @@ func _initialize() -> void:
 	_sprite_rules("res://art/traps/circle.png", circle, false)
 	for k in Halls.TRAPS.keys():
 		check(Halls.TRAPS[k].has("color"), "trap %s has its circle colour" % k)
+	# People (room strangers, travelers, town keepers): 64x64, hard alpha, every keeper drawn
+	for f in _pngs("res://art/people/"):
+		var img := _load("res://art/people/" + f)
+		check(img.get_size() == Vector2i(64, 64), "art/people/%s is %s (64x64)" % [f, img.get_size()])
+		var soft := 0
+		for y in img.get_height():
+			for x in img.get_width():
+				var a8 := img.get_pixel(x, y).a8
+				if a8 != 0 and a8 != 255:
+					soft += 1
+		check(soft == 0, "art/people/%s: %d soft pixels" % [f, soft])
+	for page in Lore.KEEPER_ART.keys():
+		check(Lore.keeper_art(int(page)) != null, "keeper picture for town page %d" % int(page))
 
 	# Effects: palette colors, a few hard alpha steps
 	for f in _pngs("res://art/fx/"):

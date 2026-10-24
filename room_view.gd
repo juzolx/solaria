@@ -133,7 +133,7 @@ func _draw_prop(i: int, font: Font) -> void:
 	var rect := Rect2()
 	var bob := sin(t * 2.0) * 1.5
 	if kind == "npc":
-		rect = scene.sprite(self, scene.tx("res://art/dungeon/npc.png"), x, z, 1.7, Color(0.9, 0.85, 0.85))
+		rect = scene.sprite(self, scene.tx("res://art/people/stranger.png"), x, z, 1.4, Color(0.9, 0.85, 0.85))
 	elif kind == "traveler":
 		rect = scene.sprite(self, Travelers.portrait(String(p.get("who", ""))), x, z, 1.5, Color(0.92, 0.88, 0.85), bob * 0.5)
 	elif kind == "beast":

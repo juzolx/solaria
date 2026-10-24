@@ -221,6 +221,8 @@ func _chip(text: String, color: Color) -> void:
 func refresh() -> void:
 	var narrow: bool = main.get_viewport().get_visible_rect().size.x < 720.0
 	if smith_pic.texture == null:
+		smith_pic.texture = Lore.keeper_art(1)   # Hilde herself
+	if smith_pic.texture == null:
 		var app: Dictionary = state.appearance.duplicate()
 		app["race"] = "Dwarf"
 		smith_pic.texture = Sprites.portrait(app, {})
