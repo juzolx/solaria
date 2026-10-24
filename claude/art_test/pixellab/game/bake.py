@@ -420,8 +420,12 @@ WEAPON_DRAWINGS = weapon_drawings()
 # as an edit of those (claude/art_test/races, jobs.txt / ojobs.txt). The head stays drawn (no hair-style
 # swap): hair recolours by its shade, the family's fabric takes the class colour (index B = dye shade).
 RACES_RAW = os.path.abspath(os.path.join(REPO, "..", "solaria_dev", "claude", "art_test", "races", "raw"))
-BUILDS = {"Goblin": "goblin", "Dwarf": "dwarf", "Orc": "orc"}
-OWN_SKIN = ["Goblin", "Orc"]  # races whose drawn skin hue is their signature: no skin recolour
+BUILDS = {"Goblin": "goblin", "Dwarf": "dwarf", "Orc": "orc", "Golem": "golem"}
+OWN_SKIN = ["Goblin", "Orc", "Werewolf", "Golem"]  # races whose drawn skin hue is their signature: no skin recolour
+# races drawn as a feature layer on another build's frames (PixelLab edits of that build's base frames)
+FEATURE_BUILDS = {"Werewolf": "orc"}
+# builds drawn once for both bodies (a golem is stone: no man or woman build)
+SHARED = {"Golem": "m"}
 FAMILY_SRC = {"plate": "warrior", "robe": "mage", "leather": "leather", "cloth": "cloth"}
 FAMILY_OF = {"Warrior": "plate", "Knight": "plate", "Sentinel": "plate",
              "Mage": "robe", "Cleric": "robe", "Acolyte": "robe", "Conjurer": "robe",
@@ -475,6 +479,8 @@ def build_bodies(info):
     a0 = SW["m"]["n_idle0"][2]
     for race, key in BUILDS.items():
         for b in "mf":
+            if race in SHARED and b != SHARED[race]:
+                continue
             if not all(os.path.exists(build_src(key, None, b, k)) for k in K):
                 continue
             base = {k: L(build_src(key, None, b, k)) for k in K}
@@ -529,6 +535,53 @@ def build_bodies(info):
             if fams:  # a body is only offered once it has an outfit
                 info["builds"].setdefault(race, {"key": key, "bodies": {}, "skin": race not in OWN_SKIN})["bodies"][b] = fams
             print(race, b, "build done:", fams)
+            if race in SHARED and fams:
+                e = info["builds"][race]
+                for ob in "mf":
+                    e["bodies"][ob] = fams
+                e["share"] = SHARED[race]
+            for fr, fk in FEATURE_BUILDS.items():
+                fp = {k: os.path.join(FEATURES, f"{fr.lower()}_{b}_{k}.png") for k in K}
+                if fk != key or not fams or not all(os.path.exists(q) for q in fp.values()):
+                    continue
+                front, back = build_feature(cells, {k: bcell(L(fp[k]), k) for k in K}, sw)
+                save(f"{d}/race_{fr.lower()}", front)
+                save(f"{d}/race_{fr.lower()}_back", back)
+                e = info["builds"].setdefault(fr, {"key": key, "bodies": {}, "skin": fr not in OWN_SKIN, "feature": f"race_{fr.lower()}"})
+                e["bodies"][b] = fams
+                print(fr, b, "feature done")
+
+
+def build_feature(cells, edits, sw):
+    """A race drawn over another build (werewolf on the orc): the pixels the edit changed, minus the
+    sword and specks and small re-shadings inside the body. Front view: what sticks out beside or below
+    the body (the tail) goes to a layer drawn behind it."""
+    front, back = [], []
+    for k in K:
+        bp, ep = cells[k].load(), edits[k].load()
+        bb = cells[k].getbbox(); hl = bb[1] + (bb[3] - bb[1]) * 0.28
+        blade, ring = sword_pts(edits[k])
+        own = {(x + dx, y + dy) for (x, y) in blade | ring for dx in (-1, 0, 1) for dy in (-1, 0, 1)} if blade else set()
+        pts = set()
+        for y in range(C):
+            for x in range(C):
+                e, o = ep[x, y], bp[x, y]
+                if not e[3] or (o[3] and sum(abs(e[i] - o[i]) for i in range(3)) <= 40):
+                    continue
+                if (x, y) in sw[k][0] or (x, y) in own:
+                    continue  # the sword: the base's, or the edit's own (moved) copy
+                pts.add((x, y))
+        keep = [c for c in (comps(pts) if pts else [])
+                if len(c) >= 6 and not (all(bp[q][3] and q[1] > hl for q in c) and len(c) < 40)]
+        pts = set().union(*keep) if keep else set()
+        f = Image.new("RGBA", (C, C)); bk = Image.new("RGBA", (C, C))
+        for (x, y) in pts:
+            if k.startswith("s") and y > hl and not bp[x, y][3]:
+                bk.putpixel((x, y), ep[x, y])
+            else:
+                f.putpixel((x, y), ep[x, y])
+        front.append(f); back.append(bk)
+    return front, back
 
 if __name__ == "__main__":
     main()

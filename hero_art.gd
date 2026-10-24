@@ -158,7 +158,7 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 	var build := build_dir(app)
 	if build != "":
 		# another body build (goblin, dwarf...): its own drawn head, the class's outfit family dyed in the class colour
-		var fams: Array = info()["builds"][str(app.get("race", ""))]["bodies"][b]
+		var fams: Array = info()["builds"][art_race(app)]["bodies"][b]
 		var fam := str(info().get("family_of", {}).get(cls, "plate"))
 		if not fam in fams:
 			fam = str(fams[0])
@@ -166,8 +166,14 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 		var cc := Color(Classes.info(cls).get("color", "#8b9bb4"))
 		var dye := _dye_ramp(cc)
 		# goblins keep their drawn yellow-green skin (their own hue family); dwarves take the skin choice
-		var bskin := skin if bool(info()["builds"][str(app.get("race", ""))].get("skin", true)) else PackedColorArray()
+		var bskin := skin if bool(info()["builds"][art_race(app)].get("skin", true)) else PackedColorArray()
+		# a race drawn over another build (the werewolf's wolf head, fur and tail on the orc)
+		var feat := str(info()["builds"][art_race(app)].get("feature", ""))
+		if feat != "":
+			_lay(data, "%s/%s_back" % [build, feat], PackedColorArray(), PackedColorArray(), cells)
 		_lay(data, "%s/outfit_%s" % [build, fam], bskin, hair, cells, false, 0, dye)
+		if feat != "":
+			_lay(data, "%s/%s" % [build, feat], PackedColorArray(), PackedColorArray(), cells)
 		_lay_weapon(data, build, weapon, cells)
 		return _finish(key, data, cells)
 	var race := race_key(app, b)
@@ -229,13 +235,21 @@ static func _dye_ramp(c: Color) -> PackedColorArray:
 		out.append(Color.from_hsv(c.h, clampf(c.s * 0.85, 0.0, 1.0), minf(c.v, 1.0) * v))
 	return out
 
+## The race whose art a hero wears: a transformation (Vampire, Werewolf, Lich) once it has its own art,
+## else the race picked in the creator.
+static func art_race(app: Dictionary) -> String:
+	var f := str(app.get("form", ""))
+	if f != "" and (info().get("builds", {}).has(f) or info().get("races", {}).has(f)):
+		return f
+	return str(app.get("race", "Human"))
+
 ## The folder of a race's own body build ("goblin_m"), or "" when the race uses the standard body.
 static func build_dir(app: Dictionary) -> String:
-	var bd: Dictionary = info().get("builds", {}).get(str(app.get("race", "")), {})
+	var bd: Dictionary = info().get("builds", {}).get(art_race(app), {})
 	var b := body_key(app)
 	if bd.is_empty() or not (bd["bodies"] as Dictionary).has(b):
 		return ""
-	return "%s_%s" % [bd["key"], b]
+	return "%s_%s" % [bd["key"], str(bd.get("share", b))]  # a golem's one body serves both
 
 ## The hand points of a hero's frames (heroes.json "hand", per body or body build).
 static func hands(app: Dictionary) -> Array:
@@ -244,7 +258,7 @@ static func hands(app: Dictionary) -> Array:
 
 ## The race's signature layer ("m/race_elf"), or "" for races without one (Human, or not drawn yet).
 static func race_key(app: Dictionary, b: String) -> String:
-	var r := str(app.get("race", "Human"))
+	var r := art_race(app)
 	if b in (info().get("races", {}).get(r, []) as Array):
 		return "%s/race_%s" % [b, r.to_lower()]
 	return ""
