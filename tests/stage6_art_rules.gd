@@ -259,6 +259,8 @@ func _initialize() -> void:
 		var orc := HeroArt.frames({"body": b, "race": "Orc"}, "Warrior", 0, "", true)["img"][0] as Image
 		var wolf := HeroArt.frames(ww, "Warrior", 0, "", true)["img"][0] as Image
 		check(wolf.get_used_rect().size.y > orc.get_used_rect().size.y, "the werewolf's ears and tail stretch the orc silhouette (%s)" % b)
+	# A golem is stone: one drawn body serves both
+	check(HeroArt.build_dir({"body": "fem", "race": "Golem"}) == "golem_m" and HeroArt.build_dir({"body": "masc", "race": "Golem"}) == "golem_m", "golems share one body")
 	# ONE scale: battle draws every art pixel at the same whole number of screen pixels
 	check(ArtStyle.unit(1.0) == 3 and ArtStyle.unit(2.0) == 6 and ArtStyle.unit(1.0 / 3.0) == 1, "one integer battle scale (3 pt per art pixel)")
 	print("ART RULES DONE, failures: ", fails)

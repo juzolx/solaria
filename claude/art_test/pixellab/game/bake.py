@@ -75,12 +75,28 @@ def comps(pts):
     return out
 
 
-def sword_pts(im):
-    """The blade (most blade-like group of metal/white pixels) plus its outline ring."""
+def sword_pts(im, near=None):
+    """The blade (most blade-like group of metal/white pixels) plus its outline ring.
+    near: a stone body (golem) is grey like steel, so take only bright neutral steel and the group
+    nearest to where the human frame holds its blade (these points)."""
     px = im.load()
-    met = {(x, y) for y in range(im.height) for x in range(im.width) if px[x, y][3] and R.kind(px[x, y][:3]) in ("metal", "shirt")}
     best, bs = set(), 0
-    for c in comps(met):
+    if near:
+        hx, hy = sum(p[0] for p in near) / len(near), sum(p[1] for p in near) / len(near)
+        met = {(x, y) for y in range(im.height) for x in range(im.width)
+               if px[x, y][3] and R.lum(px[x, y][:3]) >= 170 and max(px[x, y][:3]) - min(px[x, y][:3]) < 40}
+        cs = [c for c in comps(met) if len(c) >= 5] if met else []
+        best = min(cs, key=lambda c: (sum(p[0] for p in c) / len(c) - hx) ** 2 + (sum(p[1] for p in c) / len(c) - hy) ** 2, default=set())
+        # the blade's shaded side and hilt: neutral or brown pixels touching the bright edge, 2 steps out
+        for _ in range(2):
+            best = best | {(x + dx, y + dy) for (x, y) in best for dx in (-1, 0, 1) for dy in (-1, 0, 1)
+                           if 0 <= x + dx < im.width and 0 <= y + dy < im.height and px[x + dx, y + dy][3]
+                           and R.kind(px[x + dx, y + dy][:3]) != "outline" and R.lum(px[x + dx, y + dy][:3]) >= 60
+                           and abs(x + dx - hx) + abs(y + dy - hy) < 40}
+        met = set()
+    else:
+        met = {(x, y) for y in range(im.height) for x in range(im.width) if px[x, y][3] and R.kind(px[x, y][:3]) in ("metal", "shirt")}
+    for c in comps(met) if met else []:
         if len(c) < 10:
             continue
         if sum(R.lum(px[q][:3]) for q in c) / len(c) < 115:
@@ -426,6 +442,8 @@ OWN_SKIN = ["Goblin", "Orc", "Werewolf", "Golem"]  # races whose drawn skin hue 
 FEATURE_BUILDS = {"Werewolf": "orc"}
 # builds drawn once for both bodies (a golem is stone: no man or woman build)
 SHARED = {"Golem": "m"}
+HAIRLESS = ["Golem"]  # stone: the cyan runes on its head are not hair
+STONE = ["Golem"]  # grey stone bodies: the sword is found as bright steel only
 FAMILY_SRC = {"plate": "warrior", "robe": "mage", "leather": "leather", "cloth": "cloth"}
 FAMILY_OF = {"Warrior": "plate", "Knight": "plate", "Sentinel": "plate",
              "Mage": "robe", "Cleric": "robe", "Acolyte": "robe", "Conjurer": "robe",
@@ -490,7 +508,7 @@ def build_bodies(info):
             cells = {k: bcell(base[k], k) for k in K}
             sw = {}
             for k in K:
-                blade, ring = sword_pts(cells[k])
+                blade, ring = sword_pts(cells[k], SW["m"][k][0] if race in STONE else None)
                 grip, tip, ang = W.axis(blade, W.body_centre(cells[k]))
                 sw[k] = [blade | ring, grip, ang, tip, ((tip[0] - grip[0]) ** 2 + (tip[1] - grip[1]) ** 2) ** 0.5]
             full = sorted(v[4] for v in sw.values())[len(K) // 2]
@@ -507,7 +525,7 @@ def build_bodies(info):
                     c = bcell(L(build_src(key, fam, b, k)), k); p = c.load()
                     pts = set(sw[k][0])
                     near = {(x + dx, y + dy) for (x, y) in pts for dx in range(-3, 4) for dy in range(-3, 4)}
-                    own, ring = sword_pts(c)
+                    own, ring = sword_pts(c, SW["m"][k][0] if race in STONE else None)
                     if own and len(own & near) * 2 >= len(own):
                         pts |= own | ring
                     for (x, y) in sorted(pts):
@@ -515,7 +533,7 @@ def build_bodies(info):
                         r = next((p[x + dd, y] for dd in (1, 2, 3) if x + dd < C and (x + dd, y) not in pts and p[x + dd, y][3]), None)
                         p[x, y] = l if (l and r) else (0, 0, 0, 0)
                     bb = c.getbbox(); top = bb[1] + (bb[3] - bb[1]) * 0.28  # big builds' shoulders reach the head band
-                    hair = {q for q, kd in R.masks(c).items() if kd == "hair" and not greenish(p[q]) and q[1] < top}
+                    hair = set() if race in HAIRLESS else {q for q, kd in R.masks(c).items() if kd == "hair" and not greenish(p[q]) and q[1] < top}
                     out.append(c); idxs.append(dye_index(c, fam, index_of(c, hair)))
                 save(f"{d}/outfit_{fam}", out, idxs)
                 fams.append(fam)
