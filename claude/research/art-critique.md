@@ -44,3 +44,8 @@ New 2x base in palette with #0e0812 outline, darker desaturated skin, muted clot
 - The dungeon (current zone backgrounds/tiles in the mockup) does not look good.
 - The current monsters do not look good either (so monster redraws are needed, not just cleanup).
 - The town concept looks "hella flat": it needs depth (3/4 view buildings with visible walls and roofs, cast shadows, height/elevation, layered trees and props), like his reference.
+
+## Juzo's art direction (Oct 23 2026, with references in claude/art_refs, not committed)
+- TOWN = "dark fantasy Stardew Valley": the same 3/4 top-down depth and richness (raised cliffs and terraces, layered trees, detailed varied buildings with walls and roofs, fences, props, crops, paths, lively small villagers) but in a dark-fantasy palette and mood (dusk, stone and old wood, lanterns, the walled prison town).
+- DUNGEON and MONSTERS = "old 2D Pokemon sprites (Gen 2-3, GBC/GBA era), heavily fantasy-themed": bold dark outlines, few colours per sprite, dithering for texture, dynamic expressive poses, strong readable silhouettes, big personality; monsters are mythic fantasy creatures, not cute pocket animals. Dungeon rooms in that crisp handheld style with fantasy architecture.
+- STYLE ONLY: never copy Pokemon or Stardew designs, characters or layouts (Nintendo/ConcernedApe IP). Original creatures and places only.
