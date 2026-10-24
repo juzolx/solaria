@@ -35,6 +35,12 @@ func _initialize() -> void:
 		st.enemy_mods.clear()
 		st.enemy_elite = false
 		st.enemy_calamity = 0
+		# one monster, labelled with its own name (not a pack of whatever spawned)
+		st.horde_left = 0
+		st.horde_pack = false
+		st.horde_total = 0
+		st.enemy_species = key.trim_prefix("boss_")
+		st.enemy_name = Monsters.name_of(st.enemy_species)
 		st.enemy_art = key
 		st.enemy_is_boss = key.begins_with("boss_") or key.begins_with("calamity_")
 		Sprites.clear_monster_cache()
