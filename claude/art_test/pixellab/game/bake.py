@@ -83,6 +83,8 @@ def sword_pts(im):
     for c in comps(met):
         if len(c) < 10:
             continue
+        if sum(R.lum(px[q][:3]) for q in c) / len(c) < 115:
+            continue  # blades are bright steel; a dull grey-green group is skin (orc backs), not a sword
         l2 = max((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 for a in c for b in c)
         if l2 / len(c) > bs:
             best, bs = c, l2 / len(c)
@@ -418,8 +420,8 @@ WEAPON_DRAWINGS = weapon_drawings()
 # as an edit of those (claude/art_test/races, jobs.txt / ojobs.txt). The head stays drawn (no hair-style
 # swap): hair recolours by its shade, the family's fabric takes the class colour (index B = dye shade).
 RACES_RAW = os.path.abspath(os.path.join(REPO, "..", "solaria_dev", "claude", "art_test", "races", "raw"))
-BUILDS = {"Goblin": "goblin", "Dwarf": "dwarf"}
-OWN_SKIN = ["Goblin"]  # races whose drawn skin hue is their signature: no skin recolour
+BUILDS = {"Goblin": "goblin", "Dwarf": "dwarf", "Orc": "orc"}
+OWN_SKIN = ["Goblin", "Orc"]  # races whose drawn skin hue is their signature: no skin recolour
 FAMILY_SRC = {"plate": "warrior", "robe": "mage", "leather": "leather", "cloth": "cloth"}
 FAMILY_OF = {"Warrior": "plate", "Knight": "plate", "Sentinel": "plate",
              "Mage": "robe", "Cleric": "robe", "Acolyte": "robe", "Conjurer": "robe",
@@ -506,7 +508,8 @@ def build_bodies(info):
                         l = next((p[x - dd, y] for dd in (1, 2, 3) if x - dd >= 0 and (x - dd, y) not in pts and p[x - dd, y][3]), None)
                         r = next((p[x + dd, y] for dd in (1, 2, 3) if x + dd < C and (x + dd, y) not in pts and p[x + dd, y][3]), None)
                         p[x, y] = l if (l and r) else (0, 0, 0, 0)
-                    hair = {q for q, kd in R.masks(c).items() if kd == "hair" and not greenish(p[q])}
+                    bb = c.getbbox(); top = bb[1] + (bb[3] - bb[1]) * 0.28  # big builds' shoulders reach the head band
+                    hair = {q for q, kd in R.masks(c).items() if kd == "hair" and not greenish(p[q]) and q[1] < top}
                     out.append(c); idxs.append(dye_index(c, fam, index_of(c, hair)))
                 save(f"{d}/outfit_{fam}", out, idxs)
                 fams.append(fam)
