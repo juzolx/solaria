@@ -194,7 +194,7 @@ func _show() -> void:
 				lines.append("%s %s: %s" % [sig["slot"], str(sig["type"]).capitalize(), GameData.effect_text(sig["effect"], int(sig["value"]))])
 				lines.append("[color=%s][i]%s[/i][/color]" % [dim, sig.get("flavor", "")])
 			else:
-				lines.append("[color=#ff6b9d][b]Signature: ???[/b][/color]  [color=%s]A %s, 1 in %s kills. No pity: every kill is a fresh chance.[/color]" % [dim, str(sig["slot"]).to_lower(), _num(Monsters.SIGNATURE_CHANCE)])
+				lines.append("[color=#ff6b9d][b]Signature: ???[/b][/color]  [color=%s]%s, 1 in %s kills. No pity: every kill is a fresh chance.[/color]" % [dim, a_slot(str(sig["slot"])), _num(Monsters.SIGNATURE_CHANCE)])
 	else:
 		lines.append("")
 		lines.append("[b]Drops[/b]: %d items, %d-%d dust, and sometimes a Unique (your chance right now: %d%%)" % [
@@ -221,6 +221,11 @@ func _odds_line(label: String, odds: Array) -> String:
 		var v: float = odds[r]
 		parts.append("[color=%s]%s%%[/color]" % [GameData.color_of(r), ("%.1f" % v) if v < 10.0 else str(int(round(v)))])
 	return "  %s: %s" % [label, " / ".join(parts)]
+
+## "A helmet", "An off hand" (QA: the Signature line said "A off hand").
+static func a_slot(slot: String) -> String:
+	var s := slot.to_lower()
+	return ("An " if s.left(1) in ["a", "e", "i", "o", "u"] else "A ") + s
 
 func _num(n: int) -> String:
 	var s := str(n)
