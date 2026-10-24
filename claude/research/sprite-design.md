@@ -593,3 +593,10 @@ RGB and compared in OKLab (script in the research scratchpad; easy to redo in th
 - R9: Added prompt words per race, rule pixels, the scale check and the back-sprite size note (low
   confidence).
 - R10: Full rewrite. Merged all edits, added Q5 and the source list, cut duplicated text.
+
+## Juzo's answers (Oct 23 2026)
+- Q1 Female dwarves: NO beard (braids; still short and wide so they read as dwarves).
+- Q2 Glow/particles only on real Mythic gear: yes.
+- Q3 Goblin weapons: not answered, default full-size.
+- Q4 Gear colour does NOT follow the zone: colour comes from RARITY only.
+- Q5 Rare and Epic share a shape, differ by trim bands + gem: yes.
