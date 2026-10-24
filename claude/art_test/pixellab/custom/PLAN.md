@@ -23,6 +23,17 @@ Check `get_balance` before each batch; show a sample before any batch over ~30 g
 - Re-rolls / fixes reserve ~100
 - Total ~400, leaving most of the month free.
 
+## iPhone budget (Juzo's rule: must run well on iPhone) - measured 2026-10-24
+- One body, battle + portrait clips (idle 4 + attack 9 frames, N + S = 26 frames): ~235 KB RGBA once
+  frames are cropped and packed into one sheet (~620 KB if left on full canvases). Pack per body, never per look.
+- Hair: one style = 2 small images + 2 hair masks; load only the chosen style (~10 KB), not the library (~800 KB).
+- Colours (hair, skin, dye, rarity) stay runtime ramp swaps: store grey/indexed art + masks, recolour in a
+  palette shader. No pre-baked colour copies.
+- Faces: portrait only, one face patch (~2 KB) laid on at runtime.
+- Import with filter off (nearest), no mipmaps; frame counts stay at 4 (idle) / 8-9 (attack).
+- Open point: the PixelLab figure is ~60 px tall on a 64 px canvas, a bit over the ~54 px target. Options:
+  regenerate at size 56 (cheap, ~2 gens + anims) or accept 60 and keep the 3x battle scale. Needs Juzo's call.
+
 ## Known limits
 - PixelLab sprites are flat (one image per frame), not layers. Outfit x hair style combinations multiply, so
   hair styles need the head-swap test before we commit to them.
