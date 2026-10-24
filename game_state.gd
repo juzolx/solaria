@@ -3915,7 +3915,7 @@ func roll_doors(was_boss := false) -> Array:
 			kind = "fight"
 		if floor_num >= 3 and kind != "merchant" and randf() * 100.0 < Menagerie.NEST_DOOR_CHANCE:
 			kind = "nest"  # Juzo: a nest is the second-rarest find, after a Calamity
-		out.append(Rifts.maybe_door(self, kind))  # very rarely: a rift
+		out.append(Portals.maybe_door(self, kind, out))  # very rarely: a rift, or a champion's gate
 	if was_boss and not "camp" in out:
 		out[randi() % 3] = "camp"  # 0.13+: a Descenders' Camp waits after every boss (camp.gd)
 	return out
@@ -3958,6 +3958,8 @@ func _through_door(i: int) -> void:
 func auto_path() -> String:
 	if door_pending():
 		return auto_door()
+	if not path_offer.is_empty() and String(path_offer[0]).begins_with("portal:"):
+		return Portals.auto_pick(self)  # rift, trial or realm cards
 	for k in ["leave", "fight", "pass", "revent_no"]:
 		if k in path_offer:
 			return k
@@ -4388,6 +4390,7 @@ func start_special_trial(info: Dictionary, kind: String, data: Dictionary) -> bo
 	return true
 
 func _finish_trial() -> void:
+	var gate := bool(trial_data.get("gate", false))  # came through a champion's gate (portals.gd)
 	trial_active = false
 	floor_num = trial_return
 	fight = 1
@@ -4405,6 +4408,8 @@ func _finish_trial() -> void:
 	trial_data = {}
 	_check_spec()
 	spawn_enemy()
+	if gate:
+		_room_cleared()  # back out to your doors
 	save_game()
 
 ## Race trial for the next awakening rank.
@@ -4475,8 +4480,18 @@ func set_party(slots: Array) -> void:
 ## Hurt: campfires and safe rooms. Healthy: elite rooms are worth it. Treasure is always nice.
 func auto_door() -> String:
 	var lvl := Halls.team_sense(self)
-	if lvl == 0 or doors.size() < DOOR_KEYS.size():
+	if doors.size() < DOOR_KEYS.size():
 		return String(DOOR_KEYS.pick_random())
+	if lvl == 0:  # blank doors, but a portal door always shows (Portals.read_door)
+		var plain: Array = []
+		for i in DOOR_KEYS.size():
+			var dk: String = doors[i]
+			if dk in Portals.DOOR_KINDS:
+				if Portals.auto_wants(self, dk):
+					return String(DOOR_KEYS[i])
+			else:
+				plain.append(DOOR_KEYS[i])
+		return String(plain.pick_random() if not plain.is_empty() else DOOR_KEYS.pick_random())
 	var hp := float(hero_hp) / maxf(1.0, get_max_hp())
 	var best := 0
 	var best_score := -99.0
@@ -4497,6 +4512,8 @@ func auto_door() -> String:
 				score += 1.0
 			if trapped and lvl >= 3:
 				score -= 0.6
+		if kind in Portals.DOOR_KINDS:
+			score = Portals.auto_door_score(self, kind)
 		score += randf() * 0.2  # ties break at random
 		if score > best_score:
 			best_score = score

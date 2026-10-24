@@ -21,6 +21,7 @@ func hero(f := 20, hc := false) -> GameState:
 	g.hardcore = hc
 	g.choose_class("Warrior")
 	g.level = 40
+	g.hero_hp = g.get_max_hp()
 	g.floor_num = f
 	g.best_floor = f
 	g.in_town = false
@@ -214,6 +215,86 @@ func _initialize() -> void:
 	o.portal = {"left": 2, "floor": 1, "floors": 3}
 	var o2 := reload(o)
 	check(String(o2.portal.get("kind", "")) == "rift" and Rifts.depth(o2) == 3 and not o2.portal.has("floors"), "an older rift save becomes a depth 3 rift")
+
+	# --- Trial cards among the doors (Juzo: "three doors, your choice")
+	var ne := hero(20)
+	var nt := 0
+	for i in 5000:
+		if Portals.maybe_door(ne, "fight", []) == "trial":
+			nt += 1
+	check(Portals.trial_offer(ne).is_empty() and nt == 0, "no trial door while no trial waits for you")
+	var el := hero(20)
+	el.hidden_offer = ["gladiator"]
+	check(String(Portals.trial_offer(el).get("kind", "")) == "hidden", "a champion's hidden class on offer: a trial waits")
+	nt = 0
+	for i in 5000:
+		if Portals.maybe_door(el, "fight", []) == "trial":
+			nt += 1
+	check(nt > 25 and nt < 140, "trial doors are about as rare as rifts (%d of 5000)" % nt)
+	check(Portals.maybe_door(el, "fight", ["rift"]) == "fight", "one portal door per set of three")
+	el.doors = ["fight", "trial", "fight"]
+	var rd := Halls.read_door(el, 1)
+	check(String(rd["label"]) == "Trial" and String(rd["color"]) == Portals.COLOR and String(Halls.read_door(el, 0)["label"]) == "?", "a portal door always shows among blank doors")
+	# through the door: the card, then the trial through Portals
+	el._room_cleared()
+	el.doors = ["fight", "trial", "fight"]
+	el.choose_path("door_m")
+	check(el.exploring and String(el.room_props[0]["kind"]) == "gate", "the room holds a champion's gate")
+	Halls.interact(el, 0)
+	check(el.path_offer == ["portal:trial", "portal:leave"] and Portals.title(el) == "A champion's gate", "tapping the gate shows the trial card and Walk on")
+	var tc: Dictionary = el.path_info("portal:trial")
+	check(String(tc["name"]) == "Trial: The Arena Champion" and String(tc["text"]).contains("for good") and String(tc["color"]) == Portals.COLOR, "the trial card: champion, what you win, portal color")
+	check(el.auto_path() == Portals.LEAVE, "Auto never takes a class trial (that's for good)")
+	el.choose_path("portal:trial")
+	check(el.trial_active and Portals.kind(el) == "trial" and bool(el.trial_data.get("gate", false)), "entering the card starts the trial through Portals")
+	win(el)
+	check(not el.trial_active and el.hidden_class == "gladiator" and el.door_pending(), "won: the class is yours, back out to your doors")
+	# Auto: a cure you started is fine, never as Hardcore; low health walks on
+	var cu := hero(20)
+	cu.form = "Vampire"
+	cu.cure_active = true
+	cu.cure_kills = 999
+	check(String(Portals.trial_offer(cu).get("kind", "")) == "cure", "a finished cure hunt: the Elder Vampire waits")
+	cu.doors = ["fight", "trial", "fight"]
+	check(cu.auto_door() == "door_m", "Auto takes the cure's gate at full health")
+	cu.hero_hp = 1
+	var avoid := true
+	for i in 30:
+		if cu.auto_door() == "door_m":
+			avoid = false
+	check(avoid, "Auto avoids it when hurt")
+	cu.hero_hp = cu.get_max_hp()
+	cu.hardcore = true
+	check(not Portals.auto_wants(cu, "trial"), "Auto never takes a trial as Hardcore")
+	cu.hardcore = false
+	# a lost gate trial: no losses, back to your doors
+	cu._room_cleared()
+	cu.doors = ["trial", "trial", "trial"]
+	cu.choose_path("door_l")
+	Halls.interact(cu, 0)
+	check(cu.auto_path() == "portal:trial", "Auto steps into the cure's trial")
+	cu.choose_path("portal:trial")
+	var cg := cu.gold
+	cu._hero_died()
+	check(not cu.trial_active and cu.door_pending() and cu.gold == cg, "lost the gate trial: no losses, back to your doors")
+	# Walk on, and the page button still works
+	var wk := hero(20)
+	wk.hidden_offer = ["gladiator"]
+	wk._room_cleared()
+	wk.doors = ["trial", "trial", "trial"]
+	wk.choose_path("door_l")
+	Halls.interact(wk, 0)
+	var wk2 := reload(wk)
+	check(wk2.path_offer == ["portal:trial", "portal:leave"], "loading at the gate: the same trial card")
+	wk2.choose_path("portal:leave")
+	check(not wk2.trial_active and wk2.door_pending(), "Walk on from the gate")
+	check(Hidden.take(wk2, "gladiator") and wk2.trial_active, "the class page still starts the same trial")
+	# Auto and rifts: half health or better
+	var ar := hero(20)
+	rift_room(ar)
+	check(ar.auto_path() == "portal:rift", "Auto steps into a rift when healthy")
+	ar.hero_hp = 1
+	check(ar.auto_path() == Portals.LEAVE, "...and walks on when hurt")
 
 	print("STAGE6 PORTAL TESTS DONE, failures: ", fails)
 	GameState.delete_saves()
