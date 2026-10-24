@@ -192,6 +192,8 @@ var enemy_lpc_anim := "combat_idle"  # LPC monsters: the animation playing
 var enemy_lpc_t := 0.0
 var recoil := 0.0        # hero knocked back when hit
 var enemy_recoil := 0.0
+var hero_squash := 0.0   # A6: hit squash (see _squash)
+var enemy_squash := 0.0
 var projectiles: Array[Dictionary] = []
 const MELEE_REST := 45.0
 # Pose animation: a queue of [pose name, seconds]; idle breathing when empty
@@ -673,6 +675,7 @@ func _hero_attack(e: Dictionary) -> void:
 	enemy_flash = 1.0
 	create_tween().tween_property(self, "enemy_flash", 0.0, 0.1)
 	var target := _enemy_center()
+	_squash("enemy_squash", 1.4 if e["crit"] else 1.0)
 	var wt := _weapon_type()
 	var hit_fx := "pierce" if wt in ["spear", "bow"] else ("impact" if wt in ["staff", "mace"] else "slash")
 	_later(0.06 if not ranged else 0.16, func():
@@ -715,6 +718,7 @@ func _enemy_attack(e: Dictionary) -> void:
 	hero_flash = 1.0
 	create_tween().tween_property(self, "hero_flash", 0.0, 0.1)
 	shake = maxf(shake, 4.0)
+	_squash("hero_squash")
 	_burst(_hero_center(), Color("#f87171"), 8, 200.0)
 	_fx("claw", _hero_center(), 1.0, true)
 	_float("-%d" % e["dmg"], _hero_center(), Color("#f87171"), 20)
@@ -754,6 +758,12 @@ func _level_up_fx(e: Dictionary) -> void:
 	banner_alpha = 2.0
 	_burst(_hero_center(), Color("#fbbf24"), 30, 300.0)
 	_float("LEVEL %d" % e["level"], _hero_center() + Vector2(0, -30), Color("#fbbf24"), 22)
+	# A6: a short flourish: a crouch-and-rise, a golden glow and a ring of light
+	_pose_hero([["crouch", 0.08], ["cast", 0.3], ["follow", 0.1]])
+	cast_color = Color("#fbbf24")
+	cast_glow = 1.0
+	create_tween().tween_property(self, "cast_glow", 0.0, 0.7)
+	rings.append({"pos": _hero_center(), "life": 0.55, "max": 0.55, "grow": 74.0, "color": Color("#fde68a")})
 
 
 var halls := HallsScene.new()
@@ -816,7 +826,41 @@ func _hit_stop(seconds: float) -> void:
 		return
 	freeze_left = maxf(freeze_left, seconds)
 
+## A6: true unless the player turned on Reduce motion.
+func _motion_ok() -> bool:
+	return profile == null or not profile.reduce_motion
+
+## A6: a hit flash is one hard frame (white on monsters, hot red on the team) instead
+## of a fading pink tint (art critique). Flashing effects OFF: a soft, dim blink instead.
+func _flash_col(v: float, red: bool, a := 1.0) -> Color:
+	var c := Color(1.0, 0.3, 0.22) if red else Color(1, 1, 1)
+	if profile != null and not profile.flashes:
+		return Color(c, v * 0.25 * a)
+	return Color(c, a if v > 0.55 else 0.0)
+
+## A6: a quick squash on whoever got hit ("hero_squash" / "enemy_squash"). Pose-frame
+## art squashes by whole pixel rows (Sprites.POSES hit1); frame-animated (LPC) art
+## squashes its rect here, so any sprite gets it. Off with Reduce motion.
+func _squash(prop: String, amount := 1.0) -> void:
+	if not _motion_ok():
+		return
+	set(prop, amount)
+	create_tween().tween_property(self, prop, 0.0, 0.16).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+
+## The rect squashed wider and shorter, feet kept on the ground.
+static func squashed(r: Rect2, amount: float) -> Rect2:
+	if amount == 0.0:
+		return r
+	var sx := 1.0 + 0.12 * amount
+	var sy := 1.0 - 0.10 * amount
+	var ns := Vector2(r.size.x * sx, r.size.y * sy)
+	return Rect2(Vector2(r.position.x - (ns.x - r.size.x) * 0.5, r.end.y - ns.y), ns)
+
+const MAX_PARTICLES := 140  # R6: bursts never pile up past this (half with Low graphics)
+
 func _burst(pos: Vector2, color: Color, count: int, speed: float) -> void:
+	var cap := int(MAX_PARTICLES * 0.5) if profile != null and profile.low_graphics else MAX_PARTICLES
+	count = mini(count, cap - particles.size())
 	for i in count:
 		var angle := randf() * TAU
 		var v := Vector2(cos(angle), sin(angle)) * speed * randf_range(0.4, 1.0)
@@ -1127,6 +1171,17 @@ func _float(text: String, pos: Vector2, color: Color, font_size: int) -> void:
 # Drawing
 # =====================================================================
 
+## R6: drops finished effects in place (filter() made a new array for each list every
+## frame). With "t" and "life": gone when t >= life; only "life": when life <= 0;
+## only "t": when t >= 1.
+static func _prune(arr: Array, t_key: String, life_key: String) -> void:
+	for i in range(arr.size() - 1, -1, -1):
+		var d: Dictionary = arr[i]
+		var t := float(d[t_key]) if t_key != "" else 0.0
+		var gone := t >= float(d[life_key]) if life_key != "" and t_key != "" else (float(d[life_key]) <= 0.0 if life_key != "" else t >= 1.0)
+		if gone:
+			arr.remove_at(i)
+
 func _process(delta: float) -> void:
 	_intro_step(delta)
 	if freeze_left > 0.0:
@@ -1135,7 +1190,7 @@ func _process(delta: float) -> void:
 	if profile == null or not profile.reduce_motion:
 		bob += delta  # idle breathing and bobbing (frozen with Reduce motion)
 	shake = move_toward(shake * exp(-delta * 6.0), 0.0, delta * 8.0)  # quick fade with a short tail
-	for key in bar_ghost.keys():
+	for key in bar_ghost:  # R6: no keys() copy every frame
 		bar_ghost[key] = move_toward(float(bar_ghost[key]), float(bar_target.get(key, 0.0)), delta * 0.8)
 	lpc_t += delta
 	if chest_t >= 0.0:
@@ -1144,19 +1199,22 @@ func _process(delta: float) -> void:
 			chest_t = -1.0
 	if state != null:
 		summon_in = move_toward(summon_in, 1.0 if state.summon_turns > 0 else 0.0, delta * 3.0)
-	for k in pet_hits.keys():
-		pet_hits[k] = float(pet_hits[k]) - delta
-		if float(pet_hits[k]) <= 0.0:
-			pet_hits.erase(k)
+	if not pet_hits.is_empty():
+		for k in pet_hits.keys():
+			pet_hits[k] = float(pet_hits[k]) - delta
+			if float(pet_hits[k]) <= 0.0:
+				pet_hits.erase(k)
 	for dp in drops:
 		dp["t"] = float(dp["t"]) + delta
-	drops = drops.filter(func(dp): return float(dp["t"]) < float(dp["life"]))
+	_prune(drops, "t", "life")
 	for bm in beams:
 		bm["t"] = float(bm["t"]) + delta
-	beams = beams.filter(func(bm): return float(bm["t"]) < float(bm["life"]))
+	_prune(beams, "t", "life")
 	for fx in fx_sprites:
 		fx["t"] = float(fx["t"]) + delta
-	fx_sprites = fx_sprites.filter(func(fx): return float(fx["t"]) * FX_FPS < float(_fx_frames.get(fx["name"], 1)))
+	for i in range(fx_sprites.size() - 1, -1, -1):
+		if float(fx_sprites[i]["t"]) * FX_FPS >= float(_fx_frames.get(fx_sprites[i]["name"], 1)):
+			fx_sprites.remove_at(i)
 	enemy_lpc_t += delta
 	if enemy_lpc_anim != "combat_idle":
 		var ea: Dictionary = _enemy_art(state.enemy_is_boss).get("lpc", {}).get(enemy_lpc_anim, {}) if state != null else {}
@@ -1185,19 +1243,19 @@ func _process(delta: float) -> void:
 		var rise := 26.0 * (1.0 - pow(1.0 - minf(ft / 0.22, 1.0), 3.0)) + maxf(0.0, ft - 0.5) * 34.0
 		var side := float(f.get("vx", 0.0)) * minf(ft, 0.9)
 		f["pos"] = (f["base"] as Vector2) - Vector2(-side, rise)
-	floaters = floaters.filter(func(f): return f["life"] > 0.0)
+	_prune(floaters, "", "life")
 	for p in particles:
 		p["life"] -= delta
 		p["vel"] += Vector2(0, 600 * delta)
 		p["pos"] += p["vel"] * delta
-	particles = particles.filter(func(p): return p["life"] > 0.0)
+	_prune(particles, "", "life")
 	for r in rings:
 		r["life"] -= delta
-	rings = rings.filter(func(r): return r["life"] > 0.0)
+	_prune(rings, "", "life")
 	for pr in projectiles:
 		pr["t"] += delta / 0.16
 		pr["pos"] = (pr["from"] as Vector2).lerp(pr["to"], minf(pr["t"], 1.0))
-	projectiles = projectiles.filter(func(pr): return pr["t"] < 1.0)
+	_prune(projectiles, "t", "")
 	if toast_life > 0.0:
 		toast_life -= delta
 	elif not toasts.is_empty():
@@ -1330,7 +1388,7 @@ func _draw_members() -> void:
 				draw_texture_rect(an["white"][fi], Rect2(r.position + Vector2(0, -u), r.size), false, Color(_rim_color(), 0.42 * a))
 				draw_texture_rect(an["tex"][fi], r, false, Color(1, 1, 1, a))
 				if float(fx0.get("flash", 0.0)) > 0.0:
-					draw_texture_rect(an["white"][fi], r, false, Color(1.0, 0.2, 0.2, float(fx0["flash"]) * 0.75))
+					draw_texture_rect(an["white"][fi], r, false, _flash_col(float(fx0["flash"]), true))
 			_member_plate(m, g, c, u)
 			continue
 		var poses := Sprites.poses_for("m" + str((str(g.appearance) + str(g.hero_looks())).hash()), art["body_img"], 1, int(art["hand"].y))
@@ -1339,7 +1397,7 @@ func _draw_members() -> void:
 		var pose: Dictionary = poses[pose_name]
 		draw_texture_rect(pose["tex"], c, false, Color(1, 1, 1, a))
 		if float(fx.get("flash", 0.0)) > 0.0:
-			draw_texture_rect(pose["white"], c, false, Color(1.0, 0.2, 0.2, float(fx["flash"]) * 0.75))
+			draw_texture_rect(pose["white"], c, false, _flash_col(float(fx["flash"]), true))
 		if art["weapon"] != null and not m.knocked_out:
 			var hand: Vector2 = c.position + ((art["hand"] as Vector2) + Vector2(int(pose["dx"]), int(pose["dy"]))) * u
 			var ang := deg_to_rad(MELEE_REST - 40.0 * float(fx.get("lunge", 0.0)) if not art["weapon_type"] in ["bow", "staff"] else 12.0)
@@ -1527,6 +1585,7 @@ func _draw() -> void:
 				var fs := float(an["size"])
 				var uu := er.size.x / (art["size"] as Vector2).x
 				local = Rect2(er.position - Vector2(fs - (art["size"] as Vector2).x, fs - (art["size"] as Vector2).y) * 0.5 * uu, Vector2(fs, fs) * uu)
+				local = squashed(local, enemy_squash)
 		else:
 			var epose: Dictionary = _enemy_poses(art).get(enemy_pose, {})
 			if not epose.is_empty():
@@ -1571,7 +1630,7 @@ func _draw() -> void:
 			draw_string_outline(fnt, ex, "!", HORIZONTAL_ALIGNMENT_CENTER, 80, 48, 10, Color(0, 0, 0, enemy_alpha))
 			draw_string(fnt, ex, "!", HORIZONTAL_ALIGNMENT_CENTER, 80, 48, Color(1.0, 0.7 + 0.3 * wp, 0.2, enemy_alpha))
 		if enemy_flash > 0.0:
-			draw_texture_rect(ewhite, local, false, Color(1, 1, 1, enemy_flash * 0.85 * enemy_alpha))
+			draw_texture_rect(ewhite, local, false, _flash_col(enemy_flash, false, enemy_alpha))
 		var name_color := Color("#fbbf24") if boss else Color("#fca5a5")
 		if not boss and state.enemy_tier > 0:
 			name_color = Color(Monsters.tier_color(state.enemy_tier)).lightened(0.15)
@@ -1655,8 +1714,8 @@ func _draw() -> void:
 		var ps: float = p["size"]
 		draw_rect(Rect2(p["pos"] - Vector2(ps, ps) / 2.0, Vector2(ps, ps)), Color(pc, clampf(p["life"] * 2.0, 0.0, 1.0)))
 	for r in rings:
-		var t: float = 1.0 - r["life"] / 0.25
-		draw_arc(r["pos"], 8.0 + t * 26.0, 0.0, TAU, 24, Color(0.58, 0.77, 0.99, 1.0 - t), 3.0)
+		var t: float = 1.0 - r["life"] / float(r.get("max", 0.25))
+		draw_arc(r["pos"], 8.0 + t * float(r.get("grow", 26.0)), 0.0, TAU, 24, Color(r.get("color", Color(0.58, 0.77, 0.99)), 1.0 - t), 3.0)
 
 	# Arrows and magic bolts
 	for pr in projectiles:
@@ -1803,7 +1862,7 @@ func _draw_hero() -> void:
 	draw_texture_rect(pose.get("white", hero_art["body_white"]), Rect2(c.position + Vector2(0, -u), c.size), false, Color(_rim_color(), 0.42 * a))
 	draw_texture_rect(pose.get("tex", hero_art["body"]), c, false, Color(1, 1, 1, a))
 	if hero_flash > 0.0:
-		draw_texture_rect(pose.get("white", hero_art["body_white"]), c, false, Color(1.0, 0.2, 0.2, hero_flash * 0.75))
+		draw_texture_rect(pose.get("white", hero_art["body_white"]), c, false, _flash_col(hero_flash, true))
 	if fists:
 		# The demon road fights barehanded: a burst of red qi around the fist
 		var pulse := 0.5 + 0.5 * sin(bob * 6.0)
@@ -1815,7 +1874,7 @@ func _draw_hero() -> void:
 		draw_set_transform(_off + hand, angle, Vector2(u, u))
 		draw_texture(wtex, -piv, Color(1, 1, 1, a))
 		if hero_flash > 0.0:
-			draw_texture(hero_art["weapon_white"], -piv, Color(1.0, 0.2, 0.2, hero_flash * 0.75))
+			draw_texture(hero_art["weapon_white"], -piv, _flash_col(hero_flash, true))
 		draw_set_transform(_off)
 
 ## A called helper (Raise Dead's skeleton, Call of the Wild's wolf) stands at the hero's
@@ -1873,7 +1932,7 @@ func _draw_lpc_hero(c: Rect2, u: float, a: float, glow: Color) -> void:
 	fi = fi % n if lpc_anim == "combat_idle" else mini(fi, n - 1)
 	var s: int = an["size"]
 	var off := Vector2(Sprites.BODY_OFFSET) - Vector2((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2)
-	var r := Rect2(c.position + off * u, Vector2(s, s) * u)
+	var r := squashed(Rect2(c.position + off * u, Vector2(s, s) * u), hero_squash)
 	var white: Texture2D = an["white"][fi]
 	if glow.a > 0.0:
 		var pulse := 0.22 + 0.1 * sin(bob * 4.0)
@@ -1882,7 +1941,7 @@ func _draw_lpc_hero(c: Rect2, u: float, a: float, glow: Color) -> void:
 	draw_texture_rect(white, Rect2(r.position + Vector2(0, -u), r.size), false, Color(_rim_color(), 0.42 * a))
 	draw_texture_rect(tex[fi], r, false, Color(1, 1, 1, a))
 	if hero_flash > 0.0:
-		draw_texture_rect(white, r, false, Color(1.0, 0.2, 0.2, hero_flash * 0.75))
+		draw_texture_rect(white, r, false, _flash_col(hero_flash, true))
 
 ## God rank: a slow ring of golden motes circling the hero and a soft halo.
 func _draw_god_aura(r: Rect2, c: Color, a: float) -> void:

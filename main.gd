@@ -123,6 +123,7 @@ var online: Online
 var fallen_shown := false
 
 func _ready() -> void:
+	DebugLog.start()  # R6: local error log for "Copy debug info" (never sent anywhere)
 	# Let the layout stretch when the window is resized (and on phones later)
 	get_tree().root.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
 	get_tree().root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
@@ -317,6 +318,7 @@ func _notification(what: int) -> void:
 		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST, \
 				NOTIFICATION_WM_GO_BACK_REQUEST:
 			save_everything()
+			DebugLog.flush()
 		NOTIFICATION_EXIT_TREE:
 			_flush_saves()
 
@@ -647,6 +649,7 @@ func _on_hardcore_death() -> void:
 		row.add_child(b)
 
 func _on_tick() -> void:
+	DebugLog.flush()  # cheap when nothing new was logged
 	if not SaveIO.notices.is_empty():
 		_show_save_notices()  # e.g. a companion added at the Party tab had a damaged save
 	Store.poll(profile, codex)  # App Store purchases (does nothing while the store is off)
@@ -1400,7 +1403,9 @@ func _show_god_offer(id: String) -> void:
 	o.content.add_child(UI.wrap(String(GodClasses.info(id).get("lore", "")), 14, UI.TEXT))
 	o.content.add_child(ClassTab.class_card(self, n, true, func():
 		if GodClasses.take(state, id):
-			sfx.play("hidden")
+			# A6: a short flourish (the moment plays its own sound)
+			moment_queue.append(["god", String(n.get("name", "God class")), "Your class is reborn.", Color(ClassTree.RANK_COLORS["God"]), "", Sprites.portrait(state.appearance, state.hero_looks())])
+			_play_moments.call_deferred()
 		o.close()
 		refresh()))
 	o.content.add_child(UI.wrap("It's for good: the God class replaces your class. Not now? It waits in Character > Class.", 12, UI.DIM))

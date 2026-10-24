@@ -26,6 +26,7 @@ func _build(kind: String, title: String, sub: String, color: Color, extra: Strin
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
+	bg.show_behind_parent = true  # A6: the light burst (_draw) shows over the backdrop
 	# Entering a realm: its landscape slowly pans behind the words
 	if backdrop:
 		var pan := TextureRect.new()
@@ -70,7 +71,7 @@ func _build(kind: String, title: String, sub: String, color: Color, extra: Strin
 		var pt := create_tween()
 		pt.tween_interval(0.5)
 		pt.tween_property(pic, "modulate:a", 1.0, 0.6)
-	var kicker: String = {"realm": "YOU ENTER", "boss": "", "awaken": "AWAKENING", "transform": "SOMETHING CHANGES", "hidden": "HIDDEN CLASS", "class": "YOUR CLASS GROWS", "milestone": "A MILESTONE", "hatch": "IT HATCHED!", "forge": "FRESH FROM THE FORGE", "first": "FIRST FIND!"}.get(kind, "")
+	var kicker: String = {"realm": "YOU ENTER", "boss": "", "awaken": "AWAKENING", "transform": "SOMETHING CHANGES", "hidden": "HIDDEN CLASS", "god": "A GOD CLASS ANSWERS", "class": "YOUR CLASS GROWS", "milestone": "A MILESTONE", "hatch": "IT HATCHED!", "forge": "FRESH FROM THE FORGE", "first": "FIRST FIND!"}.get(kind, "")
 	if kicker != "":
 		lines.append(_line(v, kicker, 14, color.lightened(0.3)))
 	lines.append(_line(v, title.to_upper(), 34 if kind != "boss" else 30, color.lightened(0.4)))
@@ -81,22 +82,32 @@ func _build(kind: String, title: String, sub: String, color: Color, extra: Strin
 	lines.append(_line(v, "(tap to continue)", 10, UI.DIM))
 	# Fade in, burn the title in letter by letter, hold, fade out
 	var t := create_tween()
-	t.tween_property(bg, "color:a", 0.92 if kind in ["hidden", "transform", "class"] else 0.85, 0.4)
+	t.tween_property(bg, "color:a", 0.92 if kind in ["hidden", "god", "transform", "class"] else 0.85, 0.4)
 	t.parallel().tween_property(band, "color:a", 0.18, 0.6)
 	for i in lines.size():
 		var l: Label = lines[i]
 		l.visible_ratio = 0.0
 		l.modulate.a = 1.0
 		var dur := 0.9 if i == (1 if kicker != "" else 0) else 0.35
-		if kind == "hidden" and i == 1:
+		if kind in ["hidden", "god"] and i == 1:
 			dur = 1.6
 		t.tween_property(l, "visible_ratio", 1.0, dur)
 	t.tween_interval(2.6 if kind != "boss" else 1.8)
 	t.tween_callback(close)
+	# A6: the rarest moments (hidden or God class, awakening) open with a burst of light
+	var calm: bool = main_node != null and main_node.profile != null and main_node.profile.reduce_motion
+	if kind in ["hidden", "god", "awaken", "transform"] and not calm:
+		_ray_color = color
+		_ray_center = Vector2(size.x * 0.5, size.y * 0.42)
+		var ft := create_tween()
+		ft.tween_interval(0.35)
+		ft.tween_method(func(x: float): _rays = x; queue_redraw(), 0.0, 1.0, 0.25)
+		ft.tween_callback(_burst)
+		ft.tween_method(func(x: float): _rays = x; queue_redraw(), 1.0, 0.3, 1.4)
 	if main_node and main_node.timer:
 		main_node.timer.paused = true
 	if main_node and main_node.sfx:
-		main_node.sfx.play({"realm": "portal", "boss": "boss_intro", "awaken": "awaken", "transform": "transform", "hidden": "hidden", "class": "spec", "milestone": "milestone", "hatch": "pet", "forge": "craft", "first": "milestone"}.get(kind, "event"))
+		main_node.sfx.play({"realm": "portal", "boss": "boss_intro", "awaken": "awaken", "transform": "transform", "hidden": "hidden", "god": "hidden", "class": "spec", "milestone": "milestone", "hatch": "pet", "forge": "craft", "first": "milestone"}.get(kind, "event"))
 
 func _line(parent: Control, text: String, size_px: int, color: Color) -> Label:
 	var l := UI.label(text, size_px, color)
@@ -152,6 +163,7 @@ func _build_evolve(d: Dictionary) -> void:
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
+	bg.show_behind_parent = true  # A6: the light burst (_draw) shows over the backdrop
 	move_child(bg, 0)
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -221,6 +233,8 @@ func _build_evolve(d: Dictionary) -> void:
 
 func _burst() -> void:
 	_sparks.clear()
+	if main_node and main_node.profile and main_node.profile.reduce_motion:
+		return
 	for i in 46:
 		var a := randf() * TAU
 		var sp := randf_range(120.0, 420.0)
@@ -230,11 +244,13 @@ func _burst() -> void:
 func _process(delta: float) -> void:
 	if _sparks.is_empty():
 		return
-	for s in _sparks:
+	for i in range(_sparks.size() - 1, -1, -1):  # R6: in place, no new array each frame
+		var s: Array = _sparks[i]
 		s[0] += s[1] * delta
 		s[1] *= 0.94
 		s[2] -= delta
-	_sparks = _sparks.filter(func(s): return float(s[2]) > 0.0)
+		if float(s[2]) <= 0.0:
+			_sparks.remove_at(i)
 	queue_redraw()
 
 func _draw() -> void:
