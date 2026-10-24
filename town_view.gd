@@ -54,7 +54,7 @@ var walk_doors: Array = []  # iso: door cells people walk between
 var up_tex := {}        # iso: level-prop name -> Texture2D
 var touches := {}       # iso: finger index -> position, for the pinch
 var pinch_from := 0.0
-var placed := false     # iso: the camera has been centred on the market once the view had its size
+var placed := false     # iso: the player has moved the camera (until then it follows the market on resizes)
 
 ## The buildings you can see and tap.
 func _spots() -> Array:
@@ -200,8 +200,7 @@ func _layout() -> void:
 func _layout_iso(ms: Vector2) -> void:
 	scale_f = zoom
 	var shown := ms * scale_f
-	if pan_v == Vector2.INF or not placed:
-		placed = size.x > 1.0 and size.y > 1.0   # wait for the real view size before centring
+	if not placed:                 # keep centring on the market until the player pans or zooms
 		var m := _spot_rect("market")
 		pan_v = size / 2.0 - (m.get_center() if m.size != Vector2.ZERO else ms / 2.0) * scale_f
 	var lo := size - shown
@@ -228,6 +227,7 @@ func _zoom_to(z: float, at: Vector2) -> void:
 	if z == zoom:
 		return
 	var m := to_map(at)
+	placed = true
 	zoom = z
 	pan_v = at - m * zoom
 	_layout()
@@ -330,6 +330,7 @@ func _iso_input(e: InputEvent) -> bool:
 	if e is InputEventMouseMotion and press != "!" and (e.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0 and touches.size() < 2:
 		if dragging or e.position.distance_to(drag_from) > 8.0:
 			dragging = true
+			placed = true
 			pan_v += e.relative
 			_layout()
 			return true
