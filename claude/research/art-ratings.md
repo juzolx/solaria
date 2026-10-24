@@ -85,3 +85,5 @@ Every rating Juzo gives goes here, so all sessions learn what he thinks is reall
 | 2026-10-24 | town dev 2 | town after door paths (set 5) | better ("the town looks better") | "we do need certain areas to not clash, and the buildings to face the right directions, we cant have a door on the side facing away from the street" | every door face must touch its street directly (no paths across yards); zones (market, homes, forge, church/graveyard, plateau, walls) stay distinct with their own props/ground and gaps between |
 | 2026-10-24 | town dev 2 | buildings vs walls | bug | "certain buildings are in the walls" | keep a clear margin between buildings and walls; check depth sorting |
 | 2026-10-24 | town dev 2 | town walkers | bug | "heroes follow the paths and aren't shown if behind building... they keep going on roofs... they need to just walk around and interact" | walkers on a path graph, depth-sorted behind buildings, visit doors/stalls |
+
+- Oct 24: Race sample (Goblin + Dwarf, M/F, Warrior + Mage, claude/art_test/races/RACE_SAMPLE_goblin_dwarf.png): Juzo "Goblins and dwarfs are solid" (approved, no number given).
