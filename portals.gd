@@ -145,7 +145,7 @@ static func choose(g: GameState, key: String) -> void:
 ## tier: the toughest monster you'll meet there (0 = an ordinary one).
 static func danger_text(g: GameState, tier := 0) -> String:
 	var f := g.floor_num
-	var atk := float(3 + f * 2) * pow(GameData.ENEMY_GROWTH, f - 1) * float(Monsters.TIERS[clampi(tier, 0, 5)]["atk"])
+	var atk := float(3 + f * 2) * GameData.enemy_attack_growth(f) * float(Monsters.TIERS[clampi(tier, 0, 5)]["atk"])
 	var hit := atk * atk / (atk + g.get_defense())
 	var pct := hit / maxf(1.0, g.get_max_hp()) * 100.0
 	if pct < 4.0:

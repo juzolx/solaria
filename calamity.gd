@@ -82,7 +82,7 @@ static func appear(g: GameState, i: int) -> void:
 	g.enemy_tier = 5
 	g.enemy_mods = []
 	g.enemy_shield = 0
-	var growth := pow(GameData.ENEMY_GROWTH, POWER_FLOOR - 1)
+	var growth := pow(GameData.ENEMY_GROWTH, POWER_FLOOR - 1)  # on purpose the old flat curve: Calamities stay near-unkillable (banded growth would be ~1e10x weaker)
 	var hp := (15.0 + POWER_FLOOR * 15.0) * growth * GameData.ZONE_BOSS_HP * HP_MULT
 	g.enemy_max_hp = int(minf(hp, 9.0e17))
 	g.enemy_hp = g.enemy_max_hp

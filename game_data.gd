@@ -52,7 +52,35 @@ const LEGENDARY_EFFECTS := [
 ]
 ## Item effects that work through the bonus totals (not effect_value's list)
 const ITEM_BONUS_EFFECTS := ["execute", "boss", "rage", "stone_find", "xp", "cdr", "potion"]
-const ENEMY_GROWTH := 1.025  # enemies get 2.5% stronger per floor on top of normal scaling
+const ENEMY_GROWTH := 1.025  # legacy flat 2.5% per floor: only Calamity HP still uses it on purpose (see calamity.gd); monsters use enemy_growth()
+## 2.1 (R5 balance): deeper down the extra growth per floor eases off, so hero growth
+## (gear, levels, upgrades) keeps pace and every 25 floors asks for a similar step.
+## [last floor of the band, growth per floor]. Before 2.1 it was 2.5% all the way down.
+## HP (how long a fight takes) and Attack (how likely you fall) have their own tables:
+## Attack eases off sooner, so the deep floors ask for patience more than for luck.
+const ENEMY_GROWTH_BANDS := [[25, 1.027], [50, 1.034], [75, 1.034], [100, 1.030], [150, 1.012], [250, 1.008], [100000, 1.006]]
+const ENEMY_ATK_GROWTH_BANDS := [[25, 1.027], [50, 1.032], [75, 1.014], [100, 1.011], [150, 1.006], [250, 1.006], [100000, 1.005]]
+
+## The extra (on top of linear) monster HP scaling for a floor: the product of each
+## band's growth over the floors below. 1.0 on floor 1.
+static func enemy_growth(floor_num: int) -> float:
+	return _banded(floor_num, ENEMY_GROWTH_BANDS)
+
+## The same for monster Attack.
+static func enemy_attack_growth(floor_num: int) -> float:
+	return _banded(floor_num, ENEMY_ATK_GROWTH_BANDS)
+
+static func _banded(floor_num: int, bands: Array) -> float:
+	var g := 1.0
+	var from := 1
+	for b in bands:
+		var to := mini(floor_num, int(b[0]))
+		if to > from:
+			g *= pow(float(b[1]), to - from)
+		from = maxi(from, int(b[0]))
+		if floor_num <= int(b[0]):
+			break
+	return g
 
 # ---------- Bag ----------
 const BAG_START := 10
@@ -72,6 +100,7 @@ const POTION_SCRAP := 5
 const POTION_HEAL := 0.4
 const AUTO_POTION_AT := 0.3
 const START_POTIONS := 2
+const DEATH_KEEP_POTIONS := 2  # 2.1 (R5): a fall (not Hardcore) leaves you this many potions; the rest are lost
 
 # ---------- Crafting and shop ----------
 const CRAFT_GEAR_SCRAP := 20

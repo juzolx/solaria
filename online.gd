@@ -263,7 +263,7 @@ static func raid_hp(best_floors: Array) -> int:
 	var total := 0.0
 	for f in best_floors:
 		var fl := maxi(1, int(f))
-		var enemy_hp := (15 + fl * 15) * pow(GameData.ENEMY_GROWTH, fl - 1)
+		var enemy_hp := (15 + fl * 15) * GameData.enemy_growth(fl)
 		total += enemy_hp / 3.0 * RAID_TURNS * 8.0
 	return maxi(10000, int(total))
 

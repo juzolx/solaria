@@ -24,8 +24,8 @@ one per zone and realm. They are gone (no field in the save, no constants).
 | Milestone Champion chest: 2-3 | 2-3 dust | rare |
 | Rift vault: 3 per rift floor | 3 dust per rift floor | rare |
 | Salvage Epic: 1, Legendary: 2 | 1 / 2 dust (plus their normal scrap) | magic gear |
-| Treasure goblin: 1-2 | 4-8 scrap (`MAT_TO_SCRAP` 4) | plain chest |
-| Horde chest: 1-2 | 4-8 scrap | plain chest |
+| Treasure goblin: 1-2 | 8-12 scrap (`MAT_TO_SCRAP` 4 x 2-3; R5) | plain chest |
+| Horde chest: 1-2 | 8-12 scrap | plain chest |
 | Daily bounty: 2, weekly: 6 | 2 / 6 dust | reward |
 | Achievements: 3 or 5 | 3 or 5 dust | reward |
 | Login day 5: 3 materials | 3 dust | reward |
@@ -88,7 +88,7 @@ the balance sim); at 1,030 gold at best floor 100 it is now a real choice.
 |---|---|
 | Salvage | Common 1, Uncommon 2, Rare 4, Epic 8, Legendary 16, Unique 40, Set 20, Signature 80; +2 per upgrade level; x Dwarf / forge-heat bonus |
 | Auto-salvage and bag overflow | same values |
-| Plain chests (goblin, horde) | 4-8 (was 1-2 materials) |
+| Plain chests (goblin, horde) | 8-12 (was 1-2 materials; 4-8 before the R5 balance pass) |
 | Benched heroes | 10% per hero per kill, 1 + zone each, by class |
 | Rewards (deeds, login day 3) | base x (1 + best/50) (login 40: 60 at best 25, 640 at best 750) |
 | Traveler "hone" refund | gives the price back if it can't help |

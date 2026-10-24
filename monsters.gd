@@ -12,16 +12,17 @@ const TIER_NAMES := ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"
 const TIERS := [
 	{"color": "#cbd5e1", "weight": 60.0, "hp": 1.0, "atk": 1.0, "scale": 1.0, "mods": 0, "gold": 1.0, "xp": 1.0, "loot": 0, "extra": 0, "dust": [0, 0]},
 	{"color": "#4ade80", "weight": 25.0, "hp": 1.35, "atk": 1.12, "scale": 1.06, "mods": 1, "gold": 1.6, "xp": 1.5, "loot": 4, "extra": 0, "dust": [0, 0]},
-	{"color": "#60a5fa", "weight": 10.0, "hp": 2.0, "atk": 1.25, "scale": 1.12, "mods": 1, "gold": 2.5, "xp": 2.2, "loot": 9, "extra": 1, "dust": [1, 2]},
-	{"color": "#c084fc", "weight": 3.5, "hp": 3.2, "atk": 1.4, "scale": 1.2, "mods": 2, "gold": 4.0, "xp": 3.5, "loot": 15, "extra": 1, "dust": [1, 2]},
-	{"color": "#fb923c", "weight": 1.0, "hp": 4.5, "atk": 1.6, "scale": 1.28, "mods": 3, "gold": 7.0, "xp": 5.0, "loot": 22, "extra": 2, "dust": [1, 2]},
-	{"color": "#ff4d6d", "weight": 0.5, "hp": 6.5, "atk": 1.8, "scale": 1.36, "mods": 4, "gold": 12.0, "xp": 8.0, "loot": 30, "extra": 3, "dust": [2, 2]},
+	{"color": "#60a5fa", "weight": 10.0, "hp": 2.0, "atk": 1.2, "scale": 1.12, "mods": 1, "gold": 2.5, "xp": 2.2, "loot": 9, "extra": 1, "dust": [1, 2]},
+	{"color": "#c084fc", "weight": 3.5, "hp": 3.0, "atk": 1.3, "scale": 1.2, "mods": 2, "gold": 4.0, "xp": 3.5, "loot": 15, "extra": 1, "dust": [1, 2]},
+	{"color": "#fb923c", "weight": 1.0, "hp": 4.0, "atk": 1.4, "scale": 1.28, "mods": 2, "gold": 7.0, "xp": 5.0, "loot": 22, "extra": 2, "dust": [1, 2]},
+	{"color": "#ff4d6d", "weight": 0.5, "hp": 5.5, "atk": 1.55, "scale": 1.36, "mods": 3, "gold": 12.0, "xp": 8.0, "loot": 30, "extra": 3, "dust": [2, 2]},
 ]
 const RARE := 2
 const EPIC := 3
 const LEGENDARY := 4
 const MYTHIC := 5
 const HARDCORE_RARE_BONUS := 1.5  # Hardcore: Rare and better spawn 50% more often
+const REGEN_TURNS := 40           # 2.1 (R5): Regenerating stops healing after this many turns of a fight (no endless fights)
 
 # ---------- Modifiers ----------
 # kind: "stat" (just tougher), "nasty" (hurts you), "tricky" (messes with you)
@@ -38,7 +39,7 @@ const MODS := {
 	"Venomous": {"kind": "nasty", "color": "#a3e635", "text": "Its hits can poison you (Wisdom resists)"},
 	"Frigid": {"kind": "nasty", "color": "#7fd0f0", "text": "Its hits can chill you: -25% Attack for a while (Wisdom resists)"},
 	"Explosive": {"kind": "nasty", "color": "#fb923c", "text": "Explodes when it dies, for 12% of your max HP (dodge it)"},
-	"Regenerating": {"kind": "stat", "color": "#4ade80", "text": "Heals 3% of its health every turn"},
+	"Regenerating": {"kind": "stat", "color": "#4ade80", "text": "Heals 3% of its health every turn (for its first 40 turns)"},
 	"Elemental": {"kind": "tricky", "color": "#c084fc", "text": "Resists one more element than usual"},
 }
 

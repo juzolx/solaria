@@ -19,7 +19,7 @@ const SALVAGE_DUST := {3: 1, 4: 2}      # salvaging Epic / Legendary gear
 const BOX_DUST := 4                     # Mystery Box, the dust prize
 const RAID_DUST_PER_ZONE := 2           # weekly raid: 2 per zone you have reached
 const MAT_TO_SCRAP := 4                 # plain chests (treasure goblin, horde): 1 old material = 4 scrap
-const CHEST_SCRAP := [1, 2]             # ...so 4-8 scrap
+const CHEST_SCRAP := [2, 3]             # ...so 8-12 scrap (R5: was 4-8; scrap was the starved currency)
 
 # ---- Sinks ----
 const SET_PIECE_DUST := 10              # a Set piece of the first zone's set (was 10 Grendel's Claws)
