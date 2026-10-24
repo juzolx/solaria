@@ -175,10 +175,14 @@ func _show() -> void:
 		var se: Dictionary = Combat.SHAPE_ELEMENTS.get(String(prof.get("shape", "")), {})
 		var weak: Array = (ze.get("weak", []) as Array) + (se.get("weak", []) as Array).filter(func(x): return not x in ze.get("resist", []))
 		var res: Array = (ze.get("resist", []) as Array) + (se.get("resist", []) as Array).filter(func(x): return not x in ze.get("weak", []))
+		# Juzo (Oct 24): weaknesses and resistances live here, not over the monster in a fight.
+		# One row each, every element in its own colour.
 		if kills >= 10 or main.state.dev_mode:
-			lines.append("Weak to: [color=#4ade80]%s[/color]   Resists: [color=#94a3b8]%s[/color]" % [", ".join(weak.slice(0, 2)) if not weak.is_empty() else "nothing", ", ".join(res) if not res.is_empty() else "nothing"])
+			lines.append("[b]Weak to[/b]   " + _element_chips(weak, dim))
+			lines.append("[b]Resists[/b]   " + _element_chips(res, dim))
 		else:
-			lines.append("[color=%s]Kill 10 to learn its weaknesses.[/color]" % dim)
+			lines.append("[b]Weak to[/b]   [color=%s]???  (kill 10 to learn)[/color]" % dim)
+			lines.append("[b]Resists[/b]   [color=%s]???[/color]" % dim)
 		lines.append("")
 		var drops: Array = info.get("drops", [])
 		lines.append("[b]Drops[/b]: 1 item per kill, usually %s (%d%% of the time)" % [" or ".join(drops), int(GameData.FAVORED_SLOT_CHANCE * 100)])
@@ -265,3 +269,12 @@ func _strip() -> void:
 	strip_key = key
 	OnlineUI.clear(strip)
 	strip.add_child(Collections.track_card(codex, track))
+
+## "◆ Fire  ◆ Holy": each element in its own colour (Combat.ELEMENT_COLORS), or "nothing".
+func _element_chips(els: Array, dim: String) -> String:
+	if els.is_empty():
+		return "[color=%s]nothing[/color]" % dim
+	var out: Array = []
+	for e in els:
+		out.append("[color=%s]◆ %s[/color]" % [Combat.ELEMENT_COLORS.get(String(e), "#c0cbdc"), String(e)])
+	return "   ".join(out)

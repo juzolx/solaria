@@ -2253,20 +2253,10 @@ func _chip_row(chips: Array, x: float, y: float, font: Font, fs := SCENE_FS) -> 
 			draw_string(font, Vector2(cx + 5.0, ly + fs + 1.0), String(c[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
 			cx += wdt + 4.0
 
-## What the monster is weak to and resists, its statuses, and its boss clock.
+## The monster's statuses and its boss clock. (Juzo, Oct 24: weaknesses and
+## resistances live in the Codex only, not over the monster in the fight.)
 func _draw_enemy_info(r: Rect2, font: Font) -> void:
-	# One chip each for weaknesses and resistances ("Weak: Fire, Holy"), so a
-	# monster with several doesn't get a stack of labels over its head
-	# Next update (Juzo): less clutter: weaknesses and resistances share one short chip
 	var chips: Array = []
-	var parts: Array = []
-	if not state.enemy_weak.is_empty():
-		parts.append("Weak " + ", ".join(state.enemy_weak.map(func(e): return String(e))))
-	if not state.enemy_resist.is_empty():
-		parts.append("Res. " + ", ".join(state.enemy_resist.map(func(e): return String(e))))
-	if not parts.is_empty():
-		var wcol := Color(Combat.ELEMENT_COLORS.get(String(state.enemy_weak[0]), "#ffffff")).lightened(0.15) if not state.enemy_weak.is_empty() else Color("#94a3b8")
-		chips.append(["  ·  ".join(parts), wcol])
 	var st: Array = []
 	if state.burn_turns > 0:
 		st.append(["Burning", Color("#fb923c")])
