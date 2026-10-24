@@ -70,7 +70,7 @@ static func open_block(g: GameState) -> String:
 		return "Trials and rifts open only in the dungeon. Head down first."
 	if inside(g):
 		return "Finish the portal you're in first."
-	if g.enemy_is_boss:
+	if g.enemy_is_boss and g.enemy_hp > 0:  # a slain boss leaves the flag set until the next fight spawns
 		return "Not in the middle of a boss fight."
 	return ""
 
@@ -126,9 +126,10 @@ static func choose(g: GameState, key: String) -> void:
 		"trial":
 			var p := _portal_prop(g)
 			var t := gate_trial(g)
-			if not p.is_empty():
-				p["used"] = true
-			if not start_trial(g, t):
+			if start_trial(g, t):
+				if not p.is_empty():
+					p["used"] = true  # only spent once the trial really starts
+			else:
 				Halls._done(g)  # nothing to fight after all: on to the doors
 		"rift":
 			var p := _rift_prop(g)
