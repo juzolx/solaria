@@ -138,7 +138,8 @@ def cut(outfit_img, body, name, cape=False):
                 pp["back"][x, y] = c
                 continue
             r = body.region(x, y, long)
-            if r in ("legs", "feet") and not (body.tx0 - 4 <= x <= body.tx1 + 4):
+            low = r in ("legs", "feet") or (r == "chest" and y > body.belt + 9)  # incl. a robe's skirt
+            if low and not (body.tx0 - 4 <= x <= body.tx1 + 4):
                 continue  # outside the legs: leftover sword pixels, not clothing
             if r != "head":
                 pp[r][x, y] = c
