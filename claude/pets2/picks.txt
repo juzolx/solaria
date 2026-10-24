@@ -84,7 +84,6 @@
 3 gilded_fae 0
 3 calamity_0_pet 0
 3 calamity_1_pet 0
-3 calamity_2_pet 0
 4 forge_sentry 2
 4 slag_golem 1
 4 rune_hound 0
@@ -100,17 +99,14 @@
 4 gilded_lion 0
 4 eye_of_judgement 0
 4 sky_serpent 0
-4 cherub 0
 4 hymnbird 0
 4 executor 0
 4 sun_golem 0
-4 throne_warden 0
 4 imp 0
 4 hellmaw 0
 4 chainwraith 0
 4 brimstone_brute 0
 4 abyssal_worm 0
-4 ash_fiend 0
 4 chain_warden 0
 4 soul_broker 1
 4 obsidian_knight 0
@@ -148,3 +144,7 @@ s salamander 26
 s egg_mossy_hollows 41
 s egg_sunken_catacombs 48
 s egg_ember_halls 50
+6 cherub 1
+6 throne_warden 6
+6 ash_fiend 4
+6 calamity_2_pet 5
