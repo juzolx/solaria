@@ -1,0 +1,95 @@
+{
+ "inn": {
+  "file": "inn.png"
+ },
+ "tavern": {
+  "file": "tavern.png"
+ },
+ "guild": {
+  "file": "guild.png"
+ },
+ "shop": {
+  "file": "shop.png",
+  "flip": true
+ },
+ "smith": {
+  "file": "smith.png"
+ },
+ "stash": {
+  "file": "stash_warm.png"
+ },
+ "clinic": {
+  "file": "clinic.png"
+ },
+ "church": {
+  "file": "church.png",
+  "flip": true
+ },
+ "cabin": {
+  "file": "cabin.png",
+  "flip": true
+ },
+ "gate": {
+  "file": "dungeon.png",
+  "flip": true,
+  "sort": 2
+ },
+ "plateau": {
+  "file": "plateau.png",
+  "origin": [
+   116,
+   36
+  ],
+  "sort": -200
+ },
+ "bridge": {
+  "file": "bridge.png",
+  "origin": [
+   68,
+   28
+  ],
+  "sort": -40
+ },
+ "gatehouse": {
+  "file": "gatehouse.png"
+ },
+ "tower0": {
+  "file": "tower.png"
+ },
+ "tower1": {
+  "file": "tower.png"
+ },
+ "tower2": {
+  "file": "tower.png"
+ },
+ "tower3": {
+  "file": "tower.png"
+ },
+ "house0": {
+  "file": "house_b.png"
+ },
+ "house1": {
+  "file": "house_a.png"
+ },
+ "house2": {
+  "file": "house_a.png",
+  "flip": true
+ },
+ "house3": {
+  "file": "house_b.png",
+  "flip": true
+ },
+ "house4": {
+  "file": "house_a.png",
+  "flip": false
+ },
+ "tower4": {
+  "file": "tower.png"
+ },
+ "tower5": {
+  "file": "tower.png"
+ },
+ "tower6": {
+  "file": "tower.png"
+ }
+}

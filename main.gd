@@ -1253,6 +1253,7 @@ func _sync_town() -> void:
 	town_keeper.texture = Lore.keeper_art(town_tabs.current_tab)
 	town_keeper.visible = town_keeper.texture != null
 	building_bar.refresh(town_tabs.current_tab)
+	town_view.set_mode(state.hardcore)  # also picks the Church / Trophy Cabin picture
 	town_view.set_look(Town.look(state))
 	_town_heroes()
 	town_leave.text = "Into the dungeon"
