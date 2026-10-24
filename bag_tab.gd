@@ -15,6 +15,7 @@ var empty_note: Label
 var ids: Array[int] = []
 var last_pick_ms := 0
 var details: RichTextLabel
+var detail_pic: TextureRect
 var equip_button: Button
 var lock_button: Button
 var sell_button: Button
@@ -76,9 +77,17 @@ func setup(m) -> void:
 
 	var box := UI.panel(UI.INSET, UI.EMPTY, 8, 8, 1)
 	add_child(box)
+	var drow := UI.hbox(10)   # interface pass: the picked item's picture beside its text
+	box.add_child(drow)
+	detail_pic = ItemGrid.picture(56)
+	detail_pic.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	detail_pic.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	detail_pic.visible = false
+	drow.add_child(detail_pic)
 	details = UI.rich(UI.FONT_CAPTION)
 	details.custom_minimum_size = Vector2(0, 74)
-	box.add_child(details)
+	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	drow.add_child(details)
 
 	pick_row = UI.hbox(6)
 	pick_row.visible = false
@@ -96,7 +105,7 @@ func setup(m) -> void:
 	var row2 := UI.hbox(6)
 	add_child(row1)
 	add_child(row2)
-	equip_button = UI.button("Equip", func(): _act("equip"))
+	equip_button = UI.primary("Equip", func(): _act("equip"))   # the main action on this page
 	lock_button = UI.button("Lock", func(): _act("lock"))
 	sell_button = UI.button("Sell", func(): _act("sell"))
 	salvage_button = UI.button("Salvage", func(): _act("salvage"))
@@ -345,10 +354,13 @@ func _refresh_details() -> void:
 	if found.is_empty():
 		selected_id = -1
 		details.text = "[color=%s]Select an item to see what it does and what you can do with it.[/color]" % UI.hex(UI.DIM)
+		detail_pic.visible = false
 		for b in [equip_button, lock_button, sell_button, salvage_button, upgrade_button, reroll_button]:
 			b.disabled = true
 		return
 	var item: Dictionary = found["item"]
+	detail_pic.texture = UiIcons.big(Sprites.item_icon(item), 56)
+	detail_pic.visible = true
 	var in_bag: bool = found["where"] == "bag"
 	var locked: bool = item.get("locked", false)
 	var text := ItemText.describe(state, item)

@@ -47,20 +47,18 @@ func _build(m, item: Dictionary, actions: Array) -> void:
 
 func _card(state: GameState, item: Dictionary, label: String) -> PanelContainer:
 	var r := int(item["rarity"])
-	var card := UI.panel(UI.INSET, Color(GameData.color_of(r)).darkened(0.2), 8, 12, 2)
+	var card := PanelContainer.new()   # interface pass: the panel frame, its line in the rarity colour
+	card.add_theme_stylebox_override("panel", UiSkin.frame(UI.INSET, Color(GameData.color_of(r)), 12))
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var v := UI.vbox(6)
 	card.add_child(v)
 	var head := UI.hbox(8)
 	v.add_child(head)
-	var pic := TextureRect.new()
-	pic.texture = Sprites.item_icon(item)
-	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	var narrow := size.x < 600.0  # phones: two slim columns, still side by side
-	pic.custom_minimum_size = Vector2(32, 32) if narrow else Vector2(48, 48)
-	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	head.add_child(pic)
+	# the item big, at whole pixels, in a slot with its rarity strip
+	var slot := ItemGrid.cell(item, Callable(), false, 64)
+	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(slot)
 	head.add_child(UI.label(label, UI.FONT_CAPTION, UI.DIM))
 	var t := UI.rich(UI.FONT_CAPTION)
 	if narrow:
