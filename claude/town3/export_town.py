@@ -122,7 +122,7 @@ def main(root):
                 c = (e[2] + di, e[3] + dj)
                 if c in ok:
                     stops.add(c)
-    stops |= {c for c in ok if 18 <= c[0] <= 21 and 18 <= c[1] <= 21}      # round the well
+    stops |= {c for c in ok if 19 <= c[0] <= 22 and 19 <= c[1] <= 22}      # round the well
     pen = C.at(30, 30), C.at(38, 35)
     data = {
         "iso": True, "size": [C.W, C.H], "cell": [32, 16], "origin": [C.OX, C.OY], "grid": N,
@@ -135,8 +135,8 @@ def main(root):
         "raised_z": PLATEAU_Z,
         "occluders": occluders,
         "levels": levels,
-        "pen": [C.at(30, 35)[0], C.at(30, 31)[1], C.at(37, 31)[0] - C.at(30, 35)[0], C.at(37, 35)[1] - C.at(30, 31)[1]],
-        "pen_cells": [31, 32, 36, 34],
+        "pen": [C.at(28, 35)[0], C.at(28, 29)[1], C.at(32, 29)[0] - C.at(28, 35)[0], C.at(32, 35)[1] - C.at(28, 29)[1]],
+        "pen_cells": [28, 30, 31, 34],
         "graves": [px_cell(i + .5, j + .5) for i in range(2, 12) for j in range(2, 7) if (i, j) != (6, 4)],
         "smoke": [round(boxes["smith"][0] + boxes["smith"][2] * 0.62), round(boxes["smith"][1] + 8)],
         "ground": [[k, x0, y0, x1, y1] for k, x0, y0, x1, y1 in GROUND],

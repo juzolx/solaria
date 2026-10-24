@@ -217,7 +217,10 @@ def place_lot(sprites, lid, x0, y0, x1, y1, z=0):
         im = level1_look(im)
     dx, dy = spec.get("nudge", (0, 0))
     front = at(x1 + 1, y1 + 1)[1] + spec.get("sort", 0)
-    if "origin" in spec:
+    if "pin" in spec:                  # a known sprite pixel on a known grid point (the gate arch on the street)
+        px_, py_, pi_, pj_ = spec["pin"]
+        put(sprites, im, at(pi_, pj_, z), (px_, py_), front)
+    elif "origin" in spec:
         fx, fy = at(x0, y0, z)
         put(sprites, im, (fx + dx, fy + dy), tuple(spec["origin"]), front)
     else:

@@ -16,20 +16,22 @@ GROUND = [
     ("road", 1, 8, 38, 9),        # north lane under the plateau
     ("road", 18, 7, 21, 37),      # main street: dungeon stairs -> gate
     ("square", 13, 15, 26, 24),   # market square
-    ("road", 1, 19, 12, 20),      # cross street west
+    ("road", 1, 20, 12, 20),      # cross street west
     ("road", 27, 19, 38, 20),     # cross street east
     ("road", 7, 8, 8, 37),        # west lane
     ("road", 32, 8, 33, 26),      # east lane
     ("water", 1, 27, 38, 28),     # river
-    ("road", 1, 36, 38, 37),      # wall lane (inside the wall)
+    ("road", 1, 35, 38, 36),      # wall lane (one row clear of the wall so the wall never hides it)
     ("road", 34, 14, 38, 14),     # alley off the east lane
     ("square", 7, 11, 8, 15),     # Church forecourt (pale stone)
+    ("square", 27, 15, 28, 15),   # the square reaches the Tavern door
     ("garden", 28, 16, 31, 19),   # small public garden with a well (the Vault moved)
     ("bridge", 17, 26, 22, 29),   # stone bridge on the main street
     ("bridge", 6, 27, 9, 28),     # footbridge west
     ("field", 2, 29, 5, 34),
-    ("dirt", 13, 15, 13, 18),     # forge apron: crafts ground in front of the Blacksmith
-    ("pen", 30, 31, 36, 34),      # pet pen (fenced), beside the Clinic
+    ("dirt", 13, 16, 13, 19),     # forge apron: crafts ground in front of the Blacksmith
+    ("pen", 28, 29, 31, 34),      # pet pen (fenced), beside the Clinic
+    ("field", 13, 29, 17, 33),    # vegetable plots right behind the tall gatehouse (only low things there)
     ("yard", 13, 25, 17, 25),
     ("yard", 22, 25, 26, 25),
 ]
@@ -50,15 +52,14 @@ LOTS = [
     ("tavern", "Tavern", 24, 10, 28, 14, "j", 24),
     ("church", "Church (lot)", 2, 10, 6, 16, "i", 22),
     ("shop", "Shop", 9, 21, 12, 24, "i", 20),
-    ("smith", "Blacksmith", 9, 15, 12, 18, "i", 20),
+    ("smith", "Blacksmith", 9, 16, 12, 19, "i", 20),
     ("stash", "Vault", 28, 21, 31, 24, "i", 18),
-    ("cabin", "Trophy Cabin (lot)", 13, 29, 17, 33, "i", 16),
-    ("clinic", "Clinic", 24, 31, 28, 35, "j", 20),
+    ("cabin", "Trophy Cabin (lot)", 2, 21, 6, 25, "i", 16),
+    ("clinic", "Clinic", 23, 30, 27, 34, "j", 20),
 ]
 HOUSES = [  # plain homes for density (x0, y0, x1, y1, door side)
     (34, 10, 37, 13, "j"), (34, 15, 37, 18, "j"),       # the first opens on the alley at row 14
-    (3, 21, 6, 24, "i"),                               # door on the west lane
-    (9, 31, 12, 35, "j"),        # door on the wall lane
+    (9, 30, 12, 34, "j"),        # door on the wall lane
 ]
 # small things on the square / streets: id, label, cell
 POINTS = [

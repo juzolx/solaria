@@ -708,6 +708,8 @@ func _draw_pen_pets(px: float) -> void:
 			people.draw_set_transform(Vector2(float(p["x"]) * 2.0 * scale_f, 0), 0.0, Vector2(-scale_f, scale_f))
 		people.draw_texture_rect(tx, Rect2(pos, dst), false)
 		people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
+		if iso:
+			_cover(Rect2(pos, dst), float(p["y"]))   # pets hide behind the wall and the kennel too
 
 # =====================================================================
 # Glow and weather

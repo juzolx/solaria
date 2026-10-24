@@ -52,7 +52,13 @@
   "sort": -40
  },
  "gatehouse": {
-  "file": "gatehouse.png"
+  "file": "gatehouse.png",
+  "pin": [
+   80,
+   133,
+   20,
+   40
+  ]
  },
  "tower0": {
   "file": "tower.png"
@@ -73,8 +79,7 @@
   "file": "house_a.png"
  },
  "house2": {
-  "file": "house_a.png",
-  "flip": true
+  "file": "house_a.png"
  },
  "tower4": {
   "file": "tower.png"
@@ -84,8 +89,5 @@
  },
  "tower6": {
   "file": "tower.png"
- },
- "house3": {
-  "file": "house_a.png"
  }
 }
