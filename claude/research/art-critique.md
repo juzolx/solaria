@@ -62,3 +62,4 @@ Fewer forced rules (style from Juzo's refs via IP-Adapter), quality over coverag
 - Not chibi enough: look like the OLD in-game heroes (LPC body shapes and proportions, seen from behind) but more personalized and polished.
 - Front portrait: chisel the male cheekbones a little.
 - Downloads allowed if they help (commercial-OK licences only, sources recorded).
+- Hero pass 2: arms A (relaxed) and C (rolled sleeves) chosen. Hair: bring back the OLD LPC hair styles (redrawn in our pixels at the new head size), he liked having many and how they fit.
