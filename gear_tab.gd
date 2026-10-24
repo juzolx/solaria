@@ -25,8 +25,7 @@ func setup(m) -> void:
 
 	var head := UI.hbox(8)
 	add_child(head)
-	var hint := UI.label("Tap a slot, then an item to wear it. Or drag it onto a slot", 13, UI.DIM)
-	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var hint := UI.wrap("Tap a slot, then an item to wear it, or drag an item onto a slot.", UI.FONT_CAPTION, UI.DIM)
 	hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(hint)
 	equip_best_button = UI.primary("Equip Best", func():
@@ -79,7 +78,7 @@ func setup(m) -> void:
 
 	stats_label = UI.rich(13)
 	add_child(stats_label)
-	list_title = UI.label("", 13, UI.TEXT)
+	list_title = UI.wrap("", UI.FONT_CAPTION, UI.TEXT)
 	add_child(list_title)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL

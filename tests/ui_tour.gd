@@ -17,15 +17,27 @@ func shot(label: String) -> void:
 		if c.get("ui_root") is Control:
 			var need: float = (c.get("ui_root") as Control).get_combined_minimum_size().x
 			if need > screen_w + 1.0:
-				print("SCREEN TOO WIDE: %s needs %.0f px of %.0f" % [label, need, screen_w])
+				print("SCREEN TOO WIDE: %s needs %.0f px of %.0f%s" % [label, need, screen_w, _culprit(c.get("ui_root"), screen_w)])
 	for c in root.get_children():
 		for o in c.get_children():
 			if o is Overlay and o.box != null and o.box.size.x > screen_w + 1.0:
 				print("TOO WIDE: %s (%.0f px on a %.0f px screen)" % [label, o.box.size.x, screen_w])
 
+## The deepest visible control that is wider than the screen (what to fix).
+func _culprit(n: Control, w: float) -> String:
+	for ch in n.get_children():
+		if ch is Control and (ch as Control).is_visible_in_tree() and (ch as Control).get_combined_minimum_size().x > w - 12.0:
+			return _culprit(ch, w)
+	var bits := []
+	for ch in n.get_children():
+		if ch is Control:
+			bits.append("%s%s=%.0f" % [ch.get_class(), (" \"%s\"" % String(ch.get("text")).left(20)) if ch.get("text") != null else "", (ch as Control).get_combined_minimum_size().x])
+	return " (widest: %s [%s])" % [n.get_class(), ", ".join(bits)]
+
 func close_popups(main: Node) -> void:
+	main.moment_queue.clear()
 	for c in main.get_children():
-		if c is Overlay:
+		if c is Overlay or c is Moments:
 			c.queue_free()
 	await process_frame
 
@@ -59,6 +71,10 @@ func _initialize() -> void:
 			main.show_tab(g, s)
 			main.refresh()
 			await shot("%s_%s" % [group_names[g], grp.get_tab_title(s)])
+			if g == 1 and s == 1 and not main.state.bag.is_empty():
+				ItemPopup.show_item(main, main.state.bag[0])
+				await shot("item_popup")
+				await close_popups(main)
 	main.nav_page = 0
 	main._apply_nav()
 	var menu = SettingsMenu.new()
@@ -89,6 +105,7 @@ func _initialize() -> void:
 				continue
 			main.show_tab(2, s)
 			main.refresh()
+			await close_popups(main)
 			await shot("town_%s" % tg.get_tab_title(s))
 		main._choose_floor()
 		await shot("floor_picker")

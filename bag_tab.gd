@@ -114,10 +114,11 @@ func setup(m) -> void:
 
 	var bulk := UI.hbox(6)
 	add_child(bulk)
-	bulk.add_child(UI.label("Salvage all:", 12, UI.DIM))
+	bulk.add_child(UI.label("Salvage all:", UI.FONT_CAPTION, UI.DIM))
 	for r in [0, 1, 2, 3]:
 		var b := UI.button("", _salvage_all.bind(r))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.clip_text = true   # four in a row must fit a phone at the 15 px type size
 		b.add_theme_color_override("font_color", Color(GameData.color_of(r)))
 		b.tooltip_text = "Salvage every %s item. Locked items and upgrades are kept." % GameData.RARITY_NAMES[r]
 		bulk.add_child(b)

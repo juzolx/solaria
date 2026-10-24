@@ -41,8 +41,7 @@ func setup(m) -> void:
 
 	# ---- Character card ----
 	var card := PanelContainer.new()
-	card_style = UI.style(UI.INSET, UI.GOLD, 10, 12)
-	card_style.border_width_left = 6
+	card_style = UI.style(UI.INSET, UI.CARD_EDGE, 6, 12, 1)   # design system: one iron edge; the class colour lives in the name
 	card.add_theme_stylebox_override("panel", card_style)
 	v.add_child(card)
 	var ch := UI.hbox(12)
@@ -64,19 +63,19 @@ func setup(m) -> void:
 	top.add_child(title_label)
 	level_label = UI.label("", 17, UI.GOLD)
 	top.add_child(level_label)
-	role_label = UI.wrap("", 12, UI.DIM)
+	role_label = UI.wrap("", UI.FONT_CAPTION, UI.DIM)
 	cv.add_child(role_label)
 	chips = UI.hbox(6)
 	cv.add_child(chips)
 	xp_bar = UI.bar(UI.GOLD, 8)
 	cv.add_child(xp_bar)
-	xp_label = UI.label("", 11, UI.DIM)
+	xp_label = UI.label("", UI.FONT_CAPTION, UI.DIM)
 	cv.add_child(xp_label)
 
 	# ---- 2.1 G4 + G8: your title, and a picture of your hero to share ----
 	var trow := UI.hbox(8)
 	v.add_child(trow)
-	trow.add_child(UI.label("Title:", 12, UI.DIM))
+	trow.add_child(UI.label("Title:", UI.FONT_CAPTION, UI.DIM))
 	title_pick = OptionButton.new()
 	title_pick.fit_to_longest_item = false  # long titles would push the screen wider than a phone
 	title_pick.clip_text = true
@@ -88,7 +87,7 @@ func setup(m) -> void:
 		main.refresh())
 	UI.tip(title_pick, "Titles come from deeds (Guild Hall) and from filling the Codex (Codex > Rewards). Looks only.")
 	trow.add_child(title_pick)
-	var share := UI.primary("Share", func(): ShareCard.share(main), UI.TEAL)
+	var share := UI.button("Share", func(): ShareCard.share(main))
 	UI.tip(share, "Makes a picture of your hero to share.")
 	share.custom_minimum_size = Vector2(96, UI.TAP)
 	trow.add_child(share)
@@ -117,7 +116,7 @@ func setup(m) -> void:
 		prow.add_child(b)
 
 	# ---- The 8 stats ----
-	UI.section(v, "Stats", "Each stat has one job. Stats marked SUGGESTED are the ones your class wants most.")
+	UI.section(v, "Stats", "Each stat has one job. Gold cards with a ★ are the ones your class wants most.")
 	# Small boxes side by side: 2 across on phones, 4 on wider screens (see _fit_stat_grid)
 	stat_grid = GridContainer.new()
 	stat_grid.columns = 2
@@ -135,7 +134,7 @@ func setup(m) -> void:
 
 	# ---- Presets (2.1: builds, gear loadouts and team presets in one screen) ----
 	UI.section(v, "Presets", "Save your stats, skills, gear, team and supplies together, then switch between them for free (say, a boss build and a farming build).")
-	var pb := UI.primary("Presets", func(): PresetsScreen.new().show_for(main), UI.TEAL)
+	var pb := UI.button("Presets", func(): PresetsScreen.new().show_for(main))
 	pb.custom_minimum_size = Vector2(0, UI.TAP)
 	v.add_child(pb)
 
@@ -150,15 +149,15 @@ func setup(m) -> void:
 	nums.add_child(ng)
 	for key in ["Attack", "Defense", "Max HP", "Skill dmg", "Crit", "Crit dmg", "Double strike", "Cooldowns",
 			"Dodge", "Extra attack", "Strike first", "Heal power", "Regen", "Resist", "Loot bonus", "Gold", "Prices", "Charm"]:
-		var k := UI.label(key, 12, UI.DIM)
+		var k := UI.label(key, UI.FONT_CAPTION, UI.DIM)
 		k.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		ng.add_child(k)
-		var val := UI.label("", 14, UI.TEXT)
+		var val := UI.label("", UI.FONT_BODY, UI.TEXT)
 		ng.add_child(val)
 		numbers[key] = val
 
 	# ---- Path + respec ----
-	path_label = UI.rich(12)
+	path_label = UI.rich(UI.FONT_CAPTION)
 	v.add_child(path_label)
 	respec_button = UI.button("", func(): main.confirm("Respec all stat points?", "You'll get every stat point back to spend again. Your class stays the same.", "Respec", func(): state.respec(); main.refresh()))
 	respec_button.custom_minimum_size = Vector2(0, UI.TAP)
@@ -166,8 +165,7 @@ func setup(m) -> void:
 
 func _stat_row(st: String) -> PanelContainer:
 	var info: Dictionary = GameData.STAT_INFO[st]
-	var color := Color(info["color"])
-	var c := UI.card(color, UI.INSET, 4)
+	var c := UI.card(UI.CARD_EDGE, UI.INSET, 4)   # design system: no rainbow; suggested stats get a gold edge (refresh)
 	var box: PanelContainer = c[0]
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var bv: VBoxContainer = c[1]
@@ -176,8 +174,8 @@ func _stat_row(st: String) -> PanelContainer:
 	# STR  Strength          ★
 	var nh := UI.hbox(5)
 	bv.add_child(nh)
-	nh.add_child(UI.label(st, 15, color))
-	var nm := UI.label(info["name"], 12, UI.DIM)
+	nh.add_child(UI.label(st, UI.FONT_BODY, UI.TEXT))
+	var nm := UI.label(info["name"], UI.FONT_CAPTION, UI.DIM)
 	nm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nm.clip_text = true
@@ -186,10 +184,10 @@ func _stat_row(st: String) -> PanelContainer:
 	UI.tip(chip, "Suggested for your class")
 	nh.add_child(chip)
 	# The number, big
-	var val := UI.label("0", 24, UI.TEXT)
+	var val := UI.label("0", UI.FONT_DISPLAY, UI.TEXT)
 	bv.add_child(val)
 	# What it gives (wraps to at most a few short lines)
-	var gives := UI.rich(12)
+	var gives := UI.rich(UI.FONT_CAPTION)
 	gives.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	bv.add_child(gives)
 	var br := UI.hbox(4)
@@ -200,7 +198,7 @@ func _stat_row(st: String) -> PanelContainer:
 		b.custom_minimum_size = Vector2(0, UI.TAP)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		br.add_child(b)
-	rows[st] = {"value": val, "gives": gives, "p1": p1, "p5": p5, "chip": chip}
+	rows[st] = {"value": val, "gives": gives, "p1": p1, "p5": p5, "chip": chip, "box": box, "name": nh.get_child(0)}
 	return box
 
 func _fit_stat_grid() -> void:
@@ -238,7 +236,7 @@ func refresh() -> void:
 		title_label.text = "Choose a class"
 		return
 	var color := Color(state.class_info()["color"])
-	card_style.border_color = color
+	card_style.border_color = UI.CARD_EDGE
 	var key := str(state.appearance) + str(state.hero_looks().keys()) + state.title()
 	if key != _look_key:
 		_look_key = key
@@ -280,6 +278,12 @@ func refresh() -> void:
 		# no points to spend: drop the buttons so the boxes stay small
 		(r["p1"] as Button).get_parent().visible = state.stat_points > 0
 		(r["chip"] as Control).visible = b.has(st)
+		var sb := (r["box"] as PanelContainer).get_theme_stylebox("panel") as StyleBoxFlat
+		var want := UI.GOLD if b.has(st) else UI.CARD_EDGE
+		if sb.border_color != want:   # only touch the style when it changes
+			sb.border_color = want
+			sb.set_border_width_all(2 if b.has(st) else 1)
+			(r["name"] as Label).add_theme_color_override("font_color", UI.GOLD if b.has(st) else UI.TEXT)
 
 	var g := state
 	(numbers["Attack"] as Label).text = str(g.get_attack())

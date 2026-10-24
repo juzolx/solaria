@@ -100,7 +100,7 @@ func refresh() -> void:
 			if ia.has("tex"):
 				list.set_item_icon(i, ia["tex"] if met else ia["white"])
 				if not met:
-					list.set_item_icon_modulate(i, Color(0.32, 0.32, 0.42))  # a dark shape until you meet it
+					list.set_item_icon_modulate(i, Color(0.5, 0.48, 0.6))  # a shape until you meet it (UX pass: brighter, so the outline reads on a phone)
 			list.set_item_custom_fg_color(i, UI.TEXT if met else UI.DIM)
 			if boss and met:
 				list.set_item_custom_fg_color(i, Color("#fca5a5"))

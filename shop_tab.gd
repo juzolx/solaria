@@ -94,6 +94,10 @@ func setup(m) -> void:
 	ghead.add_child(restock_button)
 	gear_grid = GridContainer.new()
 	gear_grid.columns = 3
+	gear_grid.resized.connect(func():   # UX pass: two cards across on a phone, so 15 px text fits
+		var cols := 3 if gear_grid.size.x >= 560.0 else 2
+		if gear_grid.columns != cols:
+			gear_grid.columns = cols)
 	gear_grid.add_theme_constant_override("h_separation", 6)
 	gear_grid.add_theme_constant_override("v_separation", 8)
 	v.add_child(gear_grid)
@@ -185,8 +189,11 @@ func _gear_card(item: Dictionary, index: int) -> void:
 	var tv := UI.vbox(0)
 	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(tv)
-	tv.add_child(UI.label(GameData.RARITY_NAMES[r].to_upper(), 10, color))
-	tv.add_child(UI.label(item["slot"], 11, UI.DIM))
+	# three cards across a phone: these two lines shorten with "..." rather than widen the screen
+	for l in [UI.label(GameData.RARITY_NAMES[r].to_upper(), UI.FONT_CAPTION, color), UI.label(item["slot"], UI.FONT_CAPTION, UI.DIM)]:
+		l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		l.clip_text = true
+		tv.add_child(l)
 	var nm := UI.label(GameData.display_name(item), 14, color.lightened(0.15))
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	nm.custom_minimum_size = Vector2(0, 38)
@@ -295,5 +302,5 @@ func refresh() -> void:
 			if int(item["rarity"]) == r and not item.get("locked", false) and not state.is_upgrade(item):
 				total += state.sell_price(item)
 		var b: Button = quick_sell[r]
-		b.text = "%s (%d)  +%d gold" % [GameData.RARITY_NAMES[r], n, total]
+		b.text = "%s (%d)\n+%d gold" % [GameData.RARITY_NAMES[r], n, total]   # two lines: three across must fit a phone
 		b.disabled = n == 0

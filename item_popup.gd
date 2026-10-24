@@ -12,7 +12,8 @@ static func show_item(main_node, item: Dictionary, actions: Array = []) -> ItemP
 func _build(m, item: Dictionary, actions: Array) -> void:
 	var state: GameState = m.state
 	open(m, GameData.display_name(item), 760.0, Color(GameData.color_of(int(item["rarity"]))))
-	var row := UI.hbox(12)
+	# UX pass: phones stack the two cards (side by side, 15 px text left ~200 px a column)
+	var row: BoxContainer = UI.vbox(8) if size.x < 600.0 else UI.hbox(12)
 	content.add_child(row)
 	row.add_child(_card(state, item, "THIS ITEM"))
 	var slot: String = item["slot"]
@@ -22,7 +23,7 @@ func _build(m, item: Dictionary, actions: Array) -> void:
 		if worn.is_empty():
 			var empty := UI.panel(UI.INSET, UI.BORDER, 8, 12, 1)
 			empty.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			var el := UI.label("You're not wearing anything in this slot.", 13, UI.DIM)
+			var el := UI.label("You're not wearing anything in this slot.", UI.FONT_CAPTION, UI.DIM)
 			el.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			empty.add_child(el)
 			row.add_child(empty)
@@ -41,7 +42,7 @@ func _build(m, item: Dictionary, actions: Array) -> void:
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			b.custom_minimum_size = Vector2(0, 40)
 			if size.x < 600.0:
-				b.add_theme_font_size_override("font_size", 12)
+				b.add_theme_font_size_override("font_size", UI.FONT_CAPTION)
 			buttons.add_child(b)
 
 func _card(state: GameState, item: Dictionary, label: String) -> PanelContainer:
@@ -60,12 +61,12 @@ func _card(state: GameState, item: Dictionary, label: String) -> PanelContainer:
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	head.add_child(pic)
-	head.add_child(UI.label(label, 11, UI.DIM))
+	head.add_child(UI.label(label, UI.FONT_CAPTION, UI.DIM))
 	var t := UI.rich(13)
 	if narrow:
-		t.add_theme_font_size_override("normal_font_size", 11)
-		t.add_theme_font_size_override("bold_font_size", 11)
-		t.add_theme_font_size_override("italics_font_size", 11)
+		t.add_theme_font_size_override("normal_font_size", UI.FONT_CAPTION)
+		t.add_theme_font_size_override("bold_font_size", UI.FONT_CAPTION)
+		t.add_theme_font_size_override("italics_font_size", UI.FONT_CAPTION)
 	t.custom_minimum_size = Vector2(0 if narrow else 300, 0)
 	t.text = ItemText.describe(state, item)
 	v.add_child(t)

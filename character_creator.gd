@@ -183,7 +183,7 @@ static func race_preview(race: String) -> String:
 		t += "\n[color=%s]Home:[/color] %s (friendly)" % [UI.hex(UI.DIM), ", ".join(friends)]
 	if not foes.is_empty():
 		t += "\n[color=%s]Rivals:[/color] %s (they start hostile)" % [UI.hex(UI.DIM), ", ".join(foes)]
-	return "[font_size=11]%s[/font_size]" % t
+	return "[font_size=15]%s[/font_size]" % t
 
 func _finish() -> void:
 	if name_edit:

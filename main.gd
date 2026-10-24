@@ -838,6 +838,7 @@ func _fit_layout() -> void:
 	left_panel.size_flags_stretch_ratio = 0.9 if tall else 1.0
 	tabs.size_flags_stretch_ratio = 1.1 if tall else 1.2
 	title_label.visible = not tall
+	zone_label.visible = not tall   # phones: the battle view already names the zone; the floor number stays big
 	best_label.visible = not tall
 	event_pill.visible = not tall
 	scrap_label.get_parent().visible = not tall
@@ -872,7 +873,7 @@ func _build_top_bar(parent: Control) -> void:
 	var hero := UI.vbox(3)
 	hero.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(hero)
-	class_label = UI.label("", 14, UI.TEXT)
+	class_label = UI.label("", UI.FONT_CAPTION, UI.TEXT)
 	class_label.mouse_filter = Control.MOUSE_FILTER_PASS
 	class_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS  # long names shorten with "..." on phones
 	hero.add_child(class_label)
@@ -887,7 +888,7 @@ func _build_top_bar(parent: Control) -> void:
 	var mid := UI.vbox(2)
 	mid.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(mid)
-	zone_label = UI.label("", 11, UI.DIM)
+	zone_label = UI.label("", UI.FONT_CAPTION, UI.DIM)
 	zone_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	zone_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -895,7 +896,7 @@ func _build_top_bar(parent: Control) -> void:
 	var frow := UI.hbox(8)
 	frow.alignment = BoxContainer.ALIGNMENT_CENTER
 	mid.add_child(frow)
-	floor_label = UI.label("", 17, UI.TEXT)
+	floor_label = UI.label("", UI.FONT_TITLE, UI.TEXT)
 	frow.add_child(floor_label)
 	var pip_row := UI.hbox(4)
 	pip_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -912,7 +913,7 @@ func _build_top_bar(parent: Control) -> void:
 	boss_label.add_theme_font_size_override("font_size", UI.MIN_FONT)
 	boss_pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	frow.add_child(boss_pill)
-	best_label = UI.label("", 12, UI.DIM)
+	best_label = UI.label("", UI.FONT_CAPTION, UI.DIM)
 	best_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	frow.add_child(best_label)
 	var ep := UI.pill(UI.PINK)
@@ -1086,8 +1087,7 @@ func _build_town(parent: Control) -> void:
 	v.add_child(bar)
 	var row := UI.hbox(8)
 	bar.add_child(row)
-	town_status = UI.label("", 13, UI.TEXT)
-	town_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	town_status = UI.wrap("", UI.FONT_CAPTION, UI.TEXT)   # wraps instead of pushing the buttons off a phone screen
 	town_status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(town_status)
 	town_mail = UI.button("Mail", func(): _on_building("mail"))
@@ -1691,8 +1691,15 @@ func _refresh_top() -> void:
 	# (0.13+: always in the dungeon, with the gear found this dive as "+N")
 	var two := not state.in_town
 	var finds := Town.dive_finds(state)
-	gold_label.text = ("Risk  %s%s\nBank  %s" % [UI.short(state.gold), ("  +%d" % finds) if finds > 0 else "", UI.short(state.bank)]) if two else "Gold  %d" % state.gold
-	gold_label.add_theme_font_size_override("font_size", 11 if two else 15)
+	gold_label.text = ("Risk  %s%s\nBank  %s" % [UI.short(state.gold), (" +%d" % finds) if finds > 0 else "", UI.short(state.bank)]) if two else "Gold  %d" % state.gold
+	gold_label.add_theme_font_size_override("font_size", UI.FONT_CAPTION)   # UX pass: was 11 px, unreadable
+	gold_label.add_theme_constant_override("line_spacing", -4 if two else 0)
+	var gsb := gold_label.get_parent().get_theme_stylebox("panel") as StyleBoxFlat
+	if gsb.content_margin_top != (1 if two else 4):   # only relayout when it changes
+		gsb.content_margin_top = 1 if two else 4
+		gsb.content_margin_bottom = 1 if two else 4
+		gsb.content_margin_left = 9 if two else 12
+		gsb.content_margin_right = 9 if two else 12
 	gold_label.add_theme_color_override("font_color", Color("#fca5a5") if two and (state.gold > 0 or finds > 0) else UI.GOLD)
 	gold_label.get_parent().tooltip_text = ("At risk if you fall: %d gold you carry and %d piece%s of gear found this dive (plus what you wear).\nBank: %d (always safe). Head home from the Town tab to keep it all." % [state.gold, finds, "" if finds == 1 else "s", state.bank]) if two else "Gold: from enemies and selling. Spend it in Town."
 	scrap_label.text = "Scrap  %d" % state.scrap
@@ -1734,7 +1741,7 @@ func _refresh_fight() -> void:
 		b.tooltip_text = sk["text"]
 		var c := Color(Classes.tag_color(sk["tags"][0]))
 		b.icon = SkillIcons.for_tag(String(sk["tags"][0]))
-		b.add_theme_constant_override("icon_max_width", 26)
+		b.add_theme_constant_override("icon_max_width", 32)   # native size: crisp pixels
 		b.add_theme_stylebox_override("normal", UI.style(c.darkened(0.6), c, 6, 8))
 		b.add_theme_color_override("font_color", c.lightened(0.55))
 		for ch in b.get_children():
@@ -1838,24 +1845,32 @@ func _apply_nav() -> void:
 		nav_buttons[i].add_theme_color_override("icon_pressed_color", UI.GOLD)
 		nav_buttons[i].add_theme_color_override("icon_focus_color", UI.GOLD if on else UI.DIM)
 
-## Small pixel icons for the bottom bar (white; tinted by the button).
+## Bottom bar icons (UX pass): chunky filled 14x14 pixel shapes with a 1 px
+## near-black outline added in code, shown at 2x like the rest of the pixel art.
+## The white fill is tinted by the button (gold = this page); the outline stays dark.
 const NAV_ICONS := {
-	"sword": ["..........XX", ".........XXX", "........XXX.", ".......XXX..", "......XXX...", ".X...XXX....", "..X.XXX.....", "...XXX......", "...XX.......", "..X.XX......", ".X....X.....", "X..........."],
-	"person": ["....XXXX....", "...XXXXXX...", "...XXXXXX...", "...XXXXXX...", "....XXXX....", "............", "..XXXXXXXX..", ".XXXXXXXXXX.", ".XXXXXXXXXX.", ".XXXXXXXXXX.", ".XXXXXXXXXX.", ".XXXXXXXXXX."],
-	"bag": ["....XXXX....", "...X....X...", "...X....X...", ".XXXXXXXXXX.", ".XXXXXXXXXX.", "XXXXXXXXXXXX", "XXXXX..XXXXX", "XXXXX..XXXXX", "XXXXXXXXXXXX", "XXXXXXXXXXXX", ".XXXXXXXXXX.", "..XXXXXXXX.."],
-	"house": [".....XX.....", "....XXXX....", "...XXXXXX...", "..XXXXXXXX..", ".XXXXXXXXXX.", "XXXXXXXXXXXX", ".XXXXXXXXXX.", ".XXXX..XXXX.", ".XXXX..XXXX.", ".XXXX..XXXX.", ".XXXX..XXXX.", ".XXXX..XXXX."],
-	"book": ["XXXXX..XXXXX", "XXXXXX.XXXXX", "X...XX.X...X", "XXXXXX.XXXXX", "X...XX.X...X", "XXXXXX.XXXXX", "X...XX.X...X", "XXXXXX.XXXXX", "XXXXXX.XXXXX", "XXXXXX.XXXXX", ".XXXXXXXXXX.", "....XXXX...."],
-	"globe": ["....XXXX....", "..XX.XX.XX..", ".X..X..X..X.", ".XXXXXXXXXX.", "X...X..X...X", "X...X..X...X", "XXXXXXXXXXXX", "X...X..X...X", ".X..X..X..X.", ".XXXXXXXXXX.", "..XX.XX.XX..", "....XXXX...."],
+	"sword": ["..........XXXX", ".........XXXXX", "........XXXXX.", ".......XXXXX..", "......XXXXX...", ".XX..XXXXX....", ".XXXXXXXX.....", "..XXXXXX......", "...XXXX.......", "..XXXXXX......", ".XXX.XXXX.....", "XXX...XX......", "XX............", ".............."],
+	"person": ["....XXXXXX....", "...XXXXXXXX...", "...XXXXXXXX...", "...XX.XX.XX...", "...XXXXXXXX...", "....XXXXXX....", ".....XXXX.....", ".XXXXXXXXXXXX.", "XXXXXXXXXXXXXX", "XXXXXXXXXXXXXX", "XXXXXXXXXXXXXX", "XXXXXXXXXXXXXX", "XXXXXXXXXXXXXX", "XXXXXXXXXXXXXX"],
+	"bag": ["..............", "....XX..XX....", ".....XXXX.....", "......XX......", "....XXXXXX....", "...XXXXXXXX...", "..XXXXXXXXXX..", ".XXXXXXXXXXXX.", ".XXXXX..XXXXX.", ".XXXXX..XXXXX.", "XXXXXXXXXXXXXX", "XXXXXXXXXXXXXX", ".XXXXXXXXXXXX.", "..XXXXXXXXXX.."],
+	"house": ["......XX......", ".....XXXX.....", "....XXXXXX....", "...XXXXXXXX...", "..XXXXXXXXXX..", ".XXXXXXXXXXXX.", "XXXXXXXXXXXXXX", "..XXXXXXXXXX..", "..XXXXXXXXXX..", "..XXXX..XXXX..", "..XXXX..XXXX..", "..XXXX..XXXX..", "..XXXX..XXXX..", "..XXXX..XXXX.."],
+	"book": ["...XXXXXXXXXX.", "..XXXXXXXXXXX.", ".XXXXXXXXXXXX.", ".XXXXXXXXXXXX.", ".XXXXX..XXXXX.", ".XXXX....XXXX.", ".XXXX....XXXX.", ".XXXXX..XXXXX.", ".XXXXXXXXXXXX.", ".XXXXXXXXXXXX.", ".XXXXXXXXXXXX.", ".XXXXXXXXXXXX.", "..XXXXXXXXXXX.", ".............."],
+	"globe": [".....XXXX.....", "...XXXXXXXX...", "..XXX.XX.XXX..", ".XXX..XX..XXX.", ".XXXXXXXXXXXX.", "XXX...XX...XXX", "XXX...XX...XXX", "XXXXXXXXXXXXXX", "XXX...XX...XXX", ".XXX..XX..XXX.", ".XXXXXXXXXXXX.", "..XXX.XX.XXX..", "...XXXXXXXX...", ".....XXXX....."],
 }
 
 static func _nav_icon(icon_name: String) -> ImageTexture:
 	var rows: Array = NAV_ICONS.get(icon_name, NAV_ICONS["book"])
-	var img := Image.create(12, 12, false, Image.FORMAT_RGBA8)
-	for y in rows.size():
-		for x in String(rows[y]).length():
-			if String(rows[y])[x] == "X":
+	var img := Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	var on := func(x: int, y: int) -> bool:
+		var ry := y - 1
+		var rx := x - 1
+		return ry >= 0 and ry < rows.size() and rx >= 0 and rx < String(rows[ry]).length() and String(rows[ry])[rx] == "X"
+	for y in 16:
+		for x in 16:
+			if on.call(x, y):
 				img.set_pixel(x, y, Color.WHITE)
-	img.resize(24, 24, Image.INTERPOLATE_NEAREST)
+			elif on.call(x - 1, y) or on.call(x + 1, y) or on.call(x, y - 1) or on.call(x, y + 1):
+				img.set_pixel(x, y, UiSkin.SOOT)   # the 1 px dark outline of the style bible
+	img.resize(32, 32, Image.INTERPOLATE_NEAREST)
 	return ImageTexture.create_from_image(img)
 
 func _refresh_tabs() -> void:

@@ -71,6 +71,7 @@ func show_for(m) -> void:
 	for b in [path_toggle, fullscreen_toggle]:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grow.add_child(b)
+	fullscreen_toggle.visible = not OS.has_feature("mobile")   # a phone is always full screen
 	dark_toggle = UI.button("", func():
 		profile.dark_art = not profile.dark_art
 		main.apply_settings()
@@ -146,7 +147,7 @@ func show_for(m) -> void:
 	var reset := UI.button("Delete this hero...", func():
 		main.confirm("Delete this hero?", "This wipes this %s hero's gear, levels, gold and progress. It can't be undone. Your other heroes, the Codex and the stash are not touched." % mode_name, "Delete hero", func(): main.reset_save()))
 	reset.disabled = not main.started
-	reset.add_theme_color_override("font_color", UI.DIM)
+	reset.add_theme_color_override("font_color", UI.BAD)   # design system: red marks what cannot be undone
 	reset.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	content.add_child(reset)
 

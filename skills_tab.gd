@@ -126,8 +126,13 @@ func _slot_button(id: String, open: bool, need: int, active: bool, index := -1) 
 	b.text = "%s
 Rank %d" % [s["name"], state.skill_rank(id)]
 	b.icon = SkillIcons.for_tag(String(s["tags"][0]))  # 0.13+: slots show the skill's icon
-	b.add_theme_constant_override("icon_max_width", 22)
+	b.add_theme_constant_override("icon_max_width", 32)   # native size: crisp pixels
 	b.custom_minimum_size = Vector2(0, 46)
+	if not active:   # five passive slots share a phone row: icon on top, just the name under it
+		b.text = String(s["name"])
+		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		b.custom_minimum_size = Vector2(0, 62)
 	var c := Color(Classes.tag_color(s["tags"][0]))
 	b.add_theme_stylebox_override("normal", UI.style(c.darkened(0.7), c.darkened(0.2), 6, 4, 1))
 	b.add_theme_color_override("font_color", c.lightened(0.4))
@@ -207,9 +212,9 @@ func _card(id: String) -> Button:
 	b.icon = SkillIcons.for_tag(String(s["tags"][0]))
 	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
-	b.add_theme_constant_override("icon_max_width", 34)
+	b.add_theme_constant_override("icon_max_width", 32)   # native size: crisp pixels
 	b.clip_text = true
-	b.add_theme_font_size_override("font_size", 11)
+	b.add_theme_font_size_override("font_size", UI.FONT_CAPTION)
 	b.text = "%s\n%s" % [s["name"], "●".repeat(r) + "○".repeat(maxi(0, SkillData.MAX_RANK - r))]
 	var rc := Color(SkillData.RARITY_COLORS[int(s["rarity"])])
 	var eq := state.is_skill_equipped(id)
