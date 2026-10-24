@@ -78,8 +78,8 @@ Bugs found on the way (all fixed, all tested):
 
 ## Player-facing text
 
-- Rift card: **Rift, depth 1** "3 fights, then a vault. No running. Danger: ..." /
-  **Rift, depth 3** "3 floors of 3 fights, then a great vault. No running. Danger: ...";
+- Rift card: **Rift, depth 1** "3 fights, then a vault. Danger: ..." /
+  **Rift, depth 3** "3 floors x 3 fights, then a great vault. Danger: ..." (checked at phone size: shots/rift/rift_card.png, tests/_portal_shot.gd);
   **Walk on** "Leave it be. It closes behind you: no risk, no reward."
 - Panel titles: "A rift (depth N)", "Choose a realm".
 - Log: "A rift hangs in the air, depth N. Step through, or walk on?" / "The roots split open.

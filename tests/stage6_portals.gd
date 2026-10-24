@@ -180,6 +180,17 @@ func _initialize() -> void:
 	st.return_scrolls = 1
 	trial(st)
 	check(Town.use_return(st) and st.in_town and not st.trial_active and st.floor_num == 20, "Return Scroll out of a trial: home, try again later")
+	check(st.enemy_boss_kind != "trial" and st.enemy_species != "trial", "the champion is gone after the scroll")
+	# scroll out of a rift room before stepping through: no phantom rift on the next dive
+	var ph := hero(20)
+	ph.return_scrolls = 1
+	rift_room(ph)
+	check(Town.use_return(ph) and ph.room_props.is_empty() and not ph.exploring, "home from a rift room: the room stays behind")
+	ph.floor_num = 21
+	Town.leave(ph)
+	check(not ph.in_town and ph.path_offer.is_empty() and ph.portal.is_empty(), "next dive: no phantom rift card")
+	# Hardcore fall in a trial ends the trial too
+	check(not ht.trial_active and ht.trial_data.is_empty(), "Hardcore: the trial ends with the run")
 
 	# --- Save and load mid-portal
 	var s := hero(40)

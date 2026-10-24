@@ -101,8 +101,8 @@ static func card(g: GameState, key: String) -> Dictionary:
 		return {"name": "Walk on", "text": "Leave it be. It closes behind you: no risk, no reward.", "color": "#cbd5e1"}
 	if k == "rift":
 		var d := rift_depth_here(g)
-		var what := "%d fights, then a vault." % Rifts.FIGHTS if d <= 1 else "%d floors of %d fights, then a great vault." % [d, Rifts.FIGHTS]
-		return {"name": "Rift, depth %d" % d, "text": "%s No running.\n%s" % [what, danger_text(g, Monsters.LEGENDARY)], "color": COLOR}
+		var what := "%d fights, then a vault." % Rifts.FIGHTS if d <= 1 else "%d floors x %d fights, then a great vault." % [d, Rifts.FIGHTS]
+		return {"name": "Rift, depth %d" % d, "text": "%s\n%s" % [what, danger_text(g, Monsters.LEGENDARY)], "color": COLOR}
 	var inf := Realms.info(k)
 	var lv := Races.rep_level(Lineage.rep(g, inf["race"]))
 	return {"name": inf["name"], "text": "%s. The %s: %s.\n%s" % [inf["mechanic"]["name"], Lineage.race_plural(inf["race"]), lv[0], danger_text(g)], "color": inf["color"]}
@@ -180,6 +180,8 @@ static func leave(g: GameState, cleared: bool) -> void:
 ## A rift closes; the normal fall follows (grave, checkpoint; Hardcore: final).
 static func on_fall(g: GameState) -> void:
 	leave(g, false)
+	if g.trial_active and g.hardcore:  # the run ends here: the trial ends with it
+		_end_trial(g)
 
 ## A lost trial costs nothing: you are back where you started it, at full health.
 ## (The caller checks Hardcore first: a Hardcore fall is final everywhere.)
@@ -202,6 +204,7 @@ static func leave_for_scroll(g: GameState) -> void:
 	if g.trial_active:
 		g.say("[color=%s]The trial fades around you.[/color] You can face it again later." % COLOR)
 		_end_trial(g)
+		g.spawn_enemy()  # the champion is gone (clears its boss flags)
 	leave(g, false)
 
 ## What the Return Scroll prompt adds inside a portal.
@@ -226,7 +229,7 @@ static func resume(g: GameState) -> void:
 		Rifts.resume(g)
 		return
 	var p := _rift_prop(g)
-	if not p.is_empty() and not p.get("used", false) and g.doors.is_empty() and g.path_offer.is_empty():
+	if g.room_kind == "rift" and not p.is_empty() and not p.get("used", false) and g.doors.is_empty() and g.path_offer.is_empty():
 		offer_rift(g)
 		return
 	if Realms.is_realm_start(g.floor_num) and GameData.realm_slot(g.floor_num) >= g.realm_order.size() and g.path_offer.is_empty():

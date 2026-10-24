@@ -104,7 +104,7 @@ Online > Guild: make or join a guild (up to 20 players), see your members
 
 ## halls.gd (300 lines)
 0.13 The Halls Below: traps and door reading.
-30:spot_chance 36:roll_trap 40:roll_room_trap 53:on_engage 64:trigger 85:door_sense 101:team_sense 110:read_door 128:on_doors_shown 152:enter_event_room 179:_done 185:can_interact 189:auto_room 202:interact 277:_monster 294:leave_portal
+30:spot_chance 36:roll_trap 40:roll_room_trap 53:on_engage 64:trigger 85:door_sense 101:team_sense 110:read_door 128:on_doors_shown 152:enter_event_room 179:_done 185:can_interact 189:auto_room 202:interact 277:_monster
 
 ## halls_scene.gd (240 lines)
 0.13 The Halls Below: the room you stand in, first-person from the doorway.
@@ -230,6 +230,10 @@ Hero > Pets (visible to everyone, so players know pets exist): your class
 Pictures of companions. Each class's companion has 4 stages; the art is in
 8:texture_for 17:portrait
 
+## portals.gd (236 lines)
+2.1 F3: one portal system (rifts, realm gates, trials): rules, cards, leaving, resume.
+42:inside 45:kind 53:hold_text 62:no_run_text 66:open_block 83:offer 92:title 98:card 111:choose 132:danger_text 151:_rift_prop 158:rift_depth_here 162:offer_rift 172:leave 181:on_fall 188:lose_trial 195:_end_trial 203:leave_for_scroll 211:scroll_note 225:resume
+
 ## profile.gd (142 lines)
 Things shared by all your heroes: settings, which hero you played last,
 40:load_profile 50:_from 78:save 91:fresh_start_due 95:reset_progress 110:slots_open 117:stash_capacity 121:take_settings_from 129:record_hc_run 140:delete
@@ -248,7 +252,7 @@ Online > Raid: this week's guild raid boss. Everyone in the guild gets 3
 
 ## realms.gd (878 lines)
 Floors 251-500: the realms of the races. The World Tree's roots (floors
-161:cosmetic_by_art 164:info 167:realm_name 171:id_for_zone 175:zone_for_id 179:zone_race 184:is_people 201:here 204:misses 207:scrap_mult 210:lifesteal_mult 213:damage_mult 217:on_turn 237:hides_tier 240:roll_illusion 372:is_realm_start 377:portal_options 396:_bias 410:lock_reason 420:fill_order 436:offer_portals 448:enter 468:path_info 494:danger_text 512:path_title 527:start_encounter 562:_rival_here 570:encounter_choice 604:_ambush 631:start_realm_event 641:realm_event 706:week_mult 710:realm_of_week 714:loot_bonus 720:offer_camp 724:camp 739:_make_camp_merchant 756:new_quest 766:quest_kill 791:secret 799:secrets_found 807:on_floor 822:maybe_spirit 833:on_spirit_kill 840:completion 865:note_seen
+161:cosmetic_by_art 164:info 167:realm_name 171:id_for_zone 175:zone_for_id 179:zone_race 184:is_people 201:here 204:misses 207:scrap_mult 210:lifesteal_mult 213:damage_mult 217:on_turn 237:hides_tier 240:roll_illusion 372:is_realm_start 377:portal_options 396:_bias 410:lock_reason 420:fill_order 436:offer_portals 448:enter 468:path_info 512:path_title 527:start_encounter 562:_rival_here 570:encounter_choice 604:_ambush 631:start_realm_event 641:realm_event 706:week_mult 710:realm_of_week 714:loot_bonus 720:offer_camp 724:camp 739:_make_camp_merchant 756:new_quest 766:quest_kill 791:secret 799:secrets_found 807:on_floor 822:maybe_spirit 833:on_spirit_kill 840:completion 865:note_seen
 
 ## room_view.gd (261 lines)
 0.13 The Halls Below: the room you're standing in, first-person from the doorway

@@ -114,6 +114,9 @@ static func enter(g: GameState, floor_done := false) -> bool:
 	Milestones.on_home(g)
 	g.path_offer.clear()
 	g.doors.clear()
+	g.room_props.clear()  # the room you left (an untouched rift too) stays behind
+	g.room_kind = "fight"
+	g.exploring = false
 	g.buffs.clear()
 	g.hero_status.clear()
 	g.hero_stacks.clear()
