@@ -14,14 +14,15 @@ import hero
 def L(p): return Image.open(p).convert("RGBA")
 A = os.path.join(PL, "anims"); FA = os.path.join(PL, "female", "anims")
 BASE = {  # (body, frame) -> base PixelLab frame with the sword
-    ("m", "idle0"): os.path.join(A, "idle_north", "00.png"), ("m", "idle1"): os.path.join(A, "idle_north", "02.png"),
+    # idle + hit come from v3 clips started on the attack's rest frame, so the hero keeps the attack's size
+    ("m", "idle0"): os.path.join(A, "idle_as_north", "00.png"), ("m", "idle1"): os.path.join(A, "idle_as_north", "02.png"),
     ("m", "atk0"): os.path.join(A, "attack2_north", "02.png"), ("m", "atk1"): os.path.join(A, "attack2_north", "04.png"),
     ("m", "atk2"): os.path.join(A, "attack2_north", "06.png"), ("m", "atk3"): os.path.join(A, "attack2_north", "07.png"),
-    ("m", "hit"): os.path.join(HERE, "hit_m", "03.png"),
-    ("f", "idle0"): os.path.join(FA, "idle_north", "00.png"), ("f", "idle1"): os.path.join(FA, "idle_north", "02.png"),
+    ("m", "hit"): os.path.join(A, "hit_as_north", "01.png"),
+    ("f", "idle0"): os.path.join(FA, "idle_as_north", "00.png"), ("f", "idle1"): os.path.join(FA, "idle_as_north", "02.png"),
     ("f", "atk0"): os.path.join(FA, "attack_north", "02.png"), ("f", "atk1"): os.path.join(FA, "attack_north", "04.png"),
     ("f", "atk2"): os.path.join(FA, "attack_north", "06.png"), ("f", "atk3"): os.path.join(FA, "attack_north", "07.png"),
-    ("f", "hit"): os.path.join(HERE, "hit_f", "03.png"),
+    ("f", "hit"): os.path.join(FA, "hit_as_north", "01.png"),
 }
 NORTH = ["idle0", "idle1", "atk0", "atk1", "atk2", "atk3", "hit"]
 CW = 96
@@ -69,7 +70,7 @@ def centre(im):
 
 
 def at_feet(frames):
-    ref = max(f.getbbox()[3] for f in frames[:2])
+    ref = max(f.getbbox()[3] for f in frames[:2])  # feet of the idle frames
     out = []
     for f in frames:
         c = Image.new("RGBA", (CW, CW)); c.alpha_composite(f, (0, ref - f.getbbox()[3])); out.append(c)
@@ -79,9 +80,10 @@ def at_feet(frames):
 def clip(cls, body, weapon):
     frames = []
     for k in NORTH:
-        fr = L(os.path.join(HERE, "raw", f"{cls}_{body}_n_{k}.png"))
+        sfx = "_as" if k in ("idle0", "idle1", "hit") else ""
+        fr = L(os.path.join(HERE, "raw", f"{cls}_{body}_n_{k}{sfx}.png"))
         if weapon == "mace":
-            base = L(BASE[(body, k)]); mace = L(os.path.join(HERE, "raw", f"mace_{body}_n_{k}.png"))
+            base = L(BASE[(body, k)]); mace = L(os.path.join(HERE, "raw", f"mace2_{body}_n_{k}{sfx}.png"))
             S, W = weapon_masks(base, mace)
             fr = swap_weapon(fr, base, S, mace, W) if W else fr
         frames.append(centre(fr))
