@@ -23,6 +23,25 @@ Check `get_balance` before each batch; show a sample before any batch over ~30 g
 - Re-rolls / fixes reserve ~100
 - Total ~400, leaving most of the month free.
 
+## Gear layers (Juzo: everything interchangeable, 8 slots) - proof in ../layers/01_LAYERS_mix.png
+- Slots: helmet, chest, gloves, legs, feet, back (cape), weapon, off hand (game code has 6 today; gloves and
+  back are the likely new two - just more layers).
+- Every item is a piece cut from a PixelLab edit of the SAME base pose, so pieces line up on the base body.
+  Regions per view come from the base body's landmarks (neck line, belt 63%, boot tops 90%, torso columns);
+  code: ../layers/layers.py.
+- Draw order: back view (battle) legs, feet, chest, gloves, back/cape, head(hair), helmet, weapon, off hand;
+  front view (portrait) back/cape first, then the same. Long garments (robe) keep the skirt in the chest piece.
+- Production rule (learned from the proof): make each item as its OWN one-slot edit of the base ("change only
+  the chest to ..."), not a whole outfit. Cutting finished outfits apart leaves holes (the ranger cape hides
+  its chest from behind). Cost: 1 gen per view per body = 4 gens per item for battle + portrait.
+- Each body (male, female, later races) needs its own copy of each item; items don't move between bodies.
+- Colours / rarity stay code ramp swaps per piece.
+- OPEN, biggest decision: animation. Static pieces mix freely, but PixelLab's frame animations are whole
+  sprites. Options: (a) animate the hero in code from the pieces (idle bob, lean, arm + weapon swing:
+  fully interchangeable, cheapest on iPhone, stiffer than PixelLab frames); (b) per-item frame animation
+  (an edit per frame per item: ~50 gens per item, too expensive); (c) PixelLab frames for the base body only
+  and gear frozen on top (looks broken in the attack). Recommendation: (a).
+
 ## iPhone budget (Juzo's rule: must run well on iPhone) - measured 2026-10-24
 - One body, battle + portrait clips (idle 4 + attack 9 frames, N + S = 26 frames): ~235 KB RGBA once
   frames are cropped and packed into one sheet (~620 KB if left on full canvases). Pack per body, never per look.

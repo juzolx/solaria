@@ -1,0 +1,2 @@
+5bac562f-1b16-40be-a0e4-b925c4e19963 m_helmet_plate_north
+7bfccd66-12b8-41e8-bcf9-3b4b14521e41 m_helmet_plate_south
