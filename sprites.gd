@@ -301,6 +301,10 @@ static func hero(app: Dictionary, looks: Dictionary) -> Dictionary:
 	var key := str(app) + str(looks)
 	if _cache.has(key):
 		return _cache[key]
+	if HeroArt.available():
+		var pl := _hero_pl(app, looks, false)
+		_cache[key] = pl
+		return pl
 	if USE_LPC and Lpc.available():
 		var lp := _hero_lpc(app, looks)
 		_cache[key] = lp
@@ -375,6 +379,29 @@ static func hero(app: Dictionary, looks: Dictionary) -> Dictionary:
 	_cache[key] = out
 	return out
 
+## The PixelLab hero (hero_art.gd): class outfit, hair, face and the weapon type, on the fixed frames.
+## Laid out like the LPC hero (a 96x96 cell on the hero canvas), so battle and menus treat it the same.
+## back: seen from behind (battle); else the front portrait.
+static func _hero_pl(app: Dictionary, looks: Dictionary, back: bool) -> Dictionary:
+	var ct := HeroArt.class_of(looks)
+	var wt := ""
+	var glow := Color(0, 0, 0, 0)
+	if looks.has("Weapon"):
+		wt = looks["Weapon"].get("type", "")
+		if looks["Weapon"].get("glow", false):
+			glow = looks["Weapon"]["trim"]
+	var fr := HeroArt.frames(race_look(app)["app"], ct[0], ct[1], wt, back)  # forms and awakenings still force skin tones
+	var anims := HeroArt.anims(fr, back)
+	var still: Image = anims["combat_idle"]["img"][0]
+	var canvas := Image.create(CANVAS, CANVAS, false, Image.FORMAT_RGBA8)
+	var s := still.get_width()
+	canvas.blend_rect(still, Rect2i(0, 0, s, s), BODY_OFFSET - Vector2i((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2))
+	var hand: Array = HeroArt.info()["hand"][HeroArt.body_key(app)][0 if back else HeroArt.PORTRAIT[0]]
+	return {"body_img": canvas, "body": ImageTexture.create_from_image(canvas), "body_white": ImageTexture.create_from_image(_silhouette(canvas)),
+		"weapon": null, "weapon_white": null, "weapon_type": wt, "pivot": Vector2.ZERO, "glow": glow,
+		"hand": Vector2(BODY_OFFSET) - Vector2((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2) + Vector2(float(hand[0]), float(hand[1])),
+		"lpc": anims, "pl": true}
+
 ## The LPC hero: animation frames plus a still picture laid out like the old
 ## hero canvas (the 64x64 character at BODY_OFFSET), so menus and portraits work.
 static func _hero_lpc(app: Dictionary, looks: Dictionary) -> Dictionary:
@@ -432,6 +459,10 @@ static func hero_back(app: Dictionary, looks: Dictionary) -> Dictionary:
 	var key := "back" + str(app) + str(looks)
 	if _cache.has(key):
 		return _cache[key]
+	if HeroArt.available():
+		var pl := _hero_pl(app, looks, true)
+		_cache[key] = pl
+		return pl
 	if not (USE_LPC and Lpc.available()):
 		return hero(app, looks)
 	var sp := Lpc.spec(app, looks)
@@ -538,7 +569,8 @@ static func enemy_by_key(key: String) -> Dictionary:
 		var native: bool = int(ArtInfo.DATA["enemies"].get(key, {}).get("hd", 2)) == 1
 		var graded := DarkGrade.image(img, DarkGrade.NATIVE, true, DarkGrade.SPRITE) if native else DarkGrade.image(img)
 		out = {"tex": ImageTexture.create_from_image(graded), "white": ImageTexture.create_from_image(_silhouette(img)),
-			"size": Vector2(img.get_size()), "foot": float(used.end.y - 1 if used.size.y > 0 else img.get_height() - 1)}
+			"size": Vector2(img.get_size()), "foot": float(used.end.y - 1 if used.size.y > 0 else img.get_height() - 1),
+			"grid": 1 if native else 2}
 	_cache["e_" + key] = out
 	return out
 

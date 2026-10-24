@@ -202,6 +202,49 @@ func _initialize() -> void:
 	check(not spec.has("px") or Sprites.HERO_PIXEL <= 1, "_px_spec doesn't change the caller's spec")
 	check((spec2.get("px", 1) == Sprites.HERO_PIXEL) or Sprites.HERO_PIXEL <= 1, "_px_spec adds the pixel size to its copy")
 
+	# 2.1 heroes (art/heroes, baked from the PixelLab hero): every layer on the same 9 frames of 96x96,
+	# hard alpha, the feet on one row, every class on both bodies, the 37 styles, 10 faces, 7 weapons
+	check(HeroArt.available(), "the 2.1 hero art is baked (art/heroes/heroes.json)")
+	var hi := HeroArt.info()
+	check(int(hi.get("cell", 0)) == HeroArt.CELL and (hi.get("frames", []) as Array).size() == 9, "hero frames: 9 cells of 96x96")
+	for cls in Classes.ORDER:
+		for b in ["m", "f"]:
+			check(0 in (hi.get("classes", {}).get(cls.to_lower(), {}).get(b, []) as Array).map(func(t): return int(t)), "%s outfit for body %s" % [cls, b])
+	check((hi.get("styles", {}) as Dictionary).size() == Sprites.HAIR_STYLES.size(), "every hair style is drawn on the new hero")
+	for st in Sprites.HAIR_STYLES:
+		check((hi.get("styles", {}) as Dictionary).has(st), "hair style %s drawn" % st)
+	check((hi.get("faces", []) as Array) == HeroArt.FACES, "the 10 faces")
+	for wt in ["sword", "dagger", "axe", "mace", "spear", "bow", "staff"]:
+		check(wt in hi.get("weapons", []), "weapon drawing " + wt)
+	for b in ["m", "f"]:
+		for f in _pngs("res://art/heroes/%s/" % b):
+			var img := _load("res://art/heroes/%s/%s" % [b, f])
+			check(img.get_height() == HeroArt.CELL and img.get_width() % HeroArt.CELL == 0, "art/heroes/%s/%s is whole 96x96 cells" % [b, f])
+			if f.ends_with("_idx.png"):
+				continue
+			var soft := 0
+			for y in img.get_height():
+				for x in img.get_width():
+					var a8 := img.get_pixel(x, y).a8
+					if a8 != 0 and a8 != 255:
+						soft += 1
+			check(soft == 0, "art/heroes/%s/%s: %d soft pixels" % [b, f, soft])
+			if f.begins_with("outfit_"):
+				for i in img.get_width() / HeroArt.CELL:
+					var used := img.get_region(Rect2i(i * HeroArt.CELL, 0, HeroArt.CELL, HeroArt.CELL)).get_used_rect()
+					check(used.end.y - 1 == Sprites.HERO_FOOT - 8, "art/heroes/%s/%s frame %d stands on the feet row" % [b, f, i])
+	# The hero builds from the layers, battle and portrait, recoloured, for any class/tier/weapon
+	var hb := Sprites.hero_back({"body": "fem", "skin": 6, "hair": "Braid", "hair_color": 8, "race": "Orc", "face": "grim"},
+		{"Class": {"cls": "Knight", "tier": 75}, "Weapon": {"type": "spear", "glow": false}})
+	check(hb.get("pl", false) and (hb["lpc"]["combat_idle"]["tex"] as Array).size() == 2 and (hb["lpc"]["slash"]["tex"] as Array).size() == 4 and (hb["lpc"]["hurt"]["tex"] as Array).size() == 1, "battle frames: idle 2, attack 4, hit 1")
+	var hf := Sprites.hero({"body": "masc", "hair": "Afro", "face": "laughing"}, {"Class": {"cls": "Bard", "tier": 0}})
+	check(hf.get("pl", false) and (hf["lpc"]["combat_idle"]["tex"] as Array).size() == 2, "portrait frames: idle 2")
+	var plain := HeroArt.frames({"body": "masc", "skin": 1, "hair_color": 1}, "Mage", 0, "", false)["img"][7] as Image
+	var tinted := HeroArt.frames({"body": "masc", "skin": 6, "hair_color": 8}, "Mage", 0, "", false)["img"][7] as Image
+	check(plain.get_data() != tinted.get_data(), "skin and hair colours recolour the hero")
+	check(HeroArt.outfit_key("Warrior", 80, "m").ends_with("_t75") and HeroArt.outfit_key("Mage", 75, "m") == "m/outfit_mage", "tier outfits only where drawn")
+	# ONE scale: battle draws every art pixel at the same whole number of screen pixels
+	check(ArtStyle.unit(1.0) == 3 and ArtStyle.unit(2.0) == 6 and ArtStyle.unit(1.0 / 3.0) == 1, "one integer battle scale (3 pt per art pixel)")
 	print("ART RULES DONE, failures: ", fails)
 	quit()
 

@@ -717,6 +717,7 @@ func _enemy_attack(e: Dictionary) -> void:
 	kb.tween_property(self, "recoil", 0.0, 0.22)
 	hero_flash = 1.0
 	create_tween().tween_property(self, "hero_flash", 0.0, 0.1)
+	_later(0.08, func(): _lpc_play("hurt"))  # 2.1 heroes have a hit frame
 	shake = maxf(shake, 4.0)
 	_squash("hero_squash")
 	_burst(_hero_center(), Color("#f87171"), 8, 200.0)
@@ -1270,10 +1271,9 @@ func _process(delta: float) -> void:
 ## count is worked out in screen pixels and kept a whole number: every art
 ## pixel is then exactly the same size, with no uneven or blurred pixels.
 func _unit() -> int:
-	var sc := _scr()
-	var by_h := (_ground() - 34.0) * sc / (32.0 * Sprites.HD)
-	var by_w := size.x * 0.4 * sc / (32.0 * Sprites.HD)
-	return clampi(floori(minf(by_h, by_w)), 1, 12)
+	# 2.1 ONE scale: hero, monsters and pets all show every art pixel at ArtStyle.SCREEN_PX design
+	# points (whole screen pixels), so one screen never mixes pixel sizes
+	return ArtStyle.unit(_scr())
 
 ## Screen pixels per design pixel (the window's stretch factor).
 func _scr() -> float:
@@ -1317,19 +1317,7 @@ func _hero_canvas() -> Rect2:
 
 ## With companions around, everyone is drawn a size smaller so the group fits.
 func _hero_unit() -> int:
-	# Sprites.HERO_PIXEL 2: hero pixels are 2x2 blocks like the monsters', so they share one unit
-	var room := (_team_ground() - _ground() - 18.0) * _scr() / (31.0 * Sprites.HD)
-	if Sprites.HERO_PIXEL > 1 and hero_art.has("lpc"):
-		return clampi(_unit(), 1, maxi(1, floori(room)))  # still never covers the monster's feet and HP bar
-	var un := maxi(1, _unit() - (1 if _party_members().size() > 0 and _unit() > 2 else 0))
-	# LPC heroes are drawn smaller (about 48 of 64 pixels tall): one size up
-	# keeps them as big as the monsters while staying on whole pixels
-	if hero_art.has("lpc"):
-		un = maxi(un, roundi(un * 4.0 / 3.0))
-	# Your leader is closest to you (back-to-front): a size bigger than everyone else,
-	# but never so big that their head covers the monster's feet and HP bar
-	# (the body is about 31 art pixels tall; keep it under the gap between the two ground lines: room)
-	return clampi(un + 1, 1, maxi(1, floori(room)))
+	return _unit()
 
 func _party_members() -> Array:
 	return state.party.members if state != null and state.party != null else []
@@ -1340,7 +1328,7 @@ func _leader_x() -> float:
 
 ## Companions stand behind the leader, a size smaller (they're further back).
 func _member_canvas(i: int) -> Rect2:
-	var u := float(maxi(1, _unit() - 1)) / _scr()
+	var u := _u()
 	var s := Sprites.CANVAS * u
 	var fx: Dictionary = party_fx.get(i, {})
 	var x := size.x * (0.19 if i % 2 == 0 else 0.81) - s / 2.0
@@ -1473,9 +1461,9 @@ func _rect_for(art: Dictionary, boss: bool, scale_mult: float) -> Rect2:
 	if art.is_empty():
 		var s := _sprite_size(boss)
 		return Rect2(x - s / 2.0, gy - s + sin(bob * 2.4 + 1.0) * 2.0, s, s)
-	# LPC monsters are drawn smaller (about 48 of 64 pixels): one size up, on whole pixels
-	if art.has("lpc"):
-		ui = maxf(ui, roundf(ui * (2.0 if art.get("lpc_boss", false) else 4.0 / 3.0)))
+	# One scale: the two older 2x-grid pictures (every art pixel a 2x2 block) draw at half the unit per file pixel
+	if int(art.get("grid", 1)) == 2:
+		ui = maxf(1.0, roundf(ui / 2.0))
 	# Big bosses never take more than ~45% of the width
 	# (LPC frames are padded for big weapon swings, so measure the ~48-pixel body instead)
 	var span: float = Lpc.CORE * 0.75 if art.has("lpc") else (art["size"] as Vector2).x
@@ -1495,7 +1483,10 @@ func _enemy_center() -> Vector2:
 	var r := _enemy_rect(state.enemy_is_boss)
 	return Vector2(r.get_center().x, r.position.y + r.size.y * 0.35)
 
+var enemy_plate := Callable()  # set while drawing the monster, called after the team
+
 func _draw() -> void:
+	enemy_plate = Callable()
 	if state == null:
 		return
 	var w := size.x
@@ -1654,12 +1645,15 @@ func _draw() -> void:
 		var pack := Vector2i.ZERO
 		if state.horde_left > 0 and not boss:
 			pack = Vector2i(state.horde_total - state.horde_left + 1, state.horde_total)
-		_draw_bar(er, label, state.enemy_hp, state.enemy_max_hp, bar_color, Color(name_color, enemy_alpha), pips, pack)
-		if state.enemy_shield > 0:
-			_draw_shield(er)
-		if not state.enemy_mods.is_empty() and not veiled:
-			_draw_mods(er)
-		_draw_enemy_info(er, font)
+		# The monster's plate is drawn after your team: the big 2.1 hero (one scale) stands in front of
+		# the monster and would otherwise hide its name and health
+		enemy_plate = func() -> void:
+			_draw_bar(er, label, state.enemy_hp, state.enemy_max_hp, bar_color, Color(name_color, enemy_alpha), pips, pack)
+			if state.enemy_shield > 0:
+				_draw_shield(er)
+			if not state.enemy_mods.is_empty() and not veiled:
+				_draw_mods(er)
+			_draw_enemy_info(er, font)
 	# Your team, in front (drawn after the monster)
 	draw_ellipse_shadow(hr)
 	if cast_glow > 0.0 and (profile == null or profile.flashes):
@@ -1673,6 +1667,8 @@ func _draw() -> void:
 	_draw_members()
 	_draw_pet()
 	_draw_hero()
+	if enemy_plate.is_valid():
+		enemy_plate.call()
 	var hero_name := "HERO" if state.hero_class == "" else "%s  Lv %d" % [state.title(), state.level]
 	Cosmetics.draw_frame(self, _bar_rect(hr), state.codex, bob)
 	_draw_bar(hr, hero_name, state.hero_hp, state.get_max_hp(), Color("#63c74d"), Cosmetics.name_color(state.codex))
@@ -1916,8 +1912,8 @@ func _draw_pet() -> void:
 	var tex := Pets.portrait_frame(state, bob)
 	if tex == null:
 		return
-	var pu := float(maxi(1, _unit() - 1)) / _scr()
-	var s := 64.0 * pu
+	var pu := _u()
+	var s := float(tex.get_width()) * pu
 	var hc := _hero_canvas()
 	var x := hc.position.x + hc.size.x * 0.62
 	var y := _team_ground() - 70.0 * pu + roundf(sin(bob * 3.4 + 1.3)) * pu - pet_lunge * size.y * 0.1

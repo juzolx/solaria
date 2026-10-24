@@ -1398,6 +1398,7 @@ func _show_class_picker() -> void:
 		var looks := {}
 		for slot in info["look"]:
 			looks[slot] = Sprites.gear_look({"slot": slot, "type": info["look"][slot], "rarity": 1})
+		looks["Class"] = {"cls": cname, "tier": 0}  # each class shows its own outfit
 		pic.texture = Sprites.portrait(state.appearance, looks)
 		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		pic.custom_minimum_size = Vector2(64, 64)
@@ -1635,6 +1636,8 @@ func _handle_events() -> void:
 			"class_up":
 				var after_looks := state.hero_looks()
 				var before_looks := after_looks.duplicate()
+				# the outfit before this evolution (class outfits upgrade at 15 / 35 / 75)
+				before_looks["Class"] = {"cls": state.hero_class, "tier": [0, 0, 15, 35][clampi(state.class_path.size(), 0, 3)]}
 				if int(e.get("tier", 1)) >= 3 or e["rank"] != "":
 					before_looks.erase("Cape")
 					before_looks.erase("Aura")

@@ -36,6 +36,12 @@ const PROP_SIZE := Vector2i(32, 32)
 const ROOM_PROP_SIZE := Vector2i(40, 40)
 ## Gear item icons: every icon sits centered in one square frame, at the gear art's own pixel size.
 const ICON_FRAME := 44
+## ONE pixel scale (2.1): in battle every art pixel of the hero, monsters and pets is this many
+## design points (430 pt phone layout), rounded to whole screen pixels. Native art only.
+const SCREEN_PX := 3.0
+## Screen pixels per art pixel at a window stretch factor.
+static func unit(scr: float) -> int:
+	return maxi(1, roundi(SCREEN_PX * scr))
 ## Effects keep a few hard alpha steps instead of soft gradients.
 const FX_ALPHA := [0, 64, 128, 192, 255]
 
