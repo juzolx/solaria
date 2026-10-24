@@ -144,11 +144,14 @@ func _build() -> void:
 	add_child(margin)
 	var col := UI.vbox(10)
 	margin.add_child(col)
+	var mark := Control.new()   # interface pass (approved mockup 17): the sun-disc mark above the name
+	mark.custom_minimum_size = Vector2(0, 76)
+	mark.draw.connect(func(): _draw_sun(mark))
+	col.add_child(mark)
 	var title := UI.label("SOLARIA", 64, UI.GOLD)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_color_override("font_shadow_color", Color("#3a1f05"))
-	title.add_theme_constant_override("shadow_offset_x", 4)
-	title.add_theme_constant_override("shadow_offset_y", 4)
+	title.add_theme_color_override("font_outline_color", UiSkin.SOOT)   # an ink outline, like the sprites
+	title.add_theme_constant_override("outline_size", 10)
 	col.add_child(title)
 	var sub := UI.label("A dungeon of myths and monsters", 15, UI.TEXT)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -160,12 +163,14 @@ func _build() -> void:
 	layout = BoxContainer.new()
 	layout.add_theme_constant_override("separation", 16)
 	col.add_child(layout)
-	var menu_panel := UI.panel(Color(UI.PANEL, 0.92), UI.GOLD, 10, 16, 2)
+	var menu_panel := PanelContainer.new()
+	menu_panel.add_theme_stylebox_override("panel", UiSkin.frame(Color(UI.PANEL, 0.94), UI.GOLD_DULL, 16))
 	menu_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	layout.add_child(menu_panel)
 	menu_box = UI.vbox(8)
 	menu_panel.add_child(menu_box)
-	var side_panel := UI.panel(Color(UI.PANEL, 0.92), UI.BORDER, 10, 14, 1)
+	var side_panel := PanelContainer.new()
+	side_panel.add_theme_stylebox_override("panel", UiSkin.frame(Color(UI.PANEL, 0.94), UiSkin.IRON, 14))
 	side_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	layout.add_child(side_panel)
 	side_box = UI.vbox(8)
@@ -284,3 +289,13 @@ func refresh_menu() -> void:
 func close_and(action: Callable) -> void:
 	queue_free()
 	action.call()
+
+## The sun-disc mark: gold rings with ink outlines around a bright core (palette.gpl golds).
+func _draw_sun(c: Control) -> void:
+	var o := Vector2(c.size.x / 2.0, c.size.y / 2.0)
+	for ring in [[34.0, "#6a4a28"], [28.0, "#9a7040"], [22.0, "#c8a060"]]:
+		c.draw_arc(o, ring[0], 0.0, TAU, 48, UiSkin.SOOT, 6.0)
+		c.draw_arc(o, ring[0], 0.0, TAU, 48, Color(ring[1]), 3.0)
+	c.draw_circle(o, 13.0, UiSkin.SOOT)
+	c.draw_circle(o, 11.0, Color("#feae34"))
+	c.draw_circle(o, 5.0, Color("#fee761"))
