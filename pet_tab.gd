@@ -39,7 +39,7 @@ func _owned() -> void:
 	for p in state.pets:
 		box.add_child(_pet_row(p))
 	for e in state.eggs:
-		var c := UI.card(Color("#fde68a"))
+		var c := _frame(UI.GOLD_DULL)
 		box.add_child(c[0])
 		var h := UI.hbox(10)
 		c[1].add_child(h)
@@ -50,7 +50,7 @@ func _owned() -> void:
 		pic.custom_minimum_size = Vector2(64, 64)  # 32 px art at a clean 2x
 		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		h.add_child(pic)
+		h.add_child(_slot(pic))
 		var ev := UI.vbox(2)
 		ev.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(ev)
@@ -60,7 +60,7 @@ func _owned() -> void:
 	# Empty slots hint at what's out there (never how)
 	var empty := maxi(0, 3 - state.pets.size() - state.eggs.size())
 	for i in empty:
-		var c := UI.card(UI.BORDER)
+		var c := _frame(UI.EMPTY)
 		box.add_child(c[0])
 		var hints := ["Old hunters swear there are nests in the deep halls, for the lucky.",
 			"Every region keeps its own eggs, they say. Few ever see one.",
@@ -71,7 +71,7 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 	var id := int(p["id"])
 	var hurt := int(p["hurt"]) > 0
 	var going := id in state.pets_out and not hurt
-	var c := UI.card(UI.GREEN if going else (UI.RED.darkened(0.3) if hurt else UI.BORDER))
+	var c := _frame(UI.GOLD_DULL if going else (Color("#a22633") if hurt else UiSkin.IRON))   # gold = coming along, red = hurt
 	var h := UI.hbox(10)
 	c[1].add_child(h)
 	var pic := TextureRect.new()
@@ -82,7 +82,7 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	if hurt:
 		pic.modulate = Color(1, 0.6, 0.6, 0.7)
-	h.add_child(pic)
+	h.add_child(_slot(pic))
 	var v := UI.vbox(2)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
@@ -92,7 +92,7 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 	v.add_child(UI.label("%s %s  ·  Lv %d" % [Menagerie.TIER_NAMES[tier], Monsters.name_of(str(p["species"])), int(p["level"])], 12, tc))
 	v.add_child(UI.label(("Hurt: rests %d more floor%s" % [int(p["hurt"]), "" if int(p["hurt"]) == 1 else "s"]) if hurt else
 		"Hits for %d%% of your Attack" % int(Menagerie.power(p) * 100), 11, UI.RED if hurt else UI.DIM))
-	_ability_lines(v, p)
+	_ability_lines(v, p, renaming == id)   # locked abilities only under "More" (fewer words on the card)
 	var right := UI.vbox(4)
 	right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(right)
@@ -142,12 +142,12 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 
 ## 2.1: what the pet knows (by its rank), and what a higher-ranked one of its kind
 ## would know. A pet's rank never changes, so this pet won't learn those itself.
-func _ability_lines(v: VBoxContainer, p: Dictionary) -> void:
+func _ability_lines(v: VBoxContainer, p: Dictionary, show_locked := true) -> void:
 	var fam := String((PetAbilities.FAMILIES.get(PetAbilities.family(String(p.get("species", ""))), {}) as Dictionary).get("name", "pet"))
 	for a in PetAbilities.lines(p):
 		if a["on"]:
 			v.add_child(UI.wrap("+ " + String(a["text"]), UI.FONT_CAPTION, UI.TEXT))
-		else:
+		elif show_locked:
 			v.add_child(UI.wrap("A higher-ranked %s pet (%s and up) would know: %s" % [fam, Menagerie.TIER_NAMES[int(a["rank"])], a["text"]], 11, UI.DIM))
 
 ## Your class companion: what it is, what it does, and what it becomes.
@@ -158,7 +158,7 @@ func _pet_card() -> void:
 	var st := World.pet_stage(state)
 	var col := Color(info["color"])
 	UI.section(box, "Companion", "A companion joins you at level %d. It fights every turn and evolves when your class does. Charisma makes it stronger." % World.PET_LEVEL)
-	var c := UI.card(col if st >= 0 else UI.BORDER)
+	var c := _frame(UiSkin.IRON)   # the companion's own colour stays in its name
 	box.add_child(c[0])
 	if st < 0:
 		c[1].add_child(UI.label("Someone is watching you from the shadows... (level %d)" % World.PET_LEVEL, UI.FONT_CAPTION, UI.DIM))
@@ -171,7 +171,7 @@ func _pet_card() -> void:
 	pic.custom_minimum_size = Vector2(64, 64)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	h.add_child(pic)
+	h.add_child(_slot(pic))
 	var v := UI.vbox(2)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
@@ -205,3 +205,20 @@ func _pet_card() -> void:
 		main.refresh())
 	sv.custom_minimum_size = Vector2(0, UI.TAP)
 	nrow.add_child(sv)
+
+## Interface pass (approved mockup 06): a pet card wears the panel frame, its line in the
+## pet's state colour (gold = coming along, red = hurt). Returns [card, inner vbox] like UI.card.
+func _frame(edge: Color) -> Array:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", UiSkin.frame(UI.INSET, edge, 10))
+	var v := UI.vbox(4)
+	p.add_child(v)
+	return [p, v]
+
+## A pet or egg picture in a dark slot (ink fill, slate edge), the art at a clean 2x.
+func _slot(pic: TextureRect) -> PanelContainer:
+	var sl := PanelContainer.new()
+	sl.add_theme_stylebox_override("panel", UiSkin.bevel(Color("#120e1c"), UI.EMPTY, 2))
+	sl.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	sl.add_child(pic)
+	return sl
