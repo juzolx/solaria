@@ -154,6 +154,9 @@ func _update() -> void:
 		var show: bool = (field == "fur") == furry if field in ["skin", "hair", "hair_color", "fur"] else true
 		if field == "eyes" and HeroArt.available():
 			show = false
+		# races with their own body build (goblin, dwarf...) have a drawn head: no style or face choice yet
+		if field in ["hair", "face"] and HeroArt.available() and HeroArt.build_dir(app) != "":
+			show = false
 		for c in row_parts[field]:
 			(c as Control).visible = show
 	for field in rows:

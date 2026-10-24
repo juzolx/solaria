@@ -257,6 +257,158 @@
     34,
     64
    ]
+  ],
+  "goblin_m": [
+   [
+    64,
+    62
+   ],
+   [
+    64,
+    62
+   ],
+   [
+    66,
+    50
+   ],
+   [
+    63,
+    38
+   ],
+   [
+    61,
+    65
+   ],
+   [
+    31,
+    59
+   ],
+   [
+    61,
+    67
+   ],
+   [
+    34,
+    64
+   ],
+   [
+    36,
+    65
+   ]
+  ],
+  "goblin_f": [
+   [
+    64,
+    62
+   ],
+   [
+    63,
+    63
+   ],
+   [
+    63,
+    48
+   ],
+   [
+    59,
+    38
+   ],
+   [
+    33,
+    60
+   ],
+   [
+    31,
+    59
+   ],
+   [
+    60,
+    64
+   ],
+   [
+    35,
+    64
+   ],
+   [
+    35,
+    64
+   ]
+  ],
+  "dwarf_m": [
+   [
+    63,
+    67
+   ],
+   [
+    66,
+    62
+   ],
+   [
+    61,
+    55
+   ],
+   [
+    64,
+    41
+   ],
+   [
+    62,
+    41
+   ],
+   [
+    63,
+    64
+   ],
+   [
+    64,
+    69
+   ],
+   [
+    34,
+    64
+   ],
+   [
+    34,
+    64
+   ]
+  ],
+  "dwarf_f": [
+   [
+    67,
+    65
+   ],
+   [
+    67,
+    65
+   ],
+   [
+    71,
+    59
+   ],
+   [
+    61,
+    36
+   ],
+   [
+    66,
+    61
+   ],
+   [
+    32,
+    61
+   ],
+   [
+    67,
+    63
+   ],
+   [
+    34,
+    64
+   ],
+   [
+    34,
+    64
+   ]
   ]
  },
  "races": {
@@ -292,5 +444,58 @@
    "m",
    "f"
   ]
+ },
+ "builds": {
+  "Goblin": {
+   "key": "goblin",
+   "bodies": {
+    "m": [
+     "plate",
+     "robe",
+     "leather",
+     "cloth"
+    ],
+    "f": [
+     "plate",
+     "robe",
+     "leather",
+     "cloth"
+    ]
+   },
+   "skin": false
+  },
+  "Dwarf": {
+   "key": "dwarf",
+   "bodies": {
+    "m": [
+     "plate",
+     "robe",
+     "leather",
+     "cloth"
+    ],
+    "f": [
+     "plate",
+     "robe",
+     "leather",
+     "cloth"
+    ]
+   },
+   "skin": true
+  }
+ },
+ "family_of": {
+  "Warrior": "plate",
+  "Knight": "plate",
+  "Sentinel": "plate",
+  "Mage": "robe",
+  "Cleric": "robe",
+  "Acolyte": "robe",
+  "Conjurer": "robe",
+  "Ranger": "leather",
+  "Nightstalker": "leather",
+  "Trickster": "leather",
+  "Bard": "leather",
+  "Wanderer": "cloth",
+  "Ironbark": "cloth"
  }
 }

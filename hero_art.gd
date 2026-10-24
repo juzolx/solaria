@@ -84,7 +84,8 @@ static func _shade(ramp: PackedColorArray, i: int) -> Color:
 ## Lays one layer sheet over `dst` (same size), recolouring indexed skin/hair pixels.
 ## only_hair: copy just the hair pixels (the hair goes over the face on the portrait).
 ## cells: [first, end) cell range to copy (only what's needed: battle or portrait).
-static func _lay(dst: PackedByteArray, src_path: String, skin: PackedColorArray, hair: PackedColorArray, cells: Vector2i, only_hair := false, x0 := 0) -> void:
+## dye: the class colour for a body build's family outfit (index blue channel).
+static func _lay(dst: PackedByteArray, src_path: String, skin: PackedColorArray, hair: PackedColorArray, cells: Vector2i, only_hair := false, x0 := 0, dye := PackedColorArray()) -> void:
 	var src := _img(src_path + ".png")
 	if src == null:
 		return
@@ -94,7 +95,7 @@ static func _lay(dst: PackedByteArray, src_path: String, skin: PackedColorArray,
 	var iw := 3 if idx != null and idx.get_format() == Image.FORMAT_RGB8 else 4
 	var sw := src.get_width()
 	var dw := CELL * 9
-	var luts := [_lut(skin), _lut(hair)]
+	var luts := [_lut(skin), _lut(hair), _lut(dye)]
 	var xa := maxi(0, cells.x * CELL - x0)
 	var xb := mini(sw, cells.y * CELL - x0)
 	for y in src.get_height():
@@ -104,9 +105,11 @@ static func _lay(dst: PackedByteArray, src_path: String, skin: PackedColorArray,
 				continue
 			var s := 0
 			var h := 0
+			var dy := 0
 			if not id.is_empty():
 				s = id[(y * sw + x) * iw]
 				h = id[(y * sw + x) * iw + 1]
+				dy = id[(y * sw + x) * iw + 2]
 			if only_hair and h == 0:
 				continue
 			var di := (y * dw + x + x0) * 4
@@ -116,6 +119,9 @@ static func _lay(dst: PackedByteArray, src_path: String, skin: PackedColorArray,
 			elif s > 0 and not skin.is_empty():
 				var c: PackedByteArray = luts[0]
 				dst[di] = c[s * 3]; dst[di + 1] = c[s * 3 + 1]; dst[di + 2] = c[s * 3 + 2]
+			elif dy > 0 and not dye.is_empty():
+				var c: PackedByteArray = luts[2]
+				dst[di] = c[dy * 3]; dst[di + 1] = c[dy * 3 + 1]; dst[di + 2] = c[dy * 3 + 2]
 			else:
 				dst[di] = sd[si]; dst[di + 1] = sd[si + 1]; dst[di + 2] = sd[si + 2]
 			dst[di + 3] = 255
@@ -149,6 +155,21 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 	var hair := _ramp(hc[clampi(int(app.get("hair_color", 1)), 0, hc.size() - 1)])
 	var data := PackedByteArray()
 	data.resize(CELL * 9 * CELL * 4)
+	var build := build_dir(app)
+	if build != "":
+		# another body build (goblin, dwarf...): its own drawn head, the class's outfit family dyed in the class colour
+		var fams: Array = info()["builds"][str(app.get("race", ""))]["bodies"][b]
+		var fam := str(info().get("family_of", {}).get(cls, "plate"))
+		if not fam in fams:
+			fam = str(fams[0])
+		# the class colour, darkened and muted to sit in the dark palette like the drawn outfits
+		var cc := Color(Classes.info(cls).get("color", "#8b9bb4"))
+		var dye := _dye_ramp(cc)
+		# goblins keep their drawn yellow-green skin (their own hue family); dwarves take the skin choice
+		var bskin := skin if bool(info()["builds"][str(app.get("race", ""))].get("skin", true)) else PackedColorArray()
+		_lay(data, "%s/outfit_%s" % [build, fam], bskin, hair, cells, false, 0, dye)
+		_lay_weapon(data, build, weapon, cells)
+		return _finish(key, data, cells)
 	var race := race_key(app, b)
 	if race != "":
 		_lay(data, race + "_back", skin, hair, cells)  # wings / tail behind the body on the portrait
@@ -163,9 +184,15 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 		_lay(data, head, skin, hair, cells, true)  # the hair (bangs) stays over the face
 	if race != "":
 		_lay(data, race, skin, hair, cells)  # ears, horns, halo, wings from behind...
+	_lay_weapon(data, b, weapon, cells)
+	return _finish(key, data, cells)
+
+static func _lay_weapon(data: PackedByteArray, dir: String, weapon: String, cells: Vector2i) -> void:
 	var w := WEAPON_AS.get(weapon, weapon) as String
 	if w != "" and w in info().get("weapons", []):
-		_lay(data, "%s/weapon_%s" % [b, w], PackedColorArray(), PackedColorArray(), cells)
+		_lay(data, "%s/weapon_%s" % [dir, w], PackedColorArray(), PackedColorArray(), cells)
+
+static func _finish(key: String, data: PackedByteArray, cells: Vector2i) -> Dictionary:
 	var sheet := Image.create_from_data(CELL * 9, CELL, false, Image.FORMAT_RGBA8, data)
 	var out := {"img": [], "tex": [], "white": []}
 	for i in 9:
@@ -193,6 +220,27 @@ static func anims(fr: Dictionary, back: bool) -> Dictionary:
 	var swing: Dictionary = pick.call(ATTACK, ATTACK_FPS)
 	return {"combat_idle": pick.call(IDLE, 2.0), "slash": swing, "thrust": swing, "spellcast": swing, "shoot": swing,
 		"hurt": pick.call(HIT, 3.0)}
+
+## A dark-to-light ramp of one class colour, kept in its own hue (the hue-shifted creator ramps turn
+## light reds khaki) and pulled down into the game's dark palette.
+static func _dye_ramp(c: Color) -> PackedColorArray:
+	var out := PackedColorArray()
+	for v in [0.16, 0.26, 0.38, 0.52, 0.66]:
+		out.append(Color.from_hsv(c.h, clampf(c.s * 0.85, 0.0, 1.0), minf(c.v, 1.0) * v))
+	return out
+
+## The folder of a race's own body build ("goblin_m"), or "" when the race uses the standard body.
+static func build_dir(app: Dictionary) -> String:
+	var bd: Dictionary = info().get("builds", {}).get(str(app.get("race", "")), {})
+	var b := body_key(app)
+	if bd.is_empty() or not (bd["bodies"] as Dictionary).has(b):
+		return ""
+	return "%s_%s" % [bd["key"], b]
+
+## The hand points of a hero's frames (heroes.json "hand", per body or body build).
+static func hands(app: Dictionary) -> Array:
+	var d := build_dir(app)
+	return info()["hand"][d if d != "" else body_key(app)]
 
 ## The race's signature layer ("m/race_elf"), or "" for races without one (Human, or not drawn yet).
 static func race_key(app: Dictionary, b: String) -> String:

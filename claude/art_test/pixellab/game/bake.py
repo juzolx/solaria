@@ -331,6 +331,7 @@ def main():
                 save(f"{b}/race_{race.lower()}_back", back, [index_of(c) for c in back])
             info.setdefault("races", {}).setdefault(race, []).append(b)
         print(b, "races done")
+    build_bodies(info)
     with open(os.path.join(OUT, "heroes.json"), "w", newline=chr(10)) as f:
         json.dump(info, f, indent=1)
 
@@ -363,8 +364,15 @@ def race_cells(b, paths):
                 if (x, y) in SW[b][k][0]:
                     continue  # nor the sword
                 pts.add((x, y))
-        pts = set().union(*[c for c in comps(pts) if len(c) >= 6]) if pts else set()
         hl = (OFF_OWN[b][k][1] + HS.head_bottom(ROT[b][d_of(k)]))
+        # keep real features: specks go, and so do small changes entirely inside the body below the head
+        # (the edit re-shading the clothes); eyes, fangs and the like sit in the head and stay
+        keep = []
+        for c in comps(pts) if pts else []:
+            inside = all(bp[q][3] and q[1] > hl for q in c)
+            if len(c) >= 6 and not (inside and len(c) < 25):
+                keep.append(c)
+        pts = set().union(*keep) if keep else set()
         f = Image.new("RGBA", (C, C)); bk = Image.new("RGBA", (C, C))
         for (x, y) in pts:
             if k.startswith("s") and y > hl:
@@ -404,6 +412,120 @@ def weapon_drawings():
 
 
 WEAPON_DRAWINGS = weapon_drawings()
+
+# ---------- other body builds (sprite-design.md): their own body frames, 4 outfit families ----------
+# Made from PixelLab edits of the base frames ("turn him into a goblin ..."), then each family's outfit
+# as an edit of those (claude/art_test/races, jobs.txt / ojobs.txt). The head stays drawn (no hair-style
+# swap): hair recolours by its shade, the family's fabric takes the class colour (index B = dye shade).
+RACES_RAW = os.path.abspath(os.path.join(REPO, "..", "solaria_dev", "claude", "art_test", "races", "raw"))
+BUILDS = {"Goblin": "goblin", "Dwarf": "dwarf"}
+OWN_SKIN = ["Goblin"]  # races whose drawn skin hue is their signature: no skin recolour
+FAMILY_SRC = {"plate": "warrior", "robe": "mage", "leather": "leather", "cloth": "cloth"}
+FAMILY_OF = {"Warrior": "plate", "Knight": "plate", "Sentinel": "plate",
+             "Mage": "robe", "Cleric": "robe", "Acolyte": "robe", "Conjurer": "robe",
+             "Ranger": "leather", "Nightstalker": "leather", "Trickster": "leather", "Bard": "leather",
+             "Wanderer": "cloth", "Ironbark": "cloth"}
+# the dyed fabric of each family, as hue ranges (0-1): plate's skirt, the robe, the tunic, the gambeson
+DYE_HUES = {"plate": [(0.94, 1.0), (0.0, 0.04)], "robe": [(0.70, 0.86)], "leather": [(0.20, 0.45)], "cloth": [(0.52, 0.68)]}
+# frames a build reuses (his goblin's second idle frame lost its shirt: both idle frames are the first)
+ALIAS = {("goblin", "m", "n_idle1"): "n_idle0"}
+
+
+def build_src(race, fam, b, k):
+    k = ALIAS.get((race, b, k), k)
+    stem = f"{race}_{FAMILY_SRC[fam]}_{b}_{k}" if fam else f"{race}_{b}_{k}"
+    v2 = os.path.join(RACES_RAW, stem.replace(f"_{b}_{k}", f"_{b}_{k}") + "_v2.png")
+    if not fam and os.path.exists(os.path.join(RACES_RAW, f"{race}_{b}_{k}_v2.png")):
+        return os.path.join(RACES_RAW, f"{race}_{b}_{k}_v2.png")
+    return os.path.join(RACES_RAW, stem + ".png")
+
+
+def dye_index(c, fam, idx):
+    """Marks the family's dyed fabric in the index's blue channel (shade 1..255) for the class colour."""
+    import colorsys
+    cp, ip = c.load(), idx.load()
+    pts = []
+    for y in range(C):
+        for x in range(C):
+            px = cp[x, y]
+            if not px[3] or ip[x, y][0] or ip[x, y][1]:
+                continue
+            h, sat, v = colorsys.rgb_to_hsv(*(q / 255 for q in px[:3]))
+            if sat > (0.15 if fam == "cloth" else 0.3) and v > 0.12 and any(lo <= h <= hi for lo, hi in DYE_HUES[fam]):
+                pts.append((x, y, R.lum(px[:3])))
+    if not pts:
+        return idx
+    ls = sorted(q[2] for q in pts); lo, hi = ls[len(ls) // 20], ls[-len(ls) // 20 - 1]
+    for x, y, l in pts:
+        ip[x, y] = (0, 0, 1 + max(0, min(254, round((l - lo) / max(1, hi - lo) * 254))))
+    return idx
+
+
+def greenish(px):
+    """Yellow-green skin (goblin ears and faces): never hair, even inside the head band."""
+    import colorsys
+    h, sat, v = colorsys.rgb_to_hsv(*(q / 255 for q in px[:3]))
+    return 0.11 <= h <= 0.40 and sat > 0.25
+
+
+def build_bodies(info):
+    info["builds"] = {}; info["family_of"] = FAMILY_OF
+    a0 = SW["m"]["n_idle0"][2]
+    for race, key in BUILDS.items():
+        for b in "mf":
+            if not all(os.path.exists(build_src(key, None, b, k)) for k in K):
+                continue
+            base = {k: L(build_src(key, None, b, k)) for k in K}
+            place = {k: ((C - im.width) // 2, FOOT - im.getbbox()[3]) for k, im in base.items()}
+            def bcell(im, k):
+                c = Image.new("RGBA", (C, C)); c.alpha_composite(im, place[k]); return c
+            cells = {k: bcell(base[k], k) for k in K}
+            sw = {}
+            for k in K:
+                blade, ring = sword_pts(cells[k])
+                grip, tip, ang = W.axis(blade, W.body_centre(cells[k]))
+                sw[k] = [blade | ring, grip, ang, tip, ((tip[0] - grip[0]) ** 2 + (tip[1] - grip[1]) ** 2) ** 0.5]
+            full = sorted(v[4] for v in sw.values())[len(K) // 2]
+            for k, v in sw.items():
+                if v[4] < 0.75 * full:
+                    v[1] = (round(v[3][0] - math.cos(v[2]) * full), round(v[3][1] - math.sin(v[2]) * full))
+            d = f"{key}_{b}"
+            fams = []
+            for fam in FAMILY_SRC:
+                if not all(os.path.exists(build_src(key, fam, b, k)) for k in K):
+                    print("missing", race, b, fam); continue
+                out, idxs = [], []
+                for k in K:
+                    c = bcell(L(build_src(key, fam, b, k)), k); p = c.load()
+                    pts = set(sw[k][0])
+                    near = {(x + dx, y + dy) for (x, y) in pts for dx in range(-3, 4) for dy in range(-3, 4)}
+                    own, ring = sword_pts(c)
+                    if own and len(own & near) * 2 >= len(own):
+                        pts |= own | ring
+                    for (x, y) in sorted(pts):
+                        l = next((p[x - dd, y] for dd in (1, 2, 3) if x - dd >= 0 and (x - dd, y) not in pts and p[x - dd, y][3]), None)
+                        r = next((p[x + dd, y] for dd in (1, 2, 3) if x + dd < C and (x + dd, y) not in pts and p[x + dd, y][3]), None)
+                        p[x, y] = l if (l and r) else (0, 0, 0, 0)
+                    hair = {q for q, kd in R.masks(c).items() if kd == "hair" and not greenish(p[q])}
+                    out.append(c); idxs.append(dye_index(c, fam, index_of(c, hair)))
+                save(f"{d}/outfit_{fam}", out, idxs)
+                fams.append(fam)
+            for wt, drawing in WEAPON_DRAWINGS.items():
+                mir = mirrored(drawing)
+                wc = []
+                for k in K:
+                    g, a = sw[k][1], sw[k][2]
+                    if k.startswith("n_atk"):
+                        wc.append(drawing.placed((C, C), g, a))
+                    elif k.startswith("s"):
+                        wc.append(mir.placed((C, C), g, mir.ang + a - (math.pi - a0)))
+                    else:
+                        wc.append(drawing.placed((C, C), g, drawing.ang + a - a0))
+                save(f"{d}/weapon_{wt}", wc)
+            info["hand"][d] = [list(sw[k][1]) for k in K]
+            if fams:  # a body is only offered once it has an outfit
+                info["builds"].setdefault(race, {"key": key, "bodies": {}, "skin": race not in OWN_SKIN})["bodies"][b] = fams
+            print(race, b, "build done:", fams)
 
 if __name__ == "__main__":
     main()

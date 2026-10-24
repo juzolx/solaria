@@ -396,7 +396,7 @@ static func _hero_pl(app: Dictionary, looks: Dictionary, back: bool) -> Dictiona
 	var canvas := Image.create(CANVAS, CANVAS, false, Image.FORMAT_RGBA8)
 	var s := still.get_width()
 	canvas.blend_rect(still, Rect2i(0, 0, s, s), BODY_OFFSET - Vector2i((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2))
-	var hand: Array = HeroArt.info()["hand"][HeroArt.body_key(app)][0 if back else HeroArt.PORTRAIT[0]]
+	var hand: Array = HeroArt.hands(app)[0 if back else HeroArt.PORTRAIT[0]]
 	return {"body_img": canvas, "body": ImageTexture.create_from_image(canvas), "body_white": ImageTexture.create_from_image(_silhouette(canvas)),
 		"weapon": null, "weapon_white": null, "weapon_type": wt, "pivot": Vector2.ZERO, "glow": glow,
 		"hand": Vector2(BODY_OFFSET) - Vector2((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2) + Vector2(float(hand[0]), float(hand[1])),
