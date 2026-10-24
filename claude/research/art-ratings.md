@@ -46,3 +46,5 @@ Every rating Juzo gives goes here, so all sessions learn what he thinks is reall
 | 2026-10-24 | monsters | Sheet B zone 0: 4 boggart, 15 leshy, 16 woodwose, 5 wisp-lantern | 6 | "4-6 15-6 16-6 5-6" | plain round/thin bodies and object-like wisp score low; need more character and detail |
 | 2026-10-24 | monsters | Sheet B zone 0: 6 wisp-ghost | 5 | "6-5" | cartoon ghost face = too cute/simple |
 | 2026-10-24 | monsters | Sheet B zone 0: 11 jack-alt (skull cage) | 0 (as typed) | "11-0" | may be a typo for 10; not used either way (10 picked) |
+| 2026-10-24 | town2 | isometric town sample (iso.py: liked iso buildings + tree sheet + 32 px props, iso ground tiles, code wall, fog outside) | good | "i like it it needs major cleanup and idk how the people are gonna be in there" | isometric direction approved; next: clean seams/slabs/edges and prove small walkers fit |
+| 2026-10-24 | lead | hero direction | decision | "each class has their own outfit... their weapons still change" | class outfits + visible weapon; armour stats only |
