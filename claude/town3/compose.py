@@ -367,8 +367,10 @@ def compose():
         put(sprites, im, (x + dx, y + dy + 4), bottom(im), y + dy + 6)
     sprites.sort(key=lambda s: s[0])
     LAST_SPRITES[:] = sprites
-    for _, x, y, im, _ in sprites:
+    for _, x, y, im, tag in sprites:
         img.alpha_composite(im, (x, y))
+        if tag == "plateau":           # the plateau's paving and stairs take ground light like the streets
+            GROUND_IMG[:] = [img.copy()]
     return img
 
 
@@ -393,6 +395,11 @@ def dusk(img):
         for k, f in ((3, .10), (2, .16), (1, .24)):     # three hard bands, pixel-art style
             rr = r * .75 * k / 3
             gd.ellipse([x - rr, y - rr * .5, x + rr, y + rr * .5], fill=tuple(int(c * f) for c in col))
+    gd2 = ImageDraw.Draw(glow)
+    for k, f in ((3, .10), (2, .16), (1, .22)):   # the portal's light spills down the stairs and onto the lane (ground only)
+        sx, sy = at(20, 8.4)
+        gd2.ellipse([sx - 30 * k, sy - 12 * k, sx + 30 * k, sy + 12 * k], fill=(int(70 * f * 2), int(180 * f * 2), int(230 * f * 2)))
+    same = None
     if GROUND_IMG:                     # light pools land on the visible ground only
         ground = GROUND_IMG[0].convert("RGB")
         same = ImageChops.difference(ground, rgb).convert("L").point(lambda v: 255 if v < 3 else 0)
@@ -401,18 +408,36 @@ def dusk(img):
     bd = ImageDraw.Draw(beam)
     bx, by = at(19.9, 4.0, PLATEAU_Z + 30)
     for w, f in ((26, .10), (16, .16), (8, .24)):
-        bd.polygon([(bx - w, by), (bx + w, by), (bx + w * .6, by - 150), (bx - w * .6, by - 150)], fill=(int(90 * f * 2), int(210 * f * 2), int(255 * f * 2)))
+        bd.polygon([(bx - w, by), (bx + w, by), (bx + w * .6, by - 95), (bx - w * .6, by - 95)], fill=(int(90 * f * 2), int(210 * f * 2), int(255 * f * 2)))
+
     glow = ImageChops.add(glow, beam)
     out = ImageChops.add(dark, glow)
     if HARDCORE:                       # the whole town colder and greyer...
         out = ImageEnhance.Color(out).enhance(0.85)
-        out = ImageChops.multiply(ImageEnhance.Brightness(out).enhance(0.95), Image.new("RGB", out.size, (225, 232, 255)))
+        out = ImageChops.multiply(ImageEnhance.Brightness(out).enhance(1.05), Image.new("RGB", out.size, (225, 232, 255)))
+        fog = Image.new("RGB", out.size, (0, 0, 0))
+        fd = ImageDraw.Draw(fog)
+        for i, j, r in ((4, 3, 70), (8, 5, 60), (5, 6, 50), (10, 2, 44)):   # low hard-edged fog banks over the graves
+            fx, fy = at(i, j)
+            fd.ellipse([fx - r, fy - r * .28, fx + r, fy + r * .28], fill=(26, 30, 38))
+        if same is not None:
+            fog = ImageChops.multiply(fog, Image.merge("RGB", (same, same, same)))
+        out = ImageChops.add(out, fog)
     if HARDCORE:                       # ...and a cold, dead corner around the ruined church and graveyard
         mask = Image.new("L", out.size, 0)
         ImageDraw.Draw(mask).polygon([at(0, 0), at(13, 0), at(13, 19), at(0, 19)], fill=128)
         blue = ImageChops.multiply(out, Image.new("RGB", out.size, (150, 165, 200)))
         out = Image.composite(blue, out, mask)
     return out
+
+
+def plateau_mask(size):
+    """Where the plateau sprite shows (its paving and stairs take ground light)."""
+    m = Image.new("L", size, 0)
+    for key, x, y, im, tag in LAST_SPRITES:
+        if tag == "plateau":
+            m.paste(im.getchannel("A").point(lambda v: 255 if v > 128 else 0), (x, y), im.getchannel("A"))
+    return m
 
 
 def day(img):

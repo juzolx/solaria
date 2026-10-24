@@ -80,6 +80,14 @@ def main(root):
         spots.append({"id": lid, "label": "Into the Dungeon" if lid == "gate" else label,
                       "kind": "lot" if lid in ("church", "cabin") else "building",
                       "cells": [x0, y0, x1, y1], "door": list(doors()[lid]), "rect": list(boxes[lid])})
+    # the Inn's lodging wing is part of the Inn (everyone lives there): one tap area over both
+    inn = next(sp for sp in spots if sp["id"] == "inn")
+    if "house0" in boxes:
+        a, b = inn["rect"], boxes["house0"]
+        x0, y0 = min(a[0], b[0]), min(a[1], b[1])
+        inn["rect"] = [x0, y0, max(a[0] + a[2], b[0] + b[2]) - x0, max(a[1] + a[3], b[1] + b[3]) - y0]
+    from layout import door_cell
+    inn_doors = [inn["door"]] + [list(door_cell(*h)) for h in HOUSES if h[4]]
     mid, mlabel, mx0, my0, mx1, my1 = MARKET
     xs = [C.at(mx0, my1 + 1)[0], C.at(mx1 + 1, my0)[0]]
     ys = [C.at(mx0, my0)[1], C.at(mx1 + 1, my1 + 1)[1]]
@@ -131,6 +139,7 @@ def main(root):
         "lights": lights,
         "walk": sorted([list(c) for c in ok]),
         "stops": sorted([list(c) for c in stops]),
+        "inn_doors": inn_doors,     # walkers come and go here most (everyone lives at the Inn)
         "raised": [[i, j] for i in range(18, 22) for j in range(5, 8)],   # plateau path: walkers stand 24 px higher
         "raised_z": PLATEAU_Z,
         "occluders": occluders,

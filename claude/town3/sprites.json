@@ -72,15 +72,6 @@
  "tower3": {
   "file": "tower.png"
  },
- "house0": {
-  "file": "house_b.png"
- },
- "house1": {
-  "file": "house_a.png"
- },
- "house2": {
-  "file": "house_a.png"
- },
  "tower4": {
   "file": "tower.png"
  },
@@ -89,5 +80,8 @@
  },
  "tower6": {
   "file": "tower.png"
+ },
+ "house0": {
+  "file": "house_b.png"
  }
 }

@@ -51,6 +51,7 @@ var zoom := 2.0         # iso: 2x or 3x (pinch / wheel)
 var pan_v := Vector2.INF  # iso: map offset in view pixels (INF = not placed yet: start on the market)
 var walk := {}          # iso: Vector2i cell -> true where people can walk
 var walk_doors: Array = []  # iso: door cells people walk between
+var inn_doors: Array = []  # iso: the Inn and its lodging wing - everyone lives at the Inn, so most trips start or end here
 var walk_stops: Array = []  # iso: cells beside stalls, the well and the boards where people stop a while
 var raised := {}        # iso: Vector2i cell -> true on the plateau path (people stand higher there)
 var occluders: Array = []  # iso: [texture name, x, y, sort y, tag(, look)] - drawn again over a walker behind them
@@ -109,6 +110,9 @@ func _ready() -> void:
 			walk[Vector2i(int(c[0]), int(c[1]))] = true
 		for sp in data.get("spots", []):
 			walk_doors.append(Vector2i(int(sp["door"][0]), int(sp["door"][1])))
+		for c in data.get("inn_doors", []):
+			inn_doors.append(Vector2i(int(c[0]), int(c[1])))
+			walk[inn_doors[-1]] = true
 		for c in data.get("stops", []):
 			walk_stops.append(Vector2i(int(c[0]), int(c[1])))
 		for c in data.get("raised", []):
@@ -410,7 +414,8 @@ func _cell_px(c: Vector2i) -> Vector2:
 	return Vector2(float(o[0]) + (c.x - c.y) * 16.0, float(o[1]) + (c.x + c.y + 1) * 8.0 - z)
 
 func _place_on_grid(f: Dictionary) -> void:
-	var c: Vector2i = walk_doors[randi() % walk_doors.size()] if not walk_doors.is_empty() else Vector2i(17, 20)
+	var starts := inn_doors if not inn_doors.is_empty() else walk_doors   # people come out of the Inn
+	var c: Vector2i = starts[randi() % starts.size()] if not starts.is_empty() else Vector2i(17, 20)
 	var p := _cell_px(c)
 	f["x"] = p.x
 	f["y"] = p.y
@@ -444,7 +449,10 @@ func _pick_goal(f: Dictionary) -> void:
 	var r := randf()
 	var goal: Vector2i = f["cell"]
 	f["goal_door"] = false
-	if r < 0.45 and not walk_doors.is_empty():
+	if r < 0.25 and not inn_doors.is_empty():
+		goal = inn_doors[randi() % inn_doors.size()]
+		f["goal_door"] = true
+	elif r < 0.5 and not walk_doors.is_empty():
 		goal = walk_doors[randi() % walk_doors.size()]
 		f["goal_door"] = true
 	elif r < 0.85 and not walk_stops.is_empty():
@@ -458,7 +466,7 @@ func _pick_goal(f: Dictionary) -> void:
 
 func _arrive(f: Dictionary) -> void:
 	if f.get("goal_door", false) and not f.get("hero", false) or (f.get("goal_door", false) and randf() < 0.5):
-		f["inside"] = randf_range(3.0, 8.0)   # went in: fades out at the door, comes back out later
+		f["inside"] = randf_range(2.0, 5.0)   # went in: fades out at the door, comes back out later
 		f["fade"] = 0.0
 	f["wait"] = randf_range(1.5, 4.0)
 	f["goal_door"] = false

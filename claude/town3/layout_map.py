@@ -83,7 +83,7 @@ def main(out):
     x, y = at(19.5, 19.5)
     d.ellipse([x - 6, y - 4, x + 6, y + 4], fill="#7aa0c0", outline="#0e0812")
     for name, i, j in [("Main street", 19.5, 31), ("River", 34, 27.5),
-                       ("Stone bridge", 23.5, 28.5), ("Graveyard", 6, 3.5), ("Pet pen", 34, 32),
+                       ("Stone bridge", 23.5, 28.5), ("Garden / Graveyard (Hardcore)", 6, 3.5), ("Pet pen", 30, 31), ("Orchard", 36, 14), ("Plots", 13, 31),
                        ("Fields", 2.5, 32), ("Training yard", 36, 4)]:
         label(d, at(i, j), name, "#b8f0b0")
     label(d, (W // 2, 24), "Solaria town layout v3 - blocks only, no art. Yellow tick = door. Dungeon on the raised plateau (lit focal point).")

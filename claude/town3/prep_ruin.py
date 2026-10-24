@@ -17,7 +17,7 @@ for y in range(h):                                                     # the whi
         if a and min(r, g, b) > 150 and max(r, g, b) - min(r, g, b) < 40:
             px[x, y] = (70, 78, 66, a) if (x + y) % 4 == 0 else (88, 90, 92, a)
 rgb = ImageEnhance.Color(im.convert("RGB")).enhance(0.45)
-rgb = ImageEnhance.Brightness(rgb).enhance(0.86)
+rgb = ImageEnhance.Brightness(rgb).enhance(1.0)
 im = Image.merge("RGBA", (*rgb.split(), im.getchannel("A")))
 px = im.load()
 bb = im.getbbox()

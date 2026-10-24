@@ -22,8 +22,11 @@ GROUND = [
     ("road", 32, 8, 33, 26),      # east lane
     ("water", 1, 27, 38, 28),     # river
     ("road", 1, 35, 38, 36),      # wall lane (one row clear of the wall so the wall never hides it)
-    ("road", 34, 14, 38, 14),     # alley off the east lane
     ("square", 7, 11, 8, 15),     # Church forecourt (pale stone)
+    ("square", 9, 14, 12, 14),    # Inn yard in front of the lodging wing
+    ("garden", 34, 10, 37, 18),   # orchard where the east houses were
+    ("field", 9, 29, 12, 33),     # more vegetable plots where the south house was
+    ("square", 6, 2, 6, 6),       # pale gravel path through the church garden
     ("square", 27, 15, 28, 15),   # the square reaches the Tavern door
     ("garden", 28, 16, 31, 19),   # small public garden with a well (the Vault moved)
     ("bridge", 17, 26, 22, 29),   # stone bridge on the main street
@@ -57,9 +60,8 @@ LOTS = [
     ("cabin", "Trophy Cabin (lot)", 2, 21, 6, 25, "i", 16),
     ("clinic", "Clinic", 23, 30, 27, 34, "j", 20),
 ]
-HOUSES = [  # plain homes for density (x0, y0, x1, y1, door side)
-    (34, 10, 37, 13, "j"), (34, 15, 37, 18, "j"),       # the first opens on the alley at row 14
-    (9, 30, 12, 34, "j"),        # door on the wall lane
+HOUSES = [  # no plain homes (Juzo: everyone lives at the Inn); only the Inn's lodging wing
+    (9, 10, 12, 13, "j"),        # Inn lodging wing, door on the Inn yard (row 14)
 ]
 # small things on the square / streets: id, label, cell
 POINTS = [
