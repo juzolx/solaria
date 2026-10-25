@@ -4,7 +4,7 @@ import os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 parts = []
 for p in ["art/lpc/CREDITS.md"]:
-    t = open(os.path.join(ROOT, p)).read()
+    t = open(os.path.join(ROOT, p), encoding="utf-8").read()
     lines = []
     for l in t.splitlines():
         if l.startswith("# "):
@@ -16,6 +16,6 @@ for p in ["art/lpc/CREDITS.md"]:
             lines.append(l)
     parts.append("\n".join(lines))
 text = "\n\n".join(parts).replace("\\", "\\\\").replace('"', '\\"')
-open(os.path.join(ROOT, "credits.gd"), "w").write(
-    'class_name Credits\nextends RefCounted\n## Made by tools/make_credits.py - who made the art (their licenses ask for this). Don\'t edit by hand.\n\nconst TEXT := "%s"\n' % text.replace("\n", "\\n"))
+open(os.path.join(ROOT, "credits.gd"), "w", encoding="utf-8", newline="").write(
+    'class_name Credits\nextends RefCounted\n## Made by tools/make_credits.py: the part-by-part LPC credit list (their licenses ask for it). Don\'t edit by hand. Every other source is in credits_data.gd.\n\nconst TEXT := "%s"\n' % text.replace("\n", "\\n"))
 print(len(text))

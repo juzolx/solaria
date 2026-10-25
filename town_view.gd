@@ -162,7 +162,8 @@ func _ready() -> void:
 
 func _season_tex(season: String) -> Texture2D:
 	if not tex.has(season):
-		tex[season] = load("res://art/town/town_%s.png" % season)
+		var path := "res://art/town/town_%s.png" % season   # the old top-down town (its pictures are gone)
+		tex[season] = load(path) if ResourceLoader.exists(path) else null
 	return tex[season]
 
 ## The iso town's picture for this town's Church and Trophy Cabin (built or still a lot).
