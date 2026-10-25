@@ -87,3 +87,5 @@ Every rating Juzo gives goes here, so all sessions learn what he thinks is reall
 | 2026-10-24 | town dev 2 | town walkers | bug | "heroes follow the paths and aren't shown if behind building... they keep going on roofs... they need to just walk around and interact" | walkers on a path graph, depth-sorted behind buildings, visit doors/stalls |
 
 - Oct 24: Race sample (Goblin + Dwarf, M/F, Warrior + Mage, claude/art_test/races/RACE_SAMPLE_goblin_dwarf.png): Juzo "Goblins and dwarfs are solid" (approved, no number given).
+| 2026-10-25 | interface | Pets page: "a higher-ranked pet would know" hints moved behind each pet's More (fewer words) | ok | "I'm cool with it" | keep cards short; detail one tap away |
+- Oct 24: Juzo: Beastkin "look good". Fairy butterfly wings v1 (13_fairy_butterfly.png) "look bad, why circles" -> wants luna moth or monarch wing shapes. Grey werewolf, orc fixes shown.
