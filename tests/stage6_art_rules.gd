@@ -261,6 +261,10 @@ func _initialize() -> void:
 		check(wolf.get_used_rect().size.y > orc.get_used_rect().size.y, "the werewolf's ears and tail stretch the orc silhouette (%s)" % b)
 	# A golem is stone: one drawn body serves both
 	check(HeroArt.build_dir({"body": "fem", "race": "Golem"}) == "golem_m" and HeroArt.build_dir({"body": "masc", "race": "Golem"}) == "golem_m", "golems share one body")
+	# Fairies are the Tiny build: shorter than a human and hovering above the feet row
+	var fay := (HeroArt.frames({"body": "masc", "race": "Fairy"}, "Warrior", 0, "", true)["img"][0] as Image).get_used_rect()
+	var man := (HeroArt.frames({"body": "masc", "race": "Human"}, "Warrior", 0, "", true)["img"][0] as Image).get_used_rect()
+	check(fay.size.y < man.size.y * 0.85 and fay.end.y < man.end.y, "a fairy is tiny and floats")
 	# ONE scale: battle draws every art pixel at the same whole number of screen pixels
 	check(ArtStyle.unit(1.0) == 3 and ArtStyle.unit(2.0) == 6 and ArtStyle.unit(1.0 / 3.0) == 1, "one integer battle scale (3 pt per art pixel)")
 	print("ART RULES DONE, failures: ", fails)
