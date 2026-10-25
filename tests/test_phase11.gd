@@ -24,7 +24,7 @@ func hero(race := "Human", cls := "Warrior") -> GameState:
 func _initialize() -> void:
 	GameData.realm_order = []
 	# ---------- Races ----------
-	check(Races.ORDER.size() == 12 and "Human" in Races.ORDER and not "Merfolk" in Races.ORDER, "12 races with a Human")
+	check(Races.ORDER.size() == 11 and "Human" in Races.ORDER and not "Golem" in Races.ORDER and not "Merfolk" in Races.ORDER, "12 races with a Human")
 	for r in Races.ORDER:
 		var inf := Races.info(r)
 		check(inf.has("power") and inf["ranks"].size() >= 3 and inf["ranks"].size() <= 5, "race data " + r)

@@ -3583,6 +3583,7 @@ func load_game() -> bool:
 	var saved_look: Dictionary = data.get("appearance", {})
 	for k in saved_look:
 		appearance[k] = saved_look[k]
+	appearance["race"] = Races.current(str(appearance.get("race", "Human")))  # a retired race (Golem) -> its new one
 	wardrobe = data.get("wardrobe", {})
 	transmog = data.get("transmog", {})
 	if wardrobe.is_empty():

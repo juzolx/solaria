@@ -61,7 +61,7 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 		_text_row(right, "Race", "race", GameData.RACES)
 	_text_row(right, "Build", "body", Sprites.BODIES, Sprites.BODY_NAMES)
 	_swatch_row(right, "Skin", "skin", Sprites.swatches("skin"))
-	# Every race's choices in one row; _update shows only the current race's (Dragonkin get crests, Golems stone styles)
+	# Every race's choices in one row; _update shows only the current race's (Dragonkin get crests)
 	var all_hair: Array = Sprites.HAIR_STYLES.duplicate()
 	for x in Lpc.CREST_ORDER + Lpc.GOLEM_HAIR:
 		if not x in all_hair:

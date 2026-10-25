@@ -38,7 +38,7 @@ const INFO := {
 		"mechanic": {"name": "Forge Heat", "text": "The heat burns 1% of your HP each turn, but salvaging here gives 50% more scrap."},
 		"event": {"name": "A Runic Anvil", "text": "An old anvil still humming with runes. It can improve your gear, for a price."},
 		"camp": "Hearthstone Hold", "merchant": "a dwarven smith",
-		"portal_bias": ["Dwarf", "Golem"], "locks": {}},
+		"portal_bias": ["Dwarf"], "locks": {}},
 	"angel": {"name": "The Gilded Spire", "race": "Angel", "color": "#e8b14a",
 		"blurb": "The angels' tower above the clouds. They judge everyone who climbs it.",
 		"mechanic": {"name": "Judgement", "text": "Good heroes heal 1% each turn here. Evil heroes take 15% more damage."},

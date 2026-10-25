@@ -255,3 +255,32 @@ func _synthetic() -> void:
 		"contracts": [{"monster": "Nobody"}], "grave": {"killer": "Nobody"}}
 	SaveMigrate.migrate_hero(junk)
 	check(junk["pets"][0]["species"] == "Long Gone Beast" and (junk["class_tree"]["path"] as Array).is_empty(), "unknown names are kept harmlessly, unknown classes dropped")
+	_retired_races()
+
+## Golem was taken out as a playable race (Juzo, Oct 24): old Golem heroes load as Dwarves with
+## their stats, level and gear, from a 2.0 save (the one-time move) and from a 2.1 save (every load).
+func _retired_races() -> void:
+	check(not "Golem" in Races.ORDER and not Races.INFO.has("Golem"), "Golem is no longer a playable race")
+	var old := {"level": 40, "hero_class": "Warrior", "appearance": {"body": "masc", "race": "Golem", "skin": 10}}
+	SaveMigrate.migrate_hero(old)
+	check(String(old["appearance"]["race"]) == "Dwarf", "a 2.0 Golem hero moves to Dwarf")
+	var g := GameState.new()
+	g.codex.path = ""
+	g.slot = 3
+	g.new_game()
+	g.choose_class("Warrior")
+	g.appearance["race"] = "Golem"
+	g.level = 40
+	g.stats["VIT"] = 77
+	var bulwark := Races.make_race_gear(Races.gear_for("Dwarf").filter(func(x): return x["id"] == "core_bulwark")[0], 40, 9001)
+	bulwark["race_only"] = "Golem"  # how a 2.1 Golem's copy was saved
+	g.bag.append(bulwark)
+	g.save_game(true)
+	var back := GameState.new()
+	back.codex.path = ""
+	back.slot = 3
+	check(back.load_game(), "a 2.1 save with a Golem hero loads")
+	check(back.race() == "Dwarf" and String(back.appearance["race"]) == "Dwarf", "the Golem hero is a Dwarf now")
+	check(back.level == 40 and int(back.stats["VIT"]) == 77, "level and stats kept")
+	check(Races.can_wear(back, back.bag[-1]), "their Golem gear (Core Bulwark) is still wearable")
+	GameState.delete_saves()

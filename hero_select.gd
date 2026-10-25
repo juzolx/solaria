@@ -51,7 +51,7 @@ static func describe(meta: Dictionary) -> String:
 	if nm == "":
 		nm = "Hero"
 	return "[b]%s[/b]  %s\nLv %d %s %s\nFloor %d, %s  [color=%s](best %d)[/color]" % [nm, mode, int(meta.get("level", 1)),
-		str(meta.get("appearance", {}).get("race", "Human")), str(meta.get("title", "")), int(meta.get("floor", 1)),
+		Races.current(str(meta.get("appearance", {}).get("race", "Human"))), str(meta.get("title", "")), int(meta.get("floor", 1)),
 		str(meta.get("zone", "")), UI.hex(UI.DIM), int(meta.get("best", 1))]
 
 func _card(n: int, open_slot: bool) -> PanelContainer:

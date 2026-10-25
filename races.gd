@@ -26,7 +26,10 @@ const POWER_POINT := 0.06  # a stat point put into racial power is worth this mu
 # tag_power: extra power for skills with that tag.
 # ranks: awakening. key = {"item": name, "from": {...}} or {"trial": {...}} or {}.
 # "from": {"boss": <monster id>} / {"realm", "kind"} / {"goblin"}. Form "biters" are monster ids.
-const ORDER := ["Human", "Elf", "Fairy", "Angel", "Demon", "Dwarf", "Beastkin", "Dragonkin", "Undead", "Orc", "Goblin", "Golem"]
+const ORDER := ["Human", "Elf", "Fairy", "Angel", "Demon", "Dwarf", "Beastkin", "Dragonkin", "Undead", "Orc", "Goblin"]
+## Races no longer playable -> the race their heroes become (stats, level and gear stay).
+## Golem (Juzo, Oct 24): taken out, maybe a monster later. Dwarf is the nearest: VIT and Defense.
+const RETIRED := {"Golem": "Dwarf"}
 const INFO := {
 	"Human": {"text": "Balanced and quick to learn. +2 CHA, +2 LUK, +10% XP.", "stats": {"CHA": 2, "LUK": 2}, "passive": {}, "xp": 1.1,
 		"color": "#e8b14a",
@@ -160,17 +163,6 @@ const INFO := {
 			{"name": "Goblin King", "level": 115, "power": 220, "key": {"trial": {"name": "The Goblin King", "art": "boss_black_annis", "lore": "There can only be one. Everything else belongs to him."}},
 				"bonus": {"atk": 1.1, "gold_find": 20, "stone_find": 20}, "text": "+10% Attack, +20% gold, +20% stone finds.", "look": "crown"},
 		]},
-	"Golem": {"text": "Living stone. +10 VIT, +15% Defense, reflects 5% of damage, but -5% Attack.", "stats": {"VIT": 10}, "passive": {"def": 1.15, "thorns": 5, "atk": 0.95},
-		"color": "#94a3b8", "skins": [10, 11],
-		"power": {"name": "Core Charge", "color": "#7fd0f0", "gains": {"hit": 0.004, "boss": 1.0},
-			"bonus": {"def": 0.00075, "thorns": 0.02}, "how": "Grows every time you're hit, and from beating bosses."},
-		"ranks": [
-			{"name": "Awakened Golem", "level": 30, "power": 25, "key": {}, "bonus": {"def": 1.06, "atk": 1.04}, "text": "+6% Defense, +4% Attack.", "look": "glow"},
-			{"name": "Colossus", "level": 75, "power": 100, "key": {"item": "Living Core", "from": {"boss": "surtr", "chance": 25}},
-				"bonus": {"def": 1.1, "hp": 1.1}, "text": "+10% Defense and HP.", "look": "glow"},
-			{"name": "Titan", "level": 125, "power": 260, "key": {"trial": {"name": "The First Titan", "art": "boss_surtr", "lore": "It made the first golems. It wants to see what they became."}},
-				"bonus": {"def": 1.12, "atk": 1.1, "thorns": 10}, "text": "+12% Defense, +10% Attack, reflect 10% more.", "look": "crown"},
-		]},
 }
 
 # ---------- Transformations ----------
@@ -224,6 +216,10 @@ const ESCAPE_PER_TIER := 7.0
 const ESCAPE_MIN := 10.0
 const ESCAPE_MAX := 100.0  # 100% is possible but takes real Agility (0.12: the tamer's road)
 const SPARE_AT := 0.25   # a monster under 25% HP can be spared (befriended)
+
+## The race a saved name stands for today (a retired race -> the one its heroes became).
+static func current(race: String) -> String:
+	return String(RETIRED.get(race, race))
 
 static func info(race: String) -> Dictionary:
 	return INFO.get(race, INFO["Human"])
@@ -311,13 +307,13 @@ const RACE_GEAR := {
 	"Demon": [{"id": "hornbreaker_axe", "name": "Hornbreaker Axe", "slot": "Weapon", "type": "axe", "effect": "lifesteal", "value": 12, "mat": "ember", "trim": "#e43b44", "flavor": "Only demon blood can hold its grip."},
 		{"id": "infernal_crown", "name": "Infernal Crown", "slot": "Helmet", "type": "crown", "effect": "lifesteal", "value": 10, "mat": "dark", "trim": "#e43b44", "flavor": "Burns anyone who isn't a demon."}],
 	"Dwarf": [{"id": "dwarven_runeplate", "name": "Dwarven Runeplate", "slot": "Chest", "type": "plate", "effect": "thorns", "value": 25, "mat": "iron", "trim": "#f59e0b", "flavor": "Made for dwarven shoulders. Nobody else's."},
-		{"id": "clan_warhammer", "name": "Clan Warhammer", "slot": "Weapon", "type": "mace", "effect": "double_strike", "value": 18, "mat": "iron", "trim": "#f59e0b", "flavor": "Every dwarf clan has one. Yours does now."}],
+		{"id": "clan_warhammer", "name": "Clan Warhammer", "slot": "Weapon", "type": "mace", "effect": "double_strike", "value": 18, "mat": "iron", "trim": "#f59e0b", "flavor": "Every dwarf clan has one. Yours does now."},
+		{"id": "core_bulwark", "name": "Core Bulwark", "slot": "Off Hand", "type": "tower", "effect": "thorns", "value": 25, "mat": "steel", "trim": "#7fd0f0", "flavor": "Dwarven stone-shapers cut it from a golem's heart."}],
 	"Beastkin": [{"id": "fang_and_claw_gauntlets", "name": "Fang-and-Claw Gauntlets", "slot": "Off Hand", "type": "buckler", "effect": "crit", "value": 16, "mat": "hide", "trim": "#d9a066", "flavor": "Fit only hands that are half paw."}],
 	"Dragonkin": [{"id": "wyrmscale_mail", "name": "Wyrmscale Mail", "slot": "Chest", "type": "plate", "effect": "regen", "value": 3, "mat": "scale", "trim": "#f77622", "flavor": "Shed by a dragon. Only its kin can wear it."}],
 	"Undead": [{"id": "gravecloth_shroud", "name": "Gravecloth Shroud", "slot": "Chest", "type": "robe", "effect": "lifesteal", "value": 12, "mat": "dark", "trim": "#86c06c", "flavor": "The living get cold just touching it."}],
 	"Orc": [{"id": "skullsplitter", "name": "Skullsplitter", "slot": "Weapon", "type": "axe", "effect": "double_strike", "value": 20, "mat": "iron", "trim": "#75a743", "flavor": "Too heavy for anyone but an orc."}],
 	"Goblin": [{"id": "goblin_kings_purse", "name": "Goblin King's Purse", "slot": "Off Hand", "type": "orb", "effect": "gold_find", "value": 35, "mat": "gold", "trim": "#facc15", "flavor": "It only opens for goblin fingers."}],
-	"Golem": [{"id": "core_bulwark", "name": "Core Bulwark", "slot": "Off Hand", "type": "tower", "effect": "thorns", "value": 25, "mat": "steel", "trim": "#7fd0f0", "flavor": "Slots right into a golem's arm."}],
 }
 const RACE_GEAR_BOSS_CHANCE := 1.0  # % per boss kill for a hero of that race
 
@@ -349,5 +345,5 @@ static func def_race(gear_id: String) -> String:
 
 ## Can this hero wear this item?
 static func can_wear(g: GameState, item: Dictionary) -> bool:
-	var r: String = item.get("race_only", "")
+	var r: String = current(item.get("race_only", ""))
 	return r == "" or r == g.race()

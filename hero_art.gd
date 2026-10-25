@@ -21,7 +21,7 @@ const FACE_NAMES := ["Calm", "Smile", "Laugh", "Determined", "Fierce", "Grim", "
 ## Weapon types without their own drawing are held as the closest one.
 const WEAPON_AS := {"orb": "staff", "tome": "staff", "wand": "staff", "fist": ""}
 ## Races on the standard body get a signature layer (heroes.json "races"); the other builds
-## (Goblin, Dwarf, Orc, Werewolf, Golem, Fairy) use the human body with their skin tones until drawn.
+## (Goblin, Dwarf, Orc, Werewolf, Fairy) use the human body with their skin tones until drawn.
 
 static var _info := {}
 static var _imgs := {}
@@ -166,7 +166,10 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 		var cc := Color(Classes.info(cls).get("color", "#8b9bb4"))
 		var dye := _dye_ramp(cc)
 		# goblins keep their drawn yellow-green skin (their own hue family); dwarves take the skin choice
-		var bskin := skin if bool(info()["builds"][art_race(app)].get("skin", true)) else PackedColorArray()
+		var bd: Dictionary = info()["builds"][art_race(app)]
+		var bskin := skin if bool(bd.get("skin", true)) else PackedColorArray()
+		if bd.has("skin_ramp"):
+			bskin = _ramp(bd["skin_ramp"])  # the werewolf's grey, matching its fur
 		# a race drawn over another build (the werewolf's wolf head, fur and tail on the orc)
 		var feat := str(info()["builds"][art_race(app)].get("feature", ""))
 		if feat != "":
