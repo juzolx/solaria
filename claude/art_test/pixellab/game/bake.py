@@ -436,7 +436,7 @@ WEAPON_DRAWINGS = weapon_drawings()
 # as an edit of those (claude/art_test/races, jobs.txt / ojobs.txt). The head stays drawn (no hair-style
 # swap): hair recolours by its shade, the family's fabric takes the class colour (index B = dye shade).
 RACES_RAW = os.path.abspath(os.path.join(REPO, "..", "solaria_dev", "claude", "art_test", "races", "raw"))
-BUILDS = {"Goblin": "goblin", "Dwarf": "dwarf", "Orc": "orc", "Golem": "golem"}
+BUILDS = {"Goblin": "goblin", "Dwarf": "dwarf", "Orc": "orc", "Golem": "golem", "Fairy": "fairy"}
 OWN_SKIN = ["Goblin", "Orc", "Werewolf", "Golem"]  # races whose drawn skin hue is their signature: no skin recolour
 # races drawn as a feature layer on another build's frames (PixelLab edits of that build's base frames)
 FEATURE_BUILDS = {"Werewolf": "orc"}
@@ -444,6 +444,11 @@ FEATURE_BUILDS = {"Werewolf": "orc"}
 SHARED = {"Golem": "m"}
 HAIRLESS = ["Golem"]  # stone: the cyan runes on its head are not hair
 STONE = ["Golem"]  # grey stone bodies: the sword is found as bright steel only
+# wings cut from the build's own base frames (the outfit edits leave them out, so the class outfit
+# shows): over the back in battle, behind the body on the portrait. Hue range 0-1.
+WINGS = {"Fairy": (0.68, 0.92)}
+# hovering builds: feet this many art pixels above the foot row, per frame (idle frames bob)
+FLOAT = {"Fairy": {"n_idle0": 4, "n_idle1": 6, "s_idle0": 4, "s_idle1": 6}}
 FAMILY_SRC = {"plate": "warrior", "robe": "mage", "leather": "leather", "cloth": "cloth"}
 FAMILY_OF = {"Warrior": "plate", "Knight": "plate", "Sentinel": "plate",
              "Mage": "robe", "Cleric": "robe", "Acolyte": "robe", "Conjurer": "robe",
@@ -452,7 +457,7 @@ FAMILY_OF = {"Warrior": "plate", "Knight": "plate", "Sentinel": "plate",
 # the dyed fabric of each family, as hue ranges (0-1): plate's skirt, the robe, the tunic, the gambeson
 DYE_HUES = {"plate": [(0.94, 1.0), (0.0, 0.04)], "robe": [(0.70, 0.86)], "leather": [(0.20, 0.45)], "cloth": [(0.52, 0.68)]}
 # frames a build reuses (his goblin's second idle frame lost its shirt: both idle frames are the first)
-ALIAS = {("goblin", "m", "n_idle1"): "n_idle0"}
+ALIAS = {("goblin", "m", "n_idle1"): "n_idle0", ("fairy", "m", "n_idle1"): "n_idle0"}  # his fairy's 2nd idle hides the sword
 
 
 def build_src(race, fam, b, k):
@@ -502,7 +507,8 @@ def build_bodies(info):
             if not all(os.path.exists(build_src(key, None, b, k)) for k in K):
                 continue
             base = {k: L(build_src(key, None, b, k)) for k in K}
-            place = {k: ((C - im.width) // 2, FOOT - im.getbbox()[3]) for k, im in base.items()}
+            lift = FLOAT.get(race, {})
+            place = {k: ((C - im.width) // 2, FOOT - im.getbbox()[3] - lift.get(k, 4 if lift else 0)) for k, im in base.items()}
             def bcell(im, k):
                 c = Image.new("RGBA", (C, C)); c.alpha_composite(im, place[k]); return c
             cells = {k: bcell(base[k], k) for k in K}
@@ -534,7 +540,15 @@ def build_bodies(info):
                         p[x, y] = l if (l and r) else (0, 0, 0, 0)
                     bb = c.getbbox(); top = bb[1] + (bb[3] - bb[1]) * 0.28  # big builds' shoulders reach the head band
                     hair = set() if race in HAIRLESS else {q for q, kd in R.masks(c).items() if kd == "hair" and not greenish(p[q]) and q[1] < top}
-                    out.append(c); idxs.append(dye_index(c, fam, index_of(c, hair)))
+                    idx = dye_index(c, fam, index_of(c, hair))
+                    if race in WINGS:  # wings an outfit edit kept stay lilac (the wing layer goes over them)
+                        import colorsys
+                        lo, hi = WINGS[race]; xp = idx.load()
+                        for (x, y) in [(x, y) for y in range(C) for x in range(C) if p[x, y][3]]:
+                            h, sat, v = colorsys.rgb_to_hsv(*(q / 255 for q in p[x, y][:3]))
+                            if lo <= h <= hi and sat > 0.12 and v > 0.55:  # light lilac, not the deep violet robe
+                                xp[x, y] = (0, 0, 0)
+                    out.append(c); idxs.append(idx)
                 save(f"{d}/outfit_{fam}", out, idxs)
                 fams.append(fam)
             for wt, drawing in WEAPON_DRAWINGS.items():
@@ -553,6 +567,11 @@ def build_bodies(info):
             if fams:  # a body is only offered once it has an outfit
                 info["builds"].setdefault(race, {"key": key, "bodies": {}, "skin": race not in OWN_SKIN})["bodies"][b] = fams
             print(race, b, "build done:", fams)
+            if race in WINGS and fams:
+                front, back = wing_cells(cells, WINGS[race])
+                save(f"{d}/race_{race.lower()}", front)
+                save(f"{d}/race_{race.lower()}_back", back)
+                info["builds"][race]["feature"] = f"race_{race.lower()}"
             if race in SHARED and fams:
                 e = info["builds"][race]
                 for ob in "mf":
@@ -568,6 +587,32 @@ def build_bodies(info):
                 e = info["builds"].setdefault(fr, {"key": key, "bodies": {}, "skin": fr not in OWN_SKIN, "feature": f"race_{fr.lower()}"})
                 e["bodies"][b] = fams
                 print(fr, b, "feature done")
+
+
+def wing_cells(cells, hues):
+    """The wings of a build's base frames: pixels in the wing hue plus the dark outline around them.
+    Back view: drawn over the back; front view: behind the body."""
+    import colorsys
+    front, back = [], []
+    for k in K:
+        p = cells[k].load()
+        pts = set()
+        for y in range(C):
+            for x in range(C):
+                if p[x, y][3]:
+                    h, sat, v = colorsys.rgb_to_hsv(*(q / 255 for q in p[x, y][:3]))
+                    if hues[0] <= h <= hues[1] and sat > 0.12 and v > 0.3:
+                        pts.add((x, y))
+        pts = set().union(*[c for c in comps(pts) if len(c) >= 6]) if pts else set()
+        ring = {(x + dx, y + dy) for (x, y) in pts for dx in (-1, 0, 1) for dy in (-1, 0, 1)
+                if 0 <= x + dx < C and 0 <= y + dy < C and (x + dx, y + dy) not in pts
+                and p[x + dx, y + dy][3] and R.kind(p[x + dx, y + dy][:3]) == "outline"}
+        im = Image.new("RGBA", (C, C)); ip = im.load()
+        for q in pts | ring:
+            ip[q] = p[q]
+        (back if k.startswith("s") else front).append(im)
+        (front if k.startswith("s") else back).append(Image.new("RGBA", (C, C)))
+    return front, back
 
 
 def build_feature(cells, edits, sw):
