@@ -262,7 +262,9 @@ func _initialize() -> void:
 	# Golem is no longer playable: its art stays in art/heroes/golem_m but no hero wears it
 	check(HeroArt.build_dir({"body": "masc", "race": "Golem"}) == "", "no golem body build is offered")
 	# Fairies are the Tiny build: shorter than a human and hovering above the feet row
-	var fay := (HeroArt.frames({"body": "masc", "race": "Fairy"}, "Warrior", 0, "", true)["img"][0] as Image).get_used_rect()
+	# (the body layer alone: the butterfly wings sit behind and their tails hang below the feet)
+	var fdir := HeroArt.build_dir({"body": "masc", "race": "Fairy"})
+	var fay := HeroArt._img(fdir + "/outfit_plate.png").get_region(Rect2i(0, 0, HeroArt.CELL, HeroArt.CELL)).get_used_rect()
 	var man := (HeroArt.frames({"body": "masc", "race": "Human"}, "Warrior", 0, "", true)["img"][0] as Image).get_used_rect()
 	check(fay.size.y < man.size.y * 0.85 and fay.end.y < man.end.y, "a fairy is tiny and floats")
 	# ONE scale: battle draws every art pixel at the same whole number of screen pixels
