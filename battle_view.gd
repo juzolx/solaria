@@ -1924,7 +1924,8 @@ func _draw_pet() -> void:
 	var s := float(tex.get_width()) * pu
 	var hc := _hero_canvas()
 	var x := hc.position.x + hc.size.x * 0.62
-	var y := _team_ground() - 70.0 * pu + roundf(sin(bob * 3.4 + 1.3)) * pu - pet_lunge * size.y * 0.1
+	# feet on the ground: the 32 px still's bottom row (the idle strip does the breathing)
+	var y := _team_ground() - (Pets.foot(Pets.companion_key(state)) + 1) * pu - pet_lunge * size.y * 0.1
 	draw_texture_rect(tex, Rect2(_snap(Vector2(x, y)), Vector2(s, s)), false, Color(1, 1, 1, hero_alpha))
 
 ## An LPC hero: the current animation frame, with rim light, weapon glow and hit flash.
@@ -2318,8 +2319,8 @@ func _draw_hero_status(r: Rect2, font: Font) -> void:
 	for i in chips.size():
 		_chip_row([chips[i]], 0.0, r.position.y + 12.0 + i * (SCENE_FS + 10.0), font)
 
-## Your menagerie pets on the run (caught or hatched), at the hero's right. They grow
-## with their level: a baby is small, a level 30 pet stands tall. Cherished ones glow.
+## Your menagerie pets on the run (caught or hatched), at the hero's right: their own
+## baby art (art/pets/32) at true size, breathing, feet on the team's ground. Cherished ones glow.
 func _draw_menagerie() -> void:
 	if state == null or state.in_town:
 		return
@@ -2327,29 +2328,27 @@ func _draw_menagerie() -> void:
 	if pets.is_empty():
 		return
 	var hc := _hero_canvas()
-	var zi := clampi(GameData.zone_index(state.floor_num), 0, 9)
+	var pu := _u()
+	var w := 32.0 * pu
 	for i in pets.size():
 		var p: Dictionary = pets[i]
-		var art := Sprites.enemy_by_key(String(p["art"]))
-		if not art.has("tex"):
+		var key := String(p.get("species", ""))
+		var tex := Pets.frame(key, bob + i * 0.31)
+		if tex == null:
 			continue
-		var grow := clampf((int(p["level"]) - 1) / 29.0, 0.0, 1.0)
-		var h := hc.size.y * lerpf(0.26, 0.46, grow)
-		var asz: Vector2 = art["size"]
-		var w := h * asz.x / asz.y
 		var lunge := 1.0 if pet_hits.has(String(p["name"])) else 0.0
-		var x := hc.end.x - hc.size.x * 0.05 + i * w * 0.55
-		var feet := Vector2(x, _team_ground() - 4.0 - i * 6.0 - lunge * size.y * 0.05)
-		var bobv := roundf(sin(bob * 3.6 + i * 1.7) * 1.5)
-		var r := Rect2(_snap(feet - Vector2(w / 2.0, h - bobv)), Vector2(w, h))
+		# the first beside the companion on the right, the rest on the hero's free left side (a phone is narrow)
+		var x := hc.end.x - hc.size.x * 0.05 if i == 0 else hc.position.x + hc.size.x * 0.12 - (i - 1) * w * 0.7
+		var feet := Vector2(x, _team_ground() - (i % 2) * 2.0 * pu - lunge * size.y * 0.05)
+		var r := Rect2(_snap(feet - Vector2(w / 2.0, (Pets.foot(key) + 1) * pu)), Vector2(w, w))
 		draw_set_transform(Vector2(r.get_center().x, feet.y), 0.0, Vector2(1.0, 0.3))
-		draw_circle(Vector2.ZERO, w * 0.35, Color(0, 0, 0, 0.35 * hero_alpha))
+		draw_circle(Vector2.ZERO, w * 0.3, Color(0, 0, 0, 0.35 * hero_alpha))
 		draw_set_transform(Vector2.ZERO)
 		if p.get("cherished", false):
 			var gl := 0.25 + 0.15 * sin(bob * 3.0 + i)
-			for off in [Vector2(-1.5, 0), Vector2(1.5, 0), Vector2(0, -1.5)]:
-				draw_texture_rect(art["white"], Rect2(r.position + off, r.size), false, Color(1.0, 0.85, 0.4, gl * hero_alpha))
-		draw_texture_rect(SpriteLight.lit(art["tex"], zi), r, false, Color(1, 1, 1, (0.55 if int(p["hurt"]) > 0 else 1.0) * hero_alpha))
+			for off in [Vector2(-pu, 0), Vector2(pu, 0), Vector2(0, -pu)]:
+				draw_texture_rect(Pets.white(key), Rect2(r.position + off, r.size), false, Color(1.0, 0.85, 0.4, gl * hero_alpha))
+		draw_texture_rect(tex, r, false, Color(1, 1, 1, (0.55 if int(p["hurt"]) > 0 else 1.0) * hero_alpha))
 
 var _strip_pics := {}
 ## With companions: a compact strip at the top-left, a portrait, name and HP bar for

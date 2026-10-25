@@ -149,6 +149,10 @@ func _ability_lines(v: VBoxContainer, p: Dictionary, show_locked := true) -> voi
 			v.add_child(UI.wrap("+ " + String(a["text"]), UI.FONT_CAPTION, UI.TEXT))
 		elif show_locked:
 			v.add_child(UI.wrap("A higher-ranked %s pet (%s and up) would know: %s" % [fam, Menagerie.TIER_NAMES[int(a["rank"])], a["text"]], 11, UI.DIM))
+	# all Spirits together heal at most REGEN_CAP a turn: say so when it cuts this one
+	var rs := PetAbilities.regen_share(state, p)
+	if rs >= 0.0 and rs < PetAbilities.passive_value(String(p["species"]), PetAbilities._rank(p)) - 0.001:
+		v.add_child(UI.wrap("Team regen is capped at %s%% a turn: this pet adds %s%%." % [PetAbilities._num(PetAbilities.REGEN_CAP), PetAbilities._num(rs)], 11, UI.GOLD_DULL))
 
 ## Your class companion: what it is, what it does, and what it becomes.
 func _pet_card() -> void:

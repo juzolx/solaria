@@ -7,7 +7,8 @@ extends RefCounted
 ##  - owned pets: the species id (Menagerie), Calamity pets calamity_N_pet,
 ##  - eggs: egg_<region id>.
 ## The old 68x68 companion art in art/pets/<class>_<stage>.png (tools/art_pets.py)
-## is the fallback. Drawn in the same 64-unit box the old 68x68 art used.
+## is the fallback. Everything draws at true size (32 art px x the scene's pixel
+## unit, 3x on a phone) with its feet (foot()) on the ground line.
 
 const DIR := "res://art/pets/32/"
 
@@ -62,6 +63,33 @@ static func portrait_frame(g: GameState, t: float) -> Texture2D:
 		return null
 	var fr := idle("%s_%d" % [g.hero_class.to_lower(), st])
 	return fr[int(t * 1.6) % 2] if fr.size() == 2 else portrait(g)
+
+## The class companion's art key (<class>_<stage>), or "" if none is out.
+static func companion_key(g: GameState) -> String:
+	var st := World.pet_stage(g)
+	return "%s_%d" % [g.hero_class.to_lower(), st] if st >= 0 else ""
+
+## The idle frame for an art key at time t (seconds), else its still (null if it has no art).
+static func frame(key: String, t: float) -> Texture2D:
+	var fr := idle(key)
+	return fr[int(t * 1.6) % 2] if fr.size() == 2 else art(key)
+
+## The row the pet's feet stand on (bottom of its used rect in the 32x32 still), or 31.
+static func foot(key: String) -> int:
+	var k := "f|" + key
+	if not _cache.has(k):
+		var tex := art(key)
+		var r := tex.get_image().get_used_rect() if tex != null else Rect2i()
+		_cache[k] = r.end.y - 1 if r.size.y > 0 else 31
+	return _cache[k]
+
+## A white silhouette of the still (cherished glow, met-but-not-owned in the Codex), or null.
+static func white(key: String) -> Texture2D:
+	var k := "w|" + key
+	if not _cache.has(k):
+		var tex := art(key)
+		_cache[k] = ImageTexture.create_from_image(Sprites._silhouette(tex.get_image())) if tex != null else null
+	return _cache[k]
 
 ## A region's egg (region id, GameData.ZONES[i]["id"]), or the shared egg icon.
 static func egg(zone_id: String) -> Texture2D:

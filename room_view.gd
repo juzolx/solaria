@@ -226,21 +226,23 @@ func _draw_team() -> void:
 		var foot := 80.0 / 96.0 if art.get("pl", false) else 0.9
 		draw_texture_rect(an["tex"][fi], Rect2(feet - Vector2(sz / 2.0, sz * foot), Vector2(sz, sz)), false, Color(0.85, 0.82, 0.8, a))
 		if j == 0:
-			_draw_pet(feet, sz)
-			_draw_menagerie_room(feet, sz)
+			# pets use the leader's own pixel size (one art px = sz / cell)
+			var k := sz / float(an["size"])
+			_draw_pet(feet, sz, k)
+			_draw_menagerie_room(feet, sz, k)
 
-## Your companion trots at the leader's heels.
-func _draw_pet(leader_feet: Vector2, leader_sz: float) -> void:
+## Your companion trots at the leader's heels (true size: k units per art pixel, feet on the floor).
+func _draw_pet(leader_feet: Vector2, leader_sz: float, k: float) -> void:
 	if not state.pet_on or World.pet_stage(state) < 0:
 		return
 	var tex := Pets.portrait_frame(state, t)
 	if tex == null:
 		return
-	var s := leader_sz * 0.5
-	var hop := 0.0 if (main.profile and main.profile.reduce_motion) else absf(sin(t * 3.2)) * s * 0.05
+	var s := float(tex.get_width()) * k
 	var at := leader_feet + Vector2(leader_sz * 0.62, -4.0)
 	scene.shadow(self, at, s * 0.22)
-	draw_texture_rect(tex, Rect2(at - Vector2(s / 2.0, s * 0.85 + hop), Vector2(s, s)), false, Color(0.88, 0.85, 0.82))
+	var fy := (Pets.foot(Pets.companion_key(state)) + 1) * k
+	draw_texture_rect(tex, Rect2(at - Vector2(s / 2.0, fy), Vector2(s, s)), false, Color(0.88, 0.85, 0.82))
 
 # =====================================================================
 # Mood particles by region
@@ -335,22 +337,19 @@ func _draw_portal(c: Vector2, rw: float, rh: float) -> void:
 		draw_rect(Rect2(p, Vector2(2, 2)), Color(0.85, 0.8, 1.0, d))
 	draw_circle(c, rw * 0.18, Color(1, 1, 1, 0.6 + 0.3 * sin(t * 4.0)))
 
-## Menagerie pets on the run follow at the leader's left, sized by their level.
-func _draw_menagerie_room(leader_feet: Vector2, leader_sz: float) -> void:
+## Menagerie pets on the run follow at the leader's left: their own baby art, true size, breathing.
+func _draw_menagerie_room(leader_feet: Vector2, leader_sz: float, k: float) -> void:
 	var pets := Menagerie.out(state)
+	var s := 32.0 * k
 	for i in pets.size():
 		var p: Dictionary = pets[i]
-		var art := Sprites.enemy_by_key(String(p["art"]))
-		if not art.has("tex"):
+		var key := String(p.get("species", ""))
+		var tex := Pets.frame(key, t + i * 0.31)
+		if tex == null:
 			continue
-		var grow := clampf((int(p["level"]) - 1) / 29.0, 0.0, 1.0)
-		var s := leader_sz * lerpf(0.32, 0.55, grow)
-		var hop := 0.0 if (main.profile and main.profile.reduce_motion) else absf(sin(t * 3.0 + i)) * s * 0.04
 		var at := leader_feet + Vector2(-leader_sz * (0.5 + 0.3 * i), -4.0 - i * 4.0)
 		scene.shadow(self, at, s * 0.2)
-		var asz: Vector2 = art["size"]
-		var w := s * asz.x / asz.y
-		draw_texture_rect(SpriteLight.lit(art["tex"], scene.zone), Rect2(at - Vector2(w / 2.0, s * 0.9 + hop), Vector2(w, s)), false, Color(0.9, 0.88, 0.85))
+		draw_texture_rect(tex, Rect2(at - Vector2(s / 2.0, (Pets.foot(key) + 1) * k), Vector2(s, s)), false, Color(0.9, 0.88, 0.85))
 
 ## A Descenders' Camp by the left wall: two tents stepping back along it, the fire in front
 ## of them (below the doors), Snik's lantern between the tents. Drawn far to near.

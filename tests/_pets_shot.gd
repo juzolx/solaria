@@ -1,38 +1,87 @@
 extends SceneTree
-## A baby pet and a grown Cherished pet in a fight and in the room, into shots/pets.
+## Pets on screen at phone size (Fable pets R1): the companion and three menagerie pets in a
+## fight and in the room, Codex > Pets, the card a tap opens, the Pet tab.
+##   godot --path . --resolution 430x932 --position 3000,3000 -s tests/_pets_shot.gd -- [out dir under res://]
 const TestHero := preload("res://tests/test_hero.gd")
+
 func _initialize() -> void:
 	if not TestHero.safe():
 		quit(1)
 		return
-	TestHero.make(30)
+	var args := OS.get_cmdline_user_args()
+	var out := ProjectSettings.globalize_path("res://" + (args[0] if args.size() > 0 else "claude/art_test/pets/fable_r1"))
+	DirAccess.make_dir_recursive_absolute(out)
+	TestHero.make(12, "Knight")
 	TitleScreen.pending = {"play": 1}
 	var main = load("res://main.tscn").instantiate()
 	root.add_child(main)
 	await process_frame
 	main.timer.stop()
-	for c in main.get_children():
-		if c is Overlay:
-			c.queue_free()
+	main.codex.stats["guide_skip"] = 1
 	var st: GameState = main.state
+	st.in_town = false
+	st.level = maxi(st.level, World.PET_LEVEL)
+	st.pet_on = true
+	st.hidden_class = "beast_tamer"   # three pets out
 	st.pets.clear()
 	st.pets_out.clear()
-	var a := Menagerie.make_pet(st, "Barghest", "barghest", 1, "test")
-	var b := Menagerie.make_pet(st, "Gullinbursti", "gullinbursti", 3, "test")
-	b["level"] = 30
-	b["cherished"] = true
-	st.pets_out = [int(a["id"]), int(b["id"])]
+	for e in [["banshee", 5], ["will_o_wisp", 2], ["pale_stag", 3]]:
+		var sp: String = e[0]
+		var p := Menagerie.make_pet(st, sp, String(Monsters.by_id(sp).get("art", sp)), int(e[1]), "test")
+		p["cherished"] = sp == "banshee"
+	st.events.clear()   # no first-find fanfare over the shots
+	await _close(main)
+	main.nav_page = 0
+	main._apply_nav()
 	main.refresh()
-	await create_timer(0.6).timeout
-	root.get_texture().get_image().save_png(TestHero.shots_dir("pets").path_join("fight.png"))
-	a["level"] = 30
-	a["cherished"] = true
-	await create_timer(0.4).timeout
-	root.get_texture().get_image().save_png(TestHero.shots_dir("pets").path_join("fight_grown.png"))
+	await create_timer(1.5).timeout
+	await _shot(out, "fight")
 	st.exploring = true
 	main._room_ready = true
 	main.refresh()
-	await create_timer(0.8).timeout
-	root.get_texture().get_image().save_png(TestHero.shots_dir("pets").path_join("room.png"))
-	print("PETS SHOT DONE ", Menagerie.out(st).size())
+	await create_timer(1.0).timeout
+	await _close(main)
+	await _shot(out, "room")
+	st.exploring = false
+	for gi in main._groups().size():
+		var grp: TabContainer = main._groups()[gi]
+		for s in grp.get_tab_count():
+			var title := grp.get_tab_title(s)
+			if title != "Pets" and title != "Pet":
+				continue
+			main.show_tab(gi, s)
+			main.refresh()
+			await create_timer(0.4).timeout
+			await _shot(out, "tab_%d_%s" % [gi, title.to_lower()])
+			var page = grp.get_child(s)
+			if page is PetBookTab:
+				var flow := _find_flow(page)
+				if flow != null:
+					page.scroll_vertical = int(flow.get_global_rect().position.y - page.get_global_rect().position.y) - 40
+					await create_timer(0.3).timeout
+					await _shot(out, "codex_pets_cells")
+				page._show("banshee", true, 5)
+				await create_timer(0.4).timeout
+				await _shot(out, "codex_pets_card")
+				await _close(main)
+	print("PETS SHOTS DONE ", Menagerie.out(st).size())
 	quit()
+
+func _find_flow(n: Node) -> HFlowContainer:
+	for c in n.get_children():
+		if c is HFlowContainer:
+			return c
+		var f := _find_flow(c)
+		if f != null:
+			return f
+	return null
+
+func _close(main) -> void:
+	for c in main.get_children():
+		if c is Overlay:
+			c.queue_free()
+	await process_frame
+
+func _shot(out: String, name: String) -> void:
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png(out.path_join(name + ".png"))
