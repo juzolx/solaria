@@ -84,18 +84,6 @@ func set_pets(texs: Array, key: String) -> void:
 
 ## Where townsfolk stroll: [feet y, min x, max x] in map pixels (kept clear of things they'd walk through).
 const LANES := [[384, 150, 390], [700, 200, 470], [800, 300, 400], [470, 400, 470]]
-const FOLK := [
-	[{"body": "fem", "skin": 2, "hair": "Bun", "hair_color": 6, "eyes": 2, "race": "Human"}, {"Chest": ["robe", "cloth"], "Feet": ["sandals", "leather"]}],
-	[{"body": "masc", "skin": 4, "hair": "Short", "hair_color": 2, "eyes": 1, "race": "Human"}, {"Chest": ["tunic", "leather"], "Legs": ["pants", "cloth"], "Feet": ["boots", "leather"]}],
-	[{"body": "masc", "skin": 1, "hair": "Bald", "hair_color": 8, "eyes": 3, "race": "Dwarf"}, {"Chest": ["tunic", "leather"], "Feet": ["boots", "leather"]}],
-	[{"body": "fem", "skin": 0, "hair": "Long", "hair_color": 16, "eyes": 5, "race": "Elf"}, {"Chest": ["tunic", "cloth"], "Legs": ["leggings", "cloth"], "Feet": ["boots", "leather"]}],
-	# more townsfolk for the bigger iso town
-	[{"body": "masc", "skin": 3, "hair": "Short", "hair_color": 10, "eyes": 2, "race": "Human"}, {"Chest": ["robe", "cloth"], "Feet": ["sandals", "leather"]}],
-	[{"body": "fem", "skin": 5, "hair": "Bun", "hair_color": 3, "eyes": 1, "race": "Human"}, {"Chest": ["tunic", "cloth"], "Legs": ["pants", "cloth"], "Feet": ["boots", "leather"]}],
-	[{"body": "masc", "skin": 2, "hair": "Bald", "hair_color": 0, "eyes": 4, "race": "Human"}, {"Chest": ["tunic", "leather"], "Legs": ["pants", "leather"], "Feet": ["boots", "leather"]}],
-	[{"body": "fem", "skin": 1, "hair": "Long", "hair_color": 7, "eyes": 3, "race": "Elf"}, {"Chest": ["robe", "cloth"], "Feet": ["sandals", "leather"]}],
-]
-
 func _ready() -> void:
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -410,16 +398,13 @@ func _process(delta: float) -> void:
 # =====================================================================
 
 func _make_folk() -> void:
-	for i in FOLK.size():
-		var looks := {}
-		for slot in FOLK[i][1]:
-			looks[slot] = {"type": FOLK[i][1][slot][0], "mat": FOLK[i][1][slot][1], "trim": Color.WHITE, "glow": false}
-		var anims := Lpc.build_walker(Lpc.spec(FOLK[i][0], looks))
-		if anims["walk"].is_empty():
+	for i in TownFolk.PEOPLE.size():
+		var w := TownFolk.townsfolk(i)
+		if (w["s"] as Array).is_empty():
 			continue
 		var lane: Array = LANES[i % LANES.size()]
-		folk.append({"walk": anims["walk"]["tex"], "idle": anims["idle"]["tex"] if not anims["idle"].is_empty() else anims["walk"]["tex"].slice(0, 1),
-			"x": randf_range(lane[1], lane[2]), "y": float(lane[0]), "lane": lane, "to": -1.0, "wait": randf_range(0.5, 4.0), "flip": randf() < 0.5, "t": randf() * 3.0})
+		folk.append({"frames": w["s"], "x": randf_range(lane[1], lane[2]), "y": float(lane[0]), "lane": lane, "to": -1.0,
+			"wait": randf_range(0.5, 4.0), "flip": randf() < 0.5, "t": randf() * 3.0})
 		if iso:
 			_place_on_grid(folk[-1])
 
@@ -433,12 +418,11 @@ func set_heroes(list: Array, key: String) -> void:
 	folk = folk.filter(func(f): return not f.get("hero", false))
 	for i in list.size():
 		var e: Array = list[i]
-		var anims := Lpc.build_walker(Lpc.spec(e[0], e[1]))
-		if anims["walk"].is_empty():
+		var w := TownFolk.hero(e[0], e[1])
+		if (w["s"] as Array).is_empty():
 			continue
 		var lane: Array = LANES[(i + 1) % LANES.size()]
-		folk.append({"walk": anims["walk"]["tex"], "idle": anims["idle"]["tex"] if not anims["idle"].is_empty() else anims["walk"]["tex"].slice(0, 1),
-			"x": randf_range(lane[1], lane[2]), "y": float(lane[0]) + randf_range(-6.0, 6.0), "lane": lane, "to": -1.0, "wait": randf_range(0.5, 3.0),
+		folk.append({"frames": w["s"], "x": randf_range(lane[1], lane[2]), "y": float(lane[0]) + randf_range(-6.0, 6.0), "lane": lane, "to": -1.0, "wait": randf_range(0.5, 3.0),
 			"flip": randf() < 0.5, "t": randf() * 3.0, "hero": true, "you": bool(e[2])})
 		if iso:
 			_place_on_grid(folk[-1])
@@ -601,27 +585,27 @@ func _draw_people() -> void:
 	for f in sorted:
 		if iso and float(f.get("fade", 0.0)) >= 1.0:
 			continue
-		var walking := float(f["wait"]) <= 0.0
-		var frames: Array = f["walk"] if walking else f["idle"]
-		var i := (int(float(f["t"]) * 9.0) % maxi(1, frames.size() - 1)) + 1 if walking else (int(float(f["t"]) * 1.5) % frames.size())
-		i = clampi(i, 0, frames.size() - 1)
-		var tx: Texture2D = frames[i]
-		# iso town: walkers at half size (~24 px, about a door's height)
-		var k := 0.5 if iso else 1.0
-		var w := float(tx.get_width()) * k
-		var pos := Vector2(float(f["x"]) - w / 2.0, float(f["y"]) - w + w * 0.12)
+		# PixelLab heroes have no walk cycle yet: walking swaps the two idle frames each step and
+		# lifts a pixel on every other step; standing breathes slowly
+		var walking := float(f["wait"]) <= 0.0 and float(f.get("inside", 0.0)) <= 0.0
+		var frames: Array = f["frames"]
+		var step := int(float(f["t"]) * 6.0)
+		var tx: Texture2D = frames[(step if walking else int(float(f["t"]) * 1.5)) % frames.size()]
+		var bob := float(step % 2) if walking else 0.0
+		var w := float(tx.get_width())
+		var pos := Vector2(roundf(float(f["x"]) - w / 2.0), roundf(float(f["y"])) - TownFolk.FOOT - bob)
 		people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
-		people.draw_circle(Vector2(float(f["x"]), float(f["y"]) - 2.0), 9.0 * k, Color(0.04, 0.03, 0.08, 0.25))
+		people.draw_circle(Vector2(float(f["x"]), float(f["y"]) - 1.0), 6.0, Color(0.04, 0.03, 0.08, 0.3))
 		if f["flip"]:
-			people.draw_set_transform(Vector2((float(f["x"]) * 2.0) * scale_f, 0), 0.0, Vector2(-scale_f, scale_f))
-		people.draw_texture_rect(tx, Rect2(pos, Vector2(w, w)), false, Color(1, 1, 1, 1.0 - float(f.get("fade", 0.0))))
+			people.draw_set_transform(Vector2((pos.x * 2.0 + w) * scale_f, 0), 0.0, Vector2(-scale_f, scale_f))
+		people.draw_texture(tx, pos, Color(1, 1, 1, 1.0 - float(f.get("fade", 0.0))))
 		if iso:
 			people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
 			_cover(Rect2(pos, Vector2(w, w)), float(f["y"]))
 		if f.get("hero", false):
 			# A small marker over your heroes (brighter over the one you're playing)
 			people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
-			var top := Vector2(float(f["x"]), pos.y + w * 0.1 + sin(float(f["t"]) * 3.0) * 1.5)
+			var top := Vector2(float(f["x"]), pos.y + 9.0 + sin(float(f["t"]) * 3.0) * 1.5)
 			var col := Color("#fbbf24") if f.get("you", false) else Color("#d6c9a0")
 			people.draw_colored_polygon(PackedVector2Array([top + Vector2(-7, -9), top + Vector2(7, -9), top + Vector2(0, 1)]), Color(0.05, 0.03, 0.08, 0.85))
 			people.draw_colored_polygon(PackedVector2Array([top + Vector2(-5, -8), top + Vector2(5, -8), top + Vector2(0, -1)]), col)
@@ -730,7 +714,7 @@ func _draw_pen() -> void:
 	people.draw_rect(Rect2(sp.x - 6.0, sp.y - 14.5, 12.0, 4.0), Color("#3ca85a"))
 	_draw_pen_pets(34.0)
 
-## Your pets in the pen, `px` tall (16 in the iso town: knee-high to a 24 px walker).
+## Your pets in the pen, `px` tall (16 in the iso town: knee-high to a ~28 px walker).
 func _draw_pen_pets(px: float) -> void:
 	var sorted := pen_pets.duplicate()
 	sorted.sort_custom(func(a, b): return float(a["y"]) < float(b["y"]))

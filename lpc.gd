@@ -163,12 +163,6 @@ static func build(spec: Dictionary) -> Dictionary:
 	_built[key] = out
 	return out
 
-## Walking and standing frames for a townsperson: {"walk": {...}, "idle": {...}}.
-## dir: "" faces right (flip it for left), "up" walks away from you, "down" toward you.
-static func build_walker(spec: Dictionary, dir := "") -> Dictionary:
-	var layers := _layers(spec)
-	return {"walk": _compose(layers, "walk", false, dir), "idle": _compose(layers, "idle", false, dir)}
-
 ## The spec's parts as sorted layers: [z, order, files dict, info].
 static func _layers(spec: Dictionary) -> Array:
 	var items: Dictionary = manifest().get("items", {})
