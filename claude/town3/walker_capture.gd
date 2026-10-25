@@ -2,9 +2,11 @@ extends SceneTree
 ## In-game capture of the town walkers (PixelLab heroes) at 430x932: frames for a GIF and a strip.
 ## godot --path . --resolution 430x932 -s claude/town3/walker_capture.gd   (needs a real window)
 var main
-var OUT := ProjectSettings.globalize_path("res://claude/town3/out/walkers_v2/frames/")
+var OUT := ProjectSettings.globalize_path("res://claude/town3/out/walkers_v2/frames/")   # or the first user arg (a folder under out/)
 
 func _initialize() -> void:
+	if OS.get_cmdline_user_args().size() > 0:
+		OUT = ProjectSettings.globalize_path("res://claude/town3/out/%s/frames/" % OS.get_cmdline_user_args()[0])
 	DirAccess.make_dir_recursive_absolute(OUT)
 	GameState.delete_saves()
 	Profile.delete()
@@ -84,9 +86,29 @@ func _initialize() -> void:
 	for i in 60:
 		await create_timer(0.1).timeout
 		root.get_texture().get_image().save_png(OUT + "f%03d.png" % i)
-	for z in [3.0]:
-		tv._zoom_to(z, tv.size / 2.0)
-		await create_timer(0.6).timeout
-		root.get_texture().get_image().save_png(OUT + "zoom3.png")
+	tv._zoom_to(3.0, tv.size / 2.0)
+	await create_timer(0.6).timeout
+	root.get_texture().get_image().save_png(OUT + "zoom3.png")
+	# the hope path: two walkers on the stairs, the view on the dungeon
+	tv._zoom_to(2.0, tv.size / 2.0)
+	var gate: Rect2 = tv._spot_rect("gate")
+	tv.pan_v = tv.size / 2.0 - gate.get_center() * tv.scale_f
+	tv._layout()
+	var hope: Array = tv.raised.keys()
+	hope.sort_custom(func(a, b): return a.y > b.y)
+	for k in 2:
+		var f: Dictionary = tv.folk[k]
+		var c0: Vector2i = hope[k * 2]
+		var p0: Vector2 = tv._cell_px(c0)
+		f["x"] = p0.x; f["y"] = p0.y; f["cell"] = c0; f["inside"] = 0.0; f["fade"] = 0.0; f["wait"] = 0.0
+		f["path"] = tv._grid_path(c0, hope[-1])
+	for i in 24:
+		await create_timer(0.1).timeout
+		root.get_texture().get_image().save_png(OUT + "d%03d.png" % i)
+	# pan far into a corner: the view stops at the town's edge (no void)
+	tv.pan_v = Vector2(4000, 4000)
+	tv._layout()
+	await create_timer(0.3).timeout
+	root.get_texture().get_image().save_png(OUT + "corner.png")
 	print("CAPTURE DONE")
 	quit()

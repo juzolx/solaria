@@ -27,8 +27,7 @@ GROUND = [
     ("garden", 34, 10, 37, 18),   # orchard where the east houses were
     ("field", 9, 29, 12, 33),     # more vegetable plots where the south house was
     ("square", 6, 2, 6, 6),       # pale gravel path through the church garden
-    ("square", 27, 15, 28, 15),   # the square reaches the Tavern door
-    ("garden", 28, 16, 31, 19),   # small public garden with a well (the Vault moved)
+    ("garden", 24, 10, 28, 14),   # small public garden with a well where the Tavern stood (the stairs stay clear)
     ("bridge", 17, 26, 22, 29),   # stone bridge on the main street
     ("planks", 7, 27, 8, 28),     # wooden footbridge on the west lane
     ("field", 2, 29, 5, 34),
@@ -37,9 +36,16 @@ GROUND = [
     ("field", 13, 29, 17, 33),    # vegetable plots right behind the tall gatehouse (only low things there)
     ("yard", 13, 25, 17, 25),
     ("yard", 22, 25, 26, 25),
+    ("dirt", 34, 2, 37, 5),       # the Guild's training ring (sparring dirt, fenced)
+    ("path", 35, 6, 36, 7),       # ...and its gate path down to the north lane
 ]
+EXTRA_STOPS = [(35, 6), (36, 6)]  # people stop at the training ring's gate to watch
 
 PLATEAU, PLATEAU_Z = (13, 1, 26, 7), 24   # raised block (sprite), dungeon stands on it
+# the hope path, measured on the sprites: the wide stair climbs from the north lane (foot at j 9.5)
+# to the plateau top (j 7.6), then the dungeon's own steps up to the portal. cell -> height in px
+RAISED = {(19, 8): 12, (19, 7): 24, (19, 6): 24, (19, 5): 30, (19, 4): 44}
+GATE_DOOR = (19, 4)
 BRIDGE = (17, 26, 22, 29)
 
 # walls: ring + corner towers + gatehouse (sealed)
@@ -52,7 +58,7 @@ LOTS = [
     ("gate", "Dungeon", 17, 2, 22, 6, "j", 26),
     ("guild", "Guild Hall", 28, 3, 33, 7, "j", 24),
     ("inn", "Inn", 13, 10, 17, 14, "j", 24),
-    ("tavern", "Tavern", 24, 10, 28, 14, "j", 24),
+    ("tavern", "Tavern", 27, 14, 31, 18, "j", 24),   # east of the square, clear of the dungeon stairs
     ("church", "Church (lot)", 2, 10, 6, 16, "i", 22),
     ("shop", "Shop", 9, 21, 12, 24, "i", 20),
     ("smith", "Blacksmith", 9, 16, 12, 19, "i", 20),
@@ -63,6 +69,8 @@ LOTS = [
 HOUSES = [  # no plain homes (Juzo: everyone lives at the Inn); only the Inn's lodging wing
     (9, 10, 12, 13, "j"),        # Inn lodging wing, door on the Inn yard (row 14)
 ]
+INN_WING_DOOR = (11, 14)         # in front of the wing's drawn door (sprite flipped so it faces the yard)
+CHURCH_DOOR = (5, 14)            # in front of the Church's arched door (its facade sits back in the lot)
 # small things on the square / streets: id, label, cell
 POINTS = [
     ("bounty", "Bounty Board", 23, 8),      # by the dungeon stairs
@@ -95,7 +103,7 @@ def door_paths():
         blocked |= {(i, j) for i in range(x0, x1 + 1) for j in range(y0, y1 + 1)}
     street = {"road", "square", "bridge", "dirt"}
     out = set()
-    doors = [door_cell(*l[2:7]) for l in LOTS] + [door_cell(*h) for h in HOUSES if h[4]]
+    doors = [door_cell(*l[2:7]) for l in LOTS] + [INN_WING_DOOR]
     for d in doors:
         if g[d[0]][d[1]] in street:
             continue

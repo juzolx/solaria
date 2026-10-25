@@ -1192,13 +1192,15 @@ func _town_heroes() -> void:
 	var looks := state.hero_looks()
 	var key := "%d|%s|%s|%d" % [state.slot, str(state.appearance), str(looks), _roster_cache.size()]
 	town_view.set_heroes([[state.appearance, looks, true]] + _roster_cache, key)
-	# Your pets live in the Clinic's pen (your class companion too, if you have one)
+	# Your pets live in the Clinic's pen, at most TownView.MAX_TOWN_PETS of them: your class
+	# companion, then the pets you take on runs, then the rest (never the whole collection)
 	var texs: Array = []
 	var pkey := ""
 	if World.pet_stage(state) >= 0:
 		texs.append(Pets.portrait(state))
 		pkey += "c%d" % World.pet_stage(state)
-	for p in state.pets:
+	var ordered: Array = state.pets.filter(func(p): return state.pets_out.has(p["id"])) + state.pets.filter(func(p): return not state.pets_out.has(p["id"]))
+	for p in ordered.slice(0, maxi(0, TownView.MAX_TOWN_PETS - texs.size())):
 		texs.append(Menagerie.texture(p))
 		pkey += "|%d" % int(p["id"])
 	town_view.set_pets(texs, "%d:%s" % [state.slot, pkey])

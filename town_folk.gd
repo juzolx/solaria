@@ -4,12 +4,13 @@ extends RefCounted
 ## right (the battle's back frames are drawn bigger, so a walker would grow when it turned),
 ## halved to a true ~30 px sprite on the town's own pixel grid (1 walker pixel = 1 map pixel,
 ## a clean 2x/3x on screen like the buildings). Built once per look and cached.
-## No walk cycle is drawn yet: town_view bobs the idle frames a pixel per step.
+## Walking: idle, left step, idle, right step (HeroArt.steps lifts one leg of the idle frame).
 
 const CELL := 48          # HeroArt.CELL / 2
 const FOOT := 40          # heroes.json "foot" (80) / 2: the feet row inside a cell
 
 ## The townsfolk: [appearance, class, tier] - races, builds and outfits mixed so the street looks lived in.
+## town_view shows the first TownView.MAX_FOLK of them, so the first six mix races and sexes on their own.
 const PEOPLE := [
 	[{"body": "fem", "race": "Human", "skin": 2, "hair": "Bun", "hair_color": 6}, "Cleric", 0],
 	[{"body": "masc", "race": "Dwarf", "skin": 1, "hair": "Bald", "hair_color": 8}, "Warrior", 0],
@@ -27,16 +28,18 @@ const PEOPLE := [
 
 static var _cache := {}
 
-## {"s": [2 front textures]} for one look (cached).
+## {"s": [2 front idle textures], "walk": [idle, step, idle, step]} for one look (cached).
 static func walker(app: Dictionary, cls: String, tier: int, weapon: String) -> Dictionary:
 	var key := "%s|%s|%d|%s" % [str(app), cls, tier, weapon]
 	if _cache.has(key):
 		return _cache[key]
-	var out := {"s": []}
+	var out := {"s": [], "walk": []}
 	if HeroArt.available():
 		var front := HeroArt.frames(app, cls, tier, weapon, false)
 		for i in HeroArt.PORTRAIT:
 			out["s"].append(ImageTexture.create_from_image(half(front["img"][i])))
+		var st: Array = HeroArt.steps(front["img"][HeroArt.PORTRAIT[0]])
+		out["walk"] = [out["s"][0], ImageTexture.create_from_image(half(st[0])), out["s"][0], ImageTexture.create_from_image(half(st[1]))]
 	_cache[key] = out
 	return out
 

@@ -82,6 +82,7 @@
   "file": "tower_short.png"
  },
  "house0": {
-  "file": "house_b.png"
+  "file": "house_b.png",
+  "flip": true
  }
 }
