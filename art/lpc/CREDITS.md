@@ -1,6 +1,6 @@
 # Character art credits (LPC)
 
-Hero art is built from the Liberated Pixel Cup (LPC) Universal Spritesheet Character Generator.
+The townsfolk walking in the town are built from the Liberated Pixel Cup (LPC) Universal Spritesheet Character Generator (heroes use their own PixelLab art, art/heroes).
 Licenses: CC-BY-SA 3.0/4.0, GPL 2.0/3.0, OGA-BY 3.0, CC-BY 3.0/4.0, CC0, as listed per part.
 Source: https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator
 

@@ -72,7 +72,7 @@ func _power_card() -> void:
 	for n in [1, 5]:
 		var b := UI.button("+%d" % n, func(): Lineage.spend_power(state, n); main.refresh())
 		b.disabled = state.stat_points < n
-		b.tooltip_text = "Put %d stat point%s into %s (each is worth %.1f)" % [n, "" if n == 1 else "s", p["name"], Races.POWER_POINT]
+		b.tooltip_text = "Put %d stat point%s into %s (each is worth %.2f)" % [n, "" if n == 1 else "s", p["name"], Races.POWER_POINT]
 		row.add_child(b)
 	var bar := UI.bar(c, 10)
 	bar.max_value = float(nr["power"]) if not nr.is_empty() else maxf(1.0, pw)

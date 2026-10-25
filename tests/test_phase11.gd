@@ -52,7 +52,7 @@ func _initialize() -> void:
 	a.stat_points = 10
 	var before := Lineage.power(a)
 	Lineage.spend_power(a, 5)
-	check(absf(Lineage.power(a) - before - 0.5) < 0.001 and a.stat_points == 5, "stat points into power are 0.1 each")
+	check(absf(Lineage.power(a) - before - 5 * Races.POWER_POINT) < 0.001 and a.stat_points == 5, "stat points into power are Races.POWER_POINT each")
 	check(Lineage.awaken_block(a).begins_with("Reach level"), "awakening needs a level")
 	a.level = 40
 	a.race_power = 100.0
@@ -77,7 +77,7 @@ func _initialize() -> void:
 
 	# ---------- Transformations ----------
 	var v := hero("Human")
-	v.enemy_species = "Strigoi"
+	v.enemy_species = "strigoi"   # monster ids, not shown names
 	var bitten := false
 	for _i in 40000:
 		Lineage.on_hit(v)
@@ -94,7 +94,7 @@ func _initialize() -> void:
 	v._enemy_defeated()
 	check(v.form == "", "the Elder Vampire's death cures you")
 	var w := hero("Beastkin")
-	w.enemy_species = "Barghest"
+	w.enemy_species = "barghest"
 	for _i in 40000:
 		Lineage.on_hit(w)
 		if w.lycan_pending:
