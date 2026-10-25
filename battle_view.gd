@@ -1516,7 +1516,8 @@ func _draw() -> void:
 		for th in things:
 			halls.draw_scenery(self, th)
 		halls.vignette(self, size)
-		_draw_mood(w, h, _ground())
+		if not halls.is_3d():
+			_draw_mood(w, h, _ground())
 	_outlined(font, Vector2(12, 26), _fit_text(font, "%s  -  %s" % [zone["name"], GameData.sub_name(state.floor_num)], SCENE_FS, size.x - 24.0), HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS, Color(1, 1, 1, 0.7))
 	_draw_status(font)
 
@@ -2078,8 +2079,8 @@ func _draw_mood(w: float, h: float, gy: float) -> void:
 			x += fw
 
 func _rim_color() -> Color:
-	var zc := Color(GameData.zone_for_floor(state.floor_num)["color"])
-	return zc.lerp(Color("#fff4d6"), 0.55)
+	# the zone's light from HallsScene.MOODS (palette colours), like the room and SpriteLight
+	return HallsScene.MOODS[clampi(GameData.zone_index(state.floor_num), 0, HallsScene.MOODS.size() - 1)]["light"]
 
 func draw_ellipse_shadow(r: Rect2) -> void:
 	var c := Vector2(r.get_center().x, (_ground() + 2.0) if r.get_center().y < size.y * 0.62 else r.end.y)

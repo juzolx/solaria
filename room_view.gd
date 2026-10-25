@@ -13,6 +13,7 @@ var t := 0.0
 var key := ""
 var motes: Array = []
 var hit := {}              # "m<i>" / "d<i>" / "p<i>" -> Rect2 (tap targets)
+const LABEL_FS := 16       # prop names, the hint line and the floor title (same font as the fights)
 
 func setup(m) -> void:
 	main = m
@@ -67,7 +68,7 @@ func _draw() -> void:
 	if state == null or scene.key == "":
 		return
 	hit.clear()
-	var font := get_theme_default_font()
+	var font := UI.game_font()
 	scene.draw_shell(self, size)
 	scene.draw_doors(self, state, hit, font)
 	# Everything standing in the room, far to near
@@ -104,18 +105,20 @@ func _draw() -> void:
 			msg += "  (Auto in a moment)"
 	elif doors_open and not state.room_props.is_empty() and String(state.room_props[0]["kind"]) == "merchant":
 		msg = "Tap Snik to trade, or pick a door"
-	draw_string_outline(font, Vector2(0, size.y - 14), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, 14, 4, Color(0, 0, 0, 0.9))
-	draw_string(font, Vector2(0, size.y - 14), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, 14, Color("#f6d88f"))
+	draw_string_outline(font, Vector2(0, size.y - 14), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, LABEL_FS, 5, Color(0, 0, 0, 0.9))
+	draw_string(font, Vector2(0, size.y - 14), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, LABEL_FS, Color("#f6d88f"))
 	var title := "%s  -  Floor %d" % [GameData.zone_for_floor(state.floor_num)["name"], state.floor_num]
-	draw_string_outline(font, Vector2(10, 22), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, 4, Color(0, 0, 0, 0.9))
-	draw_string(font, Vector2(10, 22), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.75))
+	draw_string_outline(font, Vector2(10, 24), title, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FS, 5, Color(0, 0, 0, 0.9))
+	draw_string(font, Vector2(10, 24), title, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FS, Color(1, 1, 1, 0.8))
 
 ## A prop's y (0 far .. 1 near, as rolled by Halls) to depth.
 func _prop_z(y: float) -> float:
 	return lerpf(HallsScene.D - 0.5, 1.7, clampf((y - 0.3) / 0.5, 0.0, 1.0))
 
-func _prop_x(x: float) -> float:
-	return (x - 0.5) * (HallsScene.W - 1.4)
+## A prop's x (0 left .. 1 right) to world x, kept where a phone sees it at depth z.
+func _prop_x(x: float, z := HallsScene.D) -> float:
+	var lim := 0.7 * z
+	return clampf((x - 0.5) * (HallsScene.W - 1.4), -lim, lim)
 
 func _draw_prop(i: int, font: Font) -> void:
 	var p: Dictionary = state.room_props[i]
@@ -128,8 +131,8 @@ func _draw_prop(i: int, font: Font) -> void:
 		tile = "mimic"
 	if used and kind == "chest":
 		tile = "chest_open"
-	var x := _prop_x(float(p["x"]))
 	var z := _prop_z(float(p["y"]))
+	var x := _prop_x(float(p["x"]), z)
 	var rect := Rect2()
 	var bob := sin(t * 2.0) * 1.5
 	if kind == "npc":
@@ -168,25 +171,27 @@ func _draw_prop(i: int, font: Font) -> void:
 	if tile == "mimic":
 		lab = "Mimic!"
 		lc = Color("#f87171")
-	var at := Vector2(rect.get_center().x - 50, rect.end.y + 12)
-	draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, 100, 10, 3, Color(0, 0, 0, 0.9))
-	draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, 100, 10, lc)
+	var at := Vector2(rect.get_center().x - 80, rect.end.y + 16)
+	draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, 160, LABEL_FS, 5, Color(0, 0, 0, 0.9))
+	draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, 160, LABEL_FS, lc)
 
-## A trap you've spotted (hidden ones stay hidden): a magic circle on the floor, slowly
-## turning, in the colour of what it does (Halls.TRAPS "color").
+## A trap you've spotted (hidden ones stay hidden): its rune circle on the floor (art/traps/<kind>.png,
+## its own sigil in the middle), in the colour of what it does (Halls.TRAPS "color"). It doesn't turn
+## (1 px lines would crawl); the colour pulses in two hard steps instead.
 func _draw_trap() -> void:
 	var rtrap: Dictionary = state.room_trap
-	var x := _prop_x(float(rtrap["x"]))
 	var z := _prop_z(float(rtrap["y"]))
+	var x := _prop_x(float(rtrap["x"]), z)
 	var fy := HallsScene.FLOOR_Y + 0.01
 	var col := Color(String(Halls.TRAPS[String(rtrap["kind"])].get("color", "#fee761")))
-	var pulse := 0.8 + 0.2 * sin(t * 3.0)
-	var r := 1.1   # the same size as the shrine's rune circle
-	var tint := Color(col.r * 1.4 * pulse, col.g * 1.4 * pulse, col.b * 1.4 * pulse)
+	var tint := col if int(t * 2.0) % 2 == 0 else col.lightened(0.25)
+	var r := 1.1   # the same size as the shrine's glyph
 	var cols := PackedColorArray([tint, tint, tint, tint])
-	var tex := scene.tx("res://art/traps/circle.png")
+	var tex := scene.tx("res://art/traps/%s.png" % String(rtrap["kind"]))
+	if tex == null:
+		tex = scene.tx("res://art/traps/circle.png")
 	# an 8x8 grid of small quads so the circle follows the floor's perspective (one big quad warps it)
-	var spin := t * 0.4
+	var spin := 0.0
 	var n := 8
 	for gy in n:
 		for gx in n:
@@ -211,6 +216,10 @@ func _draw_team() -> void:
 	for j in range(xs.size() - 1, -1, -1):
 		var g: GameState = state if j == 0 else members[j - 1].hero
 		var art := Sprites.hero_back(g.appearance, g.hero_looks())
+		# the fights' one scale (ArtStyle.SCREEN_PX screen pixels per art pixel), companions one step smaller
+		var scr := get_global_transform_with_canvas().get_scale().x
+		scr = scr if scr > 0.01 else 1.0
+		var unit := ArtStyle.unit(scr)
 		if not art.has("lpc"):
 			continue
 		var an: Dictionary = (art["lpc"] as Dictionary).get("combat_idle", {})
@@ -218,7 +227,7 @@ func _draw_team() -> void:
 			continue
 		var n: int = (an["tex"] as Array).size()
 		var fi := int(t * float(an["fps"]) + j) % n
-		var sz: float = float(an["size"]) * (2.0 if j == 0 else 1.7)
+		var sz: float = float(an["size"]) * float(unit if j == 0 else maxi(1, unit - 1)) / scr
 		var feet := Vector2(size.x * float(xs[j]), size.y - (26.0 if j == 0 else 44.0))
 		scene.shadow(self, feet, sz * 0.18)
 		var a := 0.4 if (j == 0 and state.leader_down) or (j > 0 and members[j - 1].knocked_out) else 1.0
@@ -283,7 +292,7 @@ func _draw_motes(mood: Dictionary) -> void:
 			"drips":
 				draw_rect(Rect2(p, Vector2(1, 5)), Color(c, 0.5 * a))
 			"shadows":
-				draw_circle(p, 5.0, Color(0.05, 0.0, 0.1, 0.25 * a))
+				draw_rect(Rect2(p, Vector2(3, 3)), Color(c.darkened(0.7), 0.5 * a))
 			"dust", "leaves":
 				draw_rect(Rect2(p, Vector2(2, 2)), Color(c.darkened(0.3), 0.45 * a))
 			_:
@@ -294,22 +303,15 @@ func _draw_motes(mood: Dictionary) -> void:
 func _draw_campfire(x: float, z: float) -> Rect2:
 	var base := scene.proj(x, HallsScene.FLOOR_Y, z)
 	var s := scene.focal / z
-	for k in 5:
-		draw_set_transform(base, 0.0, Vector2(1.0, 0.35))
-		draw_circle(Vector2.ZERO, s * (0.5 + k * 0.25) * (1.0 + 0.05 * sin(t * 9.0)), Color(1.0, 0.55, 0.2, 0.08))
-		draw_set_transform(Vector2.ZERO)
+	scene.glow(self, base, s * 2.2 * (1.0 + 0.05 * sin(t * 9.0)), Color("#f77622", 0.7))
 	var flick := 1.0 + 0.06 * sin(t * 9.0) + 0.04 * sin(t * 23.0)
 	return scene.sprite(self, scene.tx("res://art/props/campfire.png"), x, z, 1.1, Color(flick, flick, flick))
 
-## A rift (portals.gd): a tall swirling oval of violet light hanging over the floor.
+## A rift (portals.gd): a swirling violet oval over the floor, a 3-frame loop (art/halls/rift_*.png).
 func _draw_rift(x: float, z: float) -> Rect2:
-	var s := scene.focal / z
-	var c := scene.proj(x, HallsScene.FLOOR_Y + 0.95, z)
-	var rw := s * 0.55
-	var rh := s * 0.9
-	scene.shadow(self, scene.proj(x, HallsScene.FLOOR_Y, z), rw * 0.8)
-	_draw_portal(c, rw, rh)
-	return Rect2(c - Vector2(rw, rh), Vector2(rw * 2.0, rh * 2.0))
+	var tex := scene.tx("res://art/halls/rift_%d.png" % (int(t * 6.0) % 3))
+	scene.glow(self, scene.proj(x, HallsScene.FLOOR_Y, z), scene.focal / z * 1.4, Color("#9a4fc0", 0.6))
+	return scene.sprite(self, tex, x, z, 1.9, Color.WHITE, -scene.focal / z * 0.15)
 
 ## A champion's gate: the middle door itself is the portal (HallsScene/Room3D draw it);
 ## returns the doorway to tap.
@@ -317,23 +319,6 @@ func _draw_gate() -> Rect2:
 	var tl := scene.proj(-HallsScene.DOOR_W / 2.0, HallsScene.FLOOR_Y + HallsScene.DOOR_H, HallsScene.D)
 	var br := scene.proj(HallsScene.DOOR_W / 2.0, HallsScene.FLOOR_Y, HallsScene.D)
 	return Rect2(tl, br - tl)
-
-## Swirling violet light with motes spiraling in, centred on c.
-func _draw_portal(c: Vector2, rw: float, rh: float) -> void:
-	for i in 6:
-		var k := 1.0 - i / 6.0
-		var wob := 1.0 + 0.05 * sin(t * 3.0 + i)
-		draw_set_transform(c, sin(t * 0.7 + i) * 0.08, Vector2(rw * k * wob / rh, 1.0))
-		var col := Color("#3b0764").lerp(Color("#c4b5fd"), 1.0 - k)
-		draw_circle(Vector2.ZERO, rh * k, Color(col, 0.35 + 0.1 * (1.0 - k)))
-	draw_set_transform(Vector2.ZERO)
-	# motes spiraling in
-	for i in 10:
-		var a := t * 1.6 + i * TAU / 10.0
-		var d := fmod(t * 0.5 + i * 0.1, 1.0)
-		var p := c + Vector2(cos(a) * rw * (1.2 - d), sin(a) * rh * (1.2 - d))
-		draw_rect(Rect2(p, Vector2(2, 2)), Color(0.85, 0.8, 1.0, d))
-	draw_circle(c, rw * 0.18, Color(1, 1, 1, 0.6 + 0.3 * sin(t * 4.0)))
 
 ## Menagerie pets on the run follow at the leader's left, sized by their level.
 func _draw_menagerie_room(leader_feet: Vector2, leader_sz: float) -> void:
@@ -353,15 +338,17 @@ func _draw_menagerie_room(leader_feet: Vector2, leader_sz: float) -> void:
 		draw_texture_rect(SpriteLight.lit(art["tex"], scene.zone), Rect2(at - Vector2(w / 2.0, s * 0.9 + hop), Vector2(w, s)), false, Color(0.9, 0.88, 0.85))
 
 ## A Descenders' Camp by the left wall: two tents stepping back along it, the fire in front
-## of them (below the doors), Snik's lantern between the tents. Drawn far to near.
+## of them (below the doors), Snik's lantern between the tents. Drawn far to near, all where
+## a phone can see them (|x| <= 0.78 z).
 func _draw_camp(x: float, z: float) -> Rect2:
 	var s := scene.focal / z
 	var t1 := scene.sprite(self, scene.tx("res://art/props/tent.png"), x - 1.6, z + 1.2, 1.1)
-	var t2 := scene.sprite(self, scene.tx("res://art/props/tent.png"), x - 1.2, z + 0.3, 1.1)
+	var t2 := scene.sprite(self, scene.tx("res://art/props/tent.png"), x - 1.0, z + 0.7, 1.1)
 	var lamp := scene.proj(x - 1.0, HallsScene.FLOOR_Y + 1.0, z + 0.6)
-	draw_circle(lamp, s * 0.06, Color(1.0, 0.8, 0.4, 0.9))
-	draw_circle(lamp, s * 0.16, Color(1.0, 0.7, 0.3, 0.15 + 0.05 * sin(t * 5.0)))
+	var lw := roundf(s * 0.06)
+	draw_rect(Rect2(lamp - Vector2(lw, lw), Vector2(lw, lw) * 2.0), Color("#fee761"))
+	scene.glow(self, lamp, s * 0.5, Color("#feae34", 0.5 + 0.15 * sin(t * 5.0)))
 	var flick := 1.0 + 0.06 * sin(t * 9.0)
 	var fire := scene.sprite(self, scene.tx("res://art/props/cookfire.png"), x, z, 1.0, Color(flick, flick, flick))
-	scene.sprite(self, scene.tx("res://art/props/backpack.png"), x - 0.6, z - 0.2, 0.5)
+	scene.sprite(self, scene.tx("res://art/props/backpack.png"), x - 0.4, z - 0.2, 0.5)
 	return fire.merge(t1).merge(t2)

@@ -16,7 +16,6 @@ var set_buttons := {}  # set -> Array of buttons
 var piece_rows: Array = []  # one row of set-piece buttons per set (stacked on phones)
 var gear_buttons := {}
 var gear_cost: RichTextLabel
-var smith_pic: TextureRect
 var section_buttons := {}
 var forge_box: VBoxContainer
 var sets_box: VBoxContainer
@@ -36,13 +35,7 @@ func setup(m) -> void:
 	# 0.13+ (Juzo): Hilde Ironbraid, the dwarf smith, and her three counters
 	var who := UI.hbox(10)
 	v.add_child(who)
-	smith_pic = TextureRect.new()
-	smith_pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	smith_pic.custom_minimum_size = Vector2(56, 56)
-	smith_pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	smith_pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	who.add_child(smith_pic)
-	smith_pic.visible = false  # 2.1: Hilde's picture is on the town page above
+	# Hilde's picture is the town page's keeper picture above (main.gd town_keeper)
 	who.add_child(UI.wrap("%s, dwarf smith of the town forge" % Smith.NAME, UI.FONT_CAPTION, UI.GOLD))
 	var tabs_row := UI.hbox(6)
 	v.add_child(tabs_row)
@@ -223,12 +216,6 @@ func _chip(text: String, color: Color) -> void:
 
 func refresh() -> void:
 	var narrow: bool = main.get_viewport().get_visible_rect().size.x < 720.0
-	if smith_pic.texture == null:
-		smith_pic.texture = Lore.keeper_art(1)   # Hilde herself
-	if smith_pic.texture == null:
-		var app: Dictionary = state.appearance.duplicate()
-		app["race"] = "Dwarf"
-		smith_pic.texture = Sprites.portrait(app, {})
 	if section == "wares":
 		_fill_wares()
 	for r in piece_rows:
