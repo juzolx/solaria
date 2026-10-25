@@ -38,6 +38,7 @@ var left_col: Control
 var leg_box: VBoxContainer
 var leg_info: RichTextLabel
 var leg_button: Button
+var cols: BoxContainer   # the item side and the wheel side (stacked on phones), inside a scroll
 
 class Wheel:
 	extends Control
@@ -87,11 +88,23 @@ func setup(m) -> void:
 	main = m
 	state = m.state
 	name = "Wheel"
-	vertical = _phone()
-	add_theme_constant_override("separation", 12)
+	vertical = true
+	# Phone sweep (SE, 375x667 = 896 design px tall): the Tavern needed 1054 px and pushed the
+	# bottom bar off. The page scrolls instead; on taller phones it fills the screen as before.
+	var page_scroll := ScrollContainer.new()
+	page_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	page_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	page_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	add_child(page_scroll)
+	cols = BoxContainer.new()
+	cols.vertical = _phone()
+	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	cols.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cols.add_theme_constant_override("separation", 12)
+	page_scroll.add_child(cols)
 	var left := UI.vbox(6)
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	add_child(left)
+	cols.add_child(left)
 	left_col = left
 	left.add_child(UI.label("FORTUNE'S WHEEL", 18, UI.GOLD))
 	var note := UI.label("Put an item on the Wheel. Win: it comes back one rarity higher. Lose: it's gone. Common %d%%, Uncommon %d%%, Rare %d%%, Epic %d%%." % GameData.GAMBLE_CHANCES, UI.FONT_CAPTION, UI.DIM)
@@ -114,7 +127,7 @@ func setup(m) -> void:
 	left.resized.connect(_on_left_resized.bind(left))
 	var right := UI.vbox(8)
 	right.custom_minimum_size = Vector2(250, 0)
-	add_child(right)
+	cols.add_child(right)
 	mode_button = UI.button("", _toggle_mode)
 	mode_button.custom_minimum_size = Vector2(0, UI.TAP)
 	var table_row := UI.hbox(6)
@@ -123,10 +136,11 @@ func setup(m) -> void:
 	leg_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	leg_button.custom_minimum_size = Vector2(0, UI.TAP)
 	table_row.add_child(leg_button)
+	mode_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	table_row.add_child(mode_button)   # one row for the three table buttons (phone height)
 	var odds_button := UI.button("Odds", show_odds)
-	odds_button.custom_minimum_size = Vector2(80, UI.TAP)
+	odds_button.custom_minimum_size = Vector2(72, UI.TAP)
 	table_row.add_child(odds_button)
-	right.add_child(mode_button)
 	var nb := UI.vbox(8)
 	right.add_child(nb)
 	normal_box = nb
@@ -203,7 +217,7 @@ func _phone() -> bool:
 	return bool(main.get("is_tall")) or main.get_viewport().get_visible_rect().size.x < 720.0
 
 func refresh() -> void:
-	vertical = _phone()
+	cols.vertical = _phone()
 	var key := "%d|%d|%d|%s|%s|%s" % [state.bag_version, state.gold, selected_id, str(slate), high, leg]
 	if key != shown and not spinning:
 		shown = key
@@ -229,8 +243,10 @@ func refresh() -> void:
 func _update() -> void:
 	if state.bag.size() >= state.bag_capacity() and not spinning and result_label.text == "":
 		result_label.text = "[color=#f87171]Your bag is full (%d / %d). You can still spin items in it, but items over the limit can't go on the wheel until you sell or salvage.[/color]" % [state.bag.size(), state.bag_capacity()]
-	mode_button.text = "Many wheels: ON" if high else "Many wheels: OFF  (one wheel)"
-	leg_button.text = "Back to the item Wheel" if leg else ("Legendary table" if WheelTables.legendary_unlocked(state) else "Legendary table (locked)")
+	mode_button.text = "Many wheels: ON" if high else "Many wheels: OFF"
+	mode_button.tooltip_text = "Spin several items at once, each on its own wheel" if not high else "Back to one wheel"
+	leg_button.text = "Item Wheel" if leg else ("Legendary" if WheelTables.legendary_unlocked(state) else "Legendary (locked)")
+	leg_button.tooltip_text = "Back to the item Wheel" if leg else "The Legendary table: pay gold for one prize"
 	mode_button.visible = not leg
 	left_col.visible = not leg
 	leg_box.visible = leg

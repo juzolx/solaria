@@ -2002,7 +2002,7 @@ func _draw_shield(r: Rect2) -> void:
 func _draw_mods(r: Rect2) -> void:
 	var font := UI.game_font()   # interface pass: the game font everywhere
 	var x := r.get_center().x
-	var y := _ground() - 6.0
+	var y := _bar_rect(r).position.y - 15.0   # just above the monster's bar, wherever the bar sits
 	var total := 0.0
 	var widths: Array = []
 	for m in state.enemy_mods:
@@ -2094,8 +2094,14 @@ func _bar_rect(r: Rect2) -> Rect2:
 	var bx := clampf(r.get_center().x - bw / 2.0, 6.0, size.x - bw - 6.0)
 	# Monsters (at the back) get theirs under their feet; your team (in front) above their heads
 	if r.get_center().y > size.y * 0.62:
+		var beside := r.get_center().x + r.size.x * 0.32 + 8.0   # the drawn body is about 0.6 of this box wide
+		if maxf(r.end.y, _team_ground()) + 8.0 > size.y - 68.0 and beside + bw <= size.x - 6.0:
+			# Phone sweep: the 2.1 hero's feet stand on the team line, under this box; a plate that
+			# can't fit under them goes beside the hero (the approved fight mockup) instead of over the legs
+			return Rect2(beside, size.y - 68.0, bw, 14.0)
 		return Rect2(bx, minf(r.end.y + 8.0, size.y - 68.0), bw, 14.0)   # room for the name above the message strip
-	return Rect2(bx, _ground() + 9.0, bw, 14.0)
+	# ...and the monster's plate stays clear of the hero's head (it sat on it on a short stage)
+	return Rect2(bx, minf(_ground() + 9.0, _hero_rect().position.y - 44.0), bw, 14.0)
 
 ## In-scene text sizes (design px; x0.85 on a 430 pt phone): names and numbers 18 (~15 pt).
 const NAME_FS := 18
