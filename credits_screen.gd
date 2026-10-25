@@ -19,7 +19,7 @@ func _build(c: VBoxContainer) -> void:
 		UI.section(c, group)
 		for s in CreditsData.in_group(group):
 			c.add_child(_entry(s))
-	UI.section(c, "Hero parts, one by one", "Every artist behind the LPC hero parts, with each part's licenses.")
+	UI.section(c, "Townsfolk parts, one by one", "Every artist behind the LPC parts the town's walkers are built from, with each part's licenses.")
 	var lpc := UI.rich(UI.FONT_CAPTION)
 	lpc.text = Credits.TEXT
 	lpc.visible = false

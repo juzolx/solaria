@@ -1,6 +1,4 @@
 # Town art credits
-The town map (art/town) is laid out by tools/town_compose.py from these free art packs:
-- **LPC Revised**: (github.com/ElizaWy/LPC, OGA-BY 3.0) terrain, cliffs, trees, plants and tilled soil by Lanea Zimmerman (Sharm) and Eliza Wyatt (DeathsDarling), with plants by Hyptosis and wildflowers by Demetrius. Brick House A and B, Paneled House A, doors, the fountain, shop signs, the plain fence, lamps, barrels, chests and crates by Lanea Zimmerman and Eliza Wyatt. Anvils and coal by BlueCarrot16. Hay by Lanea Zimmerman.
-- **[LPC] City outside**: (opengameart.org/content/lpc-city-outside, CC-BY-SA 3.0 / GPL 3.0) by Reemax (Tuomo Untinen), with art by Sharm, daneeklu, Hyptosis, Johann C, William.Thompsonj and wulax. The market stall, banners, the well and planters.
-- **LPC Tile Atlas**: (opengameart.org/content/lpc-tile-atlas, CC-BY-SA 3.0 / GPL 3.0) from the Liberated Pixel Cup base assets by Lanea Zimmerman (Sharm) and others. The gravestones.
-- **The bounty board**: drawn by tools/town_compose.py in the LPC palette.
+The isometric town (art/town/town.json, art/town/iso) is laid out by claude/town3/export_town.py from buildings, props, trees, tiles and walls made for Solaria with PixelLab (pixellab.ai, Juzo's subscription). No third-party art packs.
+
+The older top-down town (LPC Revised, [LPC] City Outside and LPC Tile Atlas, built by tools/town_compose.py) was removed for the App Store build (decision D1: no share-alike art); it is in git history only.
