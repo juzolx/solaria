@@ -11,7 +11,7 @@ Each picture with skin or hair has an index sheet (<name>_idx.png): R = skin sha
 (0 = none, 1..255 = dark..light), so the game recolours skin and hair with any ramp at build time.
 heroes.json lists what exists."""
 import json, math, os, sys
-from PIL import Image
+from PIL import Image, ImageChops
 
 HERE = os.path.dirname(os.path.abspath(__file__)); PL = os.path.dirname(HERE)
 REPO = os.path.abspath(os.path.join(PL, "..", "..", ".."))
@@ -75,10 +75,12 @@ def comps(pts):
     return out
 
 
-def sword_pts(im, near=None):
+def sword_pts(im, near=None, hint=None):
     """The blade (most blade-like group of metal/white pixels) plus its outline ring.
     near: a stone body (golem) is grey like steel, so take only bright neutral steel and the group
-    nearest to where the human frame holds its blade (these points)."""
+    nearest to where the human frame holds its blade (these points).
+    hint: the human frame's blade; groups far from it score lower (a white shirt neckline is
+    blade-shaped too), and pieces on the same line (a tip showing past the head) join the blade."""
     px = im.load()
     best, bs = set(), 0
     if near:
@@ -96,14 +98,31 @@ def sword_pts(im, near=None):
         met = set()
     else:
         met = {(x, y) for y in range(im.height) for x in range(im.width) if px[x, y][3] and R.kind(px[x, y][:3]) in ("metal", "shirt")}
-    for c in comps(met) if met else []:
+    groups = comps(met) if met else []
+    if hint:
+        hx, hy = sum(p[0] for p in hint) / len(hint), sum(p[1] for p in hint) / len(hint)
+    for c in groups:
         if len(c) < 10:
             continue
         if sum(R.lum(px[q][:3]) for q in c) / len(c) < 115:
             continue  # blades are bright steel; a dull grey-green group is skin (orc backs), not a sword
         l2 = max((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 for a in c for b in c)
-        if l2 / len(c) > bs:
-            best, bs = c, l2 / len(c)
+        sc = l2 / len(c)
+        if hint:
+            d = ((sum(p[0] for p in c) / len(c) - hx) ** 2 + (sum(p[1] for p in c) / len(c) - hy) ** 2) ** 0.5
+            sc /= 1 + d / 12
+        if sc > bs:
+            best, bs = c, sc
+    if hint and len(best) >= 2:
+        a, b = max(((p, q) for p in best for q in best), key=lambda pq: (pq[0][0] - pq[1][0]) ** 2 + (pq[0][1] - pq[1][1]) ** 2)
+        ln = max(1e-6, ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2) ** 0.5)
+        off = lambda q: abs((b[0] - a[0]) * (a[1] - q[1]) - (a[0] - q[0]) * (b[1] - a[1])) / ln
+        for c in groups:
+            if c is best or len(c) < 2 or sum(R.lum(px[q][:3]) for q in c) / len(c) < 115:
+                continue
+            gap = min(min(abs(q[0] - e[0]) + abs(q[1] - e[1]) for e in (a, b)) for q in c)
+            if gap <= 14 and all(off(q) <= 1.6 for q in c):
+                best = best | c  # the rest of the same blade (its tip past the head)
     ring = {(x + dx, y + dy) for (x, y) in best for dx in (-1, 0, 1) for dy in (-1, 0, 1)
             if 0 <= x + dx < im.width and 0 <= y + dy < im.height and (x + dx, y + dy) not in best
             and px[x + dx, y + dy][3] and R.kind(px[x + dx, y + dy][:3]) == "outline"}
@@ -436,10 +455,13 @@ WEAPON_DRAWINGS = weapon_drawings()
 # as an edit of those (claude/art_test/races, jobs.txt / ojobs.txt). The head stays drawn (no hair-style
 # swap): hair recolours by its shade, the family's fabric takes the class colour (index B = dye shade).
 RACES_RAW = os.path.abspath(os.path.join(REPO, "..", "solaria_dev", "claude", "art_test", "races", "raw"))
-BUILDS = {"Goblin": "goblin", "Dwarf": "dwarf", "Orc": "orc", "Golem": "golem", "Fairy": "fairy"}
+# Golem is no longer playable (Juzo, Oct 24): its art stays in art/heroes/golem_m, unused (a monster candidate)
+BUILDS = {"Goblin": "goblin", "Dwarf": "dwarf", "Orc": "orc", "Fairy": "fairy"}
 OWN_SKIN = ["Goblin", "Orc", "Werewolf", "Golem"]  # races whose drawn skin hue is their signature: no skin recolour
 # races drawn as a feature layer on another build's frames (PixelLab edits of that build's base frames)
 FEATURE_BUILDS = {"Werewolf": "orc"}
+# a fixed skin for a race drawn over a build (light to dark): the werewolf greys to match its fur
+SKIN_RAMP = {"Werewolf": ["#c4c4c8", "#9a9aa0", "#76767c", "#525258", "#323238"]}
 # builds drawn once for both bodies (a golem is stone: no man or woman build)
 SHARED = {"Golem": "m"}
 HAIRLESS = ["Golem"]  # stone: the cyan runes on its head are not hair
@@ -490,6 +512,59 @@ def dye_index(c, fam, idx):
     return idx
 
 
+def head_hair(c, skip):
+    """The hair of a back-view head: brown to blond pixels in the top 30% of the body (wings left out)."""
+    import colorsys
+    p = c.load()
+    body = [(x, y) for y in range(C) for x in range(C) if p[x, y][3] and (x, y) not in skip]
+    if not body:
+        return set()
+    top = min(y for _, y in body); bot = max(y for _, y in body)
+    out = set()
+    for (x, y) in body:
+        if y < top + (bot - top) * 0.3 and R.kind(p[x, y][:3]) != "outline":
+            h, sat, v = colorsys.rgb_to_hsv(*(q / 255 for q in p[x, y][:3]))
+            if h <= 0.13 and sat >= 0.3 and v < 0.9:
+                out.add((x, y))
+    return out
+
+
+HAIR_EVEN = ["Fairy"]  # its frames were drawn with lighter and darker hair: stretch each to one range
+
+
+def even_hair(idx, lo_to=40, hi_to=200):
+    """Stretches a frame's hair shades (index green) to one fixed range, so hair drawn lighter in one
+    frame and darker in another comes out the same colour."""
+    ip = idx.load()
+    pts = [(x, y) for y in range(C) for x in range(C) if ip[x, y][1]]
+    if len(pts) < 10:
+        return
+    vs = sorted(ip[q][1] for q in pts); lo, hi = vs[len(vs) // 20], vs[-len(vs) // 20 - 1]
+    for q in pts:
+        r, g, b = ip[q]
+        ip[q] = (r, max(1, min(255, round(lo_to + (g - lo) / max(1, hi - lo) * (hi_to - lo_to)))), b)
+
+
+def own_skin_index(c, idx, fam):
+    """A build that keeps its drawn skin (orc green) still marks it in the index (red channel), so a
+    race drawn over the build can recolour it (the werewolf's grey). The family's dyed fabric is not skin."""
+    cp, ip = c.load(), idx.load()
+    pts = [(x, y) for y in range(C) for x in range(C)
+           if cp[x, y][3] and not any(ip[x, y]) and greenish(cp[x, y]) and not dyed(cp[x, y], fam)]
+    if not pts:
+        return
+    ls = sorted(R.lum(cp[q][:3]) for q in pts); lo, hi = ls[len(ls) // 20], ls[-len(ls) // 20 - 1]
+    for q in pts:
+        ip[q] = (1 + max(0, min(254, round((R.lum(cp[q][:3]) - lo) / max(1, hi - lo) * 254))), 0, 0)
+
+
+def dyed(px, fam):
+    """The family's dyed fabric (a robe's shoulders reach the head band): never hair."""
+    import colorsys
+    h, sat, v = colorsys.rgb_to_hsv(*(q / 255 for q in px[:3]))
+    return sat > 0.3 and any(lo <= h <= hi for lo, hi in DYE_HUES[fam])
+
+
 def greenish(px):
     """Yellow-green skin (goblin ears and faces): never hair, even inside the head band."""
     import colorsys
@@ -514,9 +589,12 @@ def build_bodies(info):
             cells = {k: bcell(base[k], k) for k in K}
             sw = {}
             for k in K:
-                blade, ring = sword_pts(cells[k], SW["m"][k][0] if race in STONE else None)
+                blade, ring = sword_pts(cells[k], SW["m"][k][0] if race in STONE else None, SW[b][k][0])
                 grip, tip, ang = W.axis(blade, W.body_centre(cells[k]))
-                sw[k] = [blade | ring, grip, ang, tip, ((tip[0] - grip[0]) ** 2 + (tip[1] - grip[1]) ** 2) ** 0.5]
+                # erased from the outfits: the blade, and the other blade-like group if the hint chose
+                # differently (a piece of the same sword showing on the other side)
+                alt = set() if race in STONE else set().union(*sword_pts(cells[k]))
+                sw[k] = [blade | ring | alt, grip, ang, tip, ((tip[0] - grip[0]) ** 2 + (tip[1] - grip[1]) ** 2) ** 0.5]
             full = sorted(v[4] for v in sw.values())[len(K) // 2]
             for k, v in sw.items():
                 if v[4] < 0.75 * full:
@@ -531,7 +609,7 @@ def build_bodies(info):
                     c = bcell(L(build_src(key, fam, b, k)), k); p = c.load()
                     pts = set(sw[k][0])
                     near = {(x + dx, y + dy) for (x, y) in pts for dx in range(-3, 4) for dy in range(-3, 4)}
-                    own, ring = sword_pts(c, SW["m"][k][0] if race in STONE else None)
+                    own, ring = sword_pts(c, SW["m"][k][0] if race in STONE else None, SW[b][k][0])
                     if own and len(own & near) * 2 >= len(own):
                         pts |= own | ring
                     for (x, y) in sorted(pts):
@@ -539,15 +617,21 @@ def build_bodies(info):
                         r = next((p[x + dd, y] for dd in (1, 2, 3) if x + dd < C and (x + dd, y) not in pts and p[x + dd, y][3]), None)
                         p[x, y] = l if (l and r) else (0, 0, 0, 0)
                     bb = c.getbbox(); top = bb[1] + (bb[3] - bb[1]) * 0.28  # big builds' shoulders reach the head band
-                    hair = set() if race in HAIRLESS else {q for q, kd in R.masks(c).items() if kd == "hair" and not greenish(p[q]) and q[1] < top}
+                    hair = set() if race in HAIRLESS else {q for q, kd in R.masks(c).items() if kd == "hair" and not greenish(p[q])
+                                                           and q[1] < top and not dyed(p[q], fam)}
+                    if race in WINGS:
+                        wp = wing_pts(c, WINGS[race], 0.0)
+                        hair -= wp  # violet wing edges in the head band are not hair
+                        if not k.startswith("s"):  # from behind the head is hair: take every brown to blond pixel
+                            hair |= head_hair(c, wp)
                     idx = dye_index(c, fam, index_of(c, hair))
-                    if race in WINGS:  # wings an outfit edit kept stay lilac (the wing layer goes over them)
-                        import colorsys
-                        lo, hi = WINGS[race]; xp = idx.load()
-                        for (x, y) in [(x, y) for y in range(C) for x in range(C) if p[x, y][3]]:
-                            h, sat, v = colorsys.rgb_to_hsv(*(q / 255 for q in p[x, y][:3]))
-                            if lo <= h <= hi and sat > 0.12 and v > 0.55:  # light lilac, not the deep violet robe
-                                xp[x, y] = (0, 0, 0)
+                    if race in OWN_SKIN:
+                        own_skin_index(c, idx, fam)
+                    if race in HAIR_EVEN:
+                        even_hair(idx)
+                    if race in WINGS:  # small wings an outfit edit kept go (the big wing layer is behind the body)
+                        for q in wing_pts(c, WINGS[race], 0.55):  # light lilac, not the deep violet robe
+                            p[q] = (0, 0, 0, 0)
                     out.append(c); idxs.append(idx)
                 save(f"{d}/outfit_{fam}", out, idxs)
                 fams.append(fam)
@@ -568,7 +652,7 @@ def build_bodies(info):
                 info["builds"].setdefault(race, {"key": key, "bodies": {}, "skin": race not in OWN_SKIN})["bodies"][b] = fams
             print(race, b, "build done:", fams)
             if race in WINGS and fams:
-                front, back = wing_cells(cells, WINGS[race])
+                front, back = wing_layer(cells, WINGS[race])
                 save(f"{d}/race_{race.lower()}", front)
                 save(f"{d}/race_{race.lower()}_back", back)
                 info["builds"][race]["feature"] = f"race_{race.lower()}"
@@ -585,34 +669,88 @@ def build_bodies(info):
                 save(f"{d}/race_{fr.lower()}", front)
                 save(f"{d}/race_{fr.lower()}_back", back)
                 e = info["builds"].setdefault(fr, {"key": key, "bodies": {}, "skin": fr not in OWN_SKIN, "feature": f"race_{fr.lower()}"})
+                if fr in SKIN_RAMP:
+                    e["skin_ramp"] = SKIN_RAMP[fr]
                 e["bodies"][b] = fams
                 print(fr, b, "feature done")
 
 
-def wing_cells(cells, hues):
-    """The wings of a build's base frames: pixels in the wing hue plus the dark outline around them.
-    Back view: drawn over the back; front view: behind the body."""
+def wing_pts(c, hues, vmin=0.3):
+    """Pixels of a cell in the wing hue (lilac to violet)."""
     import colorsys
+    p = c.load(); pts = set()
+    for y in range(C):
+        for x in range(C):
+            if p[x, y][3]:
+                h, sat, v = colorsys.rgb_to_hsv(*(q / 255 for q in p[x, y][:3]))
+                if hues[0] <= h <= hues[1] and sat > 0.12 and v > vmin:
+                    pts.add((x, y))
+    return set().union(*[g for g in comps(pts) if len(g) >= 6]) if pts else set()
+
+
+WING_SRC = {"Fairy": ("fairy", "f")}  # big butterfly wings drawn once on her first idle and portrait frames
+
+
+def wing_drawing(path, src_cell, hues, place):
+    """One wing drawing (a PixelLab edit of a base frame with big butterfly wings) cut to the wings:
+    the wing hue, the eye spots and holes inside it, and the dark outline around it. Returns the
+    drawing and the centre of the base frame's own small wings (where it is anchored)."""
+    ed = Image.new("RGBA", (C, C))
+    ed.alpha_composite(L(path), place)  # the same canvas as its base frame, placed the same way
+    ep = ed.load()
+    pts = wing_pts(ed, hues, 0.15)
+    out = {(x, y) for y in range(C) for x in range(C) if (x, y) not in pts}
+    for g in comps(out):  # eye spots: small pockets enclosed by the wing
+        if len(g) < 40 and not any(x in (0, C - 1) or y in (0, C - 1) for x, y in g) and all(ep[q][3] for q in g):
+            pts |= g
+    ring = {(x + dx, y + dy) for (x, y) in pts for dx in (-1, 0, 1) for dy in (-1, 0, 1)
+            if 0 <= x + dx < C and 0 <= y + dy < C and (x + dx, y + dy) not in pts
+            and ep[x + dx, y + dy][3] and R.kind(ep[x + dx, y + dy][:3]) == "outline"}
+    w = Image.new("RGBA", (C, C)); wp = w.load()
+    for q in pts | ring:
+        wp[q] = ep[q]
+    small = wing_pts(src_cell, hues)
+    cx = sum(q[0] for q in small) / max(1, len(small)); cy = sum(q[1] for q in small) / max(1, len(small))
+    return w, (cx, cy)
+
+
+def wing_layer(cells, hues, race="Fairy"):
+    """Big butterfly wings on every frame, all behind the body (the class outfit reads from behind
+    too): the one drawing per view, centred where the frame's own small wings were, so every frame
+    has the same wings. The second idle frame draws them narrower: a gentle flap."""
+    key, sb = WING_SRC[race]
+    feat = os.path.join(FEATURES, f"{key}_wings_%s.png")
+    src = {d: bcell_of(key, sb, k) for d, k in (("n", "n_idle0"), ("s", "s_idle0"))}
+    draw = {d: wing_drawing(feat % d, src[d][0], hues, src[d][1]) for d in "ns"}
     front, back = [], []
     for k in K:
-        p = cells[k].load()
-        pts = set()
-        for y in range(C):
-            for x in range(C):
-                if p[x, y][3]:
-                    h, sat, v = colorsys.rgb_to_hsv(*(q / 255 for q in p[x, y][:3]))
-                    if hues[0] <= h <= hues[1] and sat > 0.12 and v > 0.3:
-                        pts.add((x, y))
-        pts = set().union(*[c for c in comps(pts) if len(c) >= 6]) if pts else set()
-        ring = {(x + dx, y + dy) for (x, y) in pts for dx in (-1, 0, 1) for dy in (-1, 0, 1)
-                if 0 <= x + dx < C and 0 <= y + dy < C and (x + dx, y + dy) not in pts
-                and p[x + dx, y + dy][3] and R.kind(p[x + dx, y + dy][:3]) == "outline"}
-        im = Image.new("RGBA", (C, C)); ip = im.load()
-        for q in pts | ring:
-            ip[q] = p[q]
-        (back if k.startswith("s") else front).append(im)
-        (front if k.startswith("s") else back).append(Image.new("RGBA", (C, C)))
+        w, (sx, sy) = draw[d_of(k)]
+        small = wing_pts(cells[k], hues)
+        if small:
+            cx = sum(q[0] for q in small) / len(small); cy = sum(q[1] for q in small) / len(small)
+        else:
+            cx, cy = sx, sy
+        if k.endswith("idle1"):  # flap: 80% as wide around the wing centre
+            bb = w.getbbox(); part = w.crop(bb)
+            nw = max(2, round(part.width * 0.8))
+            w2 = Image.new("RGBA", (C, C))
+            w2.alpha_composite(part.resize((nw, part.height), Image.NEAREST), (round(sx - (sx - bb[0]) * 0.8), bb[1]))
+            w = w2
+        layer = Image.new("RGBA", (C, C))
+        layer.alpha_composite(w, (0, 0))
+        layer = ImageChops.offset(layer, round(cx - sx), round(cy - sy))
+        back.append(layer); front.append(Image.new("RGBA", (C, C)))
     return front, back
+
+
+def bcell_of(key, b, k):
+    """A build's base frame placed in its cell as build_bodies places it, and where it went."""
+    race = next(r for r, kk in BUILDS.items() if kk == key)
+    lift = FLOAT.get(race, {})
+    im = L(build_src(key, None, b, k))
+    at = ((C - im.width) // 2, FOOT - im.getbbox()[3] - lift.get(k, 4 if lift else 0))
+    c = Image.new("RGBA", (C, C)); c.alpha_composite(im, at)
+    return c, at
 
 
 def build_feature(cells, edits, sw):

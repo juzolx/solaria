@@ -27,7 +27,7 @@ const QUICK_REPORT_PATH := "res://claude/balance-report-quick.md"
 const HEROES := [
 	["Warrior", "Human"], ["Mage", "Elf"], ["Ranger", "Dwarf"], ["Cleric", "Angel"],
 	["Trickster", "Goblin"], ["Knight", "Orc"], ["Acolyte", "Demon"], ["Bard", "Fairy"],
-	["Wanderer", "Beastkin"], ["Sentinel", "Golem"], ["Ironbark", "Undead"], ["Nightstalker", "Dragonkin"],
+	["Wanderer", "Beastkin"], ["Sentinel", "Dwarf"], ["Ironbark", "Undead"], ["Nightstalker", "Dragonkin"],
 ]
 
 var budget_s := 480.0          # real seconds each hero may use (heroes run side by side)
