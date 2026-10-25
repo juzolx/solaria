@@ -8,7 +8,7 @@ extends RefCounted
 
 const SPRITE := 1.0    # full strength for monsters, bosses and pets
 const SCENE := 0.85    # a bit gentler for backgrounds (the UI sits on top of them)
-const NATIVE := 0.3    # redrawn monsters: already dark and muted, so only a touch (plus the rim light)
+const NATIVE := 0.0    # redrawn monsters: already dark and muted, so no grade (only the rim light)
 const RIM := Color(0.11, 0.12, 0.16)  # moonlight on top/left edges
 const SHADOW_TINT := Color(0.82, 0.88, 1.12)
 const LIGHT_TINT := Color(1.0, 0.95, 0.86)

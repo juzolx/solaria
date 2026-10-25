@@ -77,6 +77,13 @@ func _native_rules(path: String, img: Image) -> void:
 	check(soft == 0, "%s: %d soft (half see-through) pixels" % [path, soft])
 	check(bare == 0, "%s: %d edge pixels without the dark outline" % [path, bare])
 
+## Fable r1: on a 430 pt phone (504 design wide, 0.853 stretch) every monster must show at the
+## hero's 3x inside its share of the stage (battle_view._width_cap): commons 56%, bosses 92%,
+## Calamities 96%. A wider picture would drop to 2x and look smaller than a common.
+func _phone_width(key: String, w: int) -> void:
+	var share := 0.96 if key.begins_with("calamity_") else (0.92 if key.begins_with("boss_") else 0.56)
+	check(w * 3 <= int(504.0 * share * 0.853), "%s is %d px wide: over %d it draws below 3x on a phone" % [key, w, int(504.0 * share * 0.853) / 3])
+
 func _initialize() -> void:
 	check(not ArtStyle.in_palette(ArtStyle.OUTLINE), "the outline color is not a palette color")
 	check(ArtStyle.in_palette(Color(ArtStyle.PALETTE[3])), "palette colors are in the palette")
@@ -92,6 +99,7 @@ func _initialize() -> void:
 			monsters += 1
 			if d == "res://art/enemies/" and int(native_info.get(f.get_basename(), {}).get("hd", 2)) == 1:
 				_native_rules(d + f, img)
+				_phone_width(f.get_basename(), img.get_width())
 				continue
 			check(img.get_size() == ArtStyle.MONSTER_SIZE or img.get_size() == ArtStyle.TALL_SIZE, "%s%s is %s (68x68 or 68x132)" % [d, f, img.get_size()])
 			var rough := 0
