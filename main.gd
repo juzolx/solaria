@@ -1343,43 +1343,7 @@ func _show_class_picker() -> void:
 	grid.add_theme_constant_override("v_separation", 10)
 	class_overlay.content.add_child(grid)
 	for cname in Classes.ORDER:
-		var info: Dictionary = Classes.CLASSES[cname]
-		var color := Color(info["color"])
-		var card := UI.panel(UI.INSET, color.darkened(0.2), 10, 10, 2)
-		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		grid.add_child(card)
-		var cv := UI.vbox(6)
-		card.add_child(cv)
-		var head := UI.hbox(8)
-		cv.add_child(head)
-		var pic := TextureRect.new()
-		var looks := {}
-		for slot in info["look"]:
-			looks[slot] = Sprites.gear_look({"slot": slot, "type": info["look"][slot], "rarity": 1})
-		looks["Class"] = {"cls": cname, "tier": 0}  # each class shows its own outfit
-		pic.texture = Sprites.portrait(state.appearance, looks)
-		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		pic.custom_minimum_size = Vector2(64, 64)
-		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		head.add_child(pic)
-		var hv := UI.vbox(0)
-		head.add_child(hv)
-		hv.add_child(UI.label(cname.to_upper(), 18, color.lightened(0.25)))
-		var tags: Array = []
-		for t in info["tags"]:
-			tags.append("[color=%s]%s[/color]" % [Classes.tag_color(t), t])
-		var tl := UI.rich(UI.FONT_CAPTION)
-		tl.text = "%s  -  %s" % [info["role"], " ".join(tags)]
-		tl.custom_minimum_size = Vector2(170, 0)
-		hv.add_child(tl)
-		var text := UI.rich(UI.FONT_CAPTION)
-		text.custom_minimum_size = Vector2(240, 0)
-		var start: Array = info["start"]
-		text.text = "%s
-[color=#e8b14a]%s[/color]: %s" % [info["blurb"], SkillData.skill_name(start[0]), SkillData.info(start[0])["text"]]
-		cv.add_child(text)
-		cv.add_child(UI.primary("Play as %s" % cname, _on_class_chosen.bind(cname), color))
+		grid.add_child(ClassTab.pick_card(self, cname, _on_class_chosen.bind(cname)))   # interface pass: built in class_tab.gd
 
 func _on_class_chosen(cname: String) -> void:
 	state.choose_class(cname)
