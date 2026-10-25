@@ -1026,7 +1026,11 @@ func _initialize() -> void:
 	dsp["dir"] = "up"
 	var back := Lpc.build(dsp)
 	check((back["anims"] as Dictionary).has("combat_idle") and (back["anims"] as Dictionary).has("slash"), "heroes have a back view")
-	check(not Lpc.build_walker(dsp, "down")["walk"].is_empty(), "heroes can walk toward you")
+	# town walkers are the PixelLab heroes, halved onto the town's pixel grid (no LPC)
+	var tw := TownFolk.townsfolk(0)
+	check((tw["s"] as Array).size() == 2 and (tw["s"][0] as Texture2D).get_width() == TownFolk.CELL, "townsfolk walk as PixelLab heroes at half size")
+	check((tw["walk"] as Array).size() == 4 and tw["walk"][1] != tw["walk"][3], "townsfolk walk with a left and a right step")
+	check(TownFolk.hero({"body": "fem", "race": "Elf", "skin": 0, "hair": "Long", "hair_color": 3}, {}) == TownFolk.hero({"body": "fem", "race": "Elf", "skin": 0, "hair": "Long", "hair_color": 3}, {}), "town walkers are built once per look")
 	# ---------- 0.12 Calamities and bound items ----------
 	var ca := GameState.new()
 	ca.codex.path = ""

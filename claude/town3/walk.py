@@ -4,7 +4,7 @@ town.json for town_view.gd. Usage: py walk.py <out_dir>  -> walk_grid.png, walk_
 import sys
 from collections import deque
 from PIL import Image, ImageDraw
-from layout import N, GROUND, LOTS, HOUSES, MARKET, PLATEAU, PLATEAU_Z, POINTS
+from layout import N, GROUND, LOTS, HOUSES, MARKET, PLATEAU, PLATEAU_Z, POINTS, RAISED, GATE_DOOR, CHURCH_DOOR, INN_WING_DOOR
 from compose import at, dusk, compose, phone
 
 WALK = {"road", "square", "bridge", "plateau", "path", "dirt", "planks"}
@@ -17,14 +17,16 @@ def grid():
             for j in range(y0, y1 + 1):
                 g[i][j] = k
     ok = {(i, j) for i in range(N) for j in range(N) if g[i][j] in WALK}
-    px0, py0, px1, py1 = PLATEAU          # plateau: only the cobbled path from the stairs up to the door
+    px0, py0, px1, py1 = PLATEAU          # plateau: only the hope path up the stairs to the portal
     ok -= {(i, j) for i in range(px0, px1 + 1) for j in range(py0, py1 + 1)}
-    ok |= {(i, j) for i in range(18, 22) for j in range(5, 8)}
+    ok -= {(18, 8), (20, 8)}              # the stair foot covers the lane here (row 9 still passes)
     for lid, _, x0, y0, x1, y1, door, _ in LOTS:
         for i in range(x0, x1 + 1):
             for j in range(y0, y1 + 1):
                 ok.discard((i, j))
     ok -= {(20, 20), (21, 20), (20, 21), (21, 21)}      # the well
+    ok |= set(RAISED)
+    ok |= {(6, 14), INN_WING_DOOR}        # the forecourt runs up to the Church's door, the yard to the wing's
     return ok
 
 
@@ -32,7 +34,8 @@ def doors():
     d = {}
     for lid, _, x0, y0, x1, y1, side, _ in LOTS:
         d[lid] = ((x1 + 1, (y0 + y1) // 2) if side == "i" else ((x0 + x1) // 2, y1 + 1))
-    d["gate"] = (19, 7)
+    d["gate"] = GATE_DOOR
+    d["church"] = CHURCH_DOOR
     d["market"] = (17, 20)
     d["bounty"] = (22, 9)
     d["mail"] = (12, 15)
@@ -68,7 +71,7 @@ def main(out):
     ov = town.copy()
     dr = ImageDraw.Draw(ov, "RGBA")
     for i, j in ok:
-        z = PLATEAU_Z if (i, j) in {(a, b) for a in range(18, 22) for b in range(5, 8)} else 0
+        z = RAISED.get((i, j), 0)
         pts = [at(i, j, z), at(i + 1, j, z), at(i + 1, j + 1, z), at(i, j + 1, z)]
         dr.polygon(pts, fill=(90, 200, 255, 60), outline=(90, 200, 255, 120))
     for lid, (i, j) in d.items():
@@ -96,7 +99,7 @@ def main(out):
             a, b = r[int(k)], r[min(int(k) + 1, len(r) - 1)]
             t = k - int(k)
             i, j = a[0] + (b[0] - a[0]) * t + .5, a[1] + (b[1] - a[1]) * t + .5
-            z = PLATEAU_Z if 5 <= j - .5 < 8 and 18 <= i - .5 < 22 else 0
+            z = RAISED.get((round(i - .5), round(j - .5)), 0)
             x, y = at(i, j, z)
             im = folk[who]
             if (b[0] - a[0]) + (a[1] - b[1]) < 0:   # heading left on screen

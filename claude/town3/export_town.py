@@ -9,7 +9,7 @@ import sys
 from PIL import Image
 import compose as C
 import decor as D
-from layout import N, GROUND, LOTS, HOUSES, MARKET, POINTS, PLATEAU, PLATEAU_Z, TOWERS, GATEHOUSE
+from layout import N, GROUND, LOTS, HOUSES, MARKET, POINTS, PLATEAU, PLATEAU_Z, TOWERS, GATEHOUSE, RAISED
 from walk import grid, doors
 
 STATES = [("lot", "lot"), ("holy", "lot"), ("lot", "built"), ("holy", "built"), ("ruin", "lot"), ("ruin", "built")]
@@ -37,7 +37,7 @@ def occluder_list(art, sprites):
     os.makedirs(os.path.join(art, "iso", "occ"), exist_ok=True)
     out = []
     for key, x, y, im, tag in sprites:
-        if tag in ("plateau", "bridge") or im.height < 28:
+        if tag in ("plateau", "bridge", "outside") or im.height < 28:
             continue
         b = im.getbbox()
         if b is None or b[3] - b[1] < 26:
@@ -49,6 +49,34 @@ def occluder_list(art, sprites):
             crop.save(path)
         out.append([name, x + b[0], y + b[1], round(key), tag])
     return out
+
+
+def trim_taps(spots):
+    """Buildings' tap areas never overlap: where two do, the one drawn in front keeps the overlap and
+    the one behind gives up its cheapest edge. (The Market is the square under everything, and the
+    small points, Bounty Board and Mailbox, win taps inside a building's area by being smaller.)"""
+    def front(sp):
+        x0, y0, x1, y1 = sp["cells"]
+        return C.at(x1 + 1, y1 + 1)[1]
+    taps = sorted([sp for sp in spots if sp["kind"] in ("building", "lot")], key=front)
+    for k, b in enumerate(taps):              # b behind every later (front) one
+        for f in taps[k + 1:]:
+            r, q = b["rect"], f["rect"]
+            ox = min(r[0] + r[2], q[0] + q[2]) - max(r[0], q[0])
+            oy = min(r[1] + r[3], q[1] + q[3]) - max(r[1], q[1])
+            if ox <= 0 or oy <= 0:
+                continue
+            cuts = []
+            if q[1] > r[1]:
+                cuts.append((r[2] * (r[1] + r[3] - q[1]), [r[0], r[1], r[2], q[1] - r[1]]))
+            if q[0] > r[0]:
+                cuts.append((r[3] * (r[0] + r[2] - q[0]), [r[0], r[1], q[0] - r[0], r[3]]))
+            if q[0] + q[2] < r[0] + r[2]:
+                cuts.append((r[3] * (q[0] + q[2] - r[0]), [q[0] + q[2], r[1], r[0] + r[2] - q[0] - q[2], r[3]]))
+            if q[1] + q[3] < r[1] + r[3]:
+                cuts.append((r[2] * (q[1] + q[3] - r[1]), [r[0], q[1] + q[3], r[2], r[1] + r[3] - q[1] - q[3]]))
+            if cuts:
+                b["rect"] = min(cuts)[1]
 
 
 def px_cell(i, j, z=0):
@@ -87,12 +115,20 @@ def main(root):
         x0, y0 = min(a[0], b[0]), min(a[1], b[1])
         inn["rect"] = [x0, y0, max(a[0] + a[2], b[0] + b[2]) - x0, max(a[1] + a[3], b[1] + b[3]) - y0]
     from layout import door_cell
-    inn_doors = [inn["door"]] + [list(door_cell(*h)) for h in HOUSES if h[4]]
+    from layout import INN_WING_DOOR
+    inn_doors = [inn["door"], list(INN_WING_DOOR)]
     mid, mlabel, mx0, my0, mx1, my1 = MARKET
     xs = [C.at(mx0, my1 + 1)[0], C.at(mx1 + 1, my0)[0]]
     ys = [C.at(mx0, my0)[1], C.at(mx1 + 1, my1 + 1)[1]]
     spots.append({"id": "market", "label": mlabel, "kind": "market", "cells": [mx0, my0, mx1, my1],
                   "door": list(doors()["market"]), "rect": [min(xs), min(ys) - 20, max(xs) - min(xs), max(ys) - min(ys) + 20]})
+    # name plates that don't sit at the top of their tap area: the Market's by the well (not on the
+    # Inn's doorstep), the Dungeon's above the portal, the Bounty Board's over the board; the
+    # Mailbox gets none (its badge is on the Mail button)
+    wx, wy = C.at(20.5, 20.5)
+    spots[-1]["plate"] = [round(wx), round(wy - 34)]
+    gate = next(sp for sp in spots if sp["id"] == "gate")
+    gate["plate"] = [gate["rect"][0] + gate["rect"][2] // 2, gate["rect"][1] - 6]
     point_prop = {"bounty": ("props48", 6), "mail": ("props48", 8)}
     for pid, label, i, j in POINTS:
         if pid not in point_prop:
@@ -100,6 +136,13 @@ def main(root):
         b = prop_boxes[(*point_prop[pid], i, j)]
         spots.append({"id": pid, "label": label, "kind": "point", "cells": [i, j, i, j],
                       "door": list(doors()[pid]), "rect": [b[0] - 6, b[1] - 6, b[2] + 12, b[3] + 12]})
+        spots[-1]["plate"] = [b[0] + b[2] // 2, b[1] - 14] if pid == "bounty" else None
+    trim_taps(spots)
+    for sp in spots:                          # an unbuilt lot's plate sits on its ground, not in the air
+        if sp["kind"] == "lot":
+            x0, y0, x1, y1 = sp["cells"]
+            gx, gy = C.at((x0 + x1 + 1) / 2, (y0 + y1 + 1) / 2)
+            sp["lot_plate"] = [round(gx), round(gy - 10)]
     # level props: [file, x, y, level_from, level_to] per building, drawn by town_view over the base
     os.makedirs(os.path.join(art, "iso", "up"), exist_ok=True)
     levels = {}
@@ -162,6 +205,8 @@ def main(root):
                 if c in ok:
                     stops.add(c)
     stops |= {c for c in ok if 19 <= c[0] <= 22 and 19 <= c[1] <= 22}      # round the well
+    from layout import EXTRA_STOPS
+    stops |= {c for c in EXTRA_STOPS if c in ok}
     pen = C.at(30, 30), C.at(38, 35)
     data = {
         "iso": True, "size": [C.W, C.H], "cell": [32, 16], "origin": [C.OX, C.OY], "grid": N,
@@ -171,8 +216,7 @@ def main(root):
         "walk": sorted([list(c) for c in ok]),
         "stops": sorted([list(c) for c in stops]),
         "inn_doors": inn_doors,     # walkers come and go here most (everyone lives at the Inn)
-        "raised": [[i, j] for i in range(18, 22) for j in range(5, 8)],   # plateau path: walkers stand 24 px higher
-        "raised_z": PLATEAU_Z,
+        "raised": [[i, j, z] for (i, j), z in sorted(RAISED.items())],   # the hope path: walkers climb the stairs (px above the ground)
         "occluders": occluders,
         "levels": levels,
         "pen": [C.at(28, 35)[0], C.at(28, 29)[1], C.at(32, 29)[0] - C.at(28, 35)[0], C.at(32, 35)[1] - C.at(28, 29)[1]],
@@ -184,7 +228,8 @@ def main(root):
         # map-only pins with no page to open (town_view doesn't make them tappable)
         "landmarks": [{"id": pid, "label": label, "cells": [i, j, i, j]} for pid, label, i, j in POINTS if pid not in point_prop],
         "houses": [],                 # no generic homes (everyone lives at the Inn)
-        "inn_wing": [list(h[:4]) for h in HOUSES],   # the Inn's lodging wing: part of the Inn on the town map "plateau": list(PLATEAU), "plateau_z": PLATEAU_Z,
+        "inn_wing": [list(h[:4]) for h in HOUSES],   # the Inn's lodging wing: part of the Inn on the town map
+        "plateau": list(PLATEAU), "plateau_z": PLATEAU_Z,
     }
     with open(os.path.join(art, "town.json"), "w", newline="\n") as f:
         json.dump(data, f, indent=1)

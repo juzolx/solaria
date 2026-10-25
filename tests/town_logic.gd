@@ -144,6 +144,35 @@ func _initialize() -> void:
 			cells.append(sp["door"])
 		var lost: Array = cells.filter(func(c): return not seen.has(Vector2i(int(c[0]), int(c[1]))))
 		check(lost.is_empty(), "every town door and stop can be walked to from the Inn (unreachable: %s)" % [lost])
+		# buildings' tap areas never overlap (the Market is the square under them; points win by size)
+		var bld: Array = d["spots"].filter(func(sp): return String(sp["kind"]) in ["building", "lot"])
+		var clash: Array = []
+		for a in bld.size():
+			for b in range(a + 1, bld.size()):
+				var ra: Array = bld[a]["rect"]
+				var rb: Array = bld[b]["rect"]
+				if Rect2(ra[0], ra[1], ra[2], ra[3]).intersects(Rect2(rb[0], rb[1], rb[2], rb[3])):
+					clash.append([bld[a]["id"], bld[b]["id"]])
+		check(clash.is_empty(), "no two building tap areas overlap (%s)" % [clash])
+		# name plates at 2x never cover each other (a plate takes the tap first)
+		var font := ThemeDB.fallback_font
+		var plates: Array = []
+		for sp in d["spots"]:
+			if sp.has("plate") and sp["plate"] == null:
+				continue
+			var w := font.get_string_size(String(sp["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 18.0
+			var c: Vector2 = TownView.plate_anchor(sp) * 2.0
+			plates.append([sp["id"], Rect2(c.x - w / 2.0, c.y - 15.0, w, 30.0)])
+		var piled: Array = []
+		for a in plates.size():
+			for b in range(a + 1, plates.size()):
+				if (plates[a][1] as Rect2).intersects(plates[b][1]):
+					piled.append([plates[a][0], plates[b][0]])
+		check(piled.is_empty(), "no two name plates overlap at 2x (%s)" % [piled])
+		# the hope path: walkers climb the stairs to the portal (the Dungeon door is up there)
+		var gate: Array = d["spots"].filter(func(sp): return sp["id"] == "gate")[0]["door"]
+		var up: Array = d["raised"].filter(func(c): return int(c[0]) == int(gate[0]) and int(c[1]) == int(gate[1]))
+		check(not up.is_empty() and float(up[0][2]) > float(d.get("plateau_z", 24)) and walk.has(Vector2i(int(gate[0]), int(gate[1]))), "the Dungeon door is up the stairs, on the walk grid")
 	GameState.delete_saves()
 	print("TOWN TESTS DONE, failures: ", fails)
 	quit()
