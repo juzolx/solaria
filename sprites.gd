@@ -554,13 +554,12 @@ static func enemy_by_key(key: String) -> Dictionary:
 		# The feet are the lowest solid row of the picture itself (art_info.gd lists the same
 		# numbers for tools; measuring here means new art can never get a stale value)
 		var used := img.get_used_rect()
-		# Redrawn monsters (art_info "hd": 1) are already in the dark palette: a light grade keeps
-		# them brighter than the hall behind them, so they read on a phone
+		# Redrawn monsters (art_info "hd": 1) are already in the dark palette: no second darkening
+		# pass (fable r1), only the rim light, so they stay brighter than the hall behind them
 		var native: bool = int(ArtInfo.DATA["enemies"].get(key, {}).get("hd", 2)) == 1
 		var graded := DarkGrade.image(img, DarkGrade.NATIVE, true, DarkGrade.SPRITE) if native else DarkGrade.image(img)
 		out = {"tex": ImageTexture.create_from_image(graded), "white": ImageTexture.create_from_image(_silhouette(img)),
-			"size": Vector2(img.get_size()), "foot": float(used.end.y - 1 if used.size.y > 0 else img.get_height() - 1),
-			"grid": 1 if native else 2}
+			"size": Vector2(img.get_size()), "foot": float(used.end.y - 1 if used.size.y > 0 else img.get_height() - 1)}
 	_cache["e_" + key] = out
 	return out
 
@@ -609,13 +608,8 @@ static func pose_image(src: Image, waist: int, top: int, lean: int, squash: int,
 		var ny := y + squash
 		if ny < 0 or ny >= h:
 			continue
-		for x in w:
-			var c := src.get_pixel(x, y)
-			if c.a <= 0.0:
-				continue
-			var nx := x + dx
-			if nx >= 0 and nx < w:
-				out.set_pixel(nx, ny, c)
+		# The whole row moves by the same dx: one blit (clear pixels leave what is under them)
+		out.blend_rect(src, Rect2i(0, y, w, 1), Vector2i(dx, ny))
 	return out
 
 ## All poses for a picture: name -> {"tex", "white", "dx" (how far the hand row moved), "dy"}.
