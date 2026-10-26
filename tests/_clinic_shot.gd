@@ -14,9 +14,11 @@ func _initialize() -> void:
 	var st: GameState = main.state
 	st.pets.clear()
 	st.pets_out.clear()
+	Menagerie.changed(st)
 	Menagerie.make_pet(st, "Barghest", "barghest", 1, "t")
 	var b := Menagerie.make_pet(st, "Gullinbursti", "gullinbursti", 3, "t")
 	b["hurt"] = 4
+	Menagerie.changed(st)   # set by hand: caches start over
 	Menagerie.make_pet(st, "Will-o'-Wisp", "will_o_wisp", 2, "t")
 	main.go_to_town(true)
 	await create_timer(0.3).timeout

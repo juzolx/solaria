@@ -141,6 +141,7 @@ var bank := 0             # gold left safe at home while you're in the dungeon
 var return_scrolls := 0    # carried Return Scrolls: escape home any time, even mid-fight
 var pets: Array = []       # owned pets (Menagerie): caught, hatched, or from a Calamity
 var pets_out: Array = []   # ids of the pets coming on runs (3 for a Beast Tamer, else 1)
+var pets_rev := 0          # bumped by Menagerie.changed whenever pets, pets_out or a hurt changes (caches key on it)
 var eggs: Array = []       # unhatched eggs (safe at home; they hatch as you clear floors)
 var go_home_after := false  # tapped Town mid-floor: head home as soon as this floor is cleared
 var carry_pick := 0       # how much gold you last chose to carry down: 0 none, 1 a quarter, 2 half, 3 all
@@ -3545,10 +3546,14 @@ func load_game() -> bool:
 	return_scrolls = int(data.get("return_scrolls", 0))
 	pets = data.get("pets", [])
 	pets_out = data.get("pets_out", [])
-	Menagerie.convert_levels(self)   # the Oct 25 level curve (never lowers a level)
+	Menagerie.changed(self)
+	var pets_migrated := Menagerie.convert_levels(self)   # the Oct 25 level curve (never lowers a level)
+	if pets_migrated:
+		say("[color=#d9a066]Pet levels were rebalanced: every pet keeps its level, and each level now adds 1.25% of its rank's hit.[/color]")
 	var home := Menagerie.one_of_each(self)   # Juzo (Oct 25): one of each kind; older saves could have two
 	if not home.is_empty():
-		say("[color=#d9a066]New rule: one of each kind of pet per team. %s went home to rest (nothing is lost).[/color]" % ", ".join(home))
+		pets_migrated = true
+		say("[color=#d9a066]New rule: one of each kind of pet per team. %s went home (nothing is lost).[/color]" % ", ".join(home))
 	eggs = data.get("eggs", [])
 	checkpoint = int(data.get("checkpoint", 0))
 	curses = data.get("curses", {})
@@ -3644,6 +3649,8 @@ func load_game() -> bool:
 		hero_hp = get_max_hp()
 	spawn_enemy()
 	Portals.resume(self)  # back in a rift's fight, or a portal choice you hadn't made
+	if pets_migrated and autosave:
+		save_game()   # Fable pets R5: the pet notes show once, not on every launch until something saves
 	return true
 
 ## v0.11: 4 stats at 3 points a level became 8 stats at 5 points a level.

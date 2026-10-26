@@ -1261,8 +1261,11 @@ func go_to_town(confirmed := false) -> bool:
 var _roster_cache: Array = []
 
 ## A town sound at map point `p`, heard only while it's on screen.
+var _last_town_sound := {}   # sound -> ticks (ms) it last played
 func _town_sound(p: Vector2, sound: String, pitch: float, db: float) -> void:
-	if town_view.in_view(p):
+	var now := Time.get_ticks_msec()
+	if town_view.in_view(p) and now - int(_last_town_sound.get(sound, -100000)) >= 1500:   # a burst stays one sound
+		_last_town_sound[sound] = now
 		sfx.play(sound, pitch, db)
 
 ## Every hero in your roster walks around town (the one you play first).
@@ -1657,18 +1660,12 @@ func _handle_events() -> void:
 				moment_queue.append(["realm", e["name"], e["blurb"], Color(e["color"]), e["mechanic"], null, DarkGrade.texture(bgp, DarkGrade.SCENE, false)])
 			"boss_intro":
 				moment_queue.append(["boss", e["name"], e["lore"], Color(e["color"]), e.get("sub", ""), null])
-			"hatch_moment":
-				var htex := Menagerie.species_texture(String(e.get("species", "")), String(e["art"]))
-				# Fable pets R4: always the hatch screen; a Legendary or Mythic one opens with light ("rare")
-				moment_queue.append(["hatch", ("Cherished " if e["cherished"] else "") + "Baby " + String(e["name"]),
-					("%s pet, a kind you've never had: it's in your Codex now." if e.get("first", false) else "%s pet. It already looks at you like you're its whole world.") % Monsters.tier_name(int(e["tier"])), Color(Monsters.tier_color(int(e["tier"]))), "rare" if int(e["tier"]) >= 4 else "", htex])
-			"egg_moment":   # a nest (Fable pets R4)
-				moment_queue.append(["egg", String(e["name"]), "Something inside is moving. It hatches after %d floors." % Menagerie.EGG_FLOORS,
-					Color(Menagerie.TIER_COLORS[clampi(int(e["tier"]), 0, 5)]), "rare" if int(e["tier"]) >= 4 else "", Pets.egg(String(e["zone"]))])
+			"hatch_moment", "egg_moment":   # Fable pets R4-R5: Menagerie.moment builds the screen
+				moment_queue.append(Menagerie.moment(e))
 			"first_find":  # next update: the first pet of a kind, the first of a Unique or Set piece
 				if e["kind"] == "pet":
 					var ftex := Menagerie.species_texture(String(e.get("species", "")), String(e["art"]))
-					moment_queue.append(["first", String(e["name"]), "%s pet, a kind you've never had. It's in your Codex now." % Monsters.tier_name(int(e["tier"])), Color(Monsters.tier_color(int(e["tier"]))), "", ftex])
+					moment_queue.append(["first", String(e["name"]), "%s pet, a kind you've never had. It's in your Codex now." % Monsters.tier_name(int(e["tier"])), Color(Menagerie.TIER_COLORS[clampi(int(e["tier"]), 0, 5)]), "", ftex])
 				else:
 					var fi: Dictionary = e["item"]
 					moment_queue.append(["first", String(e["name"]), ("Your first piece of this set. Wear more of it for its bonuses." if e["kind"] == "set" else "A Unique item. There's only one like it, and now it's in your collection."), Color(GameData.color_of(int(fi["rarity"]))), "", Sprites.item_icon(fi)])

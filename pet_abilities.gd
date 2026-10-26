@@ -184,9 +184,7 @@ static func bonus_sources(g: GameState) -> Array:
 	if g.pets.is_empty():
 		return []
 	var team := Menagerie.out(g)
-	var key: Array = []
-	for p in team:
-		key.append([int(p["id"]), _rank(p), String(p["species"])])
+	var key: Array = [g.pets_rev, g.pets.size(), g.pets_out.size(), Menagerie.max_out(g)]   # Fable pets R5: no per-lookup scan
 	var cached: Array = g.get_meta("pet_bonus", [])
 	if not cached.is_empty() and cached[0] == key:
 		return cached[1]
