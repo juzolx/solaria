@@ -32,10 +32,13 @@ func refresh() -> void:
 func _owned() -> void:
 	var tamer := Menagerie.is_tamer(state)
 	var out_n := Menagerie.out(state).size()
-	UI.section(box, "Your pets", "Pets fight beside you and grow with every kill. %s Pets are never lost: when your team goes down they come home hurt and rest, or the Clinic in town patches them up." % (
-		"As a tamer you bring up to %d at a time." % Menagerie.TAMER_OUT if tamer else "You can bring %d along." % Menagerie.OTHERS_OUT))
+	# Fable r1 #12: one line; the rest is a tap away
+	var bring := ("As a tamer you bring up to %d at a time." % Menagerie.TAMER_OUT) if tamer else ("You can bring %d along." % Menagerie.OTHERS_OUT)
+	var hd := UI.heading("Your pets", "They fight beside you and are never lost. %s" % bring)
+	UI.tip(hd, "Pets grow with every kill. When your team goes down they come home hurt and rest, or the Clinic in town patches them up.")
+	box.add_child(hd)
 	if not state.pets.is_empty():
-		box.add_child(UI.label("COMING ALONG  %d / %d" % [out_n, Menagerie.max_out(state)], 11, UI.DIM))
+		box.add_child(UI.heading("Coming along", "%d of %d" % [out_n, Menagerie.max_out(state)]))
 	for p in state.pets:
 		box.add_child(_pet_row(p))
 	for e in state.eggs:
@@ -50,7 +53,7 @@ func _owned() -> void:
 		ev.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(ev)
 		var etier := clampi(int(e.get("tier", 0)), 0, 5)
-		ev.add_child(UI.label(Menagerie.egg_name(e), UI.FONT_CAPTION, Color(Menagerie.TIER_COLORS[etier])))
+		ev.add_child(UI.label(Menagerie.egg_name(e), UI.FONT_BODY, Color(Menagerie.TIER_COLORS[etier])))
 		ev.add_child(UI.wrap("Something inside is moving. It hatches in %d floor%s.\nQuest: %s" % [int(e["floors"]), "" if int(e["floors"]) == 1 else "s", EggQuests.text(e)], 13, UI.TEXT))
 	# Empty slots hint at what's out there (never how)
 	var empty := maxi(0, 3 - state.pets.size() - state.eggs.size())
@@ -60,7 +63,7 @@ func _owned() -> void:
 		var hints := ["Old hunters swear there are nests in the deep halls, for the lucky.",
 			"Every region keeps its own eggs, they say. Few ever see one.",
 			"A nest is a rarer thing than most heroes meet in a lifetime."]
-		c[1].add_child(UI.wrap("?  " + hints[(i + state.pets.size()) % hints.size()], UI.FONT_CAPTION, UI.DIM))
+		c[1].add_child(UI.wrap("?  " + hints[(i + state.pets.size()) % hints.size()], UI.FONT_BODY, UI.DIM))
 
 func _pet_row(p: Dictionary) -> PanelContainer:
 	var id := int(p["id"])
@@ -140,11 +143,11 @@ func _ability_lines(v: VBoxContainer, p: Dictionary, show_locked := true) -> voi
 		for a in PetAbilities.lines(p):
 			if a["on"]:
 				names.append(String(a["text"]).get_slice(":", 0))
-		v.add_child(UI.wrap("  ·  ".join(names), UI.FONT_CAPTION, Color(GameData.color_of(mini(PetAbilities._rank(p), 5)))))
+		v.add_child(UI.wrap("  ·  ".join(names), UI.FONT_BODY, Color(GameData.color_of(mini(PetAbilities._rank(p), 5)))))
 	for a in PetAbilities.lines(p):
 		if a["on"]:
 			if show_locked:
-				v.add_child(UI.wrap("+ " + String(a["text"]), UI.FONT_CAPTION, UI.TEXT))
+				v.add_child(UI.wrap("+ " + String(a["text"]), UI.FONT_BODY, UI.TEXT))
 		elif show_locked:
 			v.add_child(UI.wrap("A higher-ranked %s pet (%s and up) would know: %s" % [fam, Menagerie.TIER_NAMES[int(a["rank"])], a["text"]], 11, UI.DIM))
 	# all Spirits together heal at most REGEN_CAP a turn: say so when it cuts this one
@@ -163,7 +166,7 @@ func _pet_card() -> void:
 	var c := _frame(UiSkin.IRON)   # the companion's own colour stays in its name
 	box.add_child(c[0])
 	if st < 0:
-		c[1].add_child(UI.label("Someone is watching you from the shadows... (level %d)" % World.PET_LEVEL, UI.FONT_CAPTION, UI.DIM))
+		c[1].add_child(UI.label("Someone is watching you from the shadows... (level %d)" % World.PET_LEVEL, UI.FONT_BODY, UI.DIM))
 		return
 	var h := UI.hbox(8)
 	c[1].add_child(h)
@@ -185,7 +188,7 @@ func _pet_card() -> void:
 	var stages: Array = []
 	for i in 4:
 		stages.append(String(info["stages"][i]) if i <= st or state.dev_mode else "???")
-	c[1].add_child(UI.wrap("Evolves: " + "  >  ".join(stages), UI.FONT_CAPTION, UI.DIM))
+	c[1].add_child(UI.wrap("Evolves: " + "  >  ".join(stages), UI.FONT_BODY, UI.DIM))
 	var nrow := UI.hbox(6)
 	c[1].add_child(nrow)
 	var le := LineEdit.new()

@@ -66,7 +66,7 @@ func setup(m) -> void:
 	pic.stretch_mode = TextureRect.STRETCH_SCALE  # sized by _place_pic to whole screen pixels
 	backdrop.add_child(pic)
 	backdrop.resized.connect(_place_pic)
-	text = UI.rich(UI.FONT_CAPTION)
+	text = UI.rich(UI.FONT_BODY)
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	detail.add_child(text)
 

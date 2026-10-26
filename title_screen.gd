@@ -20,11 +20,19 @@ var motes: Array = []
 var menu_box: VBoxContainer
 var side_box: VBoxContainer
 var layout: BoxContainer
+## Interface pass (Juzo: "the background images... we can't do better?"): the title stands in the
+## real dungeon room of your hero's floor (the fight's own HallsScene), your hero at 3x in front,
+## a monster of the zone at the far wall. key_art: a portrait painting instead (mockup to compare).
+static var key_art_path := ""
+var halls: HallsScene
+var room_state: GameState
+var room_h := 0.0     # the scene's height: from the top of the screen down to the menu
+var key_tex: Texture2D
 
 func show_for(main_node) -> void:
 	m = main_node
 	m.add_child(self)
-	theme = UI.make_theme()
+	theme = UI.theme()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	size = get_viewport().get_visible_rect().size
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -35,6 +43,13 @@ func show_for(main_node) -> void:
 	for zi in GameData.ZONES.size():
 		bg_keys.append((start_zone + zi) % GameData.ZONES.size())
 	bg_tex = _bg(bg_keys[0])
+	if key_art_path != "":
+		var img := Image.load_from_file(key_art_path)
+		if img:
+			key_tex = ImageTexture.create_from_image(img)
+	halls = HallsScene.new()
+	room_state = GameState.new()
+	room_state.floor_num = maxi(1, int(meta.get("floor", 1)))
 	if not meta.is_empty():
 		hero_tex = Sprites.portrait(meta.get("appearance", {}), HeroArt.meta_looks(meta))
 	else:
@@ -70,7 +85,7 @@ func _fit() -> void:
 func _process(delta: float) -> void:
 	t += delta
 	# Slowly cross-fade to the next zone every 14 seconds
-	if t > 14.0 * (bg_index + 1):
+	if halls == null and t > 14.0 * (bg_index + 1):
 		bg_index += 1
 		bg_next = _bg(bg_keys[bg_index % bg_keys.size()])
 		bg_fade = 0.0
@@ -89,6 +104,9 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	var vs := size
 	draw_rect(Rect2(Vector2.ZERO, vs), UI.BG)
+	if halls != null:
+		_draw_scene(vs)
+		return
 	# Cover the screen with the background and pan it gently
 	var ground_y := vs.y * 0.44
 	var scale := 1.0
@@ -132,6 +150,62 @@ func _draw() -> void:
 		var x: float = mo["x"] + sin(t * 0.8 + mo["phase"]) * 8.0
 		draw_rect(Rect2(roundf(x), roundf(mo["y"]), mo["size"], mo["size"]), c)
 
+## The room (or the key art), the hero, the monster, motes and a fade into the menu.
+func _draw_scene(vs: Vector2) -> void:
+	var sh := maxf(room_h, vs.y * 0.34)
+	var sz := Vector2(vs.x, sh)
+	if key_tex:
+		# whole pixels: the painting is 168 px wide, 3x on a 504 px phone
+		var k := maxf(1.0, floorf(vs.x / float(key_tex.get_width())))
+		var kw := key_tex.get_width() * k
+		var kh := key_tex.get_height() * k
+		# the painting's focus (its lower part: the hero, the gate) sits just above the menu
+		var ky := minf(0.0, roundf(sh - kh * 0.9))
+		draw_texture_rect(key_tex, Rect2(roundf((vs.x - kw) / 2.0), ky, kw, kh), false)
+	else:
+		halls.t = t
+		halls.build(room_state, sz)
+		halls.draw_shell(self, sz)
+		halls.draw_doors(self, null, {}, UI.game_font())
+		var things: Array = halls.scenery()
+		things.sort_custom(func(a, b): return float(a["z"]) > float(b["z"]))
+		for th in things:
+			halls.draw_scenery(self, th)
+		# a monster of the zone waits by the far wall, a whole-pixel 2x
+		if not monster.is_empty():
+			var mt: Texture2D = monster["tex"]
+			var mu := 2.0 if mt.get_height() <= 96 else 1.0
+			var ms := Vector2(mt.get_size()) * mu
+			var feet_y := halls.proj(0.0, HallsScene.FLOOR_Y, 4.4).y
+			var squash := 1.0 + sin(t * 3.0) * 0.02
+			var mpos := Vector2(roundf(vs.x * 0.5 - ms.x / 2.0 + 70.0), roundf(feet_y - float(monster["foot"]) * mu * squash))
+			draw_texture_rect(mt, Rect2(mpos, Vector2(ms.x, ms.y * squash)), false, Color(0.55, 0.52, 0.62))
+		halls.vignette(self, sz)
+		# your hero in front at 3x, on the floor near you
+		if hero_tex:
+			var u := 3.0
+			var hs := Vector2(hero_tex.get_size()) * u
+			var floor_y := minf(halls.proj(0.0, HallsScene.FLOOR_Y, 2.1).y, sz.y - 6.0)
+			var feet := float(Sprites.HERO_FOOT - Sprites.PORTRAIT_CROP.position.y) * u
+			var bob := roundf(sin(t * 2.2) * 0.6) * u
+			var pos := Vector2(roundf(vs.x * 0.5 - hs.x / 2.0 - 40.0), roundf(floor_y - feet + bob))
+			draw_set_transform(Vector2(pos.x + hs.x / 2.0, floor_y), 0.0, Vector2(1.0, 0.25))
+			draw_circle(Vector2.ZERO, hs.x * 0.22, Color(0, 0, 0, 0.45))
+			draw_set_transform(Vector2.ZERO)
+			draw_texture_rect(hero_tex, Rect2(pos, hs), false)
+	# the scene melts into the menu
+	var steps := 12
+	for i in steps:
+		var f := i / float(steps)
+		var y := sz.y - 120.0 + 120.0 * f
+		draw_rect(Rect2(0, y, vs.x, 120.0 / steps + 1.0), Color(UI.BG, 0.85 * f))
+	draw_rect(Rect2(0, sz.y, vs.x, vs.y - sz.y), UI.BG)
+	for mo in motes:
+		var c := Color("#feae34") if mo["warm"] else Color("#a4dddb")
+		c.a = 0.3 + 0.3 * sin(t * 2.0 + mo["phase"])
+		var x: float = mo["x"] + sin(t * 0.8 + mo["phase"]) * 8.0
+		draw_rect(Rect2(roundf(x), roundf(mo["y"]), 2, 2), c)
+
 # =====================================================================
 # Menu
 # =====================================================================
@@ -158,11 +232,15 @@ func _build() -> void:
 	col.add_child(sub)
 	var gap := Control.new()
 	gap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	gap.custom_minimum_size = Vector2(0, 150)   # room for the hero standing in the scene
 	col.add_child(gap)
 
 	layout = BoxContainer.new()
 	layout.add_theme_constant_override("separation", 16)
 	col.add_child(layout)
+	layout.resized.connect(func():
+		room_h = layout.global_position.y - global_position.y + 30.0
+		queue_redraw())
 	var menu_panel := PanelContainer.new()
 	menu_panel.add_theme_stylebox_override("panel", UiSkin.frame(Color(UI.PANEL, 0.94), UI.GOLD_DULL, 16))
 	menu_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -178,7 +256,7 @@ func _build() -> void:
 	_fit()
 	_fill_menu()
 	_fill_side()
-	var ver := UI.label("v" + PatchNotes.VERSION, UI.FONT_CAPTION, UI.DIM)
+	var ver := UI.label("v" + PatchNotes.VERSION, UI.FONT_BODY, UI.DIM)
 	ver.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	col.add_child(ver)
 
@@ -196,7 +274,7 @@ func _fill_menu() -> void:
 				p.active_slot = n
 				meta = GameState.slot_meta(n)
 				break
-	var town_l := UI.label("%s  ·  %s  ·  %d / %d heroes" % [p.town_name(p.town).to_upper(), "HARDCORE" if p.town_hardcore(p.town) else "REGULAR", GameState.town_heroes(p.town), p.slots_open()], UI.FONT_CAPTION, UI.GOLD)
+	var town_l := UI.label("%s  ·  %s  ·  %d / %d heroes" % [p.town_name(p.town).to_upper(), "HARDCORE" if p.town_hardcore(p.town) else "REGULAR", GameState.town_heroes(p.town), p.slots_open()], UI.FONT_BODY, UI.GOLD)
 	town_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	town_l.tooltip_text = "The town you're in. Switch or found another from Towns."
 	menu_box.add_child(town_l)
@@ -234,7 +312,7 @@ func _hero_line(meta: Dictionary) -> Control:
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	row.add_child(pic)
-	var info := UI.rich(UI.FONT_CAPTION)
+	var info := UI.rich(UI.FONT_BODY)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.text = HeroSelect.describe(meta)
 	row.add_child(info)
@@ -246,17 +324,17 @@ func _fill_side() -> void:
 	if m.profile.notes_seen != PatchNotes.VERSION:
 		var up := UI.panel(Color("#2a1a2e"), Color("#e8b14a"), 8, 10, 2)
 		side_box.add_child(up)
-		var ut := UI.rich(UI.FONT_CAPTION)
+		var ut := UI.rich(UI.FONT_BODY)
 		ut.text = "[color=#e8b14a][b]%s[/b][/color]  [color=%s]v%s[/color]\nNew class rules with God classes, pets from region nests, three currencies, the Legendary Wheel and safer saves." % [String(PatchNotes.NOTES[0]["name"]).to_upper(), UI.hex(UI.DIM), PatchNotes.VERSION]
 		up.add_child(ut)
 		var pulse := up.create_tween().set_loops()
 		pulse.tween_property(up, "modulate", Color(1.15, 1.1, 0.95), 0.9)
 		pulse.tween_property(up, "modulate", Color(1, 1, 1), 0.9)
 	var wn := UI.button("What's new in v%s" % PatchNotes.VERSION, func(): WhatsNew.new().show_for(m))  # 2.1 G9
-	wn.custom_minimum_size = Vector2(0, UI.TAP)
+	wn.custom_minimum_size = Vector2(0, TAP_PHONE)
 	side_box.add_child(wn)
 	var week := Realms.realm_of_week()
-	var wk := UI.rich(UI.FONT_CAPTION)
+	var wk := UI.rich(UI.FONT_BODY)
 	wk.text = "[color=%s]REALM OF THE WEEK[/color]\n[color=%s][b]%s[/b][/color]: double reputation and better loot." % [UI.hex(UI.DIM), Realms.info(week)["color"], Realms.realm_name(week)]
 	side_box.add_child(wk)
 	var ev := GameData.active_events()
@@ -264,10 +342,14 @@ func _fill_side() -> void:
 		var names := []
 		for id in ev:
 			names.append("[color=#f472b6][b]%s[/b][/color]: %s" % [GameData.EVENTS[id]["name"], GameData.EVENTS[id]["text"]])
-		var banner := UI.rich(UI.FONT_CAPTION)
+		var banner := UI.rich(UI.FONT_BODY)
 		banner.text = "[color=#f472b6]EVENT NOW[/color]\n" + "\n".join(names)
 		side_box.add_child(banner)
-	var tip := UI.rich(UI.FONT_CAPTION)
+	m.profile.notes_seen = PatchNotes.VERSION
+	if size.x < size.y * 0.95:
+		m.profile.save()
+		return   # phone: the scene needs the height; tips are on the loading screen, notes behind the button
+	var tip := UI.rich(UI.FONT_BODY)
 	tip.text = "[color=%s]TIP OF THE DAY[/color]\n%s" % [UI.hex(UI.DIM), PatchNotes.tip_of_the_day()]
 	side_box.add_child(tip)
 	side_box.add_child(UI.heading("What's new"))
@@ -275,7 +357,7 @@ func _fill_side() -> void:
 	scroll.custom_minimum_size = Vector2(0, 150)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	side_box.add_child(scroll)
-	var notes := UI.rich(UI.FONT_CAPTION)
+	var notes := UI.rich(UI.FONT_BODY)
 	notes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var lines := []
 	for n in PatchNotes.NOTES:

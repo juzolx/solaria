@@ -13,8 +13,8 @@ func _build(c: VBoxContainer) -> void:
 	var game := UI.card(UI.GOLD)
 	c.add_child(game[0])
 	game[1].add_child(UI.label(CreditsData.GAME["title"], 20, UI.GOLD))
-	game[1].add_child(UI.wrap(CreditsData.GAME["by"], UI.FONT_CAPTION))
-	game[1].add_child(UI.wrap(CreditsData.GAME["line"], UI.FONT_CAPTION, UI.DIM))
+	game[1].add_child(UI.wrap(CreditsData.GAME["by"], UI.FONT_BODY))
+	game[1].add_child(UI.wrap(CreditsData.GAME["line"], UI.FONT_BODY, UI.DIM))
 	for group in CreditsData.GROUPS:
 		UI.section(c, group)
 		for s in CreditsData.in_group(group):
@@ -23,14 +23,14 @@ func _build(c: VBoxContainer) -> void:
 func _entry(s: Dictionary) -> Control:
 	var card := UI.card(UI.BORDER)
 	var v: VBoxContainer = card[1]
-	v.add_child(UI.wrap(s["name"], UI.FONT_CAPTION, UI.GOLD))
-	v.add_child(UI.wrap(s["author"] if String(s["author"]).begins_with("Many") else "By " + s["author"], UI.FONT_CAPTION))
-	v.add_child(UI.wrap("License: " + s["license"], UI.FONT_CAPTION, Color("#c9a36a")))
-	v.add_child(UI.wrap(s["used"], UI.FONT_CAPTION, UI.DIM))
+	v.add_child(UI.wrap(s["name"], UI.FONT_BODY, UI.GOLD))
+	v.add_child(UI.wrap(s["author"] if String(s["author"]).begins_with("Many") else "By " + s["author"], UI.FONT_BODY))
+	v.add_child(UI.wrap("License: " + s["license"], UI.FONT_BODY, Color("#c9a36a")))
+	v.add_child(UI.wrap(s["used"], UI.FONT_BODY, UI.DIM))
 	if s["link"] != "-":
-		v.add_child(UI.wrap(s["link"], UI.FONT_CAPTION, UI.DIM))
+		v.add_child(UI.wrap(s["link"], UI.FONT_BODY, UI.DIM))
 	if s.has("notice"):
-		var n := UI.rich(UI.FONT_CAPTION)
+		var n := UI.rich(UI.FONT_BODY)
 		n.text = s["notice"]
 		v.add_child(n)
 	return card[0]

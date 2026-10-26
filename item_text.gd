@@ -29,7 +29,9 @@ static func describe(state: GameState, item: Dictionary) -> String:
 	# 0.13+: one score for every slot, next to the average of what you wear
 	var avg := state.average_gear_score()
 	var gs := GameData.gear_score(item)
-	text += "   [color=%s]Gear Score %d[/color] [color=%s](you average %d)[/color]" % [UI.hex(UI.GREEN) if gs > avg else dim, gs, dim, avg]
+	text += "   [color=%s]Gear Score %d[/color]" % [UI.hex(UI.GREEN) if gs > avg else dim, gs]
+	if avg > 0:   # Fable r1 #14: no "(you average 0)" before there is an average
+		text += " [color=%s](you average %d)[/color]" % [dim, avg]
 	if item.get("locked", false):
 		text += "  [color=#e8b14a](locked)[/color]"
 	match String(item.get("bound", "")):
@@ -80,6 +82,18 @@ static func compare(state: GameState, item: Dictionary) -> String:
 		verdict = "  [color=%s]Overall: weaker (%d%%)[/color]" % [UI.hex(UI.RED), int(round(overall * 100))]
 	return "Wearing it (instead of %s): %s %d -> [color=%s]%d (%s%d)[/color]%s" % [
 		current_name, item["stat"], total, c, new_total, plus, diff, verdict]
+
+## Fable r1 #9/#14: one compare line, "HP 989 » 1089 (+100)", green or red.
+static func short_compare(state: GameState, item: Dictionary) -> String:
+	var total := int(state.stat_value(item["stat"]))
+	var new_total := int(state.stat_if_equipped(item))
+	var diff := new_total - total
+	return "%s %d » [color=%s]%d (%s%d)[/color]" % [item["stat"], total, UI.hex(UI.GREEN if diff >= 0 else UI.RED), new_total, "+" if diff >= 0 else "", diff]
+
+## Name in its rarity colour over "+81 HP · Score 361".
+static func headline(item: Dictionary) -> String:
+	return "[color=%s]%s[/color]\n[color=%s]+%d %s · Score %d[/color]" % [GameData.color_of(int(item["rarity"])), GameData.display_name(item),
+		UI.hex(UI.TEXT), GameData.item_power(item), item["stat"], GameData.gear_score(item)]
 
 ## Plain-text summary for tooltips (no color codes).
 static func plain(item: Dictionary) -> String:

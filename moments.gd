@@ -17,7 +17,7 @@ static func play(main_ref, kind: String, title: String, sub: String, color: Colo
 	return m
 
 func _build(kind: String, title: String, sub: String, color: Color, extra: String, portrait: Texture2D, backdrop: Texture2D) -> void:
-	theme = UI.make_theme()
+	theme = UI.theme()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	size = get_viewport().get_visible_rect().size
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -156,7 +156,7 @@ var _ray_center := Vector2.ZERO
 var _sparks: Array = []  # [pos, vel, life]
 
 func _build_evolve(d: Dictionary) -> void:
-	theme = UI.make_theme()
+	theme = UI.theme()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	size = get_viewport().get_visible_rect().size
 	mouse_filter = Control.MOUSE_FILTER_STOP

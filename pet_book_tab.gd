@@ -35,11 +35,12 @@ func refresh() -> void:
 			owned += 1
 	box.add_child(UI.label("Owned  %d / %d     Seen  %d / %d" % [owned, all.size(), seen, all.size()], 15, UI.GOLD))
 	box.add_child(Collections.cards(codex, ["pets", "pet_epic", "pet_myth"]))  # 2.1 G4: progress and the next reward
-	box.add_child(UI.wrap("Pets are a real find: hatch an egg, or tame a beast as a Beast Tamer. Tiers go from Common to Mythic.", UI.FONT_CAPTION, UI.DIM))
-	var legend := UI.hbox(8)
+	box.add_child(UI.wrap("Pets are a real find: hatch an egg, or tame a beast as a Beast Tamer. Tiers go from Common to Mythic.", UI.FONT_BODY, UI.DIM))
+	var legend := HFlowContainer.new()   # wraps on a phone
+	legend.add_theme_constant_override("h_separation", 8)
 	box.add_child(legend)
 	for t in Menagerie.TIER_NAMES.size():
-		legend.add_child(UI.label(Menagerie.TIER_NAMES[t], UI.FONT_CAPTION, Color(Menagerie.TIER_COLORS[t])))
+		legend.add_child(UI.label(Menagerie.TIER_NAMES[t], UI.FONT_BODY, Color(Menagerie.TIER_COLORS[t])))
 	_abilities()
 	for zi in GameData.ZONES.size():
 		var z: Dictionary = GameData.ZONES[zi]
@@ -49,7 +50,7 @@ func refresh() -> void:
 		for s in z["subs"]:
 			mons.append(s["monster"]["id"])
 		box.add_child(UI.heading(str(z["name"])))
-		box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text(String(z["id"])), UI.FONT_CAPTION, Color(Menagerie.TIER_COLORS[PetAbilities.SIGNATURE_RANK])))
+		box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text(String(z["id"])), UI.FONT_BODY, Color(Menagerie.TIER_COLORS[PetAbilities.SIGNATURE_RANK])))
 		var flow := HFlowContainer.new()
 		flow.add_theme_constant_override("h_separation", 6)
 		flow.add_theme_constant_override("v_separation", 6)
@@ -58,7 +59,7 @@ func refresh() -> void:
 			flow.add_child(_cell(str(n)))
 	# Fable pets R2: the ten Calamity pets (the rarest; a slain Calamity leaves its pet)
 	box.add_child(UI.heading("Calamities"))
-	box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text("calamity"), UI.FONT_CAPTION, Color(Menagerie.TIER_COLORS[PetAbilities.SIGNATURE_RANK])))
+	box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text("calamity"), UI.FONT_BODY, Color(Menagerie.TIER_COLORS[PetAbilities.SIGNATURE_RANK])))
 	var cflow := HFlowContainer.new()
 	cflow.add_theme_constant_override("h_separation", 6)
 	cflow.add_theme_constant_override("v_separation", 6)
@@ -101,7 +102,7 @@ func _cell(n: String) -> Control:
 	if not have:
 		pic.modulate = Color(0.32, 0.3, 0.4, 0.9) if met else Color(0.12, 0.12, 0.16, 0.6)
 	v.add_child(pic)
-	var l := UI.label(_name(n) if met else "???", UI.FONT_CAPTION, Color(Menagerie.TIER_COLORS[tier]) if have else UI.DIM)
+	var l := UI.label(_name(n) if met else "???", UI.FONT_BODY, Color(Menagerie.TIER_COLORS[tier]) if have else UI.DIM)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.custom_minimum_size = Vector2(68, 0)
@@ -138,21 +139,21 @@ func _show(n: String, have: bool, tier: int) -> void:
 	o.content.add_child(pic)
 	var ls := _lines(n, have, tier)
 	for i in ls.size():
-		o.content.add_child(UI.wrap(String(ls[i]), UI.FONT_CAPTION, col if i == 0 and have else UI.TEXT))
+		o.content.add_child(UI.wrap(String(ls[i]), UI.FONT_BODY, col if i == 0 and have else UI.TEXT))
 	if have and tier < PetAbilities.SIGNATURE_RANK:
-		o.content.add_child(UI.wrap("A higher rank of this pet unlocks more (Abilities by rank, above).", UI.FONT_CAPTION, UI.DIM))
+		o.content.add_child(UI.wrap("A higher rank of this pet unlocks more (Abilities by rank, above).", UI.FONT_BODY, UI.DIM))
 
 ## 2.1: what pets can do by rank, and each family's passive and trick.
 func _abilities() -> void:
 	box.add_child(UI.heading("Abilities by rank"))
 	for t in PetAbilities.RANK_TEXT.size():
-		box.add_child(UI.wrap("%s: %s" % [Menagerie.TIER_NAMES[t], PetAbilities.RANK_TEXT[t]], UI.FONT_CAPTION, Color(Menagerie.TIER_COLORS[t])))
-	box.add_child(UI.wrap("A pet's family is its kind of monster. Tap a pet below to see its own.", UI.FONT_CAPTION, UI.DIM))
+		box.add_child(UI.wrap("%s: %s" % [Menagerie.TIER_NAMES[t], PetAbilities.RANK_TEXT[t]], UI.FONT_BODY, Color(Menagerie.TIER_COLORS[t])))
+	box.add_child(UI.wrap("A pet's family is its kind of monster. Tap a pet below to see its own.", UI.FONT_BODY, UI.DIM))
 	for f in PetAbilities.FAMILIES:
-		box.add_child(UI.label(String(PetAbilities.FAMILIES[f]["name"]).to_upper(), UI.FONT_CAPTION, UI.GOLD))
+		box.add_child(UI.label(String(PetAbilities.FAMILIES[f]["name"]).to_upper(), UI.FONT_BODY, UI.GOLD))
 		if f == "calamity":
 			# Calamity pets only ever come at Mythic, so the rank ladder above doesn't apply
-			box.add_child(UI.wrap("Calamity pets come only at Mythic. %s. %s. %s." % [PetAbilities.family_passive_range(f), PetAbilities.family_trick_text(f, PetAbilities.SIGNATURE_RANK), PetAbilities.region_signature_text("calamity")], UI.FONT_CAPTION, UI.TEXT))
+			box.add_child(UI.wrap("Calamity pets come only at Mythic. %s. %s. %s." % [PetAbilities.family_passive_range(f), PetAbilities.family_trick_text(f, PetAbilities.SIGNATURE_RANK), PetAbilities.region_signature_text("calamity")], UI.FONT_BODY, UI.TEXT))
 			continue
-		box.add_child(UI.wrap("Passive, %s" % PetAbilities.family_passive_range(f), UI.FONT_CAPTION, UI.TEXT))
-		box.add_child(UI.wrap("Epic trick, %s" % PetAbilities.family_trick_text(f, PetAbilities.TRICK_RANK), UI.FONT_CAPTION, UI.TEXT))
+		box.add_child(UI.wrap("Passive, %s" % PetAbilities.family_passive_range(f), UI.FONT_BODY, UI.TEXT))
+		box.add_child(UI.wrap("Epic trick, %s" % PetAbilities.family_trick_text(f, PetAbilities.TRICK_RANK), UI.FONT_BODY, UI.TEXT))

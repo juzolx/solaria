@@ -186,7 +186,7 @@ static func open_for(main, hidden_spots: Dictionary, locked_spots: Dictionary, o
 		o.close()
 		on_pick.call(id)
 	m.picked.connect(go)
-	o.content.add_child(UI.label("Tap a place to go there", UI.FONT_CAPTION, UI.DIM))
+	o.content.add_child(UI.label("Tap a place to go there", UI.FONT_BODY, UI.DIM))
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 6)
