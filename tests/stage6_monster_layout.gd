@@ -51,7 +51,7 @@ func _initialize() -> void:
 			await process_frame
 			await process_frame
 			_check_fight(bv, st, arg, wsz)
-	print("stage6 monster layout: %d fails" % fails)
+	print("STAGE6 MONSTER LAYOUT TESTS DONE, failures: %d" % fails)
 	quit(1 if fails > 0 else 0)
 
 func _fight(main, st: GameState, arg: String) -> void:
