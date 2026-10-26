@@ -110,27 +110,29 @@ for vx in (84, 90, 97, 103, 108):
             q = px[x + dx, y]
             if q[3] and not (q[0] > 150 and q[2] < 120):
                 px[x + dx, y] = (40, 66, 38, 255) if (x + y) % 3 else (64, 96, 52, 255)
-# a heap of fallen blocks at the tower's foot
-for _ in range(22):
-    bx, by = rng2.randint(96, 120), rng2.randint(238, 250)
-    bw, bh = rng2.randint(3, 6), rng2.randint(2, 4)
-    shade = rng2.choice(((92, 94, 100), (74, 76, 84), (110, 110, 116)))
+# a heap of fallen blocks at the tower's foot, in the wall's light stone so it reads at dusk
+LIGHT, SHADE = (141, 143, 153, 255), (74, 76, 88, 255)
+for k in range(8):
+    bx, by = 96 + (k * 7) % 24 + rng2.randint(0, 2), 240 + (k * 5) % 9
+    bw, bh = rng2.randint(5, 7), rng2.randint(3, 4)
     d.rectangle([bx - 1, by - 1, bx + bw, by + bh], fill=(16, 12, 20, 255))
-    d.rectangle([bx, by, bx + bw - 1, by + bh - 1], fill=shade + (255,))
-    d.line([bx, by, bx + bw - 1, by], fill=tuple(min(255, c + 30) for c in shade) + (255,))
-# two crows on the broken tower top
+    d.rectangle([bx, by, bx + bw - 1, by + bh - 1], fill=LIGHT)
+    d.line([bx, by + bh - 1, bx + bw - 1, by + bh - 1], fill=SHADE)
+    d.line([bx + bw - 1, by, bx + bw - 1, by + bh - 1], fill=SHADE)
+# two crows against the sky on the broken tower top: 3x2 black, a pale eye, legs on the stone
 for cxw in (58, 92):
     ty = next(y for y in range(h) if px[cxw, y][3])
-    for dx, dy in ((1, -4), (2, -4), (0, -3), (1, -3), (2, -3), (3, -3), (1, -2), (2, -2), (3, -2), (4, -2), (1, -1), (3, -1)):
-        px[cxw + dx, ty + dy] = (8, 8, 12, 255)
-    px[cxw - 1, ty - 3] = (90, 84, 70, 255)
-# the fallen cross in the forecourt, lying in the weeds
-cross = [(20 + k, 248 + k // 2) for k in range(18)] + [(25 + j, 244 + 2 * j // 3 + i) for i in range(0, 1) for j in range(-3, 9)][:0] + [(26 - k // 2, 245 + k) for k in range(8)]
+    for dx, dy in ((0, -3), (1, -3), (2, -3), (0, -2), (1, -2), (2, -2), (-1, -3), (0, -1), (2, -1)):
+        px[cxw + dx, ty + dy] = (0, 0, 0, 255)
+    px[cxw + 2, ty - 4] = (0, 0, 0, 255)
+    px[cxw + 2, ty - 3] = (210, 206, 190, 255)
+# the fallen cross in the forecourt: light stone lying on 2 px of dark earth
+cross = [(20 + k, 248 + k // 2) for k in range(18)] + [(26 - k // 2, 245 + k) for k in range(8)]
 for x, y in cross:
-    for dx, dy in ((0, 2), (1, 2), (-1, 0), (0, -1)):
-        if not px[x + dx, y + dy][3]:
-            px[x + dx, y + dy] = (16, 12, 20, 255)
+    for dy in (1, 2):
+        if not px[x, y + dy][3] or px[x, y + dy] not in (LIGHT, SHADE):
+            px[x, y + dy] = (40, 30, 24, 255)
 for x, y in cross:
-    px[x, y] = (150, 150, 158, 255)
-    px[x, y + 1] = (104, 104, 112, 255)
+    px[x, y] = LIGHT
+    px[x, y + 1] = SHADE
 im.save("art/church_ruin.png")

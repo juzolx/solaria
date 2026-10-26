@@ -131,7 +131,8 @@ def water(img, g):
     spill onto the neighbouring grass); cells touching a water vertex take that corner tile."""
     wat = lambda i, j: 0 <= i < N and 0 <= j < N and g[i][j] == "water"
     vw = lambda i, j: any(wat(a, b) for a in (i - 1, i) for b in (j - 1, j))
-    tiles = {n: load(f"water/w{n}.png") for n in range(16)}
+    tiles = {n: muted_water(load(f"water/w{n}.png")) for n in range(16)}
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
     for s in range(2 * N):
         for i in range(N):
             j = s - i
@@ -143,6 +144,40 @@ def water(img, g):
             mask = (not nw) << 3 | (not ne) << 2 | (not sw) << 1 | (not se)
             x, y = at(i, j)
             img.alpha_composite(tiles[mask], (x - 16, y))
+            layer.alpha_composite(tiles[mask], (x - 16, y))
+    bank_line(img, layer)
+
+
+def muted_water(t):
+    """The river in the town's palette: 30% less saturated, 15% darker, the white dashes
+    turned to a grey-blue (#6fa2b0)."""
+    px = t.load()
+    for y in range(t.height):
+        for x in range(t.width):
+            r, g, b, a = px[x, y]
+            if not a or not (b > r + 10):        # only the water, not its bank pixels
+                continue
+            if min(r, g, b) > 180:
+                px[x, y] = (111, 162, 176, a)
+                continue
+            l = (r * 299 + g * 587 + b * 114) / 1000
+            r, g, b = (int((l + (c - l) * 0.7) * 0.85) for c in (r, g, b))
+            px[x, y] = (r, g, b, a)
+    return t
+
+
+def is_water(p):
+    return p[3] > 128 and p[2] > p[0] + 10
+
+
+def bank_line(img, layer):
+    """A 1 px dark line where the water meets its south bank."""
+    lp, ip = layer.load(), img.load()
+    for y in range(layer.height - 1):
+        for x in range(layer.width):
+            if is_water(lp[x, y]) and not is_water(lp[x, y + 1]) and lp[x, y + 1][3] > 0:
+                r, g, b, a = ip[x, y + 1]
+                ip[x, y + 1] = (int(r * .45), int(g * .45), int(b * .5), a)
 
 
 GROUND_IMG = []   # the ground before any sprite: dusk light pools only land where it still shows
@@ -154,6 +189,7 @@ def outside(img, tiles):
     from the sealed gate running off as a rutted dirt track. Dusk comes from the look shader."""
     fog = Image.new("RGB", (32, 17), (150, 160, 170))
     memo = {}
+    stream = muted_water(load("water/w0.png"))
     for s in range(-40, 2 * N + 60):
         for i in range(-50, N + 50):
             j = s - i
@@ -165,6 +201,11 @@ def outside(img, tiles):
             ring = max(-i, -j, i - N + 1, j - N + 1)
             road = 18 <= i <= 21 and j >= N
             k = ("dirt" if road else "grass", (i * 5 + j * 3) % 2, min(ring, 14))
+            if j in (27, 28) and ring <= 4:      # the river runs on past each culvert, fading into the wood
+                g = tiles["grass"][(i * 5 + j * 3) % 2]
+                w = Image.blend(stream, g, min(1.0, 0.22 * (ring - 1)))
+                img.alpha_composite(w, (x - 16, y))
+                continue
             if k not in memo:
                 t = tiles[k[0]][k[1]]
                 rgb = ImageEnhance.Color(t.convert("RGB")).enhance(0.9)
@@ -180,6 +221,24 @@ def outside(img, tiles):
         d.line([(a[0] + 1, a[1]), (b[0] + 1, b[1])], fill=(150, 120, 86, 255), width=1)
 
 
+def wall_shadow(img):
+    """The outer wall faces away from the light (south-west and south-east) cast a 4 px band of
+    shadow on the grass at their foot, 6 px under the towers."""
+    sh = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(sh)
+    for a, b in ((at(0, N), at(N, N)), (at(N, 0), at(N, N))):
+        d.polygon([a, b, (b[0], b[1] + 4), (a[0], a[1] + 4)], fill=(10, 8, 18, 64))
+    for k in (0, N - 3):                          # the corner towers: a deeper 6 px
+        for a, b in ((at(k, N), at(k + 3, N)), (at(N, k), at(N, k + 3))):
+            d.polygon([a, b, (b[0], b[1] + 6), (a[0], a[1] + 6)], fill=(10, 8, 18, 64))
+    img.alpha_composite(sh)
+
+
+OUTSIDE_PROPS = [("props32", 25, -2, 11), ("props32", 16, -2, 12), ("props32", 16, -3, 12),   # a woodcutter's stump and logs (NW)
+                 ("props48", 7, 12, -2),                                                     # a standing stone (NE)
+                 ("props48", 19, 17, N + 3)]                                                 # a gibbet cage by the gate road
+
+
 def outside_trees(sprites):
     """A daylight wood outside the walls: thick behind the north walls, sparse and far out in front
     of the south walls (never hiding them); the gate road runs ~120 px before the trees close in."""
@@ -192,7 +251,9 @@ def outside_trees(sprites):
             ring = max(-i, -j, i - N + 1, j - N + 1)
             front = i >= N or j >= N
             road = 16 <= i <= 23 and j >= N and (ring <= 7 or 18 <= i <= 21)
-            if (front and ring < 5) or ring < 2 or road or r.random() > (0.16 if front else 0.3):
+            near_prop = any(abs(i - pi) <= 1 and abs(j - pj) <= 1 for _, _, pi, pj in OUTSIDE_PROPS)
+            stream = j in (26, 27, 28, 29) and ring <= 5
+            if (front and ring < 5) or ring < 2 or road or near_prop or stream or r.random() > (0.16 if front else 0.3):
                 continue
             x, y = at(i + .5, j + .5)
             if not (-40 < x < W + 40 and -20 < y < H + 60):
@@ -205,6 +266,11 @@ def outside_trees(sprites):
             im = Image.merge("RGBA", (*rgb.split(), im.getchannel("A")))
             bb = im.getbbox()
             put(sprites, im, (x + r.randint(-6, 6), y + 4), ((bb[0] + bb[2]) // 2, bb[3] - 1))
+    for name, n, i, j in OUTSIDE_PROPS:        # things you can see from inside, within 80 px of the walls
+        im = load(f"{name}/p{n}.png")
+        bb = im.getbbox()
+        x, y = at(i + .5, j + .5)
+        put(sprites, im, (x, y + 3), ((bb[0] + bb[2]) // 2, bb[3] - 1))
 
 
 def ripples(img, g):
@@ -251,6 +317,8 @@ def place_lot(sprites, lid, x0, y0, x1, y1, z=0):
     if not spec or not os.path.exists(os.path.join(ROOT, "art", spec["file"])):
         return
     im = load(spec["file"])
+    if not LIT[0] and lid != "smith":     # the forge burns by day too
+        im = daylit(im)
     if spec.get("flip"):
         im = im.transpose(Image.FLIP_LEFT_RIGHT)
     import decor as _d
@@ -302,18 +370,22 @@ def culvert():
 def place_walls(sprites):
     """Curtain wall from 4-cell runs (buttress at each join hides the repeat); runs along j are
     the mirrored run, shaded as the side away from the top-left light."""
-    run = load("wall_run.png")
-    mir = run.transpose(Image.FLIP_LEFT_RIGHT)
-    mir = Image.merge("RGBA", (*ImageEnhance.Brightness(mir.convert("RGB")).enhance(0.8).split(), mir.getchannel("A")))
+    # three variants (moss at the foot / a cracked block / a drain hole and stain) by position,
+    # and an arrow slit in the middle run of each side, so no run repeats its neighbour
+    runs = [load(f) for f in ("wall_run.png", "wall_run_b.png", "wall_run_c.png", "wall_run_slit.png")]
+    mirs = [Image.merge("RGBA", (*ImageEnhance.Brightness(r.transpose(Image.FLIP_LEFT_RIGHT).convert("RGB")).enhance(0.8).split(),
+                                 r.transpose(Image.FLIP_LEFT_RIGHT).getchannel("A"))) for r in runs]
     OXR, OYR = 20, 60                      # pixel of the run's vertex (0, 0) on its canvas
     gx0, gy0, gx1, gy1 = GATEHOUSE
+    pick = lambda s, side: 3 if s == 19 else (s * 7 + side) % 3
     for s in range(3, N - 3, 4):
         for j in (0, N - 1):               # along i
             if j == N - 1 and s + 3 >= gx0 + 1 and s <= gx1 - 1:
                 continue
-            put(sprites, run, at(s, j), (OXR, OYR), at(s + 4, j + 1)[1] - 1)
+            put(sprites, runs[pick(s, j)], at(s, j), (OXR, OYR), at(s + 4, j + 1)[1] - 1)
         for i in (0, N - 1):               # along j
-            put(sprites, mir, at(i + 1, s), (run.width - OXR, OYR), at(i + 1, s + 4)[1] - 1)
+            m = mirs[pick(s, i + 1)]
+            put(sprites, m, at(i + 1, s), (m.width - OXR, OYR), at(i + 1, s + 4)[1] - 1)
     for k, (tx, ty) in enumerate(TOWERS):
         place_lot(sprites, f"tower{k}", tx, ty, tx + 2, ty + 2)
     place_lot(sprites, "gatehouse", gx0, gy0, gx1, gy1)
@@ -337,6 +409,57 @@ TAG = [""]         # tag put() gives the next sprites (a lot id for buildings)
 LAST_SPRITES = []  # the sorted sprites of the last compose (export_town builds walker occluders from them)
 BOXES = {}      # sprite id -> opaque box on the town canvas (tap areas for town.json)
 NO_OVERLAYS = []  # [True] -> leave out walkers and level props (the game draws those itself)
+LIT = [True]      # False -> the day picture: windows are glass, torches and lamps unlit (the forge still burns)
+FLAMES = {("props32", 12), ("props32", 11), ("props_up", 4), ("props_up", 5), ("props48", 10)}   # torches, candles, braziers, lanterns, lamps
+_DAY = {}
+
+
+def lit_px(r, g, b):
+    """A lit pane or a flame (not wood, not pumpkins)."""
+    return r > 215 and g > 140 and b < 110 and r - b > 130
+
+
+def glow_core(r, g, b):
+    """The bright heart of a lit window or lantern."""
+    return r > 200 and g > 130 and b < 120 and r - b > 115
+
+
+def daylit(im, flame=False):
+    """The sprite by day: lit panes become glass (#3a4660, a #6b7a95 highlight on a pane's top
+    row) - the warm rim round each pane too, within 2 px of its bright heart - and a flame
+    becomes a dark iron bowl."""
+    key = (id(im), flame)
+    if key in _DAY:
+        return _DAY[key][1]
+    out = im.copy()
+    src, px = im.load(), out.load()
+    w, h = im.size
+    if flame:
+        warm = lambda r, g, b: r > 120 and r > g + 40 and r > b + 60   # any part of the fire, its dark red rim too
+        near = lambda x, y: 0 <= x < w and 0 <= y < h and src[x, y][3] and warm(*src[x, y][:3])
+        for y in range(h):
+            for x in range(w):
+                r, g, b, a = src[x, y]
+                if a and warm(r, g, b):   # the flame's foot is the dark bowl, the tongue above it is gone
+                    px[x, y] = (0, 0, 0, 0) if near(x, y + 1) else (34, 30, 36, a)
+        _DAY[key] = (im, out)
+        return out
+    core = {(x, y) for y in range(h) for x in range(w) if src[x, y][3] and glow_core(*src[x, y][:3])}
+    pane = set(core)
+    for x, y in core:
+        for dx in range(-2, 3):
+            for dy in range(-2, 3):
+                q = (x + dx, y + dy)
+                if 0 <= q[0] < w and 0 <= q[1] < h and q not in pane:
+                    r, g, b, a = src[q]
+                    if a and r > 195 and r - b > 110 and g > 50:
+                        pane.add(q)
+    for x, y in pane:
+        a = src[x, y][3]
+        px[x, y] = (107, 122, 149, a) if (x, y - 1) not in pane else (58, 70, 96, a)
+    _DAY[key] = (im, out)    # keep im alive so its id stays unique
+    return out
+
 EMPTY = set()   # lot ids drawn as empty building plots (Church / Trophy Cabin before they're built)
 HARDCORE = []   # [True] -> ruined dark Church, no church glow, the graveyard full
 
@@ -345,6 +468,7 @@ def compose():
     img = Image.new("RGBA", (W, H), (20, 18, 30, 255))
     tiles = load_tiles()
     outside(img, tiles)
+    wall_shadow(img)
     g = draw_ground(img, tiles)
     for lid, _, x0, y0, x1, y1, _, _ in LOTS:
         if lid in EMPTY:
@@ -410,6 +534,8 @@ def compose():
         name, n, i, j = e[:4]
         z = e[4] if len(e) > 4 else 0
         im = sheet(name, n)
+        if not LIT[0] and (name, n) in FLAMES:   # torches and lamps out by day (props have no windows)
+            im = daylit(im, True)
         x, y = at(i + .5, j + .5, z)
         put(sprites, im, (x, y + 3), bottom(im), at(i + .5, j + .5)[1] + 4)
         _, px, py, _, _ = sprites[-1]

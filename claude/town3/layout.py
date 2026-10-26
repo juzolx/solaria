@@ -39,7 +39,7 @@ GROUND = [
     ("dirt", 34, 2, 37, 5),       # the Guild's training ring (sparring dirt, fenced)
     ("path", 35, 6, 36, 7),       # ...and its gate path down to the north lane
 ]
-EXTRA_STOPS = [(35, 6), (36, 6), (21, 9), (22, 9), (23, 9)]  # the training ring's gate; in front of the Bounty Board
+EXTRA_STOPS = [(35, 6), (36, 6), (16, 9), (17, 9), (18, 9)]  # the training ring's gate; in front of the Bounty Board
 
 PLATEAU, PLATEAU_Z = (13, 1, 26, 7), 24   # raised block (sprite), dungeon stands on it
 # the hope path, measured on the sprites: the wide stair climbs from the north lane (foot at j 9.5)
@@ -73,7 +73,7 @@ INN_WING_DOOR = (11, 14)         # in front of the wing's drawn door (sprite fli
 CHURCH_DOOR = (5, 14)            # in front of the Church's arched door (its facade sits back in the lot)
 # small things on the square / streets: id, label, cell
 POINTS = [
-    ("bounty", "Bounty Board", 22, 8),      # by the dungeon stairs, clear of the Tavern
+    ("bounty", "Bounty Board", 17, 8),      # by the dungeon stairs (west of the foot), clear of the Tavern
     ("mail", "Mailbox", 12, 14),            # beside the Inn
     ("obelisk", "Prophecy stone", 15, 4),
 ]
