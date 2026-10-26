@@ -59,6 +59,7 @@ func _ready() -> void:
 		"crit": [[0.14, 420, 70, "square", 0.5, 0.5]],
 		"hurt": [[0.09, 150, 70, "square", 0.55, 0.32]],
 		"tap": [[0.045, 700, 380, "tri", 0.2, 0.3]],
+		"door": [[0.1, 150, 60, "tri", 0.0, 0.5], [0.03, 900, 700, "tri", 0.0, 0.15]],   # a low thump, then the latch
 		"kill": [[0.22, 320, 60, "square", 0.6, 0.4]],
 		"loot": [[0.07, 880, 880, "tri", 0.0, 0.3], [0.12, 1320, 1320, "tri", 0.0, 0.3]],
 		"legendary": [[0.09, 523, 523, "square", 0.0, 0.22], [0.09, 659, 659, "square", 0.0, 0.22], [0.09, 784, 784, "square", 0.0, 0.22], [0.35, 1047, 1047, "square", 0.0, 0.25]],
@@ -93,7 +94,7 @@ func _ready() -> void:
 		"rare_spawn": "boss_intro", "signature": "unique", "achievement": "level_up", "event": "floor", "page": "click",
 		"awaken": "level_up", "transform": "rare_spawn", "hidden": "signature", "escape": "dodge", "portal": "event",
 		"evolve": "spec", "weak_hit": "crit", "resisted": "hit", "freeze": "stun", "shatter": "crit", "combo": "ability", "milestone": "level_up", "pet": "buff", "curse": "boss_intro", "enrage": "boss_intro",
-		"drop": "loot", "door": "tap", "trap": "hurt", "whoosh": "tap"}
+		"drop": "loot", "trap": "hurt", "whoosh": "tap"}
 	for n in aliases:
 		if not sounds.has(n):
 			sounds[n] = sounds[aliases[n]]

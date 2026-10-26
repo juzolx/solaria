@@ -97,6 +97,75 @@ def trim_taps(spots):
             b["rect"] = cut(r, q)
 
 
+# (Fable round 5) the L3 banners read against the roof: each building's accent, a pale 1 px edge
+ACCENT = {"inn": (64, 138, 72), "guild": (176, 44, 44), "tavern": (196, 146, 46), "smith": (58, 98, 176),
+          "shop": (122, 64, 158), "stash": (40, 128, 138), "clinic": (226, 222, 204)}
+
+
+def banner(im, col):
+    """The banner cloth (its saturated red or blue pixels) recoloured to `col`, keeping its shading,
+    with the cloth's outer pixels lightened into a 1 px pale edge."""
+    import colorsys
+    im = im.copy()
+    px = im.load()
+    cloth = set()
+    for y in range(im.height):
+        for x in range(im.width):
+            r, g, b, a = px[x, y]
+            h, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
+            if a and s > 0.3 and v > 0.2 and (h < 0.06 or h > 0.9 or 0.5 < h < 0.7):
+                cloth.add((x, y))
+    if not cloth:
+        return im
+    top = max(colorsys.rgb_to_hsv(*(c / 255 for c in px[x, y][:3]))[2] for x, y in cloth)
+    for x, y in cloth:
+        v = colorsys.rgb_to_hsv(*(c / 255 for c in px[x, y][:3]))[2] / top
+        edge = any((x + dx, y + dy) not in cloth for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+        k = 0.55 + 0.55 * v
+        c = tuple(min(255, int(ch * k)) for ch in col)
+        if edge:
+            c = tuple(min(255, int(ch + (255 - ch) * 0.45)) for ch in c)
+        px[x, y] = c + (px[x, y][3],)
+    return im
+
+
+def merlon_gaps_dark(on):
+    """(Fable round 5, item 12) The Tavern's lit window showed through the gaps between the Vault's
+    merlons as two lit pixels on the battlement: the overlay keeps nothing in those gaps."""
+    import numpy as np
+    for key, x, y, im, tag in C.LAST_SPRITES:
+        if tag != "stash":
+            continue
+        a = np.asarray(im.split()[3]) > 0
+        gap = np.zeros_like(a)
+        for dx in range(1, 7):               # a hole with the battlement on both sides within 6 px
+            left = np.zeros_like(a)
+            right = np.zeros_like(a)
+            left[:, dx:] = a[:, :-dx]
+            right[:, :-dx] = a[:, dx:]
+            gap |= ~a & left & right
+        m = np.asarray(on).copy()
+        h, w = a.shape
+        sub = m[y:y + h, x:x + w]
+        sub[gap[:sub.shape[0], :sub.shape[1]]] = 0
+        on = Image.fromarray(m)
+    return on
+
+
+def posted(im):
+    """(Fable round 5, P5) The L3 gilded sign is a wall bracket on a 4 px plate that ended in mid-air
+    when it stood in the street: the plate runs on down to the ground as a post with a foot."""
+    im = im.copy()
+    px = im.load()
+    ink, wood, lite = (18, 14, 22, 255), (44, 40, 46, 255), (70, 66, 72, 255)   # the plate's own iron
+    for y in range(33, 46):
+        px[8, y], px[9, y], px[10, y], px[11, y] = ink, lite, wood, ink
+    for x in range(7, 13):                   # the foot
+        px[x, 46] = ink
+        px[x, 45] = ink if x in (7, 12) else wood
+    return im
+
+
 def px_cell(i, j, z=0):
     return list(C.at(i, j, z))
 
@@ -119,6 +188,7 @@ def main(root):
         assert img.width <= 2048 and img.height <= 2048
         img.save(os.path.join(art, "iso", f"town_{church}_{cabin}.png"), optimize=True)
         on = ImageChops.difference(img, lit).convert("L").point(lambda v: 255 if v else 0)
+        on = merlon_gaps_dark(on)
         over = Image.composite(lit.convert("RGBA"), Image.new("RGBA", lit.size, (0, 0, 0, 0)), on)   # clear pixels stay empty (a small file)
         over.crop(on.getbbox()).save(os.path.join(art, "iso", f"town_{church}_{cabin}_lit.png"), optimize=True)
         here = [((round(C.at(i, j, z)[0]), round(C.at(i, j, z)[1])), col) for i, j, z, col, r in D.LIGHTS]
@@ -194,11 +264,19 @@ def main(root):
         for e, owner in zip(D.level_props(own), own):
             _, n, i, j = e[:4]
             im = Image.open(os.path.join(C.ROOT, "art", "props_up", f"p{n}.png")).convert("RGBA")
-            im.save(os.path.join(art, "iso", "up", f"up{n}.png"))
+            name = f"up{n}"
+            if n == 6:                               # the gilded sign hangs from a post, not from the air
+                im = posted(im)
+            if n in (2, 3) and owner in ACCENT:     # the L3 banners in the building's own colour
+                name, im = f"up{n}_{owner}", banner(im, ACCENT[owner])
+            if ("props_up", n) in C.FLAMES:          # by day glass, at dusk its lit panes (town_view swaps)
+                im.save(os.path.join(art, "iso", "up", f"{name}_lit.png"))
+                im = C.daylit(im, True)
+            im.save(os.path.join(art, "iso", "up", f"{name}.png"))
             b = im.getbbox()
             x, y = C.at(i + .5, j + .5)
             pos = [round(x - (b[0] + b[2]) // 2), round(y + 3 - (b[3] - 1))]
-            levels.setdefault(owner, []).append([f"up{n}", pos[0], pos[1], lvl, i, j])   # + the street cell it stands on
+            levels.setdefault(owner, []).append([name, pos[0], pos[1], lvl, i, j])   # + the street cell it stands on
     ok = grid()
     # props standing on the street are not walked through; their neighbours become stops
     big = {("props48", n) for n in range(16)} | {("props_up", n) for n in range(16)} | {("props32", 12)}

@@ -1261,8 +1261,11 @@ func go_to_town(confirmed := false) -> bool:
 var _roster_cache: Array = []
 
 ## A town sound at map point `p`, heard only while it's on screen.
+var _last_town_sound := {}   # sound -> ticks (ms) it last played
 func _town_sound(p: Vector2, sound: String, pitch: float, db: float) -> void:
-	if town_view.in_view(p):
+	var now := Time.get_ticks_msec()
+	if town_view.in_view(p) and now - int(_last_town_sound.get(sound, -100000)) >= 1500:   # a burst stays one sound
+		_last_town_sound[sound] = now
 		sfx.play(sound, pitch, db)
 
 ## Every hero in your roster walks around town (the one you play first).

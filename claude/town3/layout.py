@@ -36,7 +36,7 @@ GROUND = [
     ("field", 13, 29, 17, 33),    # vegetable plots right behind the tall gatehouse (only low things there)
     ("yard", 13, 25, 17, 25),
     ("yard", 22, 25, 26, 25),
-    ("dirt", 35, 4, 37, 5),       # the Guild's training ring (sparring dirt, fenced), clear of the Guild and the tower
+    ("dirt", 35, 4, 36, 5),       # the Guild's training ring (sparring dirt, fenced), clear of the Guild and the tower
     ("path", 35, 6, 36, 7),       # ...and its gate path down to the north lane
 ]
 EXTRA_STOPS = [(35, 6), (36, 6), (16, 9), (17, 9), (18, 9)]  # the training ring's gate; in front of the Bounty Board
