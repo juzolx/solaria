@@ -22,6 +22,13 @@ var slot_info := {}           # slot -> "RING: Bone Band  +12 Defense  (2 in bag
 var slot_detail: RichTextLabel  # the picked slot's item, one line under the hero
 var pills := {}               # "ATK"/"DEF"/"HP"/"Score" -> value Label
 const SLOT_PX := 60   # Fable r1: 60 keeps Gear on a 375x667 screen with body-20 captions
+## Fable r5 #2: on a short phone (the SE) the slots shrink to 52, the four number pills become one
+## line and the bag list keeps a full row, so the upgrade the page points at can be tapped.
+var slot_px := SLOT_PX
+var pill_line: RichTextLabel
+var pill_row: HBoxContainer
+var doll_center: Control
+var short_on := -1   # the layout applied: -1 none yet, 0 roomy, 1 short (the screen size is known at refresh, not setup)
 
 func setup(m) -> void:
 	main = m
@@ -53,8 +60,9 @@ func setup(m) -> void:
 	var left := UI.vbox(3)
 	doll.add_child(left)
 	var center := Control.new()
+	doll_center = center
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	center.custom_minimum_size = Vector2(0, 4 * (SLOT_PX + 22) - 4)
+	center.custom_minimum_size = Vector2(0, 4 * (slot_px + 22) - 4)
 	doll.add_child(center)
 	var right := UI.vbox(3)
 	doll.add_child(right)
@@ -79,7 +87,7 @@ func setup(m) -> void:
 		var col := UI.vbox(1)
 		grid.add_child(col)
 		var card := PanelContainer.new()
-		card.custom_minimum_size = Vector2(SLOT_PX, SLOT_PX)
+		card.custom_minimum_size = Vector2(slot_px, slot_px)
 		card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		var st := UI.style(UI.INSET, UI.EMPTY, 8, 6)
 		card.add_theme_stylebox_override("panel", st)
@@ -94,7 +102,7 @@ func setup(m) -> void:
 		col.add_child(card)
 		var cap := UI.label(s.replace("Off Hand", "Off-hand").replace("Helmet", "Head").replace("Necklace", "Neck"), UI.FONT_BODY, UI.DIM)
 		cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		cap.custom_minimum_size = Vector2(SLOT_PX, 0)
+		cap.custom_minimum_size = Vector2(slot_px, 0)
 		col.add_child(cap)
 		slot_caps[s] = cap
 		slot_labels[s] = cap
@@ -107,6 +115,10 @@ func setup(m) -> void:
 	# Your numbers as four pills (icon-free words, big values): Attack, Defense, HP, Gear Score
 	var prow := UI.hbox(6)
 	add_child(prow)
+	pill_row = prow
+	pill_line = UI.rich(UI.FONT_BODY)
+	pill_line.visible = false
+	add_child(pill_line)
 	for k in ["ATK", "DEF", "HP", "Score"]:
 		var pp := PanelContainer.new()
 		pp.add_theme_stylebox_override("panel", UiSkin.bevel(UiSkin.SLATE, UI.EDGE, 4))
@@ -136,6 +148,7 @@ func setup(m) -> void:
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.custom_minimum_size.y = ItemGrid.CELL + 12   # always one whole row; the doll gives way first
 	add_child(scroll)
 	var sv := UI.vbox(4)
 	sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -189,7 +202,22 @@ func _count(s: String) -> int:
 			n += 1
 	return n
 
+## Fable r5 #2: the short-screen layout (52 px slots, the numbers as one line).
+func _fit_short() -> void:
+	var s := 1 if get_viewport_rect().size.y < 1000.0 else 0
+	if s == short_on:
+		return
+	short_on = s
+	slot_px = 52 if s == 1 else SLOT_PX
+	doll_center.custom_minimum_size.y = 4 * (slot_px + 22) - 4
+	for k in slot_cards:
+		(slot_cards[k] as Control).custom_minimum_size = Vector2(slot_px, slot_px)
+		(slot_caps[k] as Control).custom_minimum_size.x = slot_px
+	pill_row.visible = s == 0
+	pill_line.visible = s == 1
+
 func refresh() -> void:
+	_fit_short()
 	var ups := 0
 	var dk := str(state.appearance) + str(state.hero_looks())
 	if dk != doll_key:
@@ -237,6 +265,10 @@ func refresh() -> void:
 	(pills["DEF"] as Label).text = UI.short(state.get_defense())
 	(pills["HP"] as Label).text = UI.short(state.get_max_hp())
 	(pills["Score"] as Label).text = UI.short(state.average_gear_score())  # the average of what you wear
+	var pl: Array[String] = []
+	for k in ["ATK", "DEF", "HP", "Score"]:
+		pl.append("[color=%s]%s[/color] [color=%s]%s[/color]" % [UI.hex(UI.DIM), k, UI.hex(UI.GOLD), (pills[k] as Label).text])
+	pill_line.text = " · ".join(pl)
 	var text := ""
 	var effects: Array[String] = []
 	for effect in ["lifesteal", "regen", "double_strike", "crit", "dodge", "thorns", "gold_find"]:

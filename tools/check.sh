@@ -28,7 +28,15 @@ style=$( {
   grep -nE 'SCENE_FS := (1[0-46-9]|2[1-9])' *.gd
   # Fable r4 #19: a phone game says Tap, not Press / hover / drag (story lines like "they press on" are fine)
   awk '{l=$0; sub(/^[ \t]*#.*/,"",l); sub(/[ \t]#[^"]*$/,"",l); if (l ~ /"[^"]*(Press|press|Hover|hover|Drag|drag) [^"]*"/ && l !~ /Oxen could not drag|press (on|their|%[ds]|.*into your hands)/) print FILENAME":"FNR": "$0}' *.gd
+  # Fable r5 #6: the phone has no "Gear tab": paths read "Items › Gear" (old patch notes aside)
+  grep -nE '"[^"]*\b(Gear|Bag|Hero|Items|Town|Codex|Skills|Party) tab\b' *.gd | grep -vE '^patch_notes.gd|^[^:]+:[0-9]+:[[:space:]]*#'
+  grep -n "title screen" *_tab.gd
+  # Fable r5 #10: a path's › sits between no-break spaces (UI.PATH_SEP), so it never ends a line
+  awk '{l=$0; sub(/^[ \t]*#.*/,"",l); if (l ~ /"[^"]* › [^"]*"/ && l !~ /" › "\.join/) print FILENAME":"FNR": "$0}' *.gd
 } )
+# Fable r5 #4: grey buttons whose reason is hover-only (use UI.why); a review list, not a fail
+mute=$(grep -nA2 "\.disabled = " *.gd | grep "tooltip_text = " | grep -v "^ui.gd")
+[ -n "$mute" ] && { echo "review (disabled + tooltip, consider UI.why):"; echo "$mute" | head -10; }
 if [ -n "$style" ]; then echo "STYLE:"; echo "$style" | head -20; fail=1; else echo "style: ok"; fi
 [ "$1" = "parse" ] && exit 0
 if [ "$1" = "halls" ]; then

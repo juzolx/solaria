@@ -144,7 +144,8 @@ func _pick_panel() -> void:
 		if not ClassTree.options(state).is_empty():
 			box.add_child(UI.label("Next choice at level %d." % int(ClassTree.PICK_LEVELS[state.class_path.size()]), UI.FONT_BODY, UI.DIM))
 		return
-	box.add_child(UI.heading("Choose your class (level %d)" % int(ClassTree.PICK_LEVELS[t])))
+	box.add_child(UI.heading("Choose your class"))   # Fable r5 #7: "(level 15)" read as your level
+	box.add_child(UI.wrap("Your level-%d choice is waiting: pick one to keep growing." % int(ClassTree.PICK_LEVELS[t]), UI.FONT_BODY, UI.DIM))
 	var cols := UI.hbox(8)
 	box.add_child(cols)
 	for n in ClassTree.options(state):

@@ -148,8 +148,7 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 		main.refresh())
 	b.custom_minimum_size = Vector2(96, UI.TAP)
 	if hurt:
-		b.disabled = true   # Fable pets R4: a tap used to drop it from the team without a word
-		b.tooltip_text = "Comes back when it has rested"
+		UI.why(b, "Resting. It comes back when it has rested.")   # Fable pets R4 / interface r5 #4
 	elif not twin.is_empty():
 		b.modulate = Color(1, 1, 1, 0.55)   # greyed, but a tap still says why
 	right.add_child(b)

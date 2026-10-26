@@ -101,11 +101,11 @@ func refresh() -> void:
 	var cost := Town.rest_cost(g)
 	var full := g.hero_hp >= mx
 	rest_button.text = "You're fully rested" if full else ("Rest for the night · free" if cost == 0 else UI.cost("Rest for the night", cost))
-	rest_button.disabled = full or g.gold < cost
+	UI.why(rest_button, "You're at full health." if full else UI.need_gold(g.gold, cost))
 	potion_label.text = "Potions: %d" % g.potions
 	_recruit_refresh()
 	potion_button.text = UI.cost("Buy one", g.potion_cost())
-	potion_button.disabled = g.gold < g.potion_cost()
+	UI.why(potion_button, UI.need_gold(g.gold, g.potion_cost()))
 
 ## A new hero joins the town in the next open slot, and you play them right away.
 ## The hero you were playing stays in town (and can join your team).

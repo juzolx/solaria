@@ -247,6 +247,8 @@ func _build() -> void:
 	title.add_theme_constant_override("outline_size", 10)
 	col.add_child(title)
 	var sub := UI.label("A dungeon of myths and monsters", UI.FONT_BODY, UI.TEXT)
+	sub.add_theme_color_override("font_outline_color", UiSkin.SOOT)   # Fable r5 #17: readable over the door art
+	sub.add_theme_constant_override("outline_size", 6)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(sub)
 	var gap := Control.new()

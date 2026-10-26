@@ -135,7 +135,7 @@ func setup(m) -> void:
 		main.codex.title = "" if i == 0 else title_pick.get_item_text(i)
 		main.codex.save()
 		main.refresh())
-	UI.tip(title_pick, "Titles come from deeds (Guild Hall) and from filling the Codex (Codex › Rewards). Looks only.")
+	UI.tip(title_pick, "Titles come from deeds (Guild Hall) and from filling the Codex (Codex › Rewards). Looks only.")
 	trow.add_child(title_pick)
 	var share := UI.button("Share", func(): ShareCard.share(main))
 	UI.tip(share, "Makes a picture of your hero to share.")
@@ -361,7 +361,7 @@ func refresh() -> void:
 			chips.add_child(UI.chip("%s rank" % ClassTree.rank_of(cur), Color(ClassTree.RANK_COLORS[ClassTree.rank_of(cur)]), UI.FONT_BODY))
 	xp_bar.max_value = GameData.xp_to_next(state.level)
 	xp_bar.value = state.xp
-	xp_label.text = "%d / %d XP to level %d" % [state.xp, GameData.xp_to_next(state.level), state.level + 1]
+	xp_label.text = "%s / %s XP to level %d" % [UI._commas(state.xp), UI._commas(GameData.xp_to_next(state.level)), state.level + 1]
 
 	points_panel.visible = state.stat_points > 0 or state.auto_stats
 	if state.stat_points > 0:
@@ -432,11 +432,11 @@ func refresh() -> void:
 	var text := ""
 	var t := ClassTree.pick_tier(state)
 	if t >= 0:
-		text = "[color=#e8b14a]You can choose your next class now[/color] in Hero › Class."
+		text = "[color=#e8b14a]You can choose your next class now[/color] in Hero › Class."
 	elif state.god_class != "" or state.hidden_class != "" or state.class_path.size() >= 3:
 		text = "Your evolution tree is complete. Your special stat keeps growing."
 	else:
-		text = "At [color=#e8b14a]level %d[/color] your class evolves again (Hero › Class)." % int(ClassTree.PICK_LEVELS[state.class_path.size()])
+		text = "At [color=#e8b14a]level %d[/color] your class evolves again (Hero › Class)." % int(ClassTree.PICK_LEVELS[state.class_path.size()])
 	path_label.text = "[color=%s]%s[/color]" % [UI.hex(UI.DIM), text]
 
 	var spent := 0

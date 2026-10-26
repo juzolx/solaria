@@ -25,7 +25,7 @@ func refresh() -> void:
 	OnlineUI.clear(box)
 	var head := UI.hbox(8)
 	box.add_child(head)
-	var title := UI.heading("Mailbox")
+	var title := Control.new()   # Fable r5 #13: the bar above already says "Mailbox"
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
 	var waiting := Mail.waiting(g)
@@ -78,7 +78,7 @@ func _letter(l: Dictionary) -> PanelContainer:
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(t)
-	var when := Time.get_date_string_from_unix_time(int(l.get("time", 0)))
+	var when := UI.when(int(l.get("time", 0)))   # Fable r5 #15: "today", not "2026-10-26"
 	top.add_child(UI.label(when, UI.FONT_BODY, UI.DIM))
 	v.add_child(UI.label("From: %s" % l["from"], UI.FONT_BODY, UI.DIM))
 	var body := UI.label(String(l["body"]), UI.FONT_BODY, UI.TEXT if not empty else UI.DIM)
@@ -106,9 +106,7 @@ func _letter(l: Dictionary) -> PanelContainer:
 	var b := UI.primary("Bag full" if full else "Collect", _collect.bind(id), UI.GREEN)
 	b.custom_minimum_size = Vector2(120, UI.TAP)
 	b.size_flags_horizontal = Control.SIZE_SHRINK_END
-	b.disabled = full
-	if full:
-		b.tooltip_text = "Sell, salvage or stash something to make room. The gear waits here."
+	UI.why(b, "Your bag is full. Sell, salvage or stash something; the gear waits here." if full else "")
 	v.add_child(b)
 	return card
 

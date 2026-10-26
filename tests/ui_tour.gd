@@ -24,6 +24,22 @@ func check_floors(label: String, node: Node) -> void:
 			continue
 		if ch is Control:
 			var c := ch as Control
+			# Fable r5 #4: a grey button whose reason only shows on hover says nothing on a phone (use UI.why)
+			if c is Button and c.is_visible_in_tree() and (c as Button).disabled and c.tooltip_text != "":
+				fail("MUTE BUTTON: %s \"%s\" hides \"%s\" in a hover tooltip [%s]" % [label, String(c.get("text")).left(24).replace("\n", " "), c.tooltip_text.left(30), _path(c)])
+			# Fable r5 #2: a list squeezed under one row while it has more to show
+			if c is ScrollContainer and c.is_visible_in_tree() and c.get_child_count() > 0 and c.size.y > 0.0 and c.size.y < ItemGrid.CELL:
+				var inner := c.get_child(0) as Control
+				if inner and inner.get_combined_minimum_size().y > c.size.y + 1.0:
+					fail("SQUEEZED LIST: %s list is %.0f px tall (one row is %d) [%s]" % [label, c.size.y, ItemGrid.CELL, _path(c)])
+			# Fable r5 #9: a chip strip that wraps one chip onto a row of its own
+			if c is HFlowContainer and c.is_visible_in_tree() and c.get_child_count() >= 3 and c.get_child_count() <= 8 and c.get_children().all(func(k): return k is Button):
+				var ys := {}
+				for k in c.get_children():
+					if k is Control and (k as Control).visible:
+						ys[(k as Control).position.y] = int(ys.get((k as Control).position.y, 0)) + 1
+				if ys.size() > 1 and int(ys[ys.keys().max()]) == 1:
+					fail("ORPHAN CHIP: %s strip leaves one chip on its last row [%s]" % [label, _path(c)])
 			if c is Button and c.is_visible_in_tree() and c.size.y > 0.0 and c.size.y < UI.BUTTON_H - 1.0 and not c.has_meta("tour_small_ok"):
 				fail("SHORT BUTTON: %s \"%s\" is %.0f px (floor %d) [%s]" % [label, String(c.get("text")).left(24).replace("\n", " "), c.size.y, UI.BUTTON_H, _path(c)])
 			if (c is Label or c is Button) and c.is_visible_in_tree() and String(c.get("text")) != "":
@@ -85,6 +101,12 @@ func touch_check(where: String, c: Control) -> void:
 		fail("NO TIP: a tap on %s (%s) showed nothing" % [where, _path(c)])
 		return
 	var p := tl.get_child(tl.get_child_count() - 1) as Control
+	# Fable r5 #3: a tip that only repeats the words you tapped teaches that taps do nothing
+	var said := ""
+	for k in p.find_children("*", "RichTextLabel", true, false):
+		said = (k as RichTextLabel).get_parsed_text()
+	if c.get("text") != null and said.strip_edges() == String(c.get("text")).strip_edges():
+		fail("ECHO TIP: tapping %s only repeats \"%s\"" % [where, said.left(30)])
 	if not root.get_visible_rect().encloses(p.get_global_rect()):
 		fail("TIP OFF SCREEN: %s at %s" % [where, p.get_global_rect()])
 	await shot("tip_" + where)
@@ -181,12 +203,15 @@ func _first_session(main) -> void:
 	await shot("creator")
 	cc.scroll.scroll_vertical = 99999   # Fable r4 #7: the rows under the race card (Hair colour, Fur, Eyes, Face)
 	await shot("creator_bottom")
+	# Fable r5 #1: the hero stays in view while you pick the rows at the bottom
+	if not (cc.preview.is_visible_in_tree() and root.get_visible_rect().encloses(cc.preview.get_global_rect())):
+		fail("PREVIEW GONE: the creator's hero scrolled out of view")
 	await close_popups(main)
 	HeroSelect.new().show_for(main, null)
 	await shot("hero_select")
 	await close_popups(main)
-	main.state.last_death = {"floor": main.state.floor_num, "enemy": "A Cave Troll", "woke": 26, "lost": "gold",
-		"taken": {"hit": 60, "fire": 40}, "total": 100, "enemy_left": 0.35, "tips": ["Drink a potion below half health (Auto-potion in Hero › Skills)."]}
+	main.state.last_death = {"floor": main.state.floor_num, "enemy": "A Cave Troll", "woke": 26, "lost": "4,516 gold, 3 items",
+		"taken": {"hit": 60, "fire": 40}, "total": 100, "enemy_left": 0.35, "tips": ["Drink a potion below half health (Auto-potion in Hero › Skills)."]}
 	main._show_recap()
 	await shot("death_card")
 	if is_instance_valid(main.recap_panel):

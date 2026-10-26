@@ -70,7 +70,7 @@ static func on_floor(g: GameState) -> void:
 	if g.codex.stat(UNLOCK_KEY) > 0 or deepest_floor(g) < LEGENDARY_UNLOCK_FLOOR:
 		return
 	g.codex.at_least(UNLOCK_KEY, 1)
-	g.say("[color=#e8b14a]The Legendary table on Fortune's Wheel is open![/color] Find it in Town › Tavern.")
+	g.say("[color=#e8b14a]The Legendary table on Fortune's Wheel is open![/color] Find it in Town › Tavern.")
 	g.events.append({"type": "toast", "text": "Floor %d: the Wheel's Legendary table is open." % LEGENDARY_UNLOCK_FLOOR})
 
 static func lock_text(g: GameState) -> String:

@@ -28,7 +28,6 @@ func refresh() -> void:
 	shown = key
 	rows.clear()
 	OnlineUI.clear(box)
-	box.add_child(UI.heading("Church"))
 	if not Buildings.built("church"):
 		box.add_child(UI.wrap("An empty lot by the graveyard. Build the Church (above) and its priest will lift curses from your gear and bless it.", UI.FONT_BODY, UI.DIM))
 		return

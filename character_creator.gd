@@ -33,13 +33,18 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	body.add_theme_constant_override("separation", 14)
 	content.add_child(body)
 
-	# The stage: your hero at 3x (whole pixels) on the plinth, the name and the dice beside them
+	# The stage: your hero at 3x (whole pixels) on the plinth, the name and the dice beside them.
+	# Fable r5 #1: on phones the stage is pinned over the scroll at 2x, so the hero stays in
+	# view while you pick skin, hair and face; the name goes into the scroll.
 	var left := UI.vbox(10)
 	left.custom_minimum_size = Vector2(0 if body.vertical else 380, 0)
-	body.add_child(left)
+	if body.vertical:
+		top.add_child(left)
+	else:
+		body.add_child(left)
 	var stage := UI.hbox(10)
 	left.add_child(stage)
-	var side := Sprites.PORTRAIT * 3
+	var side := Sprites.PORTRAIT * (2 if body.vertical else 3)
 	var ph := Control.new()
 	ph.custom_minimum_size = Vector2(side, side + 8)
 	stage.add_child(ph)
@@ -59,17 +64,25 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sv.alignment = BoxContainer.ALIGNMENT_CENTER
 	stage.add_child(sv)
+	var name_box: VBoxContainer = sv
+	if body.vertical and ask_name:
+		name_box = UI.vbox(8)
+		body.add_child(name_box)
 	if ask_name:
-		sv.add_child(_head("Name"))
+		name_box.add_child(_head("Name"))
 		name_edit = LineEdit.new()
 		name_edit.max_length = 16
 		name_edit.text = NAMES.pick_random()
 		name_edit.placeholder_text = "Your hero's name"
 		name_edit.custom_minimum_size = Vector2(0, UI.TAP)
-		sv.add_child(name_edit)
+		var nr: BoxContainer = UI.hbox(8) if body.vertical else name_box
+		if body.vertical:
+			name_box.add_child(nr)
+			name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nr.add_child(name_edit)
 		var nb := UI.button("New name", func(): name_edit.text = NAMES.pick_random())
 		nb.custom_minimum_size = Vector2(0, UI.TAP)
-		sv.add_child(nb)
+		nr.add_child(nb)
 	var rnd := UI.button("Random look", _randomize)
 	rnd.custom_minimum_size = Vector2(0, UI.TAP)
 	sv.add_child(rnd)
