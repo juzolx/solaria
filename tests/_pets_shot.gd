@@ -9,7 +9,7 @@ func _initialize() -> void:
 		quit(1)
 		return
 	var args := OS.get_cmdline_user_args()
-	var out := ProjectSettings.globalize_path("res://" + (args[0] if args.size() > 0 else "claude/art_test/pets/fable_r3"))
+	var out := ProjectSettings.globalize_path("res://" + (args[0] if args.size() > 0 else "claude/art_test/pets/fable_r4"))
 	DirAccess.make_dir_recursive_absolute(out)
 	TestHero.make(12, "Knight")
 	TitleScreen.pending = {"play": 1}
@@ -29,6 +29,10 @@ func _initialize() -> void:
 		var sp: String = e[0]
 		var p := Menagerie.make_pet(st, sp, String(Monsters.by_id(sp).get("art", sp)), int(e[1]), "test")
 		p["cherished"] = sp == "banshee"
+	# Fable pets R4: one hurt pet at home and one egg, so their cards and the Clinic are in the pictures
+	var sore := Menagerie.make_pet(st, "barghest", "barghest", 2, "test")
+	sore["hurt"] = 4
+	Menagerie.give_egg(st, "nest", 0, 3)
 	st.events.clear()   # no first-find fanfare over the shots
 	await _close(main)
 	main.nav_page = 0
@@ -56,6 +60,13 @@ func _initialize() -> void:
 	await create_timer(1.0).timeout
 	await _shot(out, "fight_party")
 	print("PARTY LAYOUT lay ", bv.team_layout(), " members ", [bv._member_canvas(0), bv._member_canvas(1)])
+	st.exploring = true
+	main._room_ready = true
+	main.refresh()
+	await create_timer(1.0).timeout
+	await _close(main)
+	await _shot(out, "room_party")
+	st.exploring = false
 	st.party = null
 	main.refresh()
 	st.exploring = true
@@ -69,8 +80,9 @@ func _initialize() -> void:
 		var grp: TabContainer = main._groups()[gi]
 		for s in grp.get_tab_count():
 			var title := grp.get_tab_title(s)
-			if title != "Pets" and title != "Pet":
+			if title != "Pets" and title != "Pet" and title != "Clinic":
 				continue
+			st.in_town = title == "Clinic"   # a town page (no leave-the-dungeon prompt)
 			main.show_tab(gi, s)
 			main.refresh()
 			await create_timer(0.4).timeout

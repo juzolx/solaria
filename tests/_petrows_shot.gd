@@ -18,7 +18,7 @@ func _initialize() -> void:
 	st.pets.clear()
 	st.pets_out.clear()
 	Menagerie.make_pet(st, "barghest", "barghest", 1, "test")
-	var b := Menagerie.make_pet(st, "Gullinbursti", "gullinbursti", 3, "test")
+	var b := Menagerie.make_pet(st, "gullinbursti", "gullinbursti", 3, "test")
 	b["level"] = 12
 	Menagerie.make_pet(st, "will_o_wisp", "will_o_wisp", 2, "test")
 	Menagerie.give_egg(st, "test")

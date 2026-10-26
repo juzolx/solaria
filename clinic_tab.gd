@@ -17,7 +17,7 @@ func setup(m) -> void:
 
 func refresh() -> void:
 	var g: GameState = main.state
-	var key := "%s|%d|%s|%s" % [str(g.pets), g.gold, str(g.eggs), str(g.pets_out)]
+	var key := "%s|%d|%s|%s" % [PetTab.pets_key(g), g.gold, str(g.eggs), str(g.pets_out)]   # not kills: no rebuild per kill
 	if key == shown:
 		return
 	shown = key
@@ -34,18 +34,13 @@ func refresh() -> void:
 		box.add_child(c[0])
 		var h := UI.hbox(10)
 		c[1].add_child(h)
-		var pic := TextureRect.new()
-		pic.texture = Menagerie.texture(p)
-		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		pic.custom_minimum_size = Vector2(64, 64)  # 32 px art at a clean 2x
-		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		h.add_child(pic)
+		h.add_child(PixelPic.make(Menagerie.texture(p)))  # 32 px art at about 2x, whole screen pixels (Fable pets R4)
 		var v := UI.vbox(2)
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(v)
-		v.add_child(UI.label(String(p["name"]), UI.FONT_BODY, UI.TEXT))
-		v.add_child(UI.label(("Hurt: %d floor%s of rest left" % [int(p["hurt"]), "" if int(p["hurt"]) == 1 else "s"]) if hurt else "Healthy and ready", UI.FONT_BODY, UI.RED if hurt else UI.GREEN))
+		# wrapping lines: one-line labels next to a 130 px button pushed the page wider than an SE (Fable pets R4)
+		v.add_child(UI.wrap(String(p["name"]), UI.FONT_BODY, UI.TEXT))
+		v.add_child(UI.wrap(("Hurt: rests %d more floor%s" % [int(p["hurt"]), "" if int(p["hurt"]) == 1 else "s"]) if hurt else "Healthy and ready", UI.FONT_BODY, UI.RED if hurt else UI.GREEN))
 		if hurt:
 			var cost := Menagerie.heal_cost(p)
 			var id := int(p["id"])
@@ -67,6 +62,8 @@ func refresh() -> void:
 				if Menagerie.toggle_out(main.state, pid):
 					main.sfx.play("click")
 					main.state.save_game()
+				elif Menagerie.out_block(main.state, pid) != "":
+					main.toast(Menagerie.out_block(main.state, pid))   # one of each kind per team
 				shown = ""
 				main.refresh(), UI.GREEN if going else UI.GOLD)
 			eb.custom_minimum_size = Vector2(130, UI.TAP)

@@ -92,7 +92,9 @@ func _cell(n: String) -> Control:
 	var met := have or _met(n)
 	var tier := int(codex.pet_book.get(n, 0))
 	var c := UI.panel(UI.INSET, Color(Menagerie.TIER_COLORS[tier]) if have else UI.BORDER, 4, 4, 2 if have else 1)
-	c.custom_minimum_size = Vector2(76, 0)
+	# wide enough for "Will-o'-Wisp" under a whole-pixel picture (Fable pets R4)
+	var cw := maxf(76.0, PixelPic.side(32, 2.0, PixelPic.stretch(self)) + 8.0)
+	c.custom_minimum_size = Vector2(cw, 0)
 	var v := UI.vbox(2)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	c.add_child(v)
@@ -102,10 +104,11 @@ func _cell(n: String) -> Control:
 	if not have:
 		pic.modulate = Color(0.32, 0.3, 0.4, 0.9) if met else Color(0.12, 0.12, 0.16, 0.6)
 	v.add_child(pic)
-	var l := UI.label(_name(n) if met else "???", UI.FONT_BODY, Color(Menagerie.TIER_COLORS[tier]) if have else UI.DIM)
+	var nm := _name(n) if met else "???"
+	var l := UI.label(nm, UI.FONT_BODY if nm.length() <= 10 else UI.FONT_CAPTION, Color(Menagerie.TIER_COLORS[tier]) if have else UI.DIM)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size = Vector2(68, 0)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD   # breaks at spaces only, never inside "Will-o'-Wisp"
+	l.custom_minimum_size = Vector2(cw - 8.0, 0)
 	v.add_child(l)
 	if met:
 		# phones have no hover: a tap opens the card with what this pet does

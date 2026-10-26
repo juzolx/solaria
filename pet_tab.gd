@@ -9,7 +9,6 @@ var state: GameState
 var box: VBoxContainer
 var shown := ""
 var renaming := -1
-const BTN := 52   # Fable pets R3: 44 pt+ on a phone (UI.TAP is 44 design px; flagged to the UI dev)
 
 func setup(m) -> void:
 	main = m
@@ -21,7 +20,7 @@ func setup(m) -> void:
 
 func refresh() -> void:
 	state = main.state
-	var key := "%s|%s|%s|%d|%s|%s|%d|%d" % [str(state.pets), str(state.pets_out), str(state.eggs), state.level, state.pet_on, state.pet_name,
+	var key := "%s|%s|%s|%d|%s|%s|%d|%d" % [pets_key(state), str(state.pets_out), str(state.eggs), state.level, state.pet_on, state.pet_name,
 		World.pet_stage(state), renaming]
 	if key == shown:
 		return
@@ -34,14 +33,49 @@ func _owned() -> void:
 	var tamer := Menagerie.is_tamer(state)
 	var out_n := Menagerie.out(state).size()
 	# Fable r1 #12: one line; the rest is a tap away
-	var bring := ("As a tamer you bring up to %d at a time." % Menagerie.TAMER_OUT) if tamer else ("You can bring %d along." % Menagerie.OTHERS_OUT)
+	var bring := ("As a tamer you bring up to %d at a time." % Menagerie.TAMER_OUT) if tamer else (("You can bring one along.") if Menagerie.OTHERS_OUT == 1 else ("You can bring %d along." % Menagerie.OTHERS_OUT))
 	var hd := UI.heading("Your pets", "They fight beside you and are never lost. %s" % bring)
 	UI.tip(hd, "Pets grow with every kill. When your team goes down they come home hurt and rest, or the Clinic in town patches them up.")
 	box.add_child(hd)
 	if not state.pets.is_empty():
 		box.add_child(UI.heading("Coming along", "%d of %d" % [out_n, Menagerie.max_out(state)]))
-	for p in state.pets:
+	# Fable pets R4: the team first, then the rest by rank and level, the resting ones last;
+	# eggs (they have a quest to read) right after the team
+	var order := sorted(state)
+	var going := Menagerie.out(state).size()
+	for i in order.size():
+		if i == going:
+			_eggs()
+		var p: Dictionary = order[i]
+		if int(p["hurt"]) > 0 and (i == 0 or int(order[i - 1]["hurt"]) <= 0):
+			box.add_child(UI.label("RESTING", 11, UI.DIM))
 		box.add_child(_pet_row(p))
+	if order.size() <= going:
+		_eggs()
+	_hints()
+
+## The order the tab shows pets in: coming along (team order), healthy by rank then level, hurt.
+static func sorted(g: GameState) -> Array:
+	var team := Menagerie.out(g)
+	var rest: Array = g.pets.filter(func(p): return not team.has(p))
+	rest.sort_custom(func(a, b):
+		var ha := int(a["hurt"]) > 0
+		var hb := int(b["hurt"]) > 0
+		if ha != hb:
+			return hb
+		if int(a["tier"]) != int(b["tier"]):
+			return int(a["tier"]) > int(b["tier"])
+		return int(a["level"]) > int(b["level"]))
+	return team + rest
+
+## What the tab shows of each pet (not its kill count, which goes up every kill).
+static func pets_key(g: GameState) -> String:
+	var parts: Array = []
+	for p in g.pets:
+		parts.append([p["id"], p["name"], p["tier"], p["level"], p["hurt"], p.get("cherished", false)])
+	return str(parts)
+
+func _eggs() -> void:
 	for e in state.eggs:
 		var c := _frame(UI.GOLD_DULL)
 		box.add_child(c[0])
@@ -56,7 +90,9 @@ func _owned() -> void:
 		var etier := clampi(int(e.get("tier", 0)), 0, 5)
 		ev.add_child(UI.label(Menagerie.egg_name(e), UI.FONT_BODY, Color(Menagerie.TIER_COLORS[etier])))
 		ev.add_child(UI.wrap("Something inside is moving. It hatches in %d floor%s.\nQuest: %s" % [int(e["floors"]), "" if int(e["floors"]) == 1 else "s", EggQuests.text(e)], 13, UI.TEXT))
-	# Empty slots hint at what's out there (never how)
+
+## Empty slots hint at what's out there (never how)
+func _hints() -> void:
 	var empty := maxi(0, 3 - state.pets.size() - state.eggs.size())
 	for i in empty:
 		var c := _frame(UI.EMPTY)
@@ -84,28 +120,38 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 	var tier := int(p["tier"])
 	var tc := Color(GameData.color_of(mini(tier, 5)))
 	v.add_child(UI.label("%s %s  ·  Lv %d" % [Menagerie.TIER_NAMES[tier], Monsters.name_of(str(p["species"])), int(p["level"])], 12, tc))
-	v.add_child(UI.label(("Hurt: rests %d more floor%s" % [int(p["hurt"]), "" if int(p["hurt"]) == 1 else "s"]) if hurt else
+	v.add_child(UI.wrap(("Hurt: rests %d more floor%s, or the Clinic heals it for %s gold" % [int(p["hurt"]), "" if int(p["hurt"]) == 1 else "s", UI.short(Menagerie.heal_cost(p))]) if hurt else
 		"Hits for %d%% of your Attack" % _hits(p), 11, UI.RED if hurt else UI.DIM))
 	_ability_lines(v, p, renaming == id)   # names only on the card; the sentences and locked ones under "More"
 	var right := UI.vbox(8)
 	right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(right)
 	var full := Menagerie.out(state).size() >= Menagerie.max_out(state)
-	var b := UI.button("Coming along" if going else ("Resting" if hurt else ("Swap in" if full else "Bring along")), func():
+	# Juzo (Oct 25): one of each kind per team; a copy of a kind that's out says so
+	var twin := Menagerie.same_kind_out(state, id) if not going and not hurt else {}
+	if not twin.is_empty():
+		v.add_child(UI.wrap("%s is already out: one of each kind per team." % String(twin["name"]), 11, UI.DIM))
+	var b := UI.button("Coming along" if going else ("Resting" if hurt else ("One is out" if not twin.is_empty() else ("Swap in" if full else "Bring along"))), func():
 		if Menagerie.toggle_out(state, id):
 			main.sfx.play("click")
 			state.save_game()
 		else:
-			main.toast("Hurt pets must rest first." if hurt else "Your team is full (%d)." % Menagerie.max_out(state))
+			var why := Menagerie.out_block(state, id)
+			main.toast(why if why != "" else "Your team is full (%d)." % Menagerie.max_out(state))
 		shown = ""
 		main.refresh())
-	b.custom_minimum_size = Vector2(96, BTN)
+	b.custom_minimum_size = Vector2(96, UI.TAP)
+	if hurt:
+		b.disabled = true   # Fable pets R4: a tap used to drop it from the team without a word
+		b.tooltip_text = "Comes back when it has rested"
+	elif not twin.is_empty():
+		b.modulate = Color(1, 1, 1, 0.55)   # greyed, but a tap still says why
 	right.add_child(b)
 	var rn := UI.button("Less" if renaming == id else "More", func():
 		renaming = -1 if renaming == id else id
 		shown = ""
 		main.refresh())
-	rn.custom_minimum_size = Vector2(96, BTN)
+	rn.custom_minimum_size = Vector2(96, UI.TAP)
 	right.add_child(rn)
 	if renaming == id:
 		var row := UI.hbox(6)
@@ -114,14 +160,14 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 		le.text = String(p["name"])
 		le.max_length = 18
 		le.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		le.custom_minimum_size = Vector2(0, BTN)
+		le.custom_minimum_size = Vector2(0, UI.TAP)
 		row.add_child(le)
 		var ok := UI.button("Rename", func():
 			Menagerie.rename(state, id, le.text)
 			renaming = -1
 			shown = ""
 			main.refresh())
-		ok.custom_minimum_size = Vector2(0, BTN)
+		ok.custom_minimum_size = Vector2(0, UI.TAP)
 		row.add_child(ok)
 		var rel := UI.button("Release", func():
 			main.confirm("Release %s?" % String(p["name"]), "%s goes back to the wild for good. Pets are hard to find, so be sure. Your Codex remembers you had one." % String(p["name"]), "Release", func():
@@ -130,7 +176,7 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 				shown = ""
 				main.refresh()))
 		rel.add_theme_color_override("font_color", UI.RED)
-		rel.custom_minimum_size = Vector2(0, BTN)
+		rel.custom_minimum_size = Vector2(0, UI.TAP)
 		row.add_child(rel)
 	return c[0]
 
@@ -188,7 +234,7 @@ func _pet_card() -> void:
 		state.save_game()
 		shown = ""
 		main.refresh())
-	tog.custom_minimum_size = Vector2(90, BTN)
+	tog.custom_minimum_size = Vector2(90, UI.TAP)
 	h.add_child(tog)
 	c[1].add_child(UI.wrap("%s Hits for %d%% of your Attack every turn." % [info["text"], int(float(World.PET_POWER[st]) * state.party_mult() * 100)], 12, UI.TEXT))
 	var stages: Array = []
@@ -202,14 +248,14 @@ func _pet_card() -> void:
 	le.text = state.pet_name
 	le.max_length = 18
 	le.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	le.custom_minimum_size = Vector2(0, BTN)
+	le.custom_minimum_size = Vector2(0, UI.TAP)
 	nrow.add_child(le)
 	var sv := UI.button("Name it", func():
 		state.pet_name = Menagerie.clean_name(le.text)   # it goes into the log's BBCode
 		state.save_game()
 		shown = ""
 		main.refresh())
-	sv.custom_minimum_size = Vector2(0, BTN)
+	sv.custom_minimum_size = Vector2(0, UI.TAP)
 	nrow.add_child(sv)
 
 ## Interface pass (approved mockup 06): a pet card wears the panel frame, its line in the
