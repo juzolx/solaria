@@ -14,7 +14,12 @@ var key := ""
 var motes: Array = []
 var hit := {}              # "m<i>" / "d<i>" / "p<i>" -> Rect2 (tap targets)
 const TRAP_Z := 3.6   # a spotted trap's circle always lies here, right of the hero (never under them)
-const TRAP_X := 1.0
+const TRAP_X := 1.4   # its left edge clear of his shoulder; the shrine glyph mirrors it on the left
+const TRAP_Z_SMALL := 4.0   # on a short screen (scene.small) the floor is shorter: the circle sits deeper
+const REDRAW_HZ := 30.0     # only the flicker and the 2 Hz pulses move here
+var _redraw_in := 0.0
+var _trap_mesh: ArrayMesh = null
+var _trap_at := ""
 const LABEL_FS := 16       # prop names, the hint line and the floor title (same font as the fights)
 
 func setup(m) -> void:
@@ -29,15 +34,20 @@ func _process(delta: float) -> void:
 	state = main.state
 	t += delta
 	scene.t = t
-	scene.build(state, size)
-	_step_motes(delta)
+	scene.build(state, size, HallsScene.screen_scale(self))
+	if not scene.is_3d():
+		_step_motes(delta)   # the 3D room has its own particles; these are only drawn in 2D
 	var k := "%d|%d" % [state.floor_num, state.room_count]
+	_redraw_in -= delta
 	if k != key:
 		if key != "":
 			main.sfx.play("whoosh", randf_range(0.9, 1.1))
 		key = k
 		motes.clear()
-	queue_redraw()
+		_redraw_in = 0.0
+	if _redraw_in <= 0.0:
+		_redraw_in = 1.0 / REDRAW_HZ
+		queue_redraw()
 
 # =====================================================================
 # Taps
@@ -91,7 +101,7 @@ func _draw() -> void:
 	var doors_open := state.door_pending()
 	var rtrap: Dictionary = state.room_trap
 	if not rtrap.is_empty() and rtrap.get("spotted", false) and not rtrap.get("done", false) and not doors_open:
-		things.append({"z": TRAP_Z, "kind": "trap"})
+		things.append({"z": _trap_z(), "kind": "trap"})
 	things.sort_custom(func(a, b): return float(a["z"]) > float(b["z"]))
 	for th in things:
 		if scene.draw_scenery(self, th):
@@ -125,7 +135,7 @@ func _draw() -> void:
 
 ## A prop's y (0 far .. 1 near, as rolled by Halls) to depth.
 func _prop_z(y: float) -> float:
-	return lerpf(HallsScene.D - 0.5, 1.7, clampf((y - 0.3) / 0.5, 0.0, 1.0))
+	return lerpf(HallsScene.D - 0.5, 2.2, clampf((y - 0.3) / 0.5, 0.0, 1.0))   # never nearer than 2.2: near props dwarf the hero
 
 ## A prop's x (0 left .. 1 right) to world x, kept where a phone sees it at depth z.
 func _prop_x(x: float, z := HallsScene.D) -> float:
@@ -158,8 +168,8 @@ func _draw_prop(i: int, font: Font) -> void:
 	elif kind == "merchant":
 		if state.door_pending():
 			# while you pick a door Snik steps aside, below and left of them, so he never covers one
-			z = 2.6
-			x = _prop_x(0.25, z)
+			z = 3.0
+			x = _prop_x(0.2, z)
 		var sn := Sprites.enemy_by_key("treasure_goblin")
 		if sn.has("tex"):
 			rect = scene.sprite(self, SpriteLight.lit(sn["tex"], scene.zone), x, z, 1.4, Color.WHITE, bob)
@@ -197,33 +207,56 @@ func _draw_prop(i: int, font: Font) -> void:
 ## A trap you've spotted (hidden ones stay hidden): its rune circle on the floor (art/traps/<kind>.png,
 ## its own sigil in the middle), in the colour of what it does (Halls.TRAPS "color"). It doesn't turn
 ## (1 px lines would crawl); the colour pulses in two hard steps instead.
+func _trap_z() -> float:
+	return TRAP_Z_SMALL if scene.small else TRAP_Z
+
 func _draw_trap() -> void:
 	var rtrap: Dictionary = state.room_trap
 	# always the same spot: one size on screen, beside the hero so the sigil shows
-	var z := TRAP_Z
+	var z := _trap_z()
 	var x := TRAP_X
-	var fy := HallsScene.FLOOR_Y + 0.01
 	var col := Color(String(Halls.TRAPS[String(rtrap["kind"])].get("color", "#fee761")))
 	var tint := col if int(t * 2.0) % 2 == 0 else col.lightened(0.25)
-	var r := 1.1   # the same size as the shrine's glyph
-	var cols := PackedColorArray([tint, tint, tint, tint])
 	var tex := scene.tx("res://art/traps/%s.png" % String(rtrap["kind"]))
 	if tex == null:
 		tex = scene.tx("res://art/traps/circle.png")
-	# an 8x8 grid of small quads so the circle follows the floor's perspective (one big quad warps it)
-	var spin := 0.0
+	var mesh := trap_mesh(x, z)
+	if ArtStyle.oklab(col).distance_to(ArtStyle.oklab(Color(scene.mood()["accent"]))) < 0.1:
+		# a trap the colour of the zone's accent gets an outline-black rim, so it isn't the shrine again
+		var c := scene.proj(x, HallsScene.FLOOR_Y, z)
+		draw_mesh(mesh, tex, Transform2D(0.0, Vector2(1.03, 1.03), 0.0, c - c * 1.03), Color("#0e0812"))
+	draw_mesh(mesh, tex, Transform2D.IDENTITY, tint)
+
+## The trap circle as one mesh: an 8x8 grid of quads so it follows the floor's perspective
+## (one big quad warps it). Built once per spot and view (scene.key covers size and horizon).
+func trap_mesh(x: float, z: float) -> ArrayMesh:
+	var at := "%s|%s|%s" % [x, z, scene.key]
+	if _trap_mesh and _trap_at == at:
+		return _trap_mesh
+	var r := 1.1   # the same size as the shrine's glyph
+	var fy := HallsScene.FLOOR_Y + 0.01
 	var n := 8
+	var pts := PackedVector2Array()
+	var uvs := PackedVector2Array()
+	var idx := PackedInt32Array()
+	for gy in n + 1:
+		for gx in n + 1:
+			var u := Vector2(gx, gy) / float(n)
+			pts.append(scene.proj(x + (u.x - 0.5) * 2.0 * r, fy, z + (u.y - 0.5) * 2.0 * r))
+			uvs.append(u)
 	for gy in n:
 		for gx in n:
-			var pts := PackedVector2Array()
-			var uvs := PackedVector2Array()
-			for c in [Vector2(gx, gy), Vector2(gx + 1, gy), Vector2(gx + 1, gy + 1), Vector2(gx, gy + 1)]:
-				var u: Vector2 = c / float(n)
-				var lx := (u.x - 0.5) * 2.0 * r
-				var lz := (u.y - 0.5) * 2.0 * r
-				pts.append(scene.proj(x + lx * cos(spin) - lz * sin(spin), fy, z + lx * sin(spin) + lz * cos(spin)))
-				uvs.append(u)
-			draw_polygon(pts, cols, uvs, tex)
+			var a := gy * (n + 1) + gx
+			idx.append_array([a, a + 1, a + n + 2, a, a + n + 2, a + n + 1])
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = pts
+	arr[Mesh.ARRAY_TEX_UV] = uvs
+	arr[Mesh.ARRAY_INDEX] = idx
+	_trap_mesh = ArrayMesh.new()
+	_trap_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	_trap_at = at
+	return _trap_mesh
 
 func _draw_team() -> void:
 	var members: Array = state.party.members if state.party != null else []
@@ -248,7 +281,7 @@ func _draw_team() -> void:
 		var n: int = (an["tex"] as Array).size()
 		var fi := int(t * float(an["fps"]) + j) % n
 		var sz: float = float(an["size"]) * float(unit if j == 0 else maxi(1, unit - 1)) / scr
-		var feet := Vector2(size.x * float(xs[j]), size.y - (26.0 if j == 0 else 44.0))
+		var feet := team_feet(j, float(xs[j]))
 		scene.shadow(self, feet, sz * 0.18)
 		var a := 0.4 if (j == 0 and state.leader_down) or (j > 0 and members[j - 1].knocked_out) else 1.0
 		# 2.1 heroes stand on their frame's foot row (older art on ~0.9 of theirs)
@@ -260,6 +293,24 @@ func _draw_team() -> void:
 			var spots := _row(feet, sz, k)   # once for both (Fable pets R3)
 			_draw_pet(feet, k, spots)
 			_draw_menagerie_room(feet, k, spots)
+
+## Where member j (0 = the leader) stands, xf across the view. A short screen puts the team
+## lower, so the floor between them and the doors stays (Fable round 3, the SE).
+func team_feet(j: int, xf: float) -> Vector2:
+	var up := (12.0 if j == 0 else 30.0) if scene.small else (26.0 if j == 0 else 44.0)
+	return Vector2(size.x * xf, size.y - up)
+
+## The top of the leader's drawn art (design px) at screen scale scr, for layout checks.
+func leader_head_y(scr: float) -> float:
+	var art := Sprites.hero_back_of(state)
+	var an: Dictionary = (art.get("anims", {}) as Dictionary).get("combat_idle", {})
+	if an.is_empty():
+		return size.y
+	var sz: float = float(an["size"]) * float(ArtStyle.unit(scr)) / scr
+	var foot := float(an["foot"]) / float(an["size"]) if an.has("foot") else 0.9
+	var img: Image = (an["tex"][0] as Texture2D).get_image()
+	var top := float(img.get_used_rect().position.y) if img else 0.0
+	return team_feet(0, 0.5).y - sz * foot + top * sz / float(an["size"])
 
 ## Your companion trots at the leader's heels (true size: k units per art pixel, feet on the floor).
 func _draw_pet(leader_feet: Vector2, k: float, xs: Array) -> void:

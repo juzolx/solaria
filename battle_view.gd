@@ -1661,7 +1661,7 @@ func _draw() -> void:
 		_draw_old_bg(w, h)
 	else:
 		halls.t = Time.get_ticks_msec() / 1000.0
-		halls.build(state, size)
+		halls.build(state, size, HallsScene.screen_scale(self))
 		halls.draw_shell(self, size)
 		halls.draw_doors(self, null, {}, font)
 		var things: Array = halls.scenery()

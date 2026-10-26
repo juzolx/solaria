@@ -15,4 +15,4 @@ Fable dungeon round 1 edits (original to Solaria, CC0):
 Fable dungeon round 2 (original to Solaria, CC0, all by tools/draw_hall_bits.py):
 - z5_floor.png redrawn as leaf-littered flagstones (the PixelLab tile had only 2 colours).
 - z5_wall.png and z6_floor.png got a top light and bottom shade on their main stone (5+ colours).
-- z2_pool_0/1.png (the Flooded Vaults pool, two frames), z7_pipe.png (brass pipe) and z8_pillar.png (gilded pillar).
+- z2_pool_0/1.png (the Flooded Vaults pool, two frames; round 3: frame 1 has its rim 2 px in and a glint one row lower, so the ripple shows), z7_pipe.png (brass pipe) and z8_pillar.png (gilded pillar).
