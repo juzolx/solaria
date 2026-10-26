@@ -368,3 +368,37 @@ static func def_race(gear_id: String) -> String:
 static func can_wear(g: GameState, item: Dictionary) -> bool:
 	var r: String = current(item.get("race_only", ""))
 	return r == "" or r == g.race()
+
+# ---------- The hero creator's hair and fur choices ----------
+## Hair styles (the 13 older names first, so old saves keep their look). Names are saved: never rename one.
+const HAIR_ORDER := ["Short", "Spiky", "Side Swept", "Shaggy", "Mohawk", "Short Mohawk", "Buzz", "Bald", "Balding",
+	"Bedhead", "Unkempt", "Porcupine", "Mop", "Parted", "Page", "Bangs", "Long Bangs", "Long", "Very Long", "Wild",
+	"Loose", "Wavy", "Tied Back", "Ponytail", "High Ponytail", "Half Up", "Pigtails", "Bun", "Braid", "Bob", "Pixie",
+	"Princess", "Curly", "Long Curls", "Afro", "Cornrows", "Dreadlocks"]
+## Dragonkin grow crests and horns instead of hair (their "hair" choice picks one).
+const CREST_ORDER := ["Frills", "Back Horns", "Curled Horns", "Frills and Horns", "Smooth"]
+
+## Beastkin fur (light to dark, 5 colors each); the creator's "Fur color" row picks one (app["fur"]).
+const FUR := [
+	["Snow", ["#f4f1ea", "#d9d3c7", "#aaa294", "#7a7266", "#45403a"]],
+	["Cream", ["#f2e2c0", "#d8bf92", "#ad9166", "#7c6444", "#463624"]],
+	["Golden", ["#f1cf7a", "#d6a64a", "#a77a2c", "#74511c", "#3e2a10"]],
+	["Fox", ["#f4a35a", "#d9762f", "#a8521c", "#743412", "#3e1a0a"]],
+	["Tan", ["#d8b48a", "#b48a5e", "#88633e", "#5c4128", "#332216"]],
+	["Brown", ["#c8a070", "#9a7048", "#6e4a30", "#4a2e20", "#2a1a14"]],
+	["Chocolate", ["#9a6a4a", "#76482e", "#54301e", "#381e14", "#1e100a"]],
+	["Grey", ["#c6c8cc", "#9ca0a8", "#72767e", "#4c4f56", "#2a2c31"]],
+	["Silver", ["#e2e6ee", "#b8c0ce", "#8a94a6", "#5e687a", "#343a46"]],
+	["Charcoal", ["#7c7884", "#5a5662", "#3e3b46", "#28262e", "#141218"]],
+	["Black", ["#6a6476", "#4a4456", "#302c3a", "#1e1a26", "#0e0b14"]],
+	["Ember", ["#e8806a", "#c0503e", "#8e3228", "#5e1e18", "#30100c"]],
+]
+
+## The hair choices a race offers in the hero creator (only used if the hero art is missing).
+static func hair_styles(race: String) -> Array:
+	match race:
+		"Beastkin":
+			return ["Bald"]
+		"Dragonkin":
+			return CREST_ORDER
+	return HAIR_ORDER

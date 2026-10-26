@@ -35,9 +35,9 @@ Then add a line to the log in `claude/stage2-progress.md` and the patch notes (`
 The playable copy is C:\gamedev\solaria (no git). Copy changed git-tracked files from C:\gamedev\solaria_dev into it (never `.godot/`, never `override.cfg`), then tell Juzo to open the project in the Godot editor once (registers new scripts) before playing.
 
 ## Art
-- Heroes: LPC parts (art/lpc, `tools/lpc_extract.py`; the 523 MB LPC source isn't on the PC). Directions: "" right, "up" back, "down" front.
+- Heroes: PixelLab frames (art/heroes, hero_art.gd): back view in fights, front portrait in menus. No LPC art ships (removed for the App Store, decision D1).
 - Monsters, bosses, Calamities, pets: Dungeon Crawl Stone Soup tiles, CC0 (`tools/dcss_monsters.py`). Sources (DCSS + Screaming Brain textures) are zipped in C:\gamedev\solaria_sources. The art tools are Python + Pillow: ask Juzo before installing Python, or port the step to GDScript.
-- Free downloads on Juzo's PC go to C:\gamedev\solaria\_free_assets, light on storage. Credit every artist (credits.gd + CREDITS.md files).
+- Free downloads on Juzo's PC go to C:\gamedev\solaria\_free_assets, light on storage. Credit every artist (credits_data.gd + CREDITS.md files).
 
 ## Agents
 Spawning subagents costs more tokens than it saves for step-by-step work. Use one only for big independent jobs.

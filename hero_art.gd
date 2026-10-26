@@ -15,6 +15,7 @@ const CELL := 96
 const PAD := 16
 const FRAME := CELL + 2 * PAD
 const FOOT := 80  # the feet row inside a body cell
+const CORE := 64   # the character's own frame inside the cell (portraits and the hero canvas centre on it)
 const IDLE := [0, 1]
 const ATTACK := [2, 3, 4, 5]
 const HIT := [6]
@@ -309,7 +310,7 @@ static func _outline(data: PackedByteArray, cells: Vector2i, c: Color) -> void:
 				if src[i + 7] != 0 or src[i - 1] != 0 or src[i + dw * 4 + 3] != 0 or src[i - dw * 4 + 3] != 0:
 					data[i] = c.r8; data[i + 1] = c.g8; data[i + 2] = c.b8; data[i + 3] = c.a8
 
-## The frames as the battle's animation table (same shape as Lpc.build()["anims"]): every attack name
+## The frames as the battle's animation table (Sprites.hero()["anims"]): every attack name
 ## plays the one swing, "hurt" is the hit frame. "foot": the feet row inside a frame.
 static func anims(fr: Dictionary, back: bool) -> Dictionary:
 	var pick := func(ids: Array, fps: float) -> Dictionary:
@@ -422,3 +423,13 @@ static func meta_looks(meta: Dictionary) -> Dictionary:
 	if not looks.has("Class") and str(meta.get("class", "")) != "":
 		looks["Class"] = {"cls": str(meta["class"]), "tier": 0}
 	return looks
+
+## Which attack animation a weapon uses.
+static func attack_anim(weapon_type: String) -> String:
+	match weapon_type:
+		"bow":
+			return "shoot"
+		"spear", "staff":
+			return "thrust"
+		_:
+			return "slash"

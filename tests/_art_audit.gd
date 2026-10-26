@@ -280,7 +280,7 @@ func _heroes() -> void:
 		var crop := img.get_region(Rect2i(Sprites.PORTRAIT_CROP).intersection(Rect2i(Vector2i.ZERO, img.get_size())))
 		back.append({"imgs": [_tex(crop)], "label": "%s, from behind" % r, "sub": _sz(_tex(crop))})
 		i += 1
-	_begin(1500, "Heroes: every race, both builds, front and back", "LPC parts via Sprites.portrait (the menu portrait, %dpx). Scale 3x. Shows how the race add-ons (wings, horns, tails) sit on the shared body." % Sprites.PORTRAIT)
+	_begin(1500, "Heroes: every race, both builds, front and back", "PixelLab heroes via Sprites.portrait (the menu portrait, %dpx). Scale 3x. Shows how the race add-ons (wings, horns, tails) sit on the shared body." % Sprites.PORTRAIT)
 	_section("Front")
 	_grid(naked, 3.0, 6, 130)
 	_section("From behind (back-to-front fights)")

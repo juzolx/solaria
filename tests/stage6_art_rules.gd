@@ -221,10 +221,6 @@ func _initialize() -> void:
 	var before := hero_img.get_data()
 	check(Sprites.chunky(hero_img, 1).get_data() == before, "pixel size 1 leaves the hero's pixels alone")
 	check(hero_img.get_data() == before, "chunky never changes its source image")
-	var spec := {"body": "male"}
-	var spec2 := Sprites._px_spec(spec)
-	check(not spec.has("px") or Sprites.HERO_PIXEL <= 1, "_px_spec doesn't change the caller's spec")
-	check((spec2.get("px", 1) == Sprites.HERO_PIXEL) or Sprites.HERO_PIXEL <= 1, "_px_spec adds the pixel size to its copy")
 
 	# 2.1 heroes (art/heroes, baked from the PixelLab hero): every layer on the same 9 frames of 96x96 (weapons 128),
 	# hard alpha, the feet on one row, every class on both bodies, the 37 styles, 10 faces, 7 weapons
@@ -262,9 +258,9 @@ func _initialize() -> void:
 	# The hero builds from the layers, battle and portrait, recoloured, for any class/tier/weapon
 	var hb := Sprites.hero_back({"body": "fem", "skin": 6, "hair": "Braid", "hair_color": 8, "race": "Orc", "face": "grim"},
 		{"Class": {"cls": "Knight", "tier": 75}, "Weapon": {"type": "spear", "glow": false}})
-	check(hb.get("pl", false) and (hb["lpc"]["combat_idle"]["tex"] as Array).size() == 2 and (hb["lpc"]["slash"]["tex"] as Array).size() == 4 and (hb["lpc"]["hurt"]["tex"] as Array).size() == 1, "battle frames: idle 2, attack 4, hit 1")
+	check(hb.get("pl", false) and (hb["anims"]["combat_idle"]["tex"] as Array).size() == 2 and (hb["anims"]["slash"]["tex"] as Array).size() == 4 and (hb["anims"]["hurt"]["tex"] as Array).size() == 1, "battle frames: idle 2, attack 4, hit 1")
 	var hf := Sprites.hero({"body": "masc", "hair": "Afro", "face": "laughing"}, {"Class": {"cls": "Bard", "tier": 0}})
-	check(hf.get("pl", false) and (hf["lpc"]["combat_idle"]["tex"] as Array).size() == 2, "portrait frames: idle 2")
+	check(hf.get("pl", false) and (hf["anims"]["combat_idle"]["tex"] as Array).size() == 2, "portrait frames: idle 2")
 	var plain := HeroArt.frames({"body": "masc", "skin": 1, "hair_color": 1}, "Mage", 0, "", false)["img"][7] as Image
 	var tinted := HeroArt.frames({"body": "masc", "skin": 6, "hair_color": 8}, "Mage", 0, "", false)["img"][7] as Image
 	check(plain.get_data() != tinted.get_data(), "skin and hair colours recolour the hero")
