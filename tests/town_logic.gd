@@ -144,6 +144,88 @@ func _initialize() -> void:
 			cells.append(sp["door"])
 		var lost: Array = cells.filter(func(c): return not seen.has(Vector2i(int(c[0]), int(c[1]))))
 		check(lost.is_empty(), "every town door and stop can be walked to from the Inn (unreachable: %s)" % [lost])
+		# buildings' tap areas never overlap (the Market is the square under them; points: below)
+		var bld: Array = d["spots"].filter(func(sp): return String(sp["kind"]) in ["building", "lot"])
+		var clash: Array = []
+		for a in bld.size():
+			for b in range(a + 1, bld.size()):
+				var ra: Array = bld[a]["rect"]
+				var rb: Array = bld[b]["rect"]
+				if Rect2(ra[0], ra[1], ra[2], ra[3]).intersects(Rect2(rb[0], rb[1], rb[2], rb[3])):
+					clash.append([bld[a]["id"], bld[b]["id"]])
+		check(clash.is_empty(), "no two building tap areas overlap (%s)" % [clash])
+		# a point (Bounty Board, Mailbox) sits inside at most one building's tap area and is smaller,
+		# so _spot_at (smallest rect wins) always gives the tap to the point
+		var bad_pts: Array = []
+		for p in d["spots"].filter(func(sp): return String(sp["kind"]) == "point"):
+			var pr: Array = p["rect"]
+			var prr := Rect2(pr[0], pr[1], pr[2], pr[3])
+			var holders: Array = []
+			for b in bld:
+				var br: Array = b["rect"]
+				var brr := Rect2(br[0], br[1], br[2], br[3])
+				if brr.intersects(prr):
+					if not brr.encloses(prr) or brr.get_area() <= prr.get_area():
+						bad_pts.append([p["id"], b["id"]])
+					holders.append(b["id"])
+			if holders.size() > 1:
+				bad_pts.append([p["id"], holders])
+		check(bad_pts.is_empty(), "points sit wholly inside at most one, bigger, building tap area (%s)" % [bad_pts])
+		# name plates at 2x never cover each other (a plate takes the tap first)
+		var th := ThemeDB.get_project_theme()
+		var font: Font = th.default_font if th and th.default_font else ThemeDB.fallback_font   # the font the game draws plates with
+		var plates: Array = []
+		for sp in d["spots"]:
+			if sp.has("plate") and sp["plate"] == null:
+				continue
+			var w := font.get_string_size(String(sp["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 18.0
+			var c: Vector2 = TownView.plate_anchor(sp) * 2.0
+			plates.append([sp["id"], Rect2(c.x - w / 2.0, c.y - 15.0, w, 30.0)])
+		var piled: Array = []
+		for a in plates.size():
+			for b in range(a + 1, plates.size()):
+				if (plates[a][1] as Rect2).intersects(plates[b][1]):
+					piled.append([plates[a][0], plates[b][0]])
+		check(piled.is_empty(), "no two name plates overlap at 2x (%s)" % [piled])
+		# the hope path: walkers climb the stairs to the portal (the Dungeon door is up there)
+		var gate: Array = d["spots"].filter(func(sp): return sp["id"] == "gate")[0]["door"]
+		var up: Array = d["raised"].filter(func(c): return int(c[0]) == int(gate[0]) and int(c[1]) == int(gate[1]))
+		check(not up.is_empty() and float(up[0][2]) > float(d.get("plateau_z", 24)) and walk.has(Vector2i(int(gate[0]), int(gate[1]))), "the Dungeon door is up the stairs, on the walk grid")
+		# level props: at every level, the street cell each one stands on is off the walk grid (walkers
+		# go round it) unless it's a door, and every door and stop can still be reached from the Inn
+		var doors := {}
+		var inns: Array = []
+		for c in d["inn_doors"]:
+			inns.append(Vector2i(int(c[0]), int(c[1])))
+			doors[inns[-1]] = true
+		var targets: Array = inns.duplicate()
+		for sp in d["spots"]:
+			targets.append(Vector2i(int(sp["door"][0]), int(sp["door"][1])))
+			doors[targets[-1]] = true
+		for c in d["stops"]:
+			targets.append(Vector2i(int(c[0]), int(c[1])))
+		for lvl in [1, 2, 3]:
+			var blocked: Array = []
+			for id in d["levels"]:
+				for e in d["levels"][id]:
+					var c := Vector2i(int(e[4]), int(e[5]))
+					if int(e[3]) == lvl and walk.has(c) and not doors.has(c):
+						blocked.append(c)
+			var w := TownView.blocked_walk(walk, blocked, inns, targets)
+			var through: Array = blocked.filter(func(c): return w.has(c))
+			check(through.is_empty(), "level %d props stand off the walk grid (walked through: %s)" % [lvl, through])
+			var lost2: Array = targets.filter(func(c): return walk.has(c) and not TownView._reaches(w, inns[0], [c]))
+			check(lost2.is_empty(), "level %d props cut no door or stop off (%s)" % [lvl, lost2])
+	# the town map lands on whole device pixels wherever the view sits in the UI
+	var snapped := true
+	for cs in [1.488, 2.56, 3.0]:
+		for g in [Vector2(6, 57), Vector2(10.5, 63.25), Vector2(0, 0)]:
+			for pan in [Vector2(-312.3, -401.7), Vector2(-0.4, -7.9)]:
+				var o := TownView.snap_origin(g, pan, cs)
+				var dev: Vector2 = (g + o) * cs
+				if absf(dev.x - roundf(dev.x)) > 0.01 or absf(dev.y - roundf(dev.y)) > 0.01:
+					snapped = false
+	check(snapped, "the town map's origin is a whole device pixel for any UI offset")
 	GameState.delete_saves()
 	print("TOWN TESTS DONE, failures: ", fails)
 	quit()

@@ -459,7 +459,6 @@ func _initialize() -> void:
 	check(z.enemy_mods.size() == int(Monsters.TIERS[Monsters.MYTHIC]["mods"]) and z.enemy_max_hp >= int(base_hp * float(Monsters.TIERS[Monsters.MYTHIC]["hp"])), "mythic: 3 mods (R5), much tougher")
 	z._apply_tier(Monsters.MYTHIC)
 	check(z.enemy_max_hp <= int(base_hp * 6.5 * 1.5) + 1, "re-applying a tier doesn't stack")
-	check(z.enemy_scale() > 1.3, "mythic drawn bigger")
 	z.enemy_mods = ["Shielded"]
 	z.enemy_shield = 50
 	var hp0 := z.enemy_hp
@@ -1027,7 +1026,11 @@ func _initialize() -> void:
 	dsp["dir"] = "up"
 	var back := Lpc.build(dsp)
 	check((back["anims"] as Dictionary).has("combat_idle") and (back["anims"] as Dictionary).has("slash"), "heroes have a back view")
-	check(not Lpc.build_walker(dsp, "down")["walk"].is_empty(), "heroes can walk toward you")
+	# town walkers are the PixelLab heroes, halved onto the town's pixel grid (no LPC)
+	var tw := TownFolk.townsfolk(0)
+	check((tw["s"] as Array).size() == 2 and (tw["s"][0] as Texture2D).get_width() == TownFolk.CELL, "townsfolk walk as PixelLab heroes at half size")
+	check((tw["walk"] as Array).size() == 4 and tw["walk"][1] != tw["walk"][3], "townsfolk walk with a left and a right step")
+	check(TownFolk.hero({"body": "fem", "race": "Elf", "skin": 0, "hair": "Long", "hair_color": 3}, {}) == TownFolk.hero({"body": "fem", "race": "Elf", "skin": 0, "hair": "Long", "hair_color": 3}, {}), "town walkers are built once per look")
 	# ---------- 0.12 Calamities and bound items ----------
 	var ca := GameState.new()
 	ca.codex.path = ""

@@ -63,5 +63,5 @@ func _initialize() -> void:
 		if only != "" and not cls in only.split(","):
 			continue
 		seed(7)
-		print(play(cls, Classes.CLASSES[cls]["stats"][0], int(OS.get_environment("TURNS")) if OS.get_environment("TURNS") != "" else 10800))
+		print(play(cls, Classes.stat_order(cls)[0], int(OS.get_environment("TURNS")) if OS.get_environment("TURNS") != "" else 10800))
 	quit()

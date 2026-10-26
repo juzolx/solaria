@@ -8,6 +8,8 @@ Every art session (hero, races, 3D rooms, town, pets, monsters, icons, effects) 
   - pets: small, about 24-36 px tall (a pet sits at the hero's knee/hip);
   - normal monsters: about 48-80 px (a wolf ~hero height lying low, an ogre ~1.3x the hero);
   - bosses: about 96-128 px; Calamities up to 160 px;
+  - (fable r1, Oct 25) widths that keep 3x on a 430 pt phone: commons at most 80 px wide, bosses 131, Calamities 137 (the fight lets commons use 56% of the stage, bosses 92%, Calamities 96%; tests/stage6_art_rules.gd checks it). Rank (Rare to Mythic) never changes the pixel size: it shows as the aura, pips and name colour. Pack-mates waiting behind draw one whole step smaller (2x).
+  - (fable r2, lead Oct 25: option B) bosses and Calamities fight on the boss stage: the hero's scale, standing lower with the hero in front of their feet, their health and name in a boss bar along the top. Rated boss art is never cropped to fit; only the tallest Calamities step down one pixel size on a 375 pt SE.
   - 3D room textures 32x32 tiles; town tiles 32x32 (3/4 view), buildings sized so a door is ~hero height.
 
 ## The base hero is the reference

@@ -191,7 +191,7 @@ func _monster_entry(m: Dictionary, boss: bool, used: Dictionary) -> Dictionary:
 	var graded: Image = DarkGrade.image(raw) if raw != null else null
 	var want: int = GOOD_SIZE["boss"] if boss else GOOD_SIZE["enemy"]
 	var odd := raw != null and (raw.get_width() != want or (raw.get_height() != want and not (boss and raw.get_height() == ArtStyle.TALL_SIZE.y)))
-	var src := "png" if raw != null else ("LPC-built" if Lpc.MONSTERS.has(key) else "MISSING")
+	var src := "png" if raw != null else "MISSING"
 	return {"imgs": [_tex(raw), _tex(graded)], "label": "%s%s" % [m["name"], "  [BOSS]" if boss else ""],
 		"sub": "%s  %s  %s%s" % [key, _sz(_tex(raw)), src, "   << off-size (standard %d)" % want if odd else ""],
 		"flag": odd or raw == null}

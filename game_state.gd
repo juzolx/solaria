@@ -90,7 +90,7 @@ var kill_streak := 0    # kills without drinking a potion
 var party_slots: Array = []  # hero slots fighting with you (Regular heroes only)
 # Lineage: race power and awakening, transformations, reputation (rules in lineage.gd)
 var race_power := 0.0       # racial power from actions
-var race_power_points := 0  # stat points put into racial power (0.1 each)
+var race_power_points := 0  # stat points put into racial power (Races.POWER_POINT each)
 var awaken := 0             # awakening rank (0 = not awakened)
 var race_keys: Array[String] = []  # key items held (awakening keys, Phylactery, Silver Moonbloom)
 var form := ""              # "", "Vampire", "Werewolf", "Fallen Angel", "Lich"
@@ -1463,15 +1463,6 @@ func _apply_tier(tier: int) -> void:
 		events.append({"type": "rare_monster", "tier": tier, "name": enemy_name, "mods": enemy_mods.duplicate()})
 		say("[color=%s]%s %s appears![/color] %s" % [Monsters.tier_color(tier), Monsters.tier_name(tier), enemy_name, ", ".join(enemy_mods)])
 
-## The size the monster is drawn at (rarer = bigger).
-func enemy_scale() -> float:
-	var s := float(Monsters.TIERS[clampi(enemy_tier, 0, 5)]["scale"])
-	if has_mod("Giant"):
-		s *= 1.12
-	if enemy_calamity > 0:
-		s *= 1.35
-	return s
-
 func take_turn() -> void:
 	if run_over or in_town:
 		return
@@ -1811,7 +1802,7 @@ func _enemy_defeated() -> void:
 	var species := enemy_species
 	var zone_i := GameData.zone_index(floor_num)
 	events.append({"type": "enemy_dead", "shape": enemy_shape, "color": enemy_color, "boss": was_boss, "name": enemy_name,
-		"art": enemy_art, "tier": tier, "scale": enemy_scale()})
+		"art": enemy_art, "tier": tier})
 	if not was_boss:
 		Combat.on_enemy_death(self)
 	if enemy_boss_kind == "trial":
@@ -2146,6 +2137,10 @@ func _hero_died() -> void:
 		events.append({"type": "hero_dead", "final": true})
 		say("[color=#f87171]Your Hardcore hero has fallen on floor %d.[/color]" % floor_num)
 		codex.save()
+		# The save goes now, not when the farewell shows: quitting the app (or going back to the
+		# title) during the death animation must never bring a Hardcore hero back.
+		if autosave:
+			delete_own_saves()
 		return
 	events.append({"type": "hero_dead"})
 	if party != null:
@@ -2416,7 +2411,8 @@ func _give_item(item: Dictionary) -> void:
 	var verdict := "keep" if keep else LootRules.decide(self, item)
 	if verdict != "keep":
 		say(LootRules.carry_out(self, item, verdict))
-	elif bag.size() >= bag_capacity() + OVERFLOW_MAX and not keep:
+	elif bag.size() >= bag_capacity() + OVERFLOW_MAX and not keep and not LootRules.protected(self, item):
+		# (Legendary or better, set pieces, locked and bound items always reach the bag, even past the overflow)
 		var s := GameData.scrap_value(item, scrap_mult())
 		scrap += s
 		say("Bag overflowing! Salvaged %s (+%d scrap)" % [_tag(item), s])
@@ -3311,6 +3307,7 @@ func save_game(force := false) -> void:
 		"room_props": room_props,
 		"room_kind": room_kind,
 		"portal": portal,
+		"trial_open": {"return": trial_return, "gate": bool(trial_data.get("gate", false))} if trial_active else {},
 		"curse_turns": curse_turns,
 		"luck_turns": luck_turns,
 		"hunt_spawns": hunt_spawns,
@@ -3583,7 +3580,7 @@ func load_game() -> bool:
 	var saved_look: Dictionary = data.get("appearance", {})
 	for k in saved_look:
 		appearance[k] = saved_look[k]
-	appearance["race"] = Races.current(str(appearance.get("race", "Human")))  # a retired race (Golem) -> its new one
+	Races.retire_look(appearance)  # a retired race (Golem) -> its new one, with a skin it can pick
 	wardrobe = data.get("wardrobe", {})
 	transmog = data.get("transmog", {})
 	if wardrobe.is_empty():
@@ -3605,6 +3602,7 @@ func load_game() -> bool:
 	room_props = data.get("room_props", [])
 	room_kind = String(data.get("room_kind", "fight"))
 	portal = data.get("portal", {})
+	_resume_lost_trial(data.get("trial_open", {}))
 	horde_total = maxi(horde_left, GameData.HORDE_SIZE)
 	curse_turns = int(data.get("curse_turns", 0))
 	luck_turns = int(data.get("luck_turns", 0))
@@ -3620,6 +3618,7 @@ func load_game() -> bool:
 	loot_filter = data.get("loot_filter", loot_filter)
 	enemy_goblin = bool(data.get("enemy_goblin", false))
 	Lineage.from_save(self, data.get("lineage", {}))
+	Races.retire_rep(rep)  # standing kept under a retired race (Golem) moves to its new one
 	GameData.realm_order = realm_order
 	GearSlots.drop_unknown(self)  # 2.1: gear for a slot this version doesn't know never crashes a load
 	_give_old_legendaries_effects()
@@ -4429,6 +4428,19 @@ func _finish_trial() -> void:
 	if gate:
 		_room_cleared()  # back out to your doors
 	save_game()
+
+## The app closed in the middle of a trial: the champion is gone, so you are back on the
+## floor you left, and a champion's gate you came through stands again (try it later).
+func _resume_lost_trial(t: Dictionary) -> void:
+	if t.is_empty():
+		return
+	floor_num = maxi(1, int(t.get("return", floor_num)))
+	fight = 1
+	if bool(t.get("gate", false)):
+		for p in room_props:
+			if p is Dictionary and String(p.get("kind", "")) == "gate":
+				p["used"] = false
+	say("[color=%s]The trial faded while you were away.[/color] You can face it again." % Portals.COLOR)
 
 ## Race trial for the next awakening rank.
 func start_race_trial() -> bool:

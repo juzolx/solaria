@@ -66,7 +66,7 @@ func _bg(zi: int) -> Texture2D:
 	return DarkGrade.texture(path, DarkGrade.SCENE, false)
 
 func _pick_monster() -> void:
-	var z: Dictionary = GameData.ZONES[bg_keys[bg_index]]
+	var z: Dictionary = GameData.ZONES[bg_keys[bg_index % bg_keys.size()]]  # bg_index keeps counting up while the title sits open
 	var arts: Array = []
 	for e in z["enemies"]:
 		arts.append(e.get("art", e["id"]))
@@ -308,7 +308,7 @@ func _hero_line(meta: Dictionary) -> Control:
 	var pic := TextureRect.new()
 	pic.texture = Sprites.portrait(meta.get("appearance", {}), HeroArt.meta_looks(meta))
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(64, 64)
+	pic.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT)   # 72 after the hero update: never a fixed 64
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	row.add_child(pic)

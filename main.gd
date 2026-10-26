@@ -340,6 +340,8 @@ func _notification(what: int) -> void:
 	match what:
 		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST, \
 				NOTIFICATION_WM_GO_BACK_REQUEST:
+			if started and state.run_over and state.hardcore and state.hero_hp <= 0:
+				_record_hardcore_death()  # a fallen Hardcore hero is never left on disk
 			save_everything()
 			DebugLog.flush()
 		NOTIFICATION_EXIT_TREE:
@@ -608,7 +610,13 @@ func _show_recap() -> void:
 	recap_panel.custom_minimum_size.x = minf(520.0, battle.size.x - 24.0)
 	await get_tree().process_frame
 	if is_instance_valid(recap_panel):
-		recap_panel.position = Vector2((battle.size.x - recap_panel.size.x) / 2.0, 40.0)
+		# Phones: the fight view is shorter than the whole card, so its story scrolls and OK stays on screen
+		var top := minf(40.0, maxf(4.0, battle.size.y * 0.06))
+		DeathScreen.fit_regular(recap_panel, battle.size.y - top - 8.0)
+		await get_tree().process_frame
+	if is_instance_valid(recap_panel):
+		var top := minf(40.0, maxf(4.0, battle.size.y * 0.06))
+		recap_panel.position = Vector2((battle.size.x - recap_panel.size.x) / 2.0, top)
 		var p := recap_panel
 		get_tree().create_timer(14.0).timeout.connect(func():
 			if is_instance_valid(p):
@@ -623,15 +631,27 @@ func show_look_editor() -> void:
 		timer.start()
 		refresh(), "Change your look", true, state.hero_looks())
 
-## A Hardcore hero died: record it, delete it, and offer a new run.
-func _on_hardcore_death() -> void:
-	fallen_shown = true
-	timer.stop()
-	var new_best := profile.record_hc_run(state)
+var hc_new_best := false
+var hc_recorded := false
+
+## A Hardcore hero died: record the run and delete the hero at once (the save is
+## already gone, GameState._hero_died). The farewell itself shows a moment later.
+func _record_hardcore_death() -> void:
+	if hc_recorded:
+		return
+	hc_recorded = true
+	hc_new_best = profile.record_hc_run(state)
 	state.delete_own_saves()
 	codex.save()
 	if online:
 		online.submit_run(state)
+
+## The farewell: the hero is gone, offer a new run.
+func _on_hardcore_death() -> void:
+	fallen_shown = true
+	timer.stop()
+	_record_hardcore_death()
+	var new_best := hc_new_best
 	var o := Overlay.new().open(self, "Your hero has fallen", 520.0, UI.RED, false)
 	var slot_n := state.slot
 	DeathScreen.hardcore(o.content, state.hero_name if state.hero_name != "" else "Hero", state.level, state.race(), state.title(), state.floor_num,
@@ -735,7 +755,7 @@ func _build_ui() -> void:
 	town_page.add_child(talk_row)
 	town_keeper = TextureRect.new()
 	town_keeper.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	town_keeper.custom_minimum_size = Vector2(64, 64)   # 1x the 64 px art (crisp); 2x pushed the Tavern page off a 430x932 phone
+	town_keeper.custom_minimum_size = Vector2(128, 128)   # 2x the 64 px art: the keeper fills the left column beside the way back and their line
 	town_keeper.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	town_keeper.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	talk_row.add_child(town_keeper)
@@ -1216,13 +1236,15 @@ func _town_heroes() -> void:
 	var looks := state.hero_looks()
 	var key := "%d|%s|%s|%d" % [state.slot, str(state.appearance), str(looks), _roster_cache.size()]
 	town_view.set_heroes([[state.appearance, looks, true]] + _roster_cache, key)
-	# Your pets live in the Clinic's pen (your class companion too, if you have one)
+	# Your pets live in the Clinic's pen, at most TownView.MAX_TOWN_PETS of them: your class
+	# companion, then the pets you take on runs, then the rest (never the whole collection)
 	var texs: Array = []
 	var pkey := ""
 	if World.pet_stage(state) >= 0:
 		texs.append(Pets.portrait(state))
 		pkey += "c%d" % World.pet_stage(state)
-	for p in state.pets:
+	var ordered: Array = state.pets.filter(func(p): return state.pets_out.has(p["id"])) + state.pets.filter(func(p): return not state.pets_out.has(p["id"]))
+	for p in ordered.slice(0, maxi(0, TownView.MAX_TOWN_PETS - texs.size())):
 		texs.append(Menagerie.texture(p))
 		pkey += "|%d" % int(p["id"])
 	town_view.set_pets(texs, "%d:%s" % [state.slot, pkey])
@@ -1278,6 +1300,7 @@ func _sync_town() -> void:
 		"stash": "" if not state.hardcore else "Hardcore heroes can't use the Vault",
 	}
 	town_view.hidden_spots = {} if Menagerie.has_any(state) else {"clinic": true}
+	town_view.refresh_levels()   # level props: which stand in the street (walkers go round them)
 	var hurt_pets := state.pets.filter(func(p): return int(p["hurt"]) > 0).size()
 	town_view.badges = {"bounty": Town.ready_count(state), "guild": codex.deeds.size(), "mail": Mail.waiting(state), "clinic": hurt_pets,
 		"inn": 1 if state.hero_hp < state.get_max_hp() * 0.6 else 0}
@@ -1526,6 +1549,7 @@ func refresh() -> void:
 		var auto_pick: String = state.path_info(state.auto_path())["name"]
 		path_count_label.text = ("Waiting for you to pick" if state.path_hold else "Picks %s by itself in %d..." % [auto_pick, maxi(0, GameData.PATH_WAIT_TURNS - state.path_wait)])
 	if state.run_over and not fallen_shown:
+		_record_hardcore_death()  # now: the app may be closed before the farewell shows
 		get_tree().create_timer(1.6).timeout.connect(_on_hardcore_death)
 		fallen_shown = true
 	_play_moments()

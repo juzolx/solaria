@@ -13,7 +13,7 @@ const LIST := {
 	"cartographer": {"name": "Oswin", "title": "a half-mad cartographer", "race": "Goblin", "color": "#93c5fd",
 		"line": "\"Maps! Maps of everywhere you shouldn't be. This one shows the way home. Cheap, for you.\"",
 		"offers": [{"text": "Buy the map", "cost": "gold", "price": 30, "give": "scroll"}, {"text": "No thanks", "give": "nothing"}]},
-	"smith": {"name": "Gilda Deepanvil", "title": "a dwarf smith on the road", "race": "Dwarf", "color": "#f59e0b",
+	"smith": {"name": "Gilda Deepanvil", "title": "a hooded dwarf smith on the road", "race": "Dwarf", "color": "#f59e0b",
 		"line": "\"That blade's seen better days. Hand it here. Scrap for my trouble, nothing more.\"",
 		"offers": [{"text": "Let her hone your weapon", "cost": "scrap", "price": 4, "give": "hone"}, {"text": "Ask about the deep", "give": "lore"}]},
 	"seer": {"name": "Mirela", "title": "a fortune-teller", "race": "Elf", "color": "#c084fc",

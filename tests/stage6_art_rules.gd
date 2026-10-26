@@ -77,6 +77,28 @@ func _native_rules(path: String, img: Image) -> void:
 	check(soft == 0, "%s: %d soft (half see-through) pixels" % [path, soft])
 	check(bare == 0, "%s: %d edge pixels without the dark outline" % [path, bare])
 
+## Fable r1: on a 430 pt phone (504 design wide, 0.853 stretch) every monster must show at the
+## hero's 3x inside its share of the stage (battle_view._width_cap): commons 56%, bosses 92%,
+## Calamities 96%. A wider picture would drop to 2x and look smaller than a common.
+func _phone_width(key: String, w: int) -> void:
+	var share := 0.96 if key.begins_with("calamity_") else (0.92 if key.begins_with("boss_") else 0.56)
+	check(w * 3 <= int(504.0 * share * 0.853), "%s is %d px wide: over %d it draws below 3x on a phone" % [key, w, int(504.0 * share * 0.853) / 3])
+
+## Fable r2: monsters must not sink into their dark halls (38-94 mean luma): the whole picture,
+## outline included, averages at least 68 (commons) or 60 (bosses and Calamities, which glow).
+func _luma_floor(key: String, img: Image) -> void:
+	var total := 0.0
+	var n := 0
+	for y in img.get_height():
+		for x in img.get_width():
+			var c := img.get_pixel(x, y)
+			if c.a8 == 0:
+				continue
+			total += 0.299 * c.r8 + 0.587 * c.g8 + 0.114 * c.b8
+			n += 1
+	var floor_y := 59.5 if key.begins_with("boss_") or key.begins_with("calamity_") else 67.5
+	check(n > 0 and total / n >= floor_y, "%s averages luma %.1f (at least %.0f, monster_import.py lifts it)" % [key, total / maxi(1, n), floor_y + 0.5])
+
 func _initialize() -> void:
 	check(not ArtStyle.in_palette(ArtStyle.OUTLINE), "the outline color is not a palette color")
 	check(ArtStyle.in_palette(Color(ArtStyle.PALETTE[3])), "palette colors are in the palette")
@@ -92,6 +114,8 @@ func _initialize() -> void:
 			monsters += 1
 			if d == "res://art/enemies/" and int(native_info.get(f.get_basename(), {}).get("hd", 2)) == 1:
 				_native_rules(d + f, img)
+				_phone_width(f.get_basename(), img.get_width())
+				_luma_floor(f.get_basename(), img)
 				continue
 			check(img.get_size() == ArtStyle.MONSTER_SIZE or img.get_size() == ArtStyle.TALL_SIZE, "%s%s is %s (68x68 or 68x132)" % [d, f, img.get_size()])
 			var rough := 0
@@ -260,9 +284,12 @@ func _initialize() -> void:
 		var wolf := HeroArt.frames(ww, "Warrior", 0, "", true)["img"][0] as Image
 		check(wolf.get_used_rect().size.y > orc.get_used_rect().size.y, "the werewolf's ears and tail stretch the orc silhouette (%s)" % b)
 	# Golem is no longer playable: its art stays in art/heroes/golem_m but no hero wears it
-	check(HeroArt.build_dir({"body": "masc", "race": "Golem"}) == "", "no golem body build is offered")
+	# (an old slot summary that still says Golem draws the Dwarf it became)
+	check(HeroArt.build_dir({"body": "masc", "race": "Golem"}).begins_with("dwarf_"), "no golem body build is offered: a Golem draws as a Dwarf")
 	# Fairies are the Tiny build: shorter than a human and hovering above the feet row
-	var fay := (HeroArt.frames({"body": "masc", "race": "Fairy"}, "Warrior", 0, "", true)["img"][0] as Image).get_used_rect()
+	# (the body layer alone: the butterfly wings sit behind and their tails hang below the feet)
+	var fdir := HeroArt.build_dir({"body": "masc", "race": "Fairy"})
+	var fay := HeroArt._img(fdir + "/outfit_plate.png").get_region(Rect2i(0, 0, HeroArt.CELL, HeroArt.CELL)).get_used_rect()
 	var man := (HeroArt.frames({"body": "masc", "race": "Human"}, "Warrior", 0, "", true)["img"][0] as Image).get_used_rect()
 	check(fay.size.y < man.size.y * 0.85 and fay.end.y < man.end.y, "a fairy is tiny and floats")
 	# ONE scale: battle draws every art pixel at the same whole number of screen pixels

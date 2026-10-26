@@ -186,11 +186,15 @@ static func _stack(dst: Image, src: Image, at: Vector2i) -> void:
 				dst.set_pixel(X, Y, Color(c.r, c.g, c.b, 1.0))
 
 static func _silhouette(src: Image) -> Image:
-	var img := src.duplicate() as Image
-	for y in img.get_height():
-		for x in img.get_width():
-			if img.get_pixel(x, y).a > 0.01:
-				img.set_pixel(x, y, Color.WHITE)
+	# One masked blit instead of a get/set_pixel per pixel (fable r2: 18k calls per Calamity pose)
+	var mask := src.duplicate() as Image
+	if mask.is_compressed():
+		mask.decompress()
+	mask.convert(Image.FORMAT_RGBA8)
+	var white := Image.create(mask.get_width(), mask.get_height(), false, Image.FORMAT_RGBA8)
+	white.fill(Color.WHITE)
+	var img := Image.create(mask.get_width(), mask.get_height(), false, Image.FORMAT_RGBA8)
+	img.blit_rect_mask(white, mask, Rect2i(Vector2i.ZERO, mask.get_size()), Vector2i.ZERO)
 	return img
 
 # =====================================================================
@@ -298,13 +302,11 @@ static func _gear_map(look: Dictionary, char_map: Dictionary) -> Dictionary:
 ## Returns {"body", "body_white", "body_img", "weapon", "weapon_white", "weapon_img",
 ##          "weapon_type", "pivot" (weapon pixels), "hand" (canvas pixels), "glow"}
 static func hero(app: Dictionary, looks: Dictionary) -> Dictionary:
+	if HeroArt.available():
+		return _hero_pl_cached(app, looks, false)
 	var key := str(app) + str(looks)
 	if _cache.has(key):
 		return _cache[key]
-	if HeroArt.available():
-		var pl := _hero_pl(app, looks, false)
-		_cache[key] = pl
-		return pl
 	if USE_LPC and Lpc.available():
 		var lp := _hero_lpc(app, looks)
 		_cache[key] = lp
@@ -378,6 +380,25 @@ static func hero(app: Dictionary, looks: Dictionary) -> Dictionary:
 				out["glow"] = lk["trim"]
 	_cache[key] = out
 	return out
+
+## PixelLab heroes kept at once (oldest dropped first): every new look, weapon type or class
+## tier makes one, and a phone shouldn't keep every look tried in the creator for the session.
+const MAX_HERO_PICS := 48
+static var _pl_keys: Array[String] = []
+
+## The PixelLab hero, cached by only what it draws: the look, the class outfit and the weapon
+## (armour has no look in 2.1, so changing it doesn't make a new picture).
+static func _hero_pl_cached(app: Dictionary, looks: Dictionary, back: bool) -> Dictionary:
+	var w: Dictionary = looks.get("Weapon", {})
+	var key := "pl%s|%s|%s|%s|%s|%s" % [back, str(app), str(looks.get("Class", {})), w.get("type", ""), w.get("glow", false), w.get("trim", "")]
+	if _cache.has(key):
+		return _cache[key]
+	var pl := _hero_pl(app, looks, back)
+	_cache[key] = pl
+	_pl_keys.append(key)
+	while _pl_keys.size() > MAX_HERO_PICS:
+		_cache.erase(_pl_keys.pop_front())
+	return pl
 
 ## The PixelLab hero (hero_art.gd): class outfit, hair, face and the weapon type, on the fixed frames.
 ## Laid out like the LPC hero (a 96x96 cell on the hero canvas), so battle and menus treat it the same.
@@ -454,15 +475,29 @@ static func chunky(src: Image, px: int) -> Image:
 			out.fill_rect(Rect2i(bx, by, px, px), Color.hex(bk))
 	return out
 
+## A hero's back picture for views that draw every frame (team in the fight and the room):
+## hero_looks() and the cache key are rebuilt at most every LOOK_REFRESH_MS per hero, not 60
+## times a second. Also keeps "back_key" (the look as a string) and "back_looks" on the hero.
+const LOOK_REFRESH_MS := 500
+static func hero_back_of(g: GameState) -> Dictionary:
+	var now := Time.get_ticks_msec()
+	if g.has_meta("back_art") and now - int(g.get_meta("back_art_ms", 0)) < LOOK_REFRESH_MS:
+		return g.get_meta("back_art")
+	var looks := g.hero_looks()
+	var art := hero_back(g.appearance, looks)
+	g.set_meta("back_art", art)
+	g.set_meta("back_art_ms", now)
+	g.set_meta("back_key", str(g.appearance) + str(looks))
+	g.set_meta("back_looks", looks)
+	return art
+
 ## The hero seen from behind (0.13 back-to-front fights): same dictionary as hero().
 static func hero_back(app: Dictionary, looks: Dictionary) -> Dictionary:
+	if HeroArt.available():
+		return _hero_pl_cached(app, looks, true)
 	var key := "back" + str(app) + str(looks)
 	if _cache.has(key):
 		return _cache[key]
-	if HeroArt.available():
-		var pl := _hero_pl(app, looks, true)
-		_cache[key] = pl
-		return pl
 	if not (USE_LPC and Lpc.available()):
 		return hero(app, looks)
 	var sp := Lpc.spec(app, looks)
@@ -548,29 +583,18 @@ static func portrait(app: Dictionary, looks := {}) -> ImageTexture:
 static func enemy_by_key(key: String) -> Dictionary:
 	if _cache.has("e_" + key):
 		return _cache["e_" + key]
-	# Monsters drawn from the Dungeon Crawl tiles (0.13) win over the older LPC-built ones
-	if USE_LPC and Lpc.available() and Lpc.MONSTERS.has(key) and not ResourceLoader.exists("res://art/enemies/%s.png" % key):
-		var built := Lpc.build(Lpc.monster_spec(key))
-		var still: Image = built["still"]
-		var used := still.get_used_rect()
-		var lo := {"tex": ImageTexture.create_from_image(still), "white": ImageTexture.create_from_image(_silhouette(still)),
-			"size": Vector2(still.get_size()), "foot": float(used.end.y - 1), "lpc": built["anims"],
-			"attack": Lpc.MONSTERS[key].get("attack", "slash"), "lpc_boss": Lpc.MONSTERS[key].get("boss", false)}
-		_cache["e_" + key] = lo
-		return lo
 	var img := _img("enemies/%s.png" % key)
 	var out := {}
 	if img:
 		# The feet are the lowest solid row of the picture itself (art_info.gd lists the same
 		# numbers for tools; measuring here means new art can never get a stale value)
 		var used := img.get_used_rect()
-		# Redrawn monsters (art_info "hd": 1) are already in the dark palette: a light grade keeps
-		# them brighter than the hall behind them, so they read on a phone
+		# Redrawn monsters (art_info "hd": 1) are already in the dark palette: no second darkening
+		# pass (fable r1), only the rim light, so they stay brighter than the hall behind them
 		var native: bool = int(ArtInfo.DATA["enemies"].get(key, {}).get("hd", 2)) == 1
 		var graded := DarkGrade.image(img, DarkGrade.NATIVE, true, DarkGrade.SPRITE) if native else DarkGrade.image(img)
-		out = {"tex": ImageTexture.create_from_image(graded), "white": ImageTexture.create_from_image(_silhouette(img)),
-			"size": Vector2(img.get_size()), "foot": float(used.end.y - 1 if used.size.y > 0 else img.get_height() - 1),
-			"grid": 1 if native else 2}
+		out = {"tex": ImageTexture.create_from_image(graded), "img": graded, "white": ImageTexture.create_from_image(_silhouette(img)),
+			"size": Vector2(img.get_size()), "foot": float(used.end.y - 1 if used.size.y > 0 else img.get_height() - 1)}
 	_cache["e_" + key] = out
 	return out
 
@@ -619,13 +643,8 @@ static func pose_image(src: Image, waist: int, top: int, lean: int, squash: int,
 		var ny := y + squash
 		if ny < 0 or ny >= h:
 			continue
-		for x in w:
-			var c := src.get_pixel(x, y)
-			if c.a <= 0.0:
-				continue
-			var nx := x + dx
-			if nx >= 0 and nx < w:
-				out.set_pixel(nx, ny, c)
+		# The whole row moves by the same dx: one blit (clear pixels leave what is under them)
+		out.blend_rect(src, Rect2i(0, y, w, 1), Vector2i(dx, ny))
 	return out
 
 ## All poses for a picture: name -> {"tex", "white", "dx" (how far the hand row moved), "dy"}.
@@ -637,6 +656,7 @@ static func poses_for(key: String, src: Image, facing: int, hand_row := -1) -> D
 	var top := used.position.y
 	var bottom := used.end.y
 	var waist := top + int((bottom - top) * 0.62)
+	var white_src := _silhouette(src)  # once; each pose shifts its rows like the picture's
 	var out := {}
 	for p in POSES:
 		var d: Dictionary = POSES[p]
@@ -646,7 +666,7 @@ static func poses_for(key: String, src: Image, facing: int, hand_row := -1) -> D
 		var hdx := 0
 		if hand_row >= top and hand_row < waist:
 			hdx = int(round(lean * float(waist - hand_row) / maxf(1.0, waist - top))) * facing
-		out[p] = {"tex": ImageTexture.create_from_image(img), "white": ImageTexture.create_from_image(_silhouette(img)),
+		out[p] = {"tex": ImageTexture.create_from_image(img), "white": ImageTexture.create_from_image(pose_image(white_src, waist, top, lean, squash, facing)),
 			"dx": hdx, "dy": squash if hand_row < waist else 0}
 	_cache["pose_" + key] = out
 	return out

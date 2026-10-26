@@ -16,11 +16,12 @@ basilisk claude/art_test/monsters/raw/z3_10.png
 blightcap claude/art_test/monsters/raw/z5_8.png
 bog_body claude/art_test/monsters/raw/z1_5.png
 boggart claude/art_test/monsters/raw/z1_11.png
-bogle claude/art_test/monsters/raw/z6_7.png
+bogle claude/art_test/monsters/raw/r1_bogle.png
 boss_archon_valeth claude/art_test/monsters/raw/bossE_0.png
 boss_azgaroth claude/art_test/monsters/raw/bossE_3.png
 boss_black_annis claude/art_test/monsters/raw/bossA_1.png
 boss_charybdis claude/art_test/monsters/raw/bossB_1.png
+boss_demon_ancestor claude/art_test/monsters/raw/r1_boss_demon_ancestor.png
 boss_duke_malgrath claude/art_test/monsters/raw/bossE_2.png
 boss_dullahan claude/art_test/monsters/raw/bossA_3.png
 boss_echidna claude/art_test/monsters/raw/bossC_0.png
@@ -34,6 +35,7 @@ boss_jester_of_thorns claude/art_test/monsters/raw/bossD_0.png
 boss_scylla claude/art_test/monsters/raw/bossB_0.png
 boss_seraphiel claude/art_test/monsters/raw/bossE_1.png
 boss_surtr claude/art_test/monsters/raw/bossB_3.png
+boss_sword_spirit claude/art_test/monsters/raw/r1_boss_sword_spirit.png
 boss_typhon claude/art_test/monsters/raw/bossC_1.png
 boss_weeping_warden claude/art_test/monsters/raw/bossC_2.png
 boss_withered_queen claude/art_test/monsters/raw/bossC_3.png
@@ -55,7 +57,7 @@ chainwraith claude/art_test/monsters/raw/z9_2.png
 changeling claude/art_test/monsters/raw/z6_4.png
 cherub claude/art_test/monsters/raw/z8_10.png
 cherufe claude/art_test/monsters/raw/z3_6.png
-chimera claude/art_test/monsters/raw/z3_2.png
+chimera claude/art_test/monsters/raw/r2_chimera.png
 choir_sentinel claude/art_test/monsters/raw/z8_0.png
 cinder_miner claude/art_test/monsters/raw/z7_3.png
 cyclops claude/art_test/monsters/raw/z3_12.png
@@ -66,7 +68,7 @@ executor claude/art_test/monsters/raw/z8_7.png
 eye_of_judgement claude/art_test/monsters/raw/z8_3.png
 firebird claude/art_test/monsters/raw/z3_8.png
 forge_sentry claude/art_test/monsters/raw/z7_0.png
-garmr claude/art_test/monsters/raw/z1_10.png
+garmr claude/art_test/monsters/raw/r1_garmr.png
 gashadokuro claude/art_test/monsters/raw/z1_7.png
 gem_crawler claude/art_test/monsters/raw/z7_8.png
 ghoul claude/art_test/monsters/raw/pack1_0.png
@@ -80,7 +82,7 @@ gullinbursti claude/art_test/monsters/raw/z3_4.png
 halo_wisp claude/art_test/monsters/raw/z8_14.png
 heartrot_treant claude/art_test/monsters/raw/z5_9.png
 hellborn_duke claude/art_test/monsters/raw/z9_9.png
-hellhound claude/art_test/monsters/raw/z3_1.png
+hellhound claude/art_test/monsters/raw/r2_hellhound.png
 hellmaw claude/art_test/monsters/raw/z9_1.png
 hobyah claude/art_test/monsters/raw/z0_5.png
 hollow_sentinel claude/art_test/monsters/raw/z5_0.png

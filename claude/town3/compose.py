@@ -149,21 +149,62 @@ GROUND_IMG = []   # the ground before any sprite: dusk light pools only land whe
 
 
 def outside(img, tiles):
-    """Three cells of dusk ground outside the walls, darker each cell out (hard steps into the
-    void), and the road from the sealed gate running off into the fog."""
-    for s in range(-6, 2 * N + 6):
-        for i in range(-3, N + 3):
+    """Daylight country outside the walls over the whole picture (so a panned phone view never
+    shows void): grass a little darker than the lawns inside, light fog only far out, and the road
+    from the sealed gate running off as a rutted dirt track. Dusk comes from the look shader."""
+    fog = Image.new("RGB", (32, 17), (150, 160, 170))
+    memo = {}
+    for s in range(-40, 2 * N + 60):
+        for i in range(-50, N + 50):
             j = s - i
-            if not -3 <= j < N + 3 or (0 <= i < N and 0 <= j < N):
+            if 0 <= i < N and 0 <= j < N:
+                continue
+            x, y = at(i, j)
+            if x < -16 or x > W + 16 or y < -17 or y > H:
                 continue
             ring = max(-i, -j, i - N + 1, j - N + 1)
             road = 18 <= i <= 21 and j >= N
-            t = (tiles["cobble"] if road else tiles["grass"])[(i * 5 + j * 3) % 2]
-            rgb = ImageEnhance.Color(t.convert("RGB")).enhance(0.5)
-            rgb = ImageEnhance.Brightness(rgb).enhance((0.75, 0.5, 0.3)[ring - 1])
-            t = Image.merge("RGBA", (*rgb.split(), t.getchannel("A")))
-            x, y = at(i, j)
-            img.alpha_composite(t, (x - 16, y))
+            k = ("dirt" if road else "grass", (i * 5 + j * 3) % 2, min(ring, 14))
+            if k not in memo:
+                t = tiles[k[0]][k[1]]
+                rgb = ImageEnhance.Color(t.convert("RGB")).enhance(0.9)
+                rgb = ImageEnhance.Brightness(rgb).enhance(max(0.72, 0.85 - 0.01 * k[2]))
+                if k[2] >= 10:
+                    rgb = Image.blend(rgb, fog, min(0.22, 0.05 * (k[2] - 9)))
+                memo[k] = Image.merge("RGBA", (*rgb.split(), t.getchannel("A")))
+            img.alpha_composite(memo[k], (x - 16, y))
+    d = ImageDraw.Draw(img)
+    for ci in (19.25, 20.75):                 # two cart ruts down the road
+        a, b = at(ci, N + 0.3), at(ci, N + 9)
+        d.line([a, b], fill=(78, 58, 40, 255), width=1)
+        d.line([(a[0] + 1, a[1]), (b[0] + 1, b[1])], fill=(150, 120, 86, 255), width=1)
+
+
+def outside_trees(sprites):
+    """A daylight wood outside the walls: thick behind the north walls, sparse and far out in front
+    of the south walls (never hiding them); the gate road runs ~120 px before the trees close in."""
+    r = random.Random(31)
+    pool = (2, 3, 10, 11, 0, 1, 4)
+    for i in range(-14, N + 14):
+        for j in range(-14, N + 14):
+            if 0 <= i < N and 0 <= j < N:
+                continue
+            ring = max(-i, -j, i - N + 1, j - N + 1)
+            front = i >= N or j >= N
+            road = 16 <= i <= 23 and j >= N and (ring <= 7 or 18 <= i <= 21)
+            if (front and ring < 5) or ring < 2 or road or r.random() > (0.16 if front else 0.3):
+                continue
+            x, y = at(i + .5, j + .5)
+            if not (-40 < x < W + 40 and -20 < y < H + 60):
+                continue
+            n = r.choice(pool)
+            im = load(f"trees/t{n}.png")
+            rgb = ImageEnhance.Brightness(im.convert("RGB")).enhance(max(0.7, 0.88 - 0.012 * ring))
+            if ring >= 9:
+                rgb = Image.blend(rgb, Image.new("RGB", im.size, (150, 160, 170)), min(0.2, 0.04 * (ring - 8)))
+            im = Image.merge("RGBA", (*rgb.split(), im.getchannel("A")))
+            bb = im.getbbox()
+            put(sprites, im, (x + r.randint(-6, 6), y + 4), ((bb[0] + bb[2]) // 2, bb[3] - 1))
 
 
 def ripples(img, g):
@@ -317,6 +358,9 @@ def compose():
     shadows(img)
     GROUND_IMG[:] = [img.copy()]
     sprites = []
+    TAG[0] = "outside"
+    outside_trees(sprites)
+    TAG[0] = ""
     place_walls(sprites)
     place_lot(sprites, "plateau", *PLATEAU)
     place_lot(sprites, "bridge", *BRIDGE)
@@ -329,6 +373,10 @@ def compose():
     cache = {}
     def sheet(name, n):
         if (name, n) not in cache:
+            if name == "trees" and n >= 100:     # 100+: the same tree mirrored
+                im = sheet(name, n - 100).transpose(Image.FLIP_LEFT_RIGHT)
+                cache[(name, n)] = im
+                return im
             im = load("reeds.png" if name == "reeds" else f"folk/{n}.png" if name == "folk" else f"{name}/{'t' if name == 'trees' else 'p'}{n}.png")
             if name == "props32" and n in SMALL:   # clutter at half size: a barrel is half a walker
                 im = im.resize((16, 16), Image.NEAREST)
@@ -404,7 +452,7 @@ def dusk(img):
     gd2 = ImageDraw.Draw(glow)
     for k, f in ((3, .10), (2, .16), (1, .22)):   # the portal's light spills down the stairs and onto the lane (ground only)
         sx, sy = at(20, 8.4)
-        gd2.ellipse([sx - 30 * k, sy - 12 * k, sx + 30 * k, sy + 12 * k], fill=(int(70 * f * 2), int(180 * f * 2), int(230 * f * 2)))
+        gd2.ellipse([sx - 30 * k, sy - 12 * k, sx + 30 * k, sy + 12 * k], fill=(int(70 * f), int(180 * f), int(230 * f)))   # soft: the stairs stay stone
     same = None
     if GROUND_IMG:                     # light pools land on the visible ground only
         ground = GROUND_IMG[0].convert("RGB")

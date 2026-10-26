@@ -7,7 +7,7 @@ HW, HH = 16, 8
 W, H = N * 2 * HW + 80, N * 2 * HH + 160
 OX, OY = W // 2, 70
 COL = {"grass": "#3d5236", "plateau": "#6b6258", "grave": "#4a4a52", "yard": "#5a6a3c", "road": "#8a8172",
-       "square": "#a39782", "water": "#3b6c9a", "bridge": "#b5a890", "field": "#7a6a3a", "pen": "#6f7d45", "dirt": "#6e5a40", "path": "#8a8172", "garden": "#4f6a3a"}
+       "square": "#a39782", "water": "#3b6c9a", "bridge": "#b5a890", "field": "#7a6a3a", "pen": "#6f7d45", "dirt": "#6e5a40", "path": "#8a8172", "garden": "#4f6a3a", "planks": "#7a5a3a"}
 FONT = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 15)
 
 
