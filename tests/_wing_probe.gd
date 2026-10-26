@@ -8,9 +8,9 @@ func _initialize() -> void:
 	for bi in 2:
 		var app := {"body": ["masc", "fem"][bi], "race": "Fairy", "skin": Races.skins("Fairy")[0], "hair_color": 1}
 		var looks := {"Class": {"cls": "Warrior", "tier": 0}, "Weapon": {"type": "sword", "glow": false}}
-		var back: Dictionary = Sprites.hero_back(app, looks)["lpc"]
+		var back: Dictionary = Sprites.hero_back(app, looks)["anims"]
 		var fr: Array = back["combat_idle"]["img"] + back["slash"]["img"]
-		var row := [fr[0], fr[1], fr[4], Sprites.hero(app, looks)["lpc"]["combat_idle"]["img"][0]]
+		var row := [fr[0], fr[1], fr[4], Sprites.hero(app, looks)["anims"]["combat_idle"]["img"][0]]
 		for i in row.size():
 			sheet.blend_rect(row[i], Rect2i(0, 0, 96, 96), Vector2i((bi * 4 + i) * 96, 0))
 	sheet.resize(sheet.get_width() * 3, sheet.get_height() * 3, Image.INTERPOLATE_NEAREST)

@@ -10,6 +10,7 @@ extends RefCounted
 
 const DIR := "res://art/heroes/"
 const CELL := 96
+const CORE := 64   # the character's own frame inside the cell (portraits and the hero canvas centre on it)
 const IDLE := [0, 1]
 const ATTACK := [2, 3, 4, 5]
 const HIT := [6]
@@ -225,7 +226,7 @@ static func _finish(key: String, data: PackedByteArray, cells: Vector2i) -> Dict
 	_imgs.clear()  # the decoded layer sheets are only needed while building (the frames are cached)
 	return out
 
-## The frames as the battle's animation table (same shape as Lpc.build()["anims"]): every attack name
+## The frames as the battle's animation table (Sprites.hero()["anims"]): every attack name
 ## plays the one swing, "hurt" is the hit frame. "foot": the feet row inside a cell.
 static func anims(fr: Dictionary, back: bool) -> Dictionary:
 	var pick := func(ids: Array, fps: float) -> Dictionary:
@@ -334,3 +335,13 @@ static func meta_looks(meta: Dictionary) -> Dictionary:
 	if not looks.has("Class") and str(meta.get("class", "")) != "":
 		looks["Class"] = {"cls": str(meta["class"]), "tier": 0}
 	return looks
+
+## Which attack animation a weapon uses.
+static func attack_anim(weapon_type: String) -> String:
+	match weapon_type:
+		"bow":
+			return "shoot"
+		"spear", "staff":
+			return "thrust"
+		_:
+			return "slash"

@@ -19,16 +19,6 @@ func _build(c: VBoxContainer) -> void:
 		UI.section(c, group)
 		for s in CreditsData.in_group(group):
 			c.add_child(_entry(s))
-	UI.section(c, "Townsfolk parts, one by one", "Every artist behind the LPC parts the town's walkers are built from, with each part's licenses.")
-	var lpc := UI.rich(UI.FONT_CAPTION)
-	lpc.text = Credits.TEXT
-	lpc.visible = false
-	var tog := UI.button("Show the full LPC list", func(): pass)
-	tog.pressed.connect(func():
-		lpc.visible = not lpc.visible
-		tog.text = "Hide the LPC list" if lpc.visible else "Show the full LPC list")
-	c.add_child(tog)
-	c.add_child(lpc)
 
 func _entry(s: Dictionary) -> Control:
 	var card := UI.card(UI.BORDER)

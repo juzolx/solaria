@@ -167,8 +167,8 @@ var hero_art := {}       # from Sprites.hero()
 var hero_has_aura := false  # a God class's golden aura (set with hero_art, not looked up every frame)
 var hero_art_key := ""
 var swing := 0.0         # weapon swing: -1 wind-up, +1 strike
-var lpc_anim := "combat_idle"  # LPC heroes: the animation playing (lpc.gd)
-var lpc_t := 0.0
+var hero_anim := "combat_idle"  # the hero's animation playing (HeroArt frames)
+var hero_anim_t := 0.0
 var pet_lunge := 0.0
 var summon_lunge := 0.0   # 0.13+: the skeleton or wolf you called steps in to hit
 var summon_in := 0.0      # fades the summon in and out
@@ -189,8 +189,6 @@ var fx_sprites: Array = []   # sprite effects: {"name", "pos", "t", "scale", "fl
 static var _fx_tex := {}
 static var _fx_frames := {}
 const FX_FPS := 26.0
-var enemy_lpc_anim := "combat_idle"  # LPC monsters: the animation playing
-var enemy_lpc_t := 0.0
 var recoil := 0.0        # hero knocked back when hit
 var enemy_recoil := 0.0
 var hero_squash := 0.0   # A6: hit squash (see _squash)
@@ -645,19 +643,19 @@ func _fx(fx_name: String, pos: Vector2, scale_mult := 1.0, flip := false) -> voi
 const ELEMENT_FX := {"Fire": "fire", "Ice": "ice", "Lightning": "lightning", "Poison": "poison", "Holy": "holy",
 	"Dark": "shadow", "Shadow": "shadow", "Nature": "nature", "Arcane": "arcane", "Storm": "lightning"}
 
-## LPC heroes play a real animation (slash, thrust, cast, shoot).
-func _lpc_play(anim: String) -> void:
-	if hero_art.has("lpc") and (hero_art["lpc"] as Dictionary).has(anim):
-		lpc_anim = anim
-		lpc_t = 0.0
+## The hero plays a real animation (slash, thrust, cast, shoot).
+func _hero_play(anim: String) -> void:
+	if hero_art.has("anims") and (hero_art["anims"] as Dictionary).has(anim):
+		hero_anim = anim
+		hero_anim_t = 0.0
 
 ## The hit frame, unless a swing is still playing (getting hit never cuts an attack short).
-func _lpc_hurt() -> void:
-	if lpc_anim == "combat_idle":
-		_lpc_play("hurt")
+func _hero_hurt() -> void:
+	if hero_anim == "combat_idle":
+		_hero_play("hurt")
 
 func _hero_attack(e: Dictionary) -> void:
-	_lpc_play(Lpc.attack_anim(_weapon_type()))
+	_hero_play(HeroArt.attack_anim(_weapon_type()))
 	var ranged := _weapon_type() in ["bow", "staff"]
 	if ranged:
 		_pose_hero([["crouch", 0.08], ["follow", 0.16]])
@@ -707,12 +705,6 @@ func _hero_attack(e: Dictionary) -> void:
 		_float("x2", target + Vector2(40, -10), Color("#fbbf24"), 16)
 
 func _enemy_attack(e: Dictionary) -> void:
-	var eart := _enemy_art(state.enemy_is_boss)
-	if eart.has("lpc"):
-		var an: String = eart.get("attack", "slash")
-		if (eart["lpc"] as Dictionary).has(an):
-			enemy_lpc_anim = an
-			enemy_lpc_t = 0.0
 	_pose_enemy([["windup", 0.1], ["strike", 0.07], ["follow", 0.12]])
 	_later(0.08, func(): _pose_hero([["hit1", 0.07], ["hit2", 0.14]]))
 	var t := create_tween()
@@ -724,7 +716,7 @@ func _enemy_attack(e: Dictionary) -> void:
 	kb.tween_property(self, "recoil", 0.0, 0.22)
 	hero_flash = 1.0
 	create_tween().tween_property(self, "hero_flash", 0.0, 0.1)
-	_later(0.08, _lpc_hurt)  # 2.1 heroes have a hit frame
+	_later(0.08, _hero_hurt)  # 2.1 heroes have a hit frame
 	shake = maxf(shake, 4.0)
 	_squash("hero_squash")
 	_burst(_hero_center(), Color("#f87171"), 8, 200.0)
@@ -735,7 +727,7 @@ func _ability_fx(e: Dictionary) -> void:
 	var c := Color(e.get("color", "#ffffff"))
 	_sfx("ability", randf_range(0.95, 1.05))
 	_pose_hero([["crouch", 0.1], ["cast", 0.18], ["strike", 0.06], ["follow", 0.14]])
-	_lpc_play("spellcast" if _weapon_type() in ["staff", "", "orb", "tome"] else Lpc.attack_anim(_weapon_type()))
+	_hero_play("spellcast" if _weapon_type() in ["staff", "", "orb", "tome"] else HeroArt.attack_anim(_weapon_type()))
 	cast_color = c
 	cast_glow = 1.0
 	create_tween().tween_property(self, "cast_glow", 0.0, 0.6)
@@ -847,7 +839,7 @@ func _flash_col(v: float, red: bool, a := 1.0) -> Color:
 	return Color(c, a if v > 0.55 else 0.0)
 
 ## A6: a quick squash on whoever got hit ("hero_squash" / "enemy_squash"). Pose-frame
-## art squashes by whole pixel rows (Sprites.POSES hit1); frame-animated (LPC) art
+## art squashes by whole pixel rows (Sprites.POSES hit1); frame-animated (HeroArt) art
 ## squashes its rect here, so any sprite gets it. Off with Reduce motion.
 func _squash(prop: String, amount := 1.0) -> void:
 	if not _motion_ok():
@@ -1200,7 +1192,7 @@ func _process(delta: float) -> void:
 	shake = move_toward(shake * exp(-delta * 6.0), 0.0, delta * 8.0)  # quick fade with a short tail
 	for key in bar_ghost:  # R6: no keys() copy every frame
 		bar_ghost[key] = move_toward(float(bar_ghost[key]), float(bar_target.get(key, 0.0)), delta * 0.8)
-	lpc_t += delta
+	hero_anim_t += delta
 	if chest_t >= 0.0:
 		chest_t += delta
 		if chest_t > 2.2:
@@ -1223,17 +1215,11 @@ func _process(delta: float) -> void:
 	for i in range(fx_sprites.size() - 1, -1, -1):
 		if float(fx_sprites[i]["t"]) * FX_FPS >= float(_fx_frames.get(fx_sprites[i]["name"], 1)):
 			fx_sprites.remove_at(i)
-	enemy_lpc_t += delta
-	if enemy_lpc_anim != "combat_idle":
-		var ea: Dictionary = _enemy_art(state.enemy_is_boss).get("lpc", {}).get(enemy_lpc_anim, {}) if state != null else {}
-		if ea.is_empty() or enemy_lpc_t >= float((ea["tex"] as Array).size()) / float(ea["fps"]):
-			enemy_lpc_anim = "combat_idle"
-			enemy_lpc_t = 0.0
-	if lpc_anim != "combat_idle" and hero_art.has("lpc"):
-		var la: Dictionary = hero_art["lpc"].get(lpc_anim, {})
-		if la.is_empty() or lpc_t >= float((la["tex"] as Array).size()) / float(la["fps"]):
-			lpc_anim = "combat_idle"
-			lpc_t = 0.0
+	if hero_anim != "combat_idle" and hero_art.has("anims"):
+		var la: Dictionary = hero_art["anims"].get(hero_anim, {})
+		if la.is_empty() or hero_anim_t >= float((la["tex"] as Array).size()) / float(la["fps"]):
+			hero_anim = "combat_idle"
+			hero_anim_t = 0.0
 	var hs := _step_pose(hero_seq, hero_pose, hero_pose_t, delta, 0.0)
 	hero_seq = hs[0]
 	hero_pose = hs[1]
@@ -1372,16 +1358,16 @@ func _draw_members() -> void:
 		var body_r := Rect2(c.position + Vector2(8, 12) * Sprites.HD * u, Vector2(32, 32) * Sprites.HD * u)
 		draw_ellipse_shadow(body_r)
 		var fx0: Dictionary = party_fx.get(i, {})
-		if art.has("lpc"):
-			# Seen from behind, like the leader: a real LPC frame (kneeling = faded)
-			var anims: Dictionary = art["lpc"]
+		if art.has("anims"):
+			# Seen from behind, like the leader: a real animation frame (kneeling = faded)
+			var anims: Dictionary = art["anims"]
 			var striking := float(fx0.get("lunge", 0.0)) > 0.3
 			var an: Dictionary = anims.get("slash" if striking and anims.has("slash") else "combat_idle", {})
 			if not an.is_empty():
 				var n: int = (an["tex"] as Array).size()
 				var fi := (int(bob * float(an["fps"]) + i * 3) % n) if not striking else mini(n - 1, int((1.0 - float(fx0.get("lunge", 0.0))) * n))
 				var sz: int = an["size"]
-				var off := Vector2(Sprites.BODY_OFFSET) - Vector2((sz - Lpc.CORE) / 2, (sz - Lpc.CORE) / 2)
+				var off := Vector2(Sprites.BODY_OFFSET) - Vector2((sz - HeroArt.CORE) / 2, (sz - HeroArt.CORE) / 2)
 				var r := Rect2(c.position + off * u, Vector2(sz, sz) * u)
 				draw_texture_rect(an["white"][fi], Rect2(r.position + Vector2(0, -u), r.size), false, Color(_rim_color(), 0.42 * a))
 				draw_texture_rect(an["tex"][fi], r, false, Color(1, 1, 1, a))
@@ -1480,9 +1466,8 @@ func _rect_for(art: Dictionary, boss: bool, _scale_mult: float) -> Rect2:
 ## Most screen pixels per art pixel the stage width allows: commons keep to ~56% of
 ## the width, bosses may reach the edges (92%) and Calamities fill the stage (96%), so
 ## all of them stay at the hero's 3x on a phone.
-## (LPC frames are padded for big weapon swings, so measure the ~48-pixel body instead)
 func _width_cap(art: Dictionary, boss: bool, sc: float) -> float:
-	var span: float = Lpc.CORE * 0.75 if art.has("lpc") else (art["size"] as Vector2).x
+	var span: float = (art["size"] as Vector2).x
 	var share := 0.96 if state.enemy_calamity > 0 else (0.92 if boss else 0.56)
 	return floorf(size.x * share * sc / maxf(1.0, span))
 
@@ -1582,25 +1567,10 @@ func _draw() -> void:
 		draw_ellipse_shadow(er)
 		# Pose frames (breathing, attacking, getting hit) are made from whole pixels
 		var local := er
-		if art.has("lpc"):
-			# LPC monsters play real frames (bigger frames for weapon swings are centered on the body)
-			var anims: Dictionary = art["lpc"]
-			var an: Dictionary = anims.get(enemy_lpc_anim, anims.get("combat_idle", {}))
-			if not an.is_empty():
-				var n := (an["tex"] as Array).size()
-				var fi := int(enemy_lpc_t * float(an["fps"]))
-				fi = fi % n if enemy_lpc_anim == "combat_idle" else mini(fi, n - 1)
-				etex = an["tex"][fi]
-				ewhite = an["white"][fi]
-				var fs := float(an["size"])
-				var uu := er.size.x / (art["size"] as Vector2).x
-				local = Rect2(er.position - Vector2(fs - (art["size"] as Vector2).x, fs - (art["size"] as Vector2).y) * 0.5 * uu, Vector2(fs, fs) * uu)
-				local = squashed(local, enemy_squash)
-		else:
-			var epose: Dictionary = _enemy_poses(art).get(enemy_pose, {})
-			if not epose.is_empty():
-				etex = epose["tex"]
-				ewhite = epose["white"]
+		var epose: Dictionary = _enemy_poses(art).get(enemy_pose, {})
+		if not epose.is_empty():
+			etex = epose["tex"]
+			ewhite = epose["white"]
 		etex = Variants.tex(etex, state.enemy_variant)
 		if state.enemy_calamity <= 0:
 			etex = SpriteLight.lit(etex, clampi(GameData.zone_index(state.floor_num), 0, 9))
@@ -1872,8 +1842,8 @@ func _draw_hero() -> void:
 		var piv: Vector2 = hero_art["pivot"]
 		draw_texture_rect(hero_art["weapon_white"], Rect2(-piv - Vector2(2, 2), wtex.get_size() + Vector2(4, 4)), false, Color(glow, pulse))
 		draw_set_transform(_off)
-	if hero_art.has("lpc"):
-		_draw_lpc_hero(c, u, a, glow)
+	if hero_art.has("anims"):
+		_draw_anim_hero(c, u, a, glow)
 		return
 	var poses := _hero_poses()
 	var pose: Dictionary = poses.get(hero_pose, {})
@@ -1940,18 +1910,18 @@ func _draw_pet() -> void:
 	var y := _team_ground() - (Pets.foot(Pets.companion_key(state)) + 1) * pu - pet_lunge * size.y * 0.1
 	draw_texture_rect(tex, Rect2(_snap(Vector2(x, y)), Vector2(s, s)), false, Color(1, 1, 1, hero_alpha))
 
-## An LPC hero: the current animation frame, with rim light, weapon glow and hit flash.
-func _draw_lpc_hero(c: Rect2, u: float, a: float, glow: Color) -> void:
-	var anims: Dictionary = hero_art["lpc"]
-	var an: Dictionary = anims.get(lpc_anim, anims.get("combat_idle", {}))
+## A frame-animated hero: the current animation frame, with rim light, weapon glow and hit flash.
+func _draw_anim_hero(c: Rect2, u: float, a: float, glow: Color) -> void:
+	var anims: Dictionary = hero_art["anims"]
+	var an: Dictionary = anims.get(hero_anim, anims.get("combat_idle", {}))
 	if an.is_empty():
 		return
 	var tex: Array = an["tex"]
 	var n := tex.size()
-	var fi := int(lpc_t * float(an["fps"]))
-	fi = fi % n if lpc_anim == "combat_idle" else mini(fi, n - 1)
+	var fi := int(hero_anim_t * float(an["fps"]))
+	fi = fi % n if hero_anim == "combat_idle" else mini(fi, n - 1)
 	var s: int = an["size"]
-	var off := Vector2(Sprites.BODY_OFFSET) - Vector2((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2)
+	var off := Vector2(Sprites.BODY_OFFSET) - Vector2((s - HeroArt.CORE) / 2, (s - HeroArt.CORE) / 2)
 	var r := squashed(Rect2(c.position + off * u, Vector2(s, s) * u), hero_squash)
 	var white: Texture2D = an["white"][fi]
 	if glow.a > 0.0:
