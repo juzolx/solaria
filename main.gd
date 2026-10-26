@@ -876,6 +876,7 @@ func _group(title: String) -> TabContainer:
 	var t := TabContainer.new()
 	t.name = title
 	t.theme_type_variation = "SubTabs"
+	t.get_tab_bar().custom_minimum_size.y = 48  # a comfortable tap target (fable monsters r3: it was 37)
 	t.tab_changed.connect(func(_i): sfx.play("click"); refresh(); UI.fade_in(t.get_current_tab_control()))
 	tabs.add_child(t)
 	return t

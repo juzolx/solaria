@@ -23,6 +23,7 @@ var strip: VBoxContainer  # 2.1 G4: this region's Bestiary progress and its next
 var strip_key := ""
 var selected := ""
 var shown := ""
+var shown_kills := -1
 
 func setup(m) -> void:
 	main = m
@@ -71,10 +72,22 @@ func setup(m) -> void:
 	detail.add_child(text)
 
 func refresh() -> void:
-	var key := "%d|%d" % [codex.stat("kills"), codex.bestiary.size()]
+	# fable r3: a kill only changes counts, so those rows are relabelled in place; the list is
+	# rebuilt (icons and all) only when a monster is met
+	var key := str(codex.bestiary.size())
 	if key == shown:
+		var kills := int(codex.stat("kills"))
+		if kills != shown_kills:
+			shown_kills = kills
+			for i in keys.size():
+				if keys[i] != "":
+					list.set_item_text(i, _label(keys[i]))
+			_show()
 		return
 	shown = key
+	shown_kills = int(codex.stat("kills"))
+	# Phones: a narrower list ("Jack-in-Irons (12)" still fits) leaves the plate room for 2x bosses
+	list.custom_minimum_size.x = 150.0 if bool(main.is_tall) else 200.0
 	list.clear()
 	keys.clear()
 	# Icons are a head crop shown 1:1 on screen (fable r1: whole 76 px monsters squeezed to 22 px were blobs)
@@ -96,10 +109,7 @@ func refresh() -> void:
 		for n in ids:
 			var met := codex.seen(n)
 			var boss: bool = Monsters.info(n).get("boss", false)
-			var label := ("  %s%s  (%d)" % ["[Boss] " if boss else "", Monsters.name_of(n), codex.kills(n)]) if met else "  ???"
-			if met and bool(codex.bestiary[n].get("sig", false)):
-				label += "  *"
-			var i := list.add_item(label)
+			var i := list.add_item(_label(n))
 			var head := _head(_art_key(n, GameData.monster_home(n)), met)
 			if head != null:
 				list.set_item_icon(i, head)
@@ -117,6 +127,16 @@ func refresh() -> void:
 				selected = k
 				break
 	_show()
+
+## A list row: "[Boss] Name  (kills)", a * once its Signature is found, "???" until met.
+func _label(n: String) -> String:
+	if not codex.seen(n):
+		return "  ???"
+	var boss: bool = Monsters.info(n).get("boss", false)
+	var label := "  %s%s  (%d)" % ["[Boss] " if boss else "", Monsters.name_of(n), codex.kills(n)]
+	if bool(codex.bestiary[n].get("sig", false)):
+		label += "  *"
+	return label
 
 func _show() -> void:
 	_strip()
@@ -261,7 +281,7 @@ func _place_pic() -> void:
 	var room := (backdrop.size - Vector2(12, 12)) * sc
 	var k := maxf(1.0, floorf(minf(room.x / pic_size.x, room.y / pic_size.y)))
 	# Commons never outsize the bosses (2x on a phone): one scale for the whole Bestiary
-	k = minf(k, float(maxi(1, ArtStyle.unit(sc) - 1)))
+	k = minf(k, float(maxi(2, ArtStyle.unit(sc) - 1)))
 	var sz := pic_size * k / sc
 	var pos := Vector2((backdrop.size.x - sz.x) * 0.5, backdrop.size.y - 8.0 - sz.y)
 	# snap the top-left corner onto the screen's pixel grid

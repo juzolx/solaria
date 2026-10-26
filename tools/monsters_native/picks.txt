@@ -82,7 +82,7 @@ gullinbursti claude/art_test/monsters/raw/z3_4.png
 halo_wisp claude/art_test/monsters/raw/z8_14.png
 heartrot_treant claude/art_test/monsters/raw/z5_9.png
 hellborn_duke claude/art_test/monsters/raw/z9_9.png
-hellhound claude/art_test/monsters/raw/r2_hellhound.png
+hellhound claude/art_test/monsters/raw/r3_hellhound_hand.png
 hellmaw claude/art_test/monsters/raw/z9_1.png
 hobyah claude/art_test/monsters/raw/z0_5.png
 hollow_sentinel claude/art_test/monsters/raw/z5_0.png
