@@ -620,10 +620,11 @@ func _show_recap() -> void:
 	if is_instance_valid(recap_panel):
 		var top := minf(40.0, maxf(4.0, battle.size.y * 0.06))
 		recap_panel.position = Vector2((battle.size.x - recap_panel.size.x) / 2.0, top)
-		var p := recap_panel
-		get_tree().create_timer(14.0).timeout.connect(func():
-			if is_instance_valid(p):
-				p.create_tween().tween_property(p, "modulate:a", 0.0, 0.5).finished.connect(p.queue_free))
+		# the fade lives on the card, so OK before 14 s leaves no timer pointing at a freed card
+		var fade := recap_panel.create_tween()
+		fade.tween_interval(14.0)
+		fade.tween_property(recap_panel, "modulate:a", 0.0, 0.5)
+		fade.tween_callback(recap_panel.queue_free)
 
 ## Change your look later (race stays).
 func show_look_editor() -> void:

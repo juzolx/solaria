@@ -98,10 +98,15 @@ func close_popups(main: Node) -> void:
 
 ## Fable r3 #6: what a new player sees in the first session, one picture each.
 func _first_session(main) -> void:
+	# the game never draws the fight under the title (it reloads the scene); both drawing at
+	# once pass the shared 3D room back and forth every frame and crash the engine
+	main.ui_root.visible = false
 	var ts := TitleScreen.new()
 	ts.show_for(main)
 	await shot("title")
 	ts.queue_free()
+	await process_frame
+	main.ui_root.visible = true
 	await process_frame
 	Onboarding.show_welcome(main)
 	await shot("welcome")
@@ -132,8 +137,10 @@ func _first_session(main) -> void:
 	GuideBook.open_book(main, "")
 	await shot("guide_book")
 	await close_popups(main)
-	Moments.play(main, "boss", "Cave Troll", "Floor 25 is clear", UI.GOLD)
+	var mo := Moments.play(main, "boss", "Cave Troll", "Floor 25 is clear", UI.GOLD)
 	await shot("moment")
+	mo.close()   # its own fade (freeing it mid-tween leaves a lambda pointing at a freed label)
+	await create_timer(0.5).timeout
 	await close_popups(main)
 
 func _initialize() -> void:

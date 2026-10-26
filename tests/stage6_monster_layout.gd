@@ -114,7 +114,7 @@ func _check_fight(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 		# feet on or above the team line; only a Calamity too tall for that may go lower, behind the hero
 		var floor_y: float = bv.size.y if st.enemy_calamity > 0 else bv._team_ground()
 		check(feet_y <= floor_y + 0.5, "%s: feet %.0f under %.0f" % [tag, feet_y, floor_y])
-		if feet_y > bv._team_ground() + 0.5:
+		if feet_y > bv._team_ground() + 1.0 / sc:   # one screen pixel: _snap rounds to whole screen px (interface r3: 0.54 over on a 618 px stage)
 			check(er.position.y <= bv._boss_bar().end.y + bv.BOSS_NAME + 0.5, "%s: below the team line with room left above" % tag)
 		var top_min: float = bv._boss_bar().end.y + (bv.CALAMITY_TUCK if st.enemy_calamity > 0 else bv.BOSS_NAME)
 		check(er.position.y >= top_min - 0.5, "%s: top %.0f over the boss bar and name" % [tag, er.position.y])

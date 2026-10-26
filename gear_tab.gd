@@ -122,7 +122,7 @@ func setup(m) -> void:
 		pv.add_child(vl)
 		pills[k] = vl
 
-	stats_label = UI.label("", UI.FONT_BODY, UI.GOLD)   # one line shows; the whole list is a tap away
+	stats_label = UI.label("", UI.FONT_CAPTION, UI.GOLD)   # one caption line (the SE has 3 px to spare); the whole list is a tap away
 	stats_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	stats_label.clip_text = true
 	stats_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
