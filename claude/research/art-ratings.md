@@ -104,3 +104,5 @@ Every rating Juzo gives goes here, so all sessions learn what he thinks is reall
 - Oct 26: fights: Juzo prefers the old Surtr look (boss across from the hero, "facing off", clearly standing) over the round-5 2x boss that fills the stage. Merge of monsters r5 held; asking whether it applies to all fights.
 
 - Oct 26: dungeon grounding fix (mossy Hushwood rooms, door frames no longer drawn over props): Juzo likes it, "didn't overlap the same anymore".
+
+- Oct 26: fights: Juzo wants the face-off look for all fights ("more realistic, like they are guarding the door"): monster on the floor across from the hero, in front of the doors, no overlap.
