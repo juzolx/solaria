@@ -28,6 +28,9 @@ const MONSTER_SIZE := Vector2i(68, 68)
 const TALL_SIZE := Vector2i(68, 132)
 ## Redrawn monsters (art_info "hd": 1): native pixels, any size up to this (Calamities up to ~160 px)
 const NATIVE_MAX := Vector2i(168, 168)
+## A common's widest share of the fight stage (battle_view._width_cap; stage6_art_rules checks
+## every common keeps the hero's scale inside it).
+const COMMON_SHARE := 0.6
 ## ...with at most this many colours each (outline included)
 const NATIVE_COLORS := 24
 ## Dungeon props and consumable icons: 32x32 files, 1x art (Dungeon Crawl tiles).
