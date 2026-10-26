@@ -1438,7 +1438,7 @@ func _draw_members() -> void:
 				draw_texture_rect(an["tex"][fi], r, false, Color(1, 1, 1, a))
 				if float(fx0.get("flash", 0.0)) > 0.0:
 					draw_texture_rect(an["white"][fi], r, false, _flash_col(float(fx0["flash"]), true))
-			_member_plate(m, g, c, u)
+			_member_plate(m, g, _member_bar(i))
 			continue
 		var poses := Sprites.poses_for("m" + str(String(g.get_meta("back_key", "")).hash()), art["body_img"], 1, int(art["hand"].y))
 		var fx: Dictionary = party_fx.get(i, {})
@@ -1453,18 +1453,37 @@ func _draw_members() -> void:
 			draw_set_transform(_off + hand, ang, Vector2(u, u))
 			draw_texture(art["weapon"], -(art["pivot"] as Vector2), Color(1, 1, 1, a))
 			draw_set_transform(_off)
-		_member_plate(m, g, c, u)
+		_member_plate(m, g, _member_bar(i))
+
+## Where a companion's health bar sits: as wide as their body, just over their head. The
+## animated heroes' frames are 1x (128 px, a 32 px body at their centre, the head 37 rows
+## down); the older posed art is HD with the body at BODY_OFFSET (pets r5: the 1x frames were
+## measured as HD, so the bars ran across the whole room).
+func _member_bar(i: int) -> Rect2:
+	var c := _member_canvas(i)
+	var u := c.size.x / Sprites.CANVAS
+	var art := Sprites.hero_back_of(_party_members()[i].hero)
+	if art.has("anims"):
+		var sz := 128.0
+		var an: Dictionary = (art["anims"] as Dictionary).get("combat_idle", {})
+		if not an.is_empty():
+			sz = float(an["size"])
+		var top := c.position.y + (float(Sprites.BODY_OFFSET.y) - (sz - HeroArt.CORE) / 2.0 + 37.0) * u
+		var mid := c.position.x + (float(Sprites.BODY_OFFSET.x) - (sz - HeroArt.CORE) / 2.0 + sz / 2.0) * u
+		return Rect2(mid - 16.0 * u, top - 10.0, 32.0 * u, 5.0)
+	return Rect2(c.position + Vector2(8.0, 8.0) * Sprites.HD * u, Vector2(32.0 * Sprites.HD * u, 5.0))
 
 ## A companion's small health bar and name over their head.
-func _member_plate(m, g: GameState, c: Rect2, u: float) -> void:
-	if true:
-		var bw := 32.0 * Sprites.HD * u
-		var bx := c.position.x + 8.0 * Sprites.HD * u
-		var by := c.position.y + 8.0 * Sprites.HD * u
-		draw_rect(Rect2(bx, by, bw, 5), Color(0.03, 0.03, 0.05, 0.85))
-		draw_rect(Rect2(bx + 1, by + 1, (bw - 2) * clampf(float(m.hp) / maxf(1.0, m.max_hp()), 0.0, 1.0), 3), Color("#22c55e") if not m.knocked_out else Color("#64748b"))
-		var font := UI.game_font()   # interface pass: the game font everywhere
-		_outlined(font, Vector2(bx - 30, by - 4), _fit_text(font, m.name, NAME_FS, bw + 60), HORIZONTAL_ALIGNMENT_CENTER, bw + 60, NAME_FS, Color(g.class_info().get("color", "#ffffff")).lightened(0.4))
+func _member_plate(m, g: GameState, b: Rect2) -> void:
+	draw_rect(b, Color(0.03, 0.03, 0.05, 0.85))
+	draw_rect(Rect2(b.position.x + 1, b.position.y + 1, (b.size.x - 2) * clampf(float(m.hp) / maxf(1.0, m.max_hp()), 0.0, 1.0), 3), Color("#22c55e") if not m.knocked_out else Color("#64748b"))
+	var font := UI.game_font()   # interface pass: the game font everywhere
+	# knocked out: the plate says DOWN in red in place of the name (the face-off has no team strip)
+	var col := Color("#f87171") if m.knocked_out else Color(g.class_info().get("color", "#ffffff")).lightened(0.4)
+	_outlined(font, Vector2(b.position.x - 30, b.position.y - 4), _fit_text(font, member_label(m), NAME_FS, b.size.x + 60), HORIZONTAL_ALIGNMENT_CENTER, b.size.x + 60, NAME_FS, col)
+
+static func member_label(m) -> String:
+	return "DOWN" if m.knocked_out else String(m.name)
 
 ## The visible body part of the hero (for bars, effects and centering).
 func _hero_rect() -> Rect2:
@@ -1610,12 +1629,12 @@ func _face_visible(h: float, seam: float, top_min: float) -> float:
 ## always, so chips coming and going never move it.
 const BOSS_GAP := 64.0   # BOSS_NAME + CHIP_ROW + 10
 const BOSS_NAME := 26.0   # the plate box ends 24 px under the bar (_draw_plate)
-## Where the hall's floor meets its far wall (HallsScene's projection: horizon 0.40 h, focal
-## length 0.62 w, eye 1.5 over the floor, far wall at D), a little in front of it.
+## Where the hall's floor meets its far wall (HallsScene.floor_y at the far wall, the row the
+## 3D camera draws), a little in front of it.
 func _floor_line() -> float:
 	if state != null and (state.in_town or state.trial_active):
 		return _ground()
-	return size.y * 0.40 + size.x * 0.62 * -HallsScene.FLOOR_Y / HallsScene.D + 8.0
+	return HallsScene.floor_y(size, HallsScene.D, HallsScene.screen_scale(self)) + 8.0
 
 ## Where the wind-up "!" stands (its centre x, its baseline): right of the boss bar on the boss
 ## stage, else just over its plate's right end.
@@ -2759,33 +2778,66 @@ func _draw_team_strip(font: Font) -> void:
 	var rows: Array = [[state, state.hero_hp, state.get_max_hp(), state.leader_down, "you"]]
 	for m in state.party.members:
 		rows.append([m.hero, m.hp, m.max_hp(), m.knocked_out, "m%d" % m.slot])
-	var x := 6.0
-	var y := 26.0
-	var cw := minf(132.0, (size.x - 12.0) / rows.size() - 4.0)
-	for r in rows:
+	var boxes := _team_strip_rects(rows.size())
+	for ri in (0 if _boss_stage() else rows.size()):
+		var r: Array = rows[ri]
+		var box: Rect2 = boxes[ri]
+		var x := box.position.x
+		var y := box.position.y
+		var cw := box.size.x
 		var g: GameState = r[0]
 		var key: String = r[4]
 		if not _strip_pics.has(key):
 			_strip_pics[key] = Sprites.portrait(g.appearance, g.hero_looks())
-		var box := Rect2(x, y, cw, 36)  # UX: 15 px name (was 10 px in a 28 px plate)
 		draw_rect(box, Color(0.03, 0.04, 0.08, 0.78))
 		draw_rect(box, Color(Color(g.class_info().get("color", "#94a3b8")), 0.7), false, 1.0)
 		var pic: Texture2D = _strip_pics[key]
 		var down: bool = r[3]
 		if pic:
-			draw_texture_rect(pic, Rect2(x + 4, y + 4, 28, 28), false, Color(1, 1, 1, 0.4 if down else 1.0))
+			draw_texture_rect(pic, Rect2(x + 4, y + 4, box.size.y - 8.0, box.size.y - 8.0), false, Color(1, 1, 1, 0.4 if down else 1.0))
 		var pct := clampf(float(r[1]) / maxf(1.0, float(r[2])), 0.0, 1.0)
-		var bw := cw - 38.0
+		var tx := x + box.size.y
+		var bw := cw - box.size.y - 2.0
+		var bh := 7.0 if box.size.y >= 36.0 else 6.0
+		var bar_y := y + box.size.y - 11.0
 		var nm: String = "DOWN" if down else (g.hero_name if g.hero_name != "" else g.hero_class)  # knocked out: the plate says so in place of the name
-		draw_string(font, Vector2(x + 36, y + 16), _fit_text(font, nm, UI.MIN_FONT, bw), HORIZONTAL_ALIGNMENT_LEFT, bw, UI.MIN_FONT, Color("#f87171") if down else Color(1, 1, 1, 0.9))
-		draw_rect(Rect2(x + 36, y + 23, bw, 7), Color(0.1, 0.1, 0.14))
+		draw_string(font, Vector2(tx, y + roundf(box.size.y * 0.45)), _fit_text(font, nm, UI.MIN_FONT, bw), HORIZONTAL_ALIGNMENT_LEFT, bw, UI.MIN_FONT, Color("#f87171") if down else Color(1, 1, 1, 0.9))
+		draw_rect(Rect2(tx, bar_y, bw, bh), Color(0.1, 0.1, 0.14))
 		var col := Color("#22c55e") if pct > 0.5 else (Color("#eab308") if pct > 0.25 else Color("#ef4444"))
-		draw_rect(Rect2(x + 36, y + 23, bw * pct, 7), Color(0.4, 0.4, 0.4) if down else col)
-		x += cw + 4.0
+		draw_rect(Rect2(tx, bar_y, bw * pct, bh), Color(0.4, 0.4, 0.4) if down else col)
 	var tsl := Synergies.strike_left(state)
 	if tsl > 0:
-		draw_string_outline(font, Vector2(6, y + 54), "Team Strike in %d" % tsl, HORIZONTAL_ALIGNMENT_LEFT, -1, UI.MIN_FONT, 3, Color(0, 0, 0, 0.9))
-		draw_string(font, Vector2(6, y + 54), "Team Strike in %d" % tsl, HORIZONTAL_ALIGNMENT_LEFT, -1, UI.MIN_FONT, Color("#fbbf24"))
+		var sb: Rect2 = boxes[-1]
+		var lines: PackedStringArray = _strike_lines(font, tsl, sb.size.x)
+		for li in lines.size():
+			var at := Vector2(sb.position.x, sb.position.y + 14.0 + li * 18.0)
+			draw_string_outline(font, at, lines[li], HORIZONTAL_ALIGNMENT_LEFT, -1, UI.MIN_FONT, 3, Color(0, 0, 0, 0.9))
+			draw_string(font, at, lines[li], HORIZONTAL_ALIGNMENT_LEFT, -1, UI.MIN_FONT, Color("#fbbf24"))
+
+## "Team Strike in N" on one line, or two when the strip is too narrow for it.
+func _strike_lines(font: Font, left: int, w: float) -> PackedStringArray:
+	var one := "Team Strike in %d" % left
+	if font.get_string_size(one, HORIZONTAL_ALIGNMENT_LEFT, -1, UI.MIN_FONT).x <= w:
+		return PackedStringArray([one])
+	return PackedStringArray(["Team Strike", "in %d" % left])
+
+## The team strip's boxes, one 36 px row per hero along the top (UX: 15 px name), then the Team
+## Strike line's box (n + 1 rects). The face-off has no rows (Juzo via lead, Oct 26: they
+## covered the monster's bar, pets r5, and the SE has no room beside it; the over-head plates
+## and the hero plate show everyone's health), only the Team Strike line just over the hero plate.
+func _team_strip_rects(n: int) -> Array:
+	var out: Array = []
+	if _boss_stage():
+		var hp := _bar_rect(_hero_rect())
+		var lines := _strike_lines(UI.game_font(), 9, hp.size.x).size()
+		var h := 18.0 * lines
+		out.append(Rect2(hp.position.x, hp.position.y - h - 4.0, hp.size.x, h))
+		return out
+	var w := minf(132.0, (size.x - 12.0) / n - 4.0)
+	for i in n:
+		out.append(Rect2(6.0 + i * (w + 4.0), 26.0, w, 36.0))
+	out.append(Rect2(6.0, 66.0, size.x - 12.0, 18.0))
+	return out
 
 ## The burn on a kill (fable r5): a canvas shader eats the dying pose in a noisy order, top
 ## first, with a glowing edge just ahead of the hole. It draws into a small viewport, one texel

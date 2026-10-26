@@ -5,6 +5,7 @@ extends SceneTree
 ## the boss stage room, plates that stay put while the hero lunges, the boss chip column and the
 ## menagerie pet beside the hero plate.
 const TestHero := preload("res://tests/test_hero.gd")
+const Shot := preload("res://tests/_monster_shot.gd")
 const KEYS := ["kobold", "imp", "rune_hound", "wolpertinger", "halo_wisp", "umibozu", "chimera", "barghest+pack", "garmr+pack", "boss_grendel", "boss_charybdis",
 	"boss_surtr", "boss_forgemaster_brann",
 	"calamity_0", "calamity_1", "calamity_2", "calamity_3", "calamity_4", "calamity_5", "calamity_6", "calamity_7", "calamity_8", "calamity_9"]
@@ -56,6 +57,8 @@ func _initialize() -> void:
 				await _check_chips(bv, st, arg, wsz)
 			if arg == "calamity_2":
 				await _check_death(main, bv, st, arg, wsz)
+		for arg in ["kobold", "boss_grendel", "calamity_2"]:
+			await _check_party(main, bv, st, arg, wsz)
 		await _check_bestiary(main, wsz)
 	# (f) Epic, Legendary and Mythic are told apart by their pips too
 	check(BattleView.tier_pips(3) != BattleView.tier_pips(4) and BattleView.tier_pips(4) != BattleView.tier_pips(5), "tiers 3-5 wear the same pips")
@@ -81,6 +84,103 @@ func _fight(main, st: GameState, arg: String) -> void:
 	if key.begins_with("calamity_"):
 		st.enemy_calamity = int(key.trim_prefix("calamity_")) + 1
 	main.refresh()
+
+## A party of two (pets r5): each companion's bar no wider than their body, DOWN on a knocked-out
+## one's plate, and the Team Strike line just over the hero plate, clear of the monster's bar and
+## name, the companions' names and the monster itself.
+func _check_party(main, bv, st: GameState, arg: String, wsz: Vector2i) -> void:
+	_fight(main, st, arg)
+	if arg == "boss_grendel":
+		st.enemy_mods = ["Swift", "Armored"]
+	st.party = Shot._party()
+	main.refresh()
+	await process_frame
+	await process_frame
+	var tag := "%s with a party at %dx%d" % [arg, wsz.x, wsz.y]
+	var font := UI.game_font()
+	var keep: Array = []   # [rect, what] the strip must stay off
+	var bar: Rect2 = bv._boss_bar()
+	keep.append([Rect2(bar.position, Vector2(bar.size.x, bar.size.y + bv.BOSS_NAME)), "the monster's bar and name"])
+	for i in st.party.members.size():
+		var m = st.party.members[i]
+		var b: Rect2 = bv._member_bar(i)
+		var c: Rect2 = bv._member_canvas(i)
+		var u := c.size.x / Sprites.CANVAS
+		var art := Sprites.hero_back_of(m.hero)
+		var body := 32.0 * Sprites.HD * u
+		if art.has("anims"):
+			body = float((art["anims"]["combat_idle"]["tex"][0] as Texture2D).get_image().get_used_rect().size.x) * u
+		check(b.size.x <= body + 8.0, "%s: %s's bar %.0f wide over a %.0f body" % [tag, m.name, b.size.x, body])
+		var tw := font.get_string_size(m.name, HORIZONTAL_ALIGNMENT_LEFT, -1, bv.NAME_FS).x
+		keep.append([Rect2(b.get_center().x - tw / 2.0, b.position.y - 4.0 - bv.NAME_FS, tw, bv.NAME_FS + 4.0 + b.size.y), m.name + "'s name and bar"])
+	# the face-off has no strip rows (lead, Oct 26: option A), only the Team Strike line over the hero plate
+	var boxes: Array = bv._team_strip_rects(st.party.size() + 1)
+	check(boxes.size() == 1, "%s: %d strip boxes on the face-off, only the Team Strike line" % [tag, boxes.size()])
+	var plate: Rect2 = bv._bar_rect(bv._hero_rect())
+	keep.append([plate, "the hero plate"])
+	var sb: Rect2 = boxes[-1]
+	check(sb.end.y <= plate.position.y and plate.position.y - sb.end.y <= 8.0, "%s: Team Strike %s not just over the hero plate %s" % [tag, sb, plate])
+	check(Rect2(Vector2.ZERO, bv.size).encloses(sb), "%s: Team Strike %s off the stage" % [tag, sb])
+	# a knocked-out companion's plate says DOWN
+	st.party.members[0].knocked_out = true
+	check(BattleView.member_label(st.party.members[0]) == "DOWN", "%s: a knocked-out companion's plate says %s" % [tag, BattleView.member_label(st.party.members[0])])
+	st.party.members[0].knocked_out = false
+	var er: Rect2 = bv._enemy_rect(st.enemy_is_boss)
+	var art: Dictionary = bv._enemy_art(st.enemy_is_boss)
+	for box in boxes:
+		for k in keep:
+			check(not (box as Rect2).intersects(k[0]), "%s: Team Strike %s covers %s %s" % [tag, box, k[1], k[0]])
+		check(not _touches(er, art, box), "%s: Team Strike %s covers the monster" % [tag, box])
+	st.party = null
+	main.refresh()
+	await process_frame
+
+## True when a solid pixel of the monster's picture (drawn in er) falls inside the prop's rect r.
+func _touches(er: Rect2, art: Dictionary, r: Rect2) -> bool:
+	var hit := er.intersection(r)
+	if hit.size.x <= 0.0 or hit.size.y <= 0.0:
+		return false
+	var img: Image = art["img"]
+	var k: Vector2 = (art["size"] as Vector2) / er.size
+	var a := ((hit.position - er.position) * k).floor()
+	var b := ((hit.end - er.position) * k).ceil()
+	for y in range(maxi(0, int(a.y)), mini(img.get_height(), int(b.y))):
+		for x in range(maxi(0, int(a.x)), mini(img.get_width(), int(b.x))):
+			if img.get_pixel(x, y).a > 0.1:
+				return true
+	return false
+
+## The screen rects of every standing prop a fight room can hold at this stage size: 3D props of
+## 10 zones x 6 rooms per fight event, and the current room's 2D decor. [[rect, name], ...]
+var _props := {}
+func _prop_rects(bv, st: GameState) -> Array:
+	var halls: HallsScene = bv.halls
+	var scr := HallsScene.screen_scale(bv)
+	halls.build(st, bv.size, scr)
+	var k := "%s|%s" % [bv.size, halls.room_key]
+	if _props.has(k):
+		return _props[k]
+	var out: Array = []
+	for z in 10:
+		for s in 6:
+			for ev in Room3D.FIGHT_EVENTS:
+				var r := Room3D.new()
+				r.rebuild(z, 2000 + s * 7919, {"light": HallsScene.MOODS[z]["light"], "amb": HallsScene.ambient(z),
+					"accent": HallsScene.MOODS[z]["accent"], "kind": HallsScene.MOODS[z]["kind"], "dark": 0.4,
+					"gate": ev == "gate", "small": halls.small, "event": ev})
+				for sp in r.standing_props():
+					var x: float = sp["x"]
+					var w: float = sp["w"]
+					var a := halls.proj(x - w / 2.0, HallsScene.FLOOR_Y + float(sp["h"]), float(sp["z"]))
+					var b := halls.proj(x + w / 2.0, HallsScene.FLOOR_Y, float(sp["z"]))
+					out.append([Rect2(a, b - a), "z%d %s %s" % [z, r.kind, sp["art"]]])
+				r.free()
+	for dc in halls.decor:
+		var tex: Texture2D = load("res://art/dungeon/%s.png" % String(dc["art"]))
+		if tex:
+			out.append([halls.sprite_rect(tex, float(dc["x"]), float(dc["z"]), float(dc["h"]), scr), "2D " + String(dc["art"])])
+	_props[k] = out
+	return out
 
 func _check_fight(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 	var tag := "%s at %dx%d" % [arg, wsz.x, wsz.y]
@@ -114,6 +214,13 @@ func _check_fight(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 		check(er.size.y <= bv.size.y * 0.6, "%s: %.0f of the stage's %.0f, it fills the stage" % [tag, er.size.y, bv.size.y])
 		# every monster centred between the doors, guarding them (Juzo, Oct 26)
 		check(absf(er.get_center().x - bv.size.x * 0.5) < 1.0, "%s: off the centre between the doors" % tag)
+		# it never meets a standing prop: the 3D rooms' (any fight room of any zone) and Low graphics' 2D decor
+		# (Juzo, Oct 26: the grotto's mushrooms touched the imp and the rune hound)
+		var met := {}
+		for pr in _prop_rects(bv, st):
+			if not met.has(pr[1]) and _touches(er, art, pr[0]):
+				met[pr[1]] = true
+				check(false, "%s: monster %s meets %s at %s" % [tag, er, pr[1], pr[0]])
 		if st.horde_pack:
 			# a pack shows one monster; the badge says which of the pack it is
 			var badge: String = BattleView._pack_badge(Vector2i(st.horde_total - st.horde_left + 1, st.horde_total))

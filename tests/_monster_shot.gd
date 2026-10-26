@@ -4,7 +4,7 @@ extends SceneTree
 ## -> shots/monsters/<tag>/<key>.png (floor picks the zone's hall behind it, tier 0-5 its rank,
 ## +pack two pack-mates waiting behind it; +mods two mods; +status burning, poisoned and winding
 ## up; +pet a menagerie pet out; +dead a frame of its burn (alpha under 0.6); calamity_N keys appear as
-## that Calamity; +banner a rank banner over it; +next with +pack: the first falls, the next steps in)
+## that Calamity; +banner a rank banner over it; +party two companions (+down: the first knocked out); +next with +pack: the first falls, the next steps in)
 const TestHero := preload("res://tests/test_hero.gd")
 func _initialize() -> void:
 	if not TestHero.safe():
@@ -38,7 +38,7 @@ func _initialize() -> void:
 	var dir := TestHero.shots_dir("monsters/" + args[0])
 	for arg in args.slice(1):
 		var flags: Array = []
-		for f in ["+dead", "+next", "+pet", "+status", "+mods", "+pack", "+banner"]:
+		for f in ["+dead", "+next", "+pet", "+status", "+mods", "+pack", "+banner", "+party", "+down"]:
 			if arg.contains(f):
 				flags.append(f)
 				arg = arg.replace(f, "")
@@ -84,6 +84,10 @@ func _initialize() -> void:
 			st.events = st.events.filter(func(e): return e.get("type", "") != "first_find")   # no popup over the fight
 		elif not "+pet" in flags:
 			st.pets_out.clear()
+		# +party: two companions (pets r5's party fight: the strip and their plates)
+		st.party = _party() if "+party" in flags else null
+		if st.party != null and "+down" in flags:
+			st.party.members[0].knocked_out = true   # +down: the first companion knocked out
 		var shot := key + ("_t%d" % tier if tier > 0 else "")
 		for f in flags:
 			shot += "_" + String(f).trim_prefix("+")
@@ -119,10 +123,9 @@ func _initialize() -> void:
 				"name": st.enemy_name, "art": st.enemy_art, "tier": tier, "calamity": false}]
 			main.battle.play(ev2)
 			st.horde_left -= 1
-			var waited2 := 0.0
-			while waited2 < 3.0 and not (main.battle.dying.is_empty() and float(main.battle.walk_in) < 0.6 and float(main.battle.walk_in) > 0.0):
+			var t0 := Time.get_ticks_msec()   # real time: frames come faster than 60 a second here
+			while Time.get_ticks_msec() - t0 < 4000 and not (main.battle.dying.is_empty() and float(main.battle.walk_in) < 0.6 and float(main.battle.walk_in) > 0.0):
 				await process_frame
-				waited2 += 1.0 / 60.0
 		root.get_texture().get_image().save_png(dir.path_join(shot + ".png"))
 	quit()
 
@@ -146,3 +149,19 @@ static func _not_a_fight(main: Node, key: String) -> String:
 	if st.enemy_art != key or st.enemy_hp <= 0:
 		return "monster is %s" % st.enemy_art
 	return ""
+
+## Two companions, a Cleric and a Ranger (as tests/_pets_shot.gd builds them).
+static func _party() -> Party:
+	var pt := Party.new()
+	for n in 2:
+		var mem := Party.Member.new()
+		mem.slot = 20 + n
+		mem.hero = GameState.new()
+		mem.hero.codex.path = ""
+		mem.hero.autosave = false
+		mem.hero.new_game()
+		mem.hero.choose_class(["Cleric", "Ranger"][n])
+		mem.hp = mem.max_hp()
+		mem.name = ["Ina", "Bo"][n]
+		pt.members.append(mem)
+	return pt
