@@ -10,6 +10,11 @@ P48, P32, TREE = "props48", "props32", "trees"
 
 # lit sources: (i, j, z, colour, radius) - z in px above the ground
 LIGHTS = []
+# the four brazier pillars round the stair foot: town dressing, so they stay in the game's base
+# picture (the other props_up are level props the game draws itself). (22,10), not (21,10): clear
+# of the stair newel, so the flame no longer sits on its top.
+# (22,10) is gone: the Tavern stood in front of its foot (Juzo: props behind buildings float)
+BRAZIERS = ((18, 10), (18, 13), (21, 13))
 LEVEL = 3           # building level shown in the mockup (1-3); props below grow with it
 UP = "props_up"
 # per building: (level-2 item, level-3 items) from the upgrade sheet
@@ -42,6 +47,8 @@ def level_props(owners=None):
             f[1], f[2] = (side[0] + (door == "i"), side[1] + (door == "j")), (side[0] + 2 * (door == "i"), side[1] + 2 * (door == "j"))
         if lid == "clinic":  # its door is reached along the wall lane from the west: props stand east of it
             f = [(dc[0] + 1, dc[1]), (dc[0] + 2, dc[1]), (dc[0] + 3, dc[1]), (dc[0] + 4, dc[1])]
+        if lid == "tavern":  # the Vault stands in front of the row's west end: everything east of the door
+            f = [(dc[0] + 1, dc[1]), (dc[0] + 2, dc[1]), (dc[0] + 3, dc[1]), (dc[0] + 3, dc[1] + 1)]
         n0 = len(d)
         if LEVEL == 1:      # still growing: scaffolding and a pile of stone and timber at the front
             d += [(UP, 0, *f[0]), (UP, 1, *f[1]), (UP, 11, *f[3])]
@@ -76,112 +83,110 @@ def decor():
     d = level_props()
     Z = PLATEAU_Z
     # plateau: prophecy stone + candle shrines at the dungeon, torches at the stairs
-    d += [(P48, 7, 15, 4, Z), (P32, 11, 16, 5, Z), (P32, 11, 23, 5, Z), (P32, 46, 24, 3, Z),
-          (P32, 12, 17, 7, Z), (P32, 12, 22, 7, Z), (P32, 44, 25, 2, Z), (P32, 23, 14, 2, Z)]
+    # (the stone stands at the plateau's front: further back the Dungeon hid its foot)
+    d += [(P48, 7, 14, 6, Z), (P32, 11, 23, 5, Z), (P32, 46, 24, 3, Z),
+          (P32, 12, 17, 7, Z), (P32, 12, 22, 7, Z), (P32, 44, 25, 2, Z)]
     LIGHTS.extend([(17.5, 7.5, Z + 30, (255, 170, 90), 40), (22.5, 7.5, Z + 30, (255, 170, 90), 40),
                    (19.8, 4.2, Z + 26, (120, 230, 255), 110), (19.5, 8.0, 6, (90, 200, 255), 70)])
-    d += [(P32, 12, 20, 8, 12)]       # a torch bracket on the stair rail, halfway up
-    LIGHTS.append((20.5, 8.5, 12 + 26, (255, 170, 90), 32))
+    # (no torch on the stair rail: from the street it stood on the Tavern chimney's top; the plateau
+    # torches and the braziers light the stair)
     # MARKET = the whole square as one place (Juzo): the well in the middle of the square with
     # the main street flowing round it, a ring of stalls around it, crates/carts between
     d += [(P48, 5, 20, 20),
-          (P48, 0, 24, 21), (P48, 1, 17, 17), (P48, 2, 22, 17), (P48, 3, 26, 18),
+          (P48, 0, 23, 21), (P48, 1, 17, 17), (P48, 2, 22, 17),
           (P48, 4, 25, 23), (P48, 0, 22, 24), (P48, 2, 17, 24), (P48, 1, 16, 22), (P48, 3, 14, 24),
-          (P48, 11, 26, 21), (P48, 9, 14, 20),
-          (P32, 0, 16, 20), (P32, 1, 16, 21), (P32, 39, 23, 19), (P32, 2, 18, 23), (P32, 0, 21, 16),
+          (P48, 9, 14, 20),
+          (P32, 0, 16, 20), (P32, 1, 16, 21), (P32, 39, 22, 19), (P32, 2, 18, 23), (P32, 0, 21, 16),
           (P32, 3, 21, 22), (P32, 29, 20, 22)]
     LIGHTS.extend([(20.5, 20.5, 20, (255, 190, 110), 50)])
-    for i, j in ((18, 10), (21, 10), (18, 13), (21, 13)):
+    for i, j in BRAZIERS:
         d.append((UP, 4, i, j))
         LIGHTS.append((i + .5, j + .5, 40, (255, 160, 80), 44))
-    d += [(P32, 24, 14, 8), (P32, 23, 16, 8), (P32, 24, 24, 8), (P32, 23, 26, 8), (P32, 44, 13, 8)]
+    d += [(P32, 23, 16, 8), (P32, 24, 24, 8), (P32, 23, 26, 8)]
     # Bounty Board beside the dungeon stairs (heroes read it before descending); Mailbox by the Inn
-    d += [(P48, 6, 22, 8), (P48, 8, 12, 14)]
+    d += [(P48, 6, 17, 8), (P48, 8, 12, 14)]   # the board west of the stair foot, clear of the Tavern
     # street lamps along the main street and lanes
-    d += [lamp(17, 11), lamp(22, 25), lamp(22, 31), *([] if HARDCORE else [lamp(8, 12)]), lamp(8, 26), lamp(31, 22), lamp(13, 9)]
+    # (none behind a building: the Inn hid (17, 11) and (13, 9), the Clinic (22, 31))
+    d += [lamp(22, 25), *([] if HARDCORE else [lamp(7, 15)]), lamp(8, 26), lamp(32, 23)]
     # the Inn's yard (everyone lives at the Inn): benches, barrels, lantern, cart
-    d += [(P32, 3, 10, 14), (P32, 0, 9, 14), (P32, 0, 12, 14), (UP, 5, 12, 13)]
-    LIGHTS.append((12.5, 13.5, 34, (255, 190, 110), 40))
+    d += [(P32, 3, 10, 14), (P32, 0, 9, 14), (P32, 0, 12, 14)]   # (no lantern: (12, 13) was on the wing's own cell)
     # inn / tavern fronts
-    d += [(P32, 3, 14, 15), (P32, 0, 16, 15), (P32, 14, 13, 15), (P32, 0, 22, 15), (P32, 0, 23, 15),
-          (P32, 3, 25, 15), (P32, 59, 26, 15)]
-    # blacksmith yard (faces the square on +i)
-    d += [(P32, 17, 13, 17), (P32, 18, 13, 19), (P32, 42, 14, 16)]
+    d += [(P32, 3, 14, 15), (P32, 0, 16, 15), (P32, 14, 13, 15), (P32, 0, 22, 15), (P32, 0, 23, 15)]   # (the Tavern hid 25 and 26)
+    # blacksmith yard on the west lane, just inside the gate (faces the lane on +i)
+    d += [(P32, 17, 6, 30), (P32, 18, 6, 33), (P32, 42, 5, 34)]
     # shop front (cross street side)
     d += [(P32, 1, 13, 24), (P32, 2, 13, 21)]
     # vault: lantern + chest
     d += [(P32, 31, 32, 21)]
-    # the public garden where the Tavern stood: fenced, a small well, benches, a tree; gate on the lane
-    d += [e for e in fence("wood", 24, 10, 29, 15) if not (e[4] == "j" and e[2] == 24 and e[3] == 12)]
-    d += [(P32, 36, 26, 12), (P32, 3, 25, 11), (P32, 14, 27, 10), (P32, 15, 24, 14), (TREE, 0, 28, 14), (P32, 3, 27, 13)]
+    # (the public garden behind the Tavern is gone: the Tavern stands in front of all of it)
     # guild training yard: a fenced dirt ring with dummies, a shield target, racks, hay and a grindstone
-    d += [e for e in fence("wood", 34, 2, 38, 6) if not (e[4] == "i" and e[3] == 6 and e[2] in (35, 36))]
-    d += [(P32, 40, 35, 3), (P32, 40, 37, 4), (P32, 40, 35, 5), (P32, 41, 37, 2), (P32, 18, 34, 2), (P32, 35, 36, 2),
-          (P32, 35, 34, 5), (P32, 42, 37, 5), (P32, 3, 34, 7), (P32, 0, 37, 7)]
+    # (Juzo: the Guild sat on top of the dummies) the ring keeps clear of the Guild's wing (i 34) and
+    # the corner tower (row 2)
+    d += [e for e in fence("wood", 35, 4, 38, 6) if not (e[4] == "i" and e[3] == 6 and e[2] in (35, 36))]
+    d += [(P32, 40, 36, 4), (P32, 40, 37, 4), (P32, 40, 36, 5), (P32, 18, 35, 5),
+          (P32, 42, 37, 5), (P32, 3, 34, 7), (P32, 0, 37, 7)]
     # clinic: herb pots, cauldron; pet pen with fence, kennel, hay
     d += [(P32, 43, 22, 33)]
-    d += fence("wood", 28, 29, 32, 35)
+    d += [e for e in fence("wood", 28, 29, 32, 35) if not (e[4] == "j" and e[2] == 28)]   # the Clinic's wall closes the west side
     d += [(P48, 14, 30, 30), (P32, 58, 29, 32), (P32, 59, 30, 33), (P32, 37, 29, 30)]
-    # fields + scarecrow
-    rows = {30: 20, 31: 21, 32: None, 33: 22, 34: 22}          # a crop per row, one row left bare
-    for i in range(2, 6):
-        for j, c in rows.items():
-            if c is not None and (i, j) != (5, 34):
-                d.append((P32, c, i, j))
-    d += [(P32, 40, 3, 32), (P32, 34, 6, 31), (P32, 2, 5, 32)]
+    # the paved plaza where the Blacksmith stood (Juzo: no crops): a shade tree, a lamp and
+    # two benches facing the square
+    d += [(TREE, 0, 10, 17), (P32, 3, 12, 17), (P32, 3, 12, 18), lamp(11, 16)]
     # vegetable plots behind the gatehouse, fenced: rows of wheat, a bare path row, pumpkins, cabbages
     for i in range(9, 18):
         for j, c in {29: 22, 30: 22 if i < 13 else 21, 31: None, 32: 20, 33: 21 if i < 13 else 20}.items():
-            if c is not None:
+            if c is not None and not (j == 33 and i in (11, 12, 15, 16)):   # the gatehouse hides those
                 d.append((P32, c, i, j))
-    d += fence("wood", 9, 29, 18, 34) + [(P32, 40, 15, 31), (P32, 40, 10, 32), (P32, 50, 12, 31), (P32, 30, 13, 31)]
+    d += [e for e in fence("wood", 9, 29, 18, 34) if not (e[3] == 34 and 10 <= e[2] <= 16 or (e[2], e[3]) == (18, 33))] + [(P32, 40, 15, 31), (P32, 40, 10, 32), (P32, 50, 12, 31), (P32, 30, 13, 31)]
     # orchard (east, where the houses were)
     d += [(P32, 30, 35, 12), (P32, 39, 37, 15), (P32, 50, 34, 17), (P32, 2, 36, 11), (P32, 30, 37, 18)]
-    # houses: woodpiles, barrels, benches
-    d += [(P32, 50, 27, 22)]
     # trophy cabin: hide rack, skull pike, antler... (built state)
     d += [(P32, 46, 7, 25)]
     # graveyard: rows of graves, angel, cross, iron fence, gate to the lane
     graves = (6, 7, 8, 10, 60, 63, 9)
     if HARDCORE:
         for i in range(2, 12):
-            for j in range(2, 7):
-                if (i, j) != (6, 4):
+            for j in range(2, 7):    # (the Inn's roof stands in front of the east half: no graves whose foot it hides)
+                if (i, j) != (3, 4) and (i, j) in GRAVE_CELLS:
                     d.append((P32, graves[rng.randrange(len(graves))], i, j))
     else:   # the Church's garden: flowerbeds either side of a gravel path, benches facing the angel, a shrine
         d += [("bed", 0, i, j) for i0, j0 in ((3, 2), (8, 2), (3, 5), (8, 5)) for i in (i0, i0 + 1) for j in (j0, j0 + 1)]
-        d += [(P32, 3, 5, 3), (P32, 3, 7, 3), (P32, 3, 5, 5), (P32, 3, 7, 5), (TREE, 12, 2, 2), (TREE, 13, 11, 6),
-              (TREE, 0, 10, 2), (P32, 11, 7, 2)]
+        # (the Inn's roof stands in front of the garden's east half: nothing there whose foot it hides)
+        d += [(P32, 3, 5, 5), (TREE, 0, 10, 2)]
         # the east half: a gravel walk to a bell shrine, hedges, a bench under the oak, potted flowers
-        d += [(P32, 54, 11, 4), (P32, 11, 11, 3), (TREE, 12, 10, 5), (TREE, 13, 10, 3), (P32, 3, 11, 2),
-              (P32, 14, 2, 4), (P32, 14, 11, 5), (P32, 15, 2, 6)]
-    d += [(P48, 12, 6, 4)] + ([(P48, 13, 10, 3), (P32, 54, 11, 2)] if HARDCORE else [])
-    if HARDCORE:
-        d += [(P32, 6, 3, 17), (P32, 63, 4, 18), (P32, 60, 5, 17), (P32, 9, 2, 18), (TREE, 7, 5, 9)]
-    d += [e for e in fence("iron" if HARDCORE else "wood", 1, 1, 12, 7) if not (e[4] == "i" and e[3] == 7 and e[2] in (6, 7))]
+        d += [(P32, 54, 11, 4), (P32, 11, 11, 3), (TREE, 13, 10, 3), (P32, 3, 11, 2),
+              (P32, 14, 2, 4), (P32, 15, 2, 6)]
+    d += [(P48, 12, 3, 4)] + ([(P48, 13, 10, 3), (P32, 54, 11, 2)] if HARDCORE else [])
+    if HARDCORE:   # three big pieces among the headstones, for scale: a sarcophagus, an obelisk, a mausoleum on the wall
+        d += [(P48, 16, 1, 4), (P48, 17, 3, 1), (P48, 18, 8, 1)]
+    if HARDCORE:     # (the graves that stood by the ruin were behind it and the Trophy Cabin)
+        d += [(TREE, 7, 5, 9)]
+    hid = {(1, 1), (1, 2), (2, 1), (5, 7), (8, 7), (9, 7), (10, 7), (11, 7), (12, 4), (12, 5), (12, 6)}   # in the tower, behind the Inn
+    d += [e for e in fence("iron" if HARDCORE else "wood", 1, 1, 12, 7)
+          if not (e[4] == "i" and e[3] == 7 and e[2] in (6, 7)) and (e[2], e[3]) not in hid]
     if HARDCORE:
         d += [(P32, 28, 3, 6), (P32, 28, 9, 2)]
     # torches on the inner wall faces between towers
-    for i in (5, 14, 25, 35):
+    for i in (5, 35):                   # (14 and 25 stood behind the Dungeon and the Guild)
         d.append((P32, 12, i, 1))
         LIGHTS.append((i + .5, 1.5, 28, (255, 170, 90), 30))
-    for j in (6, 26):
+    for j in (6,):                      # (26 stood behind the Blacksmith)
         if HARDCORE and j < 20:
             continue
         d.append((P32, 12, 1, j))
         LIGHTS.append((1.5, j + .5, 28, (255, 170, 90), 30))
     d += [("fence", "wood", 7, 27, "j"), ("fence", "wood", 7, 28, "j"), ("fence", "wood", 9, 27, "j"), ("fence", "wood", 9, 28, "j")]
-    for i, j in ((3, 26), (5, 29), (11, 26), (13, 29), (25, 26), (27, 29), (31, 26), (33, 29), (36, 26)):
+    for i, j in ((3, 26), (11, 26), (13, 29), (25, 26), (27, 29), (31, 26), (33, 29), (36, 26)):
         d.append(("reeds", 0, i, j))
     # river side: reeds-ish rocks, signpost at the bridge
     d += [(P32, 19, 23, 25), (P32, 24, 12, 29), (P32, 23, 30, 29), (P32, 25, 36, 30)]   # the stump on the bank, not in the water
     d += [(P48, 11, 26, 37), (P32, 12, 29, 37), (P32, 0, 27, 37), (P32, 19, 31, 37), (P32, 1, 12, 37)]
     LIGHTS.append((29.5, 37.5, 30, (255, 170, 90), 34))
     # gate courtyard: torches by the sealed gate, crates
-    d += [(P32, 12, 17, 37), (P32, 12, 22, 37), (P48, 9, 24, 37), (P32, 1, 23, 37)]
-    LIGHTS.extend([(17.5, 37.5, 30, (255, 170, 90), 36), (22.5, 37.5, 30, (255, 170, 90), 36)])
+    d += [(P32, 12, 22, 37), (P48, 9, 24, 37), (P32, 1, 23, 37)]   # (the gatehouse hid the west torch's foot)
+    LIGHTS.extend([(22.5, 37.5, 30, (255, 170, 90), 36)])
     # forge glow, church glow
-    LIGHTS.extend([(12.5, 17.5, 14, (255, 120, 50), 44)] + ([] if HARDCORE else [(5.5, 13.5, 30, (255, 220, 150), 60)]))
+    LIGHTS.extend([(5.5, 31.5, 14, (255, 120, 50), 44)] + ([] if HARDCORE else [(5.5, 13.5, 30, (255, 220, 150), 60)]))
     d += [("folk", "villager", 18, 21), ("folk", "hero", 21, 20), ("folk", "villager", 15, 19), ("folk", "hero", 24, 9),
           ("folk", "hero", 19, 31), ("folk", "villager", 33, 19)]
     return d
@@ -203,6 +208,7 @@ def trees():
         busy |= {(i, j) for i in range(x0 - 1, x1 + 2) for j in range(y0 - 1, y1 + 2)}
     for tx, ty in TOWERS:
         busy |= {(tx + a, ty + b) for a in range(-1, 4) for b in range(-1, 4)}
+    busy |= {(1, 18), (1, 19)}         # behind the Trophy Cabin's roof: only a scrap of crown showed
     free = lambda i, j: 0 < i < N - 1 and 0 < j < N - 1 and g[i][j] == "grass" and (i, j) not in busy
     oaks, pines, small = (0, 1, 4, 15, 14), (2, 3, 10, 11), (5, 9, 12, 13)
     t, used = [], set()
@@ -221,7 +227,7 @@ def trees():
         for j in range(N):             # cell so they never hide the water
             if g[i][j] == "water" and (j == 0 or g[i][j - 1] != "water") and i % 3 == 0 and rng.random() < .8:
                 add(i, j - 2, oaks + (8,))
-    for i, j in ((2, 24), (3, 25), (36, 21), (37, 22), (37, 24), (36, 36), (37, 35), (35, 37)):
+    for i, j in ((2, 24), (3, 25), (36, 21), (37, 22), (37, 24), (36, 36), (37, 35)):
         add(i, j, oaks + small)
     if HARDCORE:
         for i, j in ((5, 6), (10, 4)):           # dead trees inside the graveyard fence, crowns clear of the walls
@@ -232,10 +238,14 @@ def trees():
     return t
 
 
+GRAVE_CELLS = {(2, 3), (2, 4), (2, 5), (2, 6), (3, 2), (3, 3), (3, 5), (3, 6), (4, 2), (4, 3), (4, 4), (4, 5), (4, 6),
+               (5, 2), (5, 5), (5, 6), (6, 2), (6, 3), (8, 2), (9, 2), (10, 2), (10, 3), (11, 2), (11, 3), (11, 4)}
+LOT_HIDDEN = {(5, 10), (6, 10), (4, 17), (7, 16), (5, 21), (6, 21)}   # empty-lot rope behind the Inn wing and the Shop
+
+
 def empty_lot(x0, y0, x1, y1):
     """An unbuilt plot: rope-and-stake fence, a sign, stacked logs and stones waiting."""
-    e = fence("wood", x0, y0, x1 + 1, y1 + 1)
-    e += [(UP, 5, x1, y0 + 1), (P32, 19, x1, y1), (P32, 33, x0 + 1, y0 + 1), (P32, 16, x0 + 2, y0 + 1), (P32, 23, x1 - 1, y0 + 2),
+    e = [f for f in fence("wood", x0, y0, x1 + 1, y1 + 1) if (f[2], f[3]) not in LOT_HIDDEN]
+    e += [(P48, 20, x1, y0 + 1), (P48, 21, x0 + 1, y1), (P32, 19, x1, y1), (P32, 33, x0 + 1, y0 + 1), (P32, 16, x0 + 2, y0 + 1), (P32, 23, x1 - 1, y0 + 2),
           (P32, 24, x0 + 1, y1 - 1), (P32, 50, x1 - 1, y1 - 2), (P32, 1, x0 + 2, y1 - 1)]
-    LIGHTS.append((x1 + .5, y0 + 1.5, 34, (255, 190, 110), 26))
-    return e
+    return e   # the yellow "build here" sign and a plank stack (fix_r4_art.py), the old top-down lot's motif

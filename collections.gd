@@ -197,8 +197,10 @@ static func total(track: String) -> int:
 			for zi in GameData.ZONES.size():
 				n += GameData.zone_uniques(zi).size()
 			return n
-		"signatures", "pets":
+		"signatures":
 			return Monsters.all_monsters().size()
+		"pets":
+			return Menagerie.all_species().size()   # Calamity pets too (the Codex header counts the same list)
 		"slots":
 			return GameData.SLOT_ORDER.size()
 		"sets":
@@ -237,7 +239,7 @@ static func count(codex: Codex, track: String) -> int:
 			return n
 		"pets":
 			var n := 0
-			for m in Monsters.all_monsters():
+			for m in Menagerie.all_species():
 				if codex.pet_book.has(m):
 					n += 1
 			return n
@@ -394,26 +396,31 @@ static func track_card(codex: Codex, track: String) -> PanelContainer:
 	card.add_child(v)
 	var top := UI.hbox(8)
 	v.add_child(top)
-	var nl := UI.label(track_name(track), UI.FONT_CAPTION, UI.TEXT)
+	var nl := UI.label(track_name(track), UI.FONT_BODY, UI.TEXT)
 	nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # QA: long names ("A rare find for every slot") were cut off on phones
 	top.add_child(nl)
-	top.add_child(UI.label(("%d / %d" % [have, goal]) if goal > 0 else str(have), UI.FONT_CAPTION, UI.GOLD))
+	top.add_child(UI.label(("%d / %d" % [have, goal]) if goal > 0 else str(have), UI.FONT_BODY, UI.GOLD))
 	var bar := UI.bar(UI.GOLD, 6)
 	bar.max_value = maxi(1, goal)
 	bar.value = mini(have, maxi(1, goal))
 	v.add_child(bar)
-	var nt := UI.wrap(("Next at %s: %s" % [need_text(nxt), reward_text(nxt)]) if not nxt.is_empty() else "Every reward here is yours.", UI.FONT_CAPTION, UI.DIM)
+	# Fable r2 #14: one short line ("Next at 9: name colour Curio Amber"); the long form is the tip
+	var nt := UI.wrap(("Next at %d: %s" % [int(nxt["need"]), reward_text(nxt)]) if not nxt.is_empty() else "Every reward here is yours.", UI.FONT_BODY, UI.DIM)
 	v.add_child(nt)
+	if not nxt.is_empty():
+		UI.tip(card, "Next at %s: %s" % [need_text(nxt), reward_text(nxt)])
 	return card
 
-## Progress cards for several tracks, two to a row.
+## Progress cards for several tracks: two to a row on a wide screen, one on a phone (Fable r2 #14).
 static func cards(codex: Codex, list: Array) -> GridContainer:
 	var g := GridContainer.new()
 	g.columns = 2
 	g.add_theme_constant_override("h_separation", 6)
 	g.add_theme_constant_override("v_separation", 6)
 	g.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	g.columns = 1
+	g.resized.connect(func(): g.columns = 2 if g.size.x >= 600.0 else 1)
 	for t in list:
 		var c := track_card(codex, String(t))
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL

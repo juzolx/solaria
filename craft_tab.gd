@@ -14,7 +14,9 @@ var bag_button: Button
 var set_info := {}     # set id -> [header label, cost label, wearing label]
 var set_buttons := {}  # set -> Array of buttons
 var piece_rows: Array = []  # one row of set-piece buttons per set (stacked on phones)
-var gear_buttons := {}
+var mystery_box: VBoxContainer   # Fable r1 #10: one slot picker and one Roll button
+var mystery_slot: OptionButton
+var mystery_roll: Button
 var gear_cost: RichTextLabel
 var section_buttons := {}
 var forge_box: VBoxContainer
@@ -36,7 +38,7 @@ func setup(m) -> void:
 	var who := UI.hbox(10)
 	v.add_child(who)
 	# Hilde's picture is the town page's keeper picture above (main.gd town_keeper)
-	who.add_child(UI.wrap("%s, dwarf smith of the town forge" % Smith.NAME, UI.FONT_CAPTION, UI.GOLD))
+	who.add_child(UI.wrap("%s, dwarf smith of the town forge" % Smith.NAME, UI.FONT_BODY, UI.GOLD))
 	var tabs_row := UI.hbox(6)
 	v.add_child(tabs_row)
 	for sec in [["forge", "Forge"], ["sets", "Set Recipes"], ["wares", "Dwarf's Wares"]]:
@@ -51,7 +53,7 @@ func setup(m) -> void:
 	wares_box = UI.vbox(10)
 
 	# ---- 1. What you have ----
-	v.add_child(UI.heading("Your scrap and dust  -  scrap comes from salvaging, dust from bosses, rare monsters and maxed skills"))
+	v.add_child(UI.heading("Scrap and dust", "Scrap from salvaging; dust from bosses, rare monsters and maxed skills."))
 	mats_row = HFlowContainer.new()
 	mats_row.add_theme_constant_override("h_separation", 6)
 	mats_row.add_theme_constant_override("v_separation", 6)
@@ -76,7 +78,7 @@ func setup(m) -> void:
 
 	v = sets_box
 	# ---- 3. Set recipes ----
-	v.add_child(UI.heading("Set recipes  -  wear 2 or 3 pieces of a set for bonuses"))
+	v.add_child(UI.heading("Set recipes", "Wear 2 or 3 pieces of a set for bonuses."))
 	for set_name in GameData.SET_ORDER:
 		var info: Dictionary = GameData.SETS[set_name]
 		var card := _frame(UiSkin.IRON)   # interface pass (approved mockup 11): the panel frame
@@ -85,15 +87,15 @@ func setup(m) -> void:
 		card.add_child(cv)
 		var head := UI.hbox(8)
 		cv.add_child(head)
-		var title := UI.label(String(info["name"]), 15, UI.GOLD)
+		var title := UI.label(String(info["name"]), UI.FONT_BODY, UI.GOLD)
 		head.add_child(title)
 		head.add_child(UI.spacer())
-		var wearing := UI.label("", UI.FONT_CAPTION, UI.DIM)
+		var wearing := UI.label("", UI.FONT_BODY, UI.DIM)
 		head.add_child(wearing)
-		var bonus := UI.rich(UI.FONT_CAPTION)
+		var bonus := UI.rich(UI.FONT_BODY)
 		bonus.text = "[color=%s]Bonus:[/color] %s" % [UI.hex(UI.DIM), info["text"]]
 		cv.add_child(bonus)
-		var cost := UI.rich(UI.FONT_CAPTION)
+		var cost := UI.rich(UI.FONT_BODY)
 		cv.add_child(cost)
 		var row := BoxContainer.new()  # side by side, or stacked on phones (refresh)
 		row.add_theme_constant_override("separation", 6)
@@ -116,22 +118,30 @@ func setup(m) -> void:
 
 	v = forge_box
 	# ---- 4. Mystery gear ----
-	v.add_child(UI.heading("Mystery gear  -  pick a slot, get a random item with better odds"))
-	gear_cost = UI.rich(UI.FONT_CAPTION)
-	v.add_child(gear_cost)
-	var grid := GridContainer.new()
-	grid.columns = 4  # 2.1: 8 slots in two even rows
-	grid.add_theme_constant_override("h_separation", 6)
-	grid.add_theme_constant_override("v_separation", 6)
-	v.add_child(grid)
+	# (hidden until you have scrap: no wall of dead buttons)
+	mystery_box = UI.vbox(8)
+	v.add_child(mystery_box)
+	mystery_box.add_child(UI.heading("Mystery gear", "A random item for the slot you pick, with better odds."))
+	gear_cost = UI.rich(UI.FONT_BODY)
+	mystery_box.add_child(gear_cost)
+	var mrow := UI.hbox(8)
+	mystery_box.add_child(mrow)
+	mystery_slot = OptionButton.new()
 	for slot in GameData.SLOT_ORDER:
-		var b := UI.button(slot, func(): state.craft_gear(slot); main.sfx.play("craft"); main.refresh())
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		grid.add_child(b)
-		gear_buttons[slot] = b
+		mystery_slot.add_item(slot)
+	mystery_slot.custom_minimum_size = Vector2(150, UI.TAP)
+	mrow.add_child(mystery_slot)
+	mystery_roll = UI.primary("Roll · %d scrap" % GameData.CRAFT_GEAR_SCRAP, func():
+		state.craft_gear(GameData.SLOT_ORDER[mystery_slot.selected])
+		main.sfx.play("craft")
+		main.refresh())
+	mystery_roll.custom_minimum_size = Vector2(0, UI.TAP)
+	mystery_roll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mystery_roll.add_theme_color_override("font_disabled_color", Color(UI.RED).lightened(0.3))
+	mrow.add_child(mystery_roll)
 
 	# ---- Dwarf's wares ----
-	wares_box.add_child(UI.heading("Dwarf's Wares  -  forged for your depth, never below your average Gear Score; new pieces each time you come home"))
+	wares_box.add_child(UI.heading("Dwarf's Wares", "Forged for your depth; new pieces each time you come home."))
 	wares_list = UI.vbox(6)
 	wares_box.add_child(wares_list)
 	_show_section("forge")
@@ -167,7 +177,7 @@ func _fill_wares(force := false) -> void:
 		pic.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED   # whole pixels
 		pic.texture = UiIcons.big(Sprites.item_icon(item), 44)
 		h.add_child(pic)
-		var t := UI.rich(UI.FONT_CAPTION)
+		var t := UI.rich(UI.FONT_BODY)
 		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		t.text = ItemText.describe(state, item)
 		h.add_child(t)
@@ -178,7 +188,7 @@ func _fill_wares(force := false) -> void:
 				main.sfx.play("buy")
 			_fill_wares(true)
 			main.refresh(), UI.GOLD)
-		b.custom_minimum_size = Vector2(110, 40)
+		b.custom_minimum_size = Vector2(120, UI.BUTTON_H)   # Fable r2 #8
 		b.disabled = e["sold"] or need > 0 or state.bag_full()
 		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(b)
@@ -190,12 +200,12 @@ func _recipe_card(parent: Control, title: String, color: Color, text: String) ->
 	parent.add_child(card)
 	var cv := UI.vbox(5)
 	card.add_child(cv)
-	cv.add_child(UI.label(title, 15, UI.GOLD))   # one accent: titles gold, not per-recipe colours
-	var desc := UI.rich(UI.FONT_CAPTION)
+	cv.add_child(UI.label(title, UI.FONT_BODY, UI.GOLD))   # one accent: titles gold, not per-recipe colours
+	var desc := UI.rich(UI.FONT_BODY)
 	desc.custom_minimum_size = Vector2(0, 32)
 	desc.text = "[color=%s]%s[/color]" % [UI.hex(UI.DIM), text]
 	cv.add_child(desc)
-	var cost := UI.rich(UI.FONT_CAPTION)
+	var cost := UI.rich(UI.FONT_BODY)
 	cv.add_child(cost)
 	return [cost, cv, desc]
 
@@ -207,7 +217,7 @@ func _craft_set(set_name: String, slot: String) -> void:
 func _chip(text: String, color: Color) -> void:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", UiSkin.bevel(UiSkin.SLATE, UI.EDGE, 4))
-	var l := UI.rich(UI.FONT_CAPTION)
+	var l := UI.rich(UI.FONT_BODY)
 	l.fit_content = true
 	l.autowrap_mode = TextServer.AUTOWRAP_OFF
 	l.text = text
@@ -260,9 +270,10 @@ func refresh() -> void:
 			b.tooltip_text = "%s (%s)\n+%d %s\nSet bonus: %s" % [info["pieces"][slot], slot, GameData.item_power(preview), preview["stat"], info["text"]]
 			b.disabled = not ok
 
-	gear_cost.text = "Costs: %s scrap each. Items match your best floor (%d)." % [UI.have_need(state.scrap, GameData.CRAFT_GEAR_SCRAP), state.best_floor]
-	for slot in gear_buttons:
-		(gear_buttons[slot] as Button).disabled = state.scrap < GameData.CRAFT_GEAR_SCRAP or state.bag_full()
+	mystery_box.visible = state.scrap > 0
+	gear_cost.text = "[color=%s]Items match your best floor (%d).[/color]" % [UI.hex(UI.DIM), state.best_floor]
+	mystery_roll.disabled = state.scrap < GameData.CRAFT_GEAR_SCRAP or state.bag_full()
+	mystery_roll.text = "Bag full" if state.bag_full() else "Roll · %d scrap" % GameData.CRAFT_GEAR_SCRAP
 
 ## Interface pass: a forge card wears the panel frame, its line in `edge`.
 func _frame(edge: Color) -> PanelContainer:

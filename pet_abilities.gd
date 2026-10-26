@@ -60,7 +60,7 @@ const SIGNATURES := {
 	"ember_halls": {"name": "Ember Breath", "when": "start", "do": "burn", "value": 1.0, "text": "On its first turn each fight, breathes fire: the monster burns for {v}x its hit for 3 turns"},
 	"the_shadow_deep": {"name": "Shadow Fang", "when": "start", "do": "strike", "value": 3.0, "text": "On its first turn each fight, strikes from the dark for {v}x its hit"},
 	"elf": {"name": "Hush of the Wood", "when": "low", "do": "shield", "value": 20, "text": "Once a fight, when you drop below 35% health, the wood hides you: a shield of {v}% of your max HP"},
-	"fairy": {"name": "Fairy Gold", "when": "kill", "do": "gold", "value": 1, "text": "Every kill shakes loose extra gold ({v}x the floor's coin)"},
+	"fairy": {"name": "Fairy Gold", "when": "kill", "do": "gold", "value": 100, "text": "Every kill drops its gold twice"},
 	"dwarf": {"name": "Ironroot Wall", "when": "start", "do": "shield", "value": 10, "text": "On its first turn each fight, raises a shield of {v}% of your max HP"},
 	"angel": {"name": "Gilded Grace", "when": "low", "do": "heal", "value": 25, "text": "Once a fight, when you drop below 35% health, a light heals {v}% of your max HP"},
 	"demon": {"name": "Hellfire", "when": "start", "do": "burn", "value": 1.5, "text": "On its first turn each fight, calls hellfire: the monster burns for {v}x its hit for 3 turns"},
@@ -126,6 +126,8 @@ static func _num(v: float) -> String:
 	return str(int(v)) if is_equal_approx(v, round(v)) else "%.1f" % v
 
 static func _fill(text: String, v: float, c := 0.0) -> String:
+	if is_equal_approx(v, 1.0):
+		text = text.replace("{v}x its hit", "its hit")   # "pounce again for 1x its hit" reads oddly
 	return text.replace("{v}", _num(v)).replace("{c}", _num(c))
 
 static func passive_text(species: String, rank: int) -> String:
@@ -265,15 +267,16 @@ static func on_pet_turn(g: GameState, p: Dictionary, hit: int) -> void:
 				g.cfight["pet_pick"] = picked
 
 ## A kill: "kill" signatures go off.
-static func on_kill(g: GameState) -> void:
+static func on_kill(g: GameState, drop := 0) -> void:
 	for p in Menagerie.out(g):
 		if has_signature(p):
 			var sig := signature_of(String(p["species"]))
 			if String(sig["when"]) == "kill":
-				apply(g, p, String(sig["do"]), float(sig["value"]), 0, String(sig["name"]))
+				apply(g, p, String(sig["do"]), float(sig["value"]), 0, String(sig["name"]), drop)
 
 ## One effect. Returns false if it couldn't happen (you're down, the fight's over).
-static func apply(g: GameState, p: Dictionary, what: String, value: float, hit: int, label: String) -> bool:
+## drop: the gold the kill pays, for "gold" (0 = mid-fight: the kill formula, GameState.kill_gold).
+static func apply(g: GameState, p: Dictionary, what: String, value: float, hit: int, label: String, drop := 0) -> bool:
 	var helps_you := what in ["heal", "shield"]
 	if helps_you and (g.leader_down or g.hero_hp <= 0):
 		return false
@@ -284,7 +287,7 @@ static func apply(g: GameState, p: Dictionary, what: String, value: float, hit: 
 		"strike":
 			g.last_hit = "hit"
 			var d := g._damage_enemy(maxi(1, int(hit * value)), ["Physical"])
-			g.events.append({"type": "summon_hit", "dmg": d, "name": String(p["name"])})
+			g.events.append({"type": "summon_hit", "dmg": d, "name": String(p["name"]), "pet": int(p["id"]), "tier": int(p["tier"])})   # its name floats from the buff event below
 		"shield":
 			var add := mini(maxi(1, int(maxhp * value / 100.0)), int(maxhp * SHIELD_CAP) - g.shield_hp)
 			if add <= 0:
@@ -320,13 +323,13 @@ static func apply(g: GameState, p: Dictionary, what: String, value: float, hit: 
 			else:
 				g.enemy_poison_turns = maxi(g.enemy_poison_turns, 2)
 		"gold":
-			# a share of what the kill pays (GameState: floor coin x10 for a boss x the rank's gold)
-			var base := (2 + g.floor_num) * (10 if g.enemy_is_boss else 1) * float(Monsters.TIERS[clampi(g.enemy_tier, 0, Monsters.TIERS.size() - 1)]["gold"])
-			var gold := maxi(1, int(base * value / 100.0))
+			# value % of what this kill pays: the real drop (goblins, milestone bonus), else the formula
+			var gold := maxi(1, int((drop if drop > 0 else g.kill_gold()) * value / 100.0))
 			g._add_gold(gold)
+			g.events.append({"type": "pet_gold", "pet": int(p["id"]), "amount": gold, "label": label})
 			g.say("[color=#fbbf24]%s's %s: +%d gold.[/color]" % [p["name"], label, gold])
 		_:
 			return false
 	if what != "gold":
-		g.events.append({"type": "buff", "name": label})
+		g.events.append({"type": "buff", "name": label, "pet": int(p["id"]), "tier": int(p["tier"])})   # floats over the pet that did it
 	return true

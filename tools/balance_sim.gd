@@ -9,6 +9,7 @@ extends SceneTree
 ## One turn is one second at the default (1x) speed (main.gd TURN_SECONDS).
 ## Each hero also has a real-time budget so a full run stays under ~10 minutes; a hero that
 ## runs out of budget stops there and the report says how much play time it covered.
+## BALANCE_PET=<tier 0-5> gives every hero one pet of that rank at the start (pet level balance, Oct 25).
 ## BALANCE_BUDGET=<seconds> raises the real-time budget per hero (default 480; heroes run side by side, one process each).
 ## Runs against the test user folder only (override.cfg): never touches real saves.
 
@@ -117,7 +118,8 @@ func _initialize() -> void:
 				var r: Dictionary = str_to_var(FileAccess.get_file_as_string(path))
 				results.append(r)
 				pending.erase(i)
-				print("%s/%s: floor %d, level %d, %.1f h played, %d deaths (%.0f s real)" % [r["class"], r["race"], r["best_floor"], r["level"], r["minutes"] / 60.0, r["deaths"], r["real_s"]])
+				print("%s/%s: floor %d, level %d, %.1f h played, %d deaths (%.0f s real)%s" % [r["class"], r["race"], r["best_floor"], r["level"], r["minutes"] / 60.0, r["deaths"], r["real_s"],
+					(", pet level %d after %d kills, power %.3f" % [int(r["pet_level"]), int(r["pet_kills"]), float(r["pet_power"])]) if r.has("pet_level") else ""])
 				DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	if results.is_empty():
 		quit(1)
@@ -149,6 +151,8 @@ func _play(cls: String, race: String, hours: float, budget_s: float) -> Dictiona
 	g.hero_name = cls
 	g.new_game()
 	g.choose_class(cls)
+	if OS.get_environment("BALANCE_PET") != "":
+		Menagerie.make_pet(g, "will_o_wisp", "will_o_wisp", int(OS.get_environment("BALANCE_PET")), "sim")
 	g.class_auto = true
 	g.auto_stats = true
 	g._check_spec()
@@ -269,6 +273,10 @@ func _play(cls: String, race: String, hours: float, budget_s: float) -> Dictiona
 	res["turns"] = turn
 	res["class_title"] = g.title()
 	res["pets"] = g.pets.size()
+	if not g.pets.is_empty():
+		res["pet_level"] = int(g.pets[0]["level"])
+		res["pet_kills"] = int(g.pets[0]["kills"])
+		res["pet_power"] = Menagerie.power(g.pets[0])
 	res["upg"] = _avg_upg(g)
 	return res
 

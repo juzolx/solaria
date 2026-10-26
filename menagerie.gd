@@ -26,9 +26,13 @@ const EGG_FLOORS := 10          # an egg hatches after this many cleared floors
 const NEST_DOOR_CHANCE := 0.05  # % per door from floor 3 (about 1 in 2,000): only a Calamity is rarer
 ## Each rank is clearly stronger: how hard a pet hits, x your Attack (Common .. Mythic)
 const POWER_BY_TIER := [0.08, 0.12, 0.17, 0.24, 0.33, 0.45]
-const MAX_LEVEL := 50
-const KILLS_PER_LEVEL := 40
-const POWER_PER_LEVEL := 0.004
+## Pet levels (Juzo, Oct 25: "whatever balances well"; numbers in claude/pets2 balance sims):
+## a level every run or so early on, max in about 30 hours of play, and a max-level pet stays
+## weaker than a level-1 pet one rank up (each level is +1.25% of its rank's own hit).
+const MAX_LEVEL := 30
+const LEVEL_KILLS_FIRST := 50    # kills from level 1 to 2
+const LEVEL_KILLS_STEP := 25     # each level after needs this many more than the one before
+const LEVEL_BONUS := 0.0125      # per level above 1, a share of the rank's base power
 
 static func is_tamer(g: GameState) -> bool:
 	return g.hidden_class == "beast_tamer"
@@ -64,6 +68,47 @@ static func out(g: GameState) -> Array:
 			list.append(p)
 	return list.slice(0, max_out(g))
 
+## Juzo (Oct 25): one of each kind on a team. The pet on the team that is the same kind as id
+## ({} = none). Each hero keeps their own team (party members' pets don't come along).
+static func same_kind_out(g: GameState, id: int) -> Dictionary:
+	var p := find(g, id)
+	for o in g.pets_out:
+		var q := find(g, int(o))
+		if int(o) != id and not q.is_empty() and String(q["species"]) == String(p.get("species", "")):
+			return q
+	return {}
+
+## Why pet id can't come along ("" = it can).
+static func out_block(g: GameState, id: int) -> String:
+	var p := find(g, id)
+	if p.is_empty() or id in g.pets_out:
+		return ""
+	if int(p["hurt"]) > 0:
+		return "Hurt pets must rest first."
+	var twin := same_kind_out(g, id)
+	if not twin.is_empty():
+		return "You already have a %s out (%s). One of each kind per team." % [Monsters.name_of(String(p["species"])), String(twin["name"])]
+	return ""
+
+## Old saves (and anything else) with two of a kind on the team: the highest rank stays, the
+## others go home (nothing is lost). Returns the names sent home.
+static func one_of_each(g: GameState) -> Array:
+	var keep := {}   # species -> pet id kept
+	for o in g.pets_out:
+		var q := find(g, int(o))
+		if q.is_empty():
+			continue
+		var sp := String(q["species"])
+		if not keep.has(sp) or int(q["tier"]) > int(find(g, int(keep[sp]))["tier"]):
+			keep[sp] = int(o)
+	var home: Array = []
+	for o in g.pets_out.duplicate():
+		var q := find(g, int(o))
+		if not q.is_empty() and int(keep[String(q["species"])]) != int(o):
+			g.pets_out.erase(o)
+			home.append(String(q["name"]))
+	return home
+
 static func toggle_out(g: GameState, id: int) -> bool:
 	var p := find(g, id)
 	if p.is_empty():
@@ -73,6 +118,12 @@ static func toggle_out(g: GameState, id: int) -> bool:
 		return true
 	if int(p["hurt"]) > 0:
 		return false
+	# resting pets give their spot up first (Fable pets R3: they don't fight, out() skips them)
+	for o in g.pets_out.duplicate():
+		if int(find(g, int(o)).get("hurt", 0)) > 0:
+			g.pets_out.erase(o)
+	if not same_kind_out(g, id).is_empty():
+		return false   # one of each kind (out_block says why)
 	# 0.13+ (Juzo): pets swap: with every spot taken, the one out longest goes home
 	while g.pets_out.size() >= max_out(g) and not g.pets_out.is_empty():
 		g.pets_out.remove_at(0)
@@ -84,10 +135,15 @@ static func make_pet(g: GameState, monster: String, art: String, tier: int, from
 	var p := {"id": g._new_id(), "name": Monsters.name_of(monster), "species": monster, "art": art, "tier": clampi(tier, 0, 5),
 		"level": 1, "kills": 0, "hurt": 0, "from": from}
 	g.pets.append(p)
-	if g.pets_out.size() < max_out(g):
-		g.pets_out.append(int(p["id"]))
+	if out(g).size() < max_out(g):
+		for o in g.pets_out.duplicate():   # a resting pet doesn't keep a new one home
+			if int(find(g, int(o)).get("hurt", 0)) > 0:
+				g.pets_out.erase(o)
+		if same_kind_out(g, int(p["id"])).is_empty():   # one of each kind: a second copy waits at home
+			g.pets_out.append(int(p["id"]))
 	g.codex.add("pets")
 	if g.codex.found_pet(str(p["species"]), int(p["tier"])):  # next update: the first of its kind gets a fanfare
+		g._check_codex()   # Fable pets R4: its Codex reward lands now, with the find, not a kill later
 		if from == "egg":
 			p["new_kind"] = true  # hatch() shows the fanfare itself
 		else:
@@ -95,7 +151,26 @@ static func make_pet(g: GameState, monster: String, art: String, tier: int, from
 	return p
 
 static func power(p: Dictionary) -> float:
-	return float(POWER_BY_TIER[clampi(int(p["tier"]), 0, 5)]) + POWER_PER_LEVEL * int(p["level"])
+	var lv := clampi(int(p["level"]), 1, MAX_LEVEL)   # old saves may show more; the bonus stops at MAX_LEVEL
+	return float(POWER_BY_TIER[clampi(int(p["tier"]), 0, 5)]) * (1.0 + LEVEL_BONUS * (lv - 1))
+
+## Total kills a pet needs to reach this level (1 = none).
+static func kills_for(level: int) -> int:
+	var n := maxi(0, level - 1)
+	return LEVEL_KILLS_FIRST * n + LEVEL_KILLS_STEP * n * (n - 1) / 2
+
+## The level these kills earn on the curve (at most MAX_LEVEL).
+static func level_for(kills: int) -> int:
+	var lv := 1
+	while lv < MAX_LEVEL and kills >= kills_for(lv + 1):
+		lv += 1
+	return lv
+
+## Old saves (the 40-kills-a-level curve, max 50): the level the kills earn now, never lower than
+## what the pet already showed.
+static func convert_levels(g: GameState) -> void:
+	for p in g.pets:
+		p["level"] = maxi(int(p.get("level", 1)), level_for(int(p.get("kills", 0))))
 
 # =====================================================================
 # Catching (Beast Tamer only)
@@ -133,7 +208,7 @@ static func try_catch(g: GameState) -> bool:
 	if randf() * 100.0 < catch_chance(g):
 		var p := make_pet(g, g.enemy_species, g.enemy_art, g.enemy_tier, "caught")
 		g.say("[color=#d9a066]%sThe %s stops fighting and follows you.[/color] It's your pet now%s." % [
-			"Your Beast Whisperer hums it calm. " if helper else "", p["name"], "" if int(p["id"]) in g.pets_out else " (waiting at home: your team is full)"])
+			"Your Beast Whisperer hums it calm. " if helper else "", p["name"], "" if int(p["id"]) in g.pets_out else (" (waiting at home: one of its kind is already out)" if not same_kind_out(g, int(p["id"])).is_empty() else " (waiting at home: your team is full)")])
 		g.events.append({"type": "mini_event", "kind": "pet", "title": "CAUGHT!", "sub": "%s joins you" % p["name"]})
 		g.feats["caught"] = int(g.feats.get("caught", 0)) + 1
 		g.tip("caught", "Pets fight beside you and grow with every kill. Pick who comes along in Character > Pets. Pets are never lost: when they go down they come home hurt and rest.")
@@ -159,15 +234,16 @@ static func turn(g: GameState) -> void:
 		g.last_hit = "hit"
 		var hit := maxi(1, int(g.get_attack() * power(p) * song * g.party_mult()))
 		var d := g._damage_enemy(hit, ["Physical"])
-		g.events.append({"type": "summon_hit", "dmg": d, "name": String(p["name"])})
+		g.events.append({"type": "summon_hit", "dmg": d, "name": String(p["name"]), "pet": int(p["id"]), "tier": int(p["tier"])})
 		PetAbilities.on_pet_turn(g, p, hit)  # 2.1: its trick and signature, by rank
 
 ## A kill: every pet on the run learns from it.
-static func on_kill(g: GameState) -> void:
-	PetAbilities.on_kill(g)
+## drop: the gold this kill pays (0 = work it out: GameState.kill_gold).
+static func on_kill(g: GameState, drop := 0) -> void:
+	PetAbilities.on_kill(g, drop)
 	for p in out(g):
 		p["kills"] = int(p["kills"]) + 1
-		if int(p["level"]) < MAX_LEVEL and int(p["kills"]) >= int(p["level"]) * KILLS_PER_LEVEL:
+		if int(p["level"]) < MAX_LEVEL and int(p["kills"]) >= kills_for(int(p["level"]) + 1):
 			p["level"] = int(p["level"]) + 1
 			g.say("[color=#d9a066]%s grows stronger (level %d).[/color]" % [p["name"], int(p["level"])])
 
@@ -206,7 +282,8 @@ static func give_egg(g: GameState, from: String, zone := -1, tier := -1) -> void
 	g.eggs.append(egg)
 	var col := String(TIER_COLORS[int(egg["tier"])])
 	g.say("[color=%s]A %s![/color] Something inside is moving. It hatches after %d floors." % [col, egg_name(egg), EGG_FLOORS])
-	g.events.append({"type": "mini_event", "kind": "pet", "title": "AN EGG!", "sub": egg_name(egg)})
+	# Fable pets R4: the find gets its own moment (the nest screen), not a banner
+	g.events.append({"type": "egg_moment", "zone": String(egg["zone"]), "tier": int(egg["tier"]), "name": egg_name(egg)})
 	g.tip("egg", "Eggs hatch after a few cleared floors into one of that region's monsters, at the egg's rank.")
 
 ## The region index an egg belongs to (-1 = none). New eggs keep the region id
@@ -255,10 +332,11 @@ static func hatch(g: GameState, egg := {}) -> Dictionary:
 	if cherished:
 		p["cherished"] = true
 		g.codex.add("cherished_pets")
-	g.say("[color=#fde68a]Your egg hatches: a %sbaby %s![/color]" % ["Cherished " if cherished else "", p["name"]])
+	g.say("[color=#fde68a]Your egg hatches: a %sbaby %s![/color] %s" % ["Cherished " if cherished else "", p["name"],
+		"It joins your team." if int(p["id"]) in g.pets_out else ("It waits at home: you already have one of its kind out." if not same_kind_out(g, int(p["id"])).is_empty() else "It waits at home: your team is full.")])
+	# one announcement: the hatch screen (Fable pets R4: no banner on top of it)
 	g.events.append({"type": "hatch_moment", "name": String(p["name"]), "art": art, "species": species, "cherished": cherished, "tier": tier, "first": p.has("new_kind")})
 	p.erase("new_kind")
-	g.events.append({"type": "mini_event", "kind": "pet", "title": "IT HATCHED!", "sub": ("A Cherished baby %s" if cherished else "A baby %s") % String(p["name"])})
 	return p
 
 # =====================================================================
@@ -283,10 +361,21 @@ static func heal(g: GameState, id: int) -> bool:
 
 static func rename(g: GameState, id: int, new_name: String) -> void:
 	var p := find(g, id)
-	new_name = new_name.strip_edges().left(18)
+	new_name = clean_name(new_name)
 	if not p.is_empty() and new_name != "":
 		p["name"] = new_name
 		g.save_game()
+
+## A name as typed, safe for the log (no BBCode brackets), trimmed, at most 18 letters.
+static func clean_name(s: String) -> String:
+	return s.replace("[", "").replace("]", "").strip_edges().left(18)
+
+## Every kind of pet there is: the monsters and the Calamity pets (the Codex and Collections count this).
+static func all_species() -> Array:
+	var all: Array = Monsters.all_monsters().duplicate()
+	for c in Calamity.LIST:
+		all.append(Calamity.pet_id(c))
+	return all
 
 ## Anyone with a pet (or an egg) sees the Clinic in town.
 static func has_any(g: GameState) -> bool:

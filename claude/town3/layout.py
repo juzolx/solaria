@@ -30,16 +30,16 @@ GROUND = [
     ("garden", 24, 10, 28, 14),   # small public garden with a well where the Tavern stood (the stairs stay clear)
     ("bridge", 17, 26, 22, 29),   # stone bridge on the main street
     ("planks", 7, 27, 8, 28),     # wooden footbridge on the west lane
-    ("field", 2, 29, 5, 34),
-    ("dirt", 13, 16, 13, 19),     # forge apron: crafts ground in front of the Blacksmith
+    ("dirt", 6, 30, 6, 33),       # forge apron: the Blacksmith's yard by the west lane, just inside the gate
+    ("square", 9, 16, 12, 19),    # a small paved plaza where the Blacksmith stood (Juzo moved it by the gate)
     ("pen", 28, 29, 31, 34),      # pet pen (fenced), beside the Clinic
     ("field", 13, 29, 17, 33),    # vegetable plots right behind the tall gatehouse (only low things there)
     ("yard", 13, 25, 17, 25),
     ("yard", 22, 25, 26, 25),
-    ("dirt", 34, 2, 37, 5),       # the Guild's training ring (sparring dirt, fenced)
+    ("dirt", 35, 4, 37, 5),       # the Guild's training ring (sparring dirt, fenced), clear of the Guild and the tower
     ("path", 35, 6, 36, 7),       # ...and its gate path down to the north lane
 ]
-EXTRA_STOPS = [(35, 6), (36, 6), (21, 9), (22, 9), (23, 9)]  # the training ring's gate; in front of the Bounty Board
+EXTRA_STOPS = [(35, 6), (36, 6), (16, 9), (17, 9), (18, 9)]  # the training ring's gate; in front of the Bounty Board
 
 PLATEAU, PLATEAU_Z = (13, 1, 26, 7), 24   # raised block (sprite), dungeon stands on it
 # the hope path, measured on the sprites: the wide stair climbs from the north lane (foot at j 9.5)
@@ -61,7 +61,7 @@ LOTS = [
     ("tavern", "Tavern", 27, 14, 31, 18, "j", 24),   # east of the square, clear of the dungeon stairs
     ("church", "Church (lot)", 2, 10, 6, 16, "i", 22),
     ("shop", "Shop", 9, 21, 12, 24, "i", 20),
-    ("smith", "Blacksmith", 9, 16, 12, 19, "i", 20),
+    ("smith", "Blacksmith", 2, 30, 5, 33, "i", 20),  # the west farm corner, by the gate road (Juzo, Oct 25)
     ("stash", "Vault", 28, 21, 31, 24, "i", 18),
     ("cabin", "Trophy Cabin (lot)", 2, 21, 6, 25, "i", 16),
     ("clinic", "Clinic", 23, 30, 27, 34, "j", 20),
@@ -73,9 +73,9 @@ INN_WING_DOOR = (11, 14)         # in front of the wing's drawn door (sprite fli
 CHURCH_DOOR = (5, 14)            # in front of the Church's arched door (its facade sits back in the lot)
 # small things on the square / streets: id, label, cell
 POINTS = [
-    ("bounty", "Bounty Board", 22, 8),      # by the dungeon stairs, clear of the Tavern
+    ("bounty", "Bounty Board", 17, 8),      # by the dungeon stairs (west of the foot), clear of the Tavern
     ("mail", "Mailbox", 12, 14),            # beside the Inn
-    ("obelisk", "Prophecy stone", 15, 4),
+    ("obelisk", "Prophecy stone", 14, 6),   # at the plateau's front: further back the Dungeon hid its foot
 ]
 # the Market is the whole square (well + stalls + paving) as one tap area
 MARKET = ("market", "Market", 13, 15, 26, 24)

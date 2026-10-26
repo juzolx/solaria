@@ -25,12 +25,12 @@ func refresh() -> void:
 	shown = key
 	OnlineUI.clear(box)
 	var all := Collections.all()
-	box.add_child(UI.label("Rewards  %d / %d" % [codex.coll_earned.size(), all.size()], 15, UI.GOLD))
-	box.add_child(UI.wrap("Fill the Codex to earn titles, name colors and plate frames. Looks only: they never change your power. Every hero in every town shares them. Pick a title on the Hero tab; name colors and frames at the Guild Hall.", UI.FONT_CAPTION, UI.DIM))
+	box.add_child(UI.label("Rewards  %d / %d" % [codex.coll_earned.size(), all.size()], UI.FONT_BODY, UI.GOLD))
+	box.add_child(UI.wrap("Fill the Codex to earn titles, name colors and plate frames. Looks only: they never change your power. Every hero in every town shares them. Pick a title on the Hero tab; name colors and frames at the Guild Hall.", UI.FONT_BODY, UI.DIM))
 	var tracks := Collections.tracks()
 	for g in Collections.GROUPS:
 		box.add_child(UI.heading(String(g[0])))
-		box.add_child(UI.wrap(String(g[1]), UI.FONT_CAPTION, UI.DIM))
+		box.add_child(UI.wrap(String(g[1]), UI.FONT_BODY, UI.DIM))
 		for t in tracks:
 			if Collections.group_of(t) != String(g[0]):
 				continue
@@ -46,7 +46,7 @@ func refresh() -> void:
 func _row(m: Dictionary, with_track: bool) -> Control:
 	var got := Collections.has(codex, String(m["id"]))
 	var h := UI.hbox(8)
-	var mark := UI.label("✓" if got else "◆", UI.FONT_CAPTION, UI.GOLD if got else UI.DIM)
+	var mark := UI.label("✓" if got else "◆", UI.FONT_BODY, UI.GOLD if got else UI.DIM)
 	mark.custom_minimum_size = Vector2(16, 0)
 	h.add_child(mark)
 	var t := String(m["track"])
@@ -57,11 +57,11 @@ func _row(m: Dictionary, with_track: bool) -> Control:
 			what += "  (%d / %d)" % [mini(Collections.count(codex, t), Collections.total(t)), Collections.total(t)]
 		elif not got:
 			what += "  (have %d)" % Collections.count(codex, t)
-	var l := UI.wrap("%s  -  %s" % [what, Collections.reward_text(m)], UI.FONT_CAPTION, UI.TEXT if got else UI.DIM)
+	var l := UI.wrap("%s  -  %s" % [what, Collections.reward_text(m)], UI.FONT_BODY, UI.TEXT if got else UI.DIM)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(l)
 	if got:
-		h.add_child(UI.label(str(codex.coll_earned[m["id"]]), UI.FONT_CAPTION, UI.DIM))
+		h.add_child(UI.label(str(codex.coll_earned[m["id"]]), UI.FONT_BODY, UI.DIM))
 	return h
 
 ## Interface pass (approved mockup 15): one framed card per track: its name and count, a gold
@@ -82,7 +82,7 @@ func _track_card(t: String, ms: Array) -> PanelContainer:
 	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(nm)
 	if tot > 0:
-		head.add_child(UI.label("%d / %d" % [mini(have, tot), tot], UI.FONT_CAPTION, UI.DIM))
+		head.add_child(UI.label("%d / %d" % [mini(have, tot), tot], UI.FONT_BODY, UI.DIM))
 		var bar := UI.bar(UI.GOLD, 8)
 		bar.max_value = tot
 		bar.value = mini(have, tot)

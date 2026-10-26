@@ -21,26 +21,51 @@ func setup(m) -> void:
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_child(box)
 
+## Fable r1 #11: the page is seven parts, each with its own key, and a refresh rebuilds only the
+## parts whose inputs changed (a kill or a boss only touches the hidden-class part, not the
+## portraits and frames of the rest).
+var parts := {}   # part name -> its VBoxContainer (in page order)
+
 func refresh() -> void:
+	if parts.is_empty():
+		for pname in ["none", "header", "pick", "god", "hidden", "tree", "detail", "sigs"]:
+			var c := UI.vbox(10)
+			box.add_child(c)
+			parts[pname] = c
+	if shown == "":   # someone asked for a full redraw
+		for c in parts.values():
+			c.remove_meta("key")
+		shown = "built"
+	var page := box
+	var base := "%s|%s|%d|%s" % [state.hero_class, str(state.class_path), state.level, state.dev_mode]
 	var sn := ClassTree.stat_name(state)
-	var key := "%s|%s|%d|%d|%s|%s|%s|%s|%s|%s|%s|%d|%s|%d" % [state.hero_class, str(state.class_path), state.level, int(state.faith), state.god_class,
-		str(state.god_offers), selected, state.dev_mode, str(state.hidden), state.hidden_class, str(state.hidden_stage),
-		int(state.ctrack.get("kills", 0)) / 25, sn, int(state.unique_value(sn)) if sn != "" else 0]
-	key += "|%s|%d|%s|%s|%s" % [state.sig_slot, 0, state.trial_active, state.enemy_is_boss, str(state.hidden_offer)]
-	if key == shown:
+	_part("none", str(state.hero_class == ""), func():
+		if state.hero_class == "":
+			box.add_child(UI.label("Choose a class first.", UI.FONT_BODY, UI.DIM)))
+	var no_class := state.hero_class == ""
+	_part("header", "" if no_class else "%s|%d|%s|%s|%s|%s" % [base, int(state.faith), state.god_class, state.hidden_class, state.title(), str(state.god_offers)], _header)
+	_part("pick", "" if no_class else "%s|%s|%s" % [base, str(state.god_offers), str(state.hidden_offer)], _pick_panel)
+	_part("god", "" if no_class else "%s|%s|%s" % [base, state.god_class, str(state.god_offers)], _god_classes)   # a God class that answered, or yours
+	_part("hidden", "" if no_class else "%s|%s|%s|%s|%d|%s|%d|%s|%s|%s" % [base, str(state.hidden), state.hidden_class, str(state.hidden_stage),
+		int(state.ctrack.get("kills", 0)) / 25, sn, int(state.unique_value(sn)) if sn != "" else 0, state.trial_active, state.enemy_is_boss, str(state.hidden_offer) + str(state.best_floor)], _hidden_classes)
+	_part("tree", "" if no_class else "%s|%s" % [base, str(state.appearance)], _tree)
+	_part("detail", "" if no_class else "%s|%s" % [base, selected], _detail)
+	_part("sigs", "" if no_class else "%s|%s" % [base, state.sig_slot], _signatures)
+	box = page
+
+## Rebuilds one part of the page when its key changed; the builders add to `box`.
+func _part(pname: String, key: String, builder: Callable) -> void:
+	var c: VBoxContainer = parts[pname]
+	if c.has_meta("key") and String(c.get_meta("key")) == key:
 		return
-	shown = key
-	OnlineUI.clear(box)
-	if state.hero_class == "":
-		box.add_child(UI.label("Choose a class first.", UI.FONT_CAPTION, UI.DIM))
-		return
-	_header()
-	_pick_panel()
-	_god_classes()  # a God class that answered, or yours
-	_hidden_classes()  # a hidden path on offer, or yours, right under the choice
-	_tree()
-	_detail()
-	_signatures()
+	c.set_meta("key", key)
+	OnlineUI.clear(c)
+	if key != "" or pname == "none":
+		var page := box
+		box = c
+		builder.call()
+		box = page
+	c.visible = c.get_children().any(func(n): return not n.is_queued_for_deletion())
 
 # =====================================================================
 # Header: who you are now
@@ -70,7 +95,7 @@ func _header() -> void:
 	h.add_child(cv)
 	var top := UI.hbox(8)
 	cv.add_child(top)
-	var tl := UI.label(state.title().to_upper(), 22, border.lightened(0.25))
+	var tl := UI.name_plate(state.title())   # Fable r2 #11: the name in bone, the class colour stays on the frame
 	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(tl)
 	if r != "":
@@ -80,7 +105,7 @@ func _header() -> void:
 	var steps: Array = [state.hero_class]
 	for n in ClassTree.path_nodes(state):
 		steps.append(n["name"])
-	var path := UI.rich(UI.FONT_CAPTION)
+	var path := UI.rich(UI.FONT_BODY)
 	path.text = "[color=%s]Your path:[/color] %s" % [UI.hex(UI.DIM), "  >  ".join(steps)]
 	cv.add_child(path)
 	var lines: Array = []
@@ -88,23 +113,25 @@ func _header() -> void:
 		lines.append("[color=%s]%s:[/color] %s" % [UI.hex(UI.DIM), n["name"], ClassTree.bonus_text(n)])
 	if lines.is_empty():
 		lines.append("[color=%s]%s[/color]" % [UI.hex(UI.DIM), info["blurb"]])
-	var bt := UI.rich(UI.FONT_CAPTION)
+	var bt := UI.rich(UI.FONT_BODY)
 	bt.text = "\n".join(lines)
 	cv.add_child(bt)
 	var sn := ClassTree.stat_name(state)
 	if sn != "":
-		var st := UI.rich(UI.FONT_CAPTION)
+		var st := UI.rich(UI.FONT_BODY)
 		st.text = "[color=%s]Special stat:[/color] [b]%s %.1f[/b]  [color=%s](grows when you %s, and from every boss)[/color]\n[color=%s]It gives you:[/color] %s" % [
 			UI.hex(UI.DIM), sn, state.unique_value(sn), UI.hex(UI.DIM), ClassTree.grow_text(state), UI.hex(UI.DIM), ClassTree.stat_text(state)]
 		cv.add_child(st)
-	var faith := UI.rich(UI.FONT_CAPTION)
-	faith.text = "[color=%s]Faith %+d. Holy skills, bosses and good deeds raise it; Shadow and Blood skills and dark bargains lower it. At %+d you count as Good, at %d as Evil.%s[/color]" % [
-		UI.hex(UI.DIM), int(state.faith), int(ClassTree.GOOD_AT), int(ClassTree.EVIL_AT), " The Wanderer is always Neutral." if state.hero_class == "Wanderer" else ""]
+	# Fable r1 #12: Faith is a chip; the rules are a tap away
+	var faith := UI.chip("Faith %+d" % int(state.faith), Color(ClassTree.ALIGN_COLORS[al]), UI.FONT_BODY)
+	faith.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	UI.tip(faith, "Holy skills, bosses and good deeds raise Faith; Shadow and Blood skills and dark bargains lower it. At %+d you count as Good, at %d as Evil.%s" % [
+		int(ClassTree.GOOD_AT), int(ClassTree.EVIL_AT), " The Wanderer is always Neutral." if state.hero_class == "Wanderer" else ""])
 	cv.add_child(faith)
 
 static func _badge(text: String, c: Color) -> PanelContainer:
 	var p := UI.panel(Color(c, 0.14), c, 6, 4, 1)
-	p.add_child(UI.label(text, UI.FONT_CAPTION, c.lightened(0.2)))
+	p.add_child(UI.label(text, UI.FONT_BODY, c.lightened(0.2)))
 	return p
 
 # =====================================================================
@@ -115,7 +142,7 @@ func _pick_panel() -> void:
 	var t := ClassTree.pick_tier(state)
 	if t < 0:
 		if not ClassTree.options(state).is_empty():
-			box.add_child(UI.label("Next choice at level %d." % int(ClassTree.PICK_LEVELS[state.class_path.size()]), UI.FONT_CAPTION, UI.DIM))
+			box.add_child(UI.label("Next choice at level %d." % int(ClassTree.PICK_LEVELS[state.class_path.size()]), UI.FONT_BODY, UI.DIM))
 		return
 	box.add_child(UI.heading("Choose your class (level %d)" % int(ClassTree.PICK_LEVELS[t])))
 	var cols := UI.hbox(8)
@@ -152,17 +179,17 @@ static func class_card(m, n: Dictionary, with_button: bool, on_pick: Callable) -
 	var nl := UI.label(String(n["name"]), 16, UI.GOLD if why == "" else UI.DIM)
 	nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(nl)
-	var tags := UI.rich(UI.FONT_CAPTION)
+	var tags := UI.rich(UI.FONT_BODY)
 	var bits: Array = ["[color=%s]%s[/color]" % [ClassTree.ALIGN_COLORS[side], ClassTree.ALIGN_NAMES[side]]]
 	if r != "":
 		bits.append("[color=%s]%s[/color]" % [ClassTree.RANK_COLORS[r], ClassTree.rank_text(n)])
 	tags.text = "  ".join(bits)
 	v.add_child(tags)
-	var t := UI.rich(UI.FONT_CAPTION)
+	var t := UI.rich(UI.FONT_BODY)
 	t.text = "%s.\n[color=%s]%s[/color]" % [n["role_text"], UI.hex(UI.DIM), ClassTree.bonus_text(n)]
 	v.add_child(t)
 	if why != "" and (with_button or why.begins_with("Your deeds")):
-		var wl := UI.label(why, UI.FONT_CAPTION, Color("#f87171"))
+		var wl := UI.label(why, UI.FONT_BODY, Color("#f87171"))
 		wl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(wl)
 	if with_button and why == "":
@@ -195,8 +222,9 @@ static func outfit_stage(g: GameState, cls: String, tier: int, scale := 2, silho
 	pic.size = pic.custom_minimum_size
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	if silhouette:
-		pic.modulate = Color(UiSkin.SOOT, 0.85)   # a step not reached yet: only its shape
+	if silhouette:   # a step not reached yet: a flat slate shape of the whole hero (Fable r1 #17)
+		pic.texture = ImageTexture.create_from_image(Sprites._silhouette((pic.texture as Texture2D).get_image()))
+		pic.modulate = UI.EMPTY
 	c.add_child(pic)
 	c.resized.connect(func():   # centred, whole pixels, the plinth under the feet
 		pic.position = Vector2(roundf((c.size.x - side) / 2.0), 0)
@@ -226,15 +254,15 @@ static func pick_card(m, cname: String, on_pick: Callable) -> PanelContainer:
 	var tags: Array = []
 	for t in info["tags"]:
 		tags.append("[color=%s]%s[/color]" % [Classes.tag_color(t), t])
-	var tl := UI.rich(UI.FONT_CAPTION)
+	var tl := UI.rich(UI.FONT_BODY)
 	tl.text = "%s
 %s" % [info["role"], " ".join(tags)]
 	hv.add_child(tl)
-	var blurb := UI.rich(UI.FONT_CAPTION)
+	var blurb := UI.rich(UI.FONT_BODY)
 	blurb.text = "[color=%s]%s[/color]" % [UI.hex(UI.DIM), info["blurb"]]
 	hv.add_child(blurb)
 	var start: Array = info["start"]
-	var text := UI.rich(UI.FONT_CAPTION)
+	var text := UI.rich(UI.FONT_BODY)
 	text.text = "[color=%s]First skill, %s:[/color] %s" % [UI.hex(UI.GOLD_DULL), SkillData.skill_name(start[0]), SkillData.info(start[0])["text"]]
 	cv.add_child(text)
 	var b := UI.primary("Play as %s" % cname, on_pick)
@@ -250,35 +278,53 @@ func _tree() -> void:
 	if state.hidden_class != "":
 		UI.section(box, "Your path", "Your main route ended when you took a hidden class. It grows on its own now, at levels 15, 35 and 75.")
 		return
-	UI.section(box, "Your path", "Your class evolves at levels 15, 35 and 75. What it becomes stays a mystery until you get there and choose.")
-	var row := UI.hbox(6)
+	# Fable r1 #17: one line of four nodes (dots on a 2 px line, the level under each); reached
+	# nodes show the outfit and the class in gold, the ones ahead a dark "?" shape. The choose-now
+	# state is the gold pick panel above, not a second colour here.
+	UI.section(box, "Your path", "Your class evolves at levels 15, 35 and 75.")
+	var row := UI.hbox(0)
 	box.add_child(row)
 	var steps: Array = [{"level": 1, "id": "", "name": state.hero_class}]
 	for i in ClassTree.PICK_LEVELS.size():
 		var id: String = state.class_path[i] if state.class_path.size() > i else ""
 		steps.append({"level": int(ClassTree.PICK_LEVELS[i]), "id": id})
 	for i in steps.size():
-		if i > 0:
-			var arrow := UI.label("›", 18, UI.DIM)
-			arrow.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-			row.add_child(arrow)
 		var st: Dictionary = steps[i]
 		var n: Dictionary = ClassTree.node(String(st["id"])) if String(st["id"]) != "" else {}
 		if st.has("name"):
 			n = {"name": st["name"]}
 		var reached := not n.is_empty()
-		var ready: bool = not reached and ClassTree.pick_tier(state) == i - 1 and state.level >= int(st["level"])
-		var col := UI.GOLD if reached else (UI.GREEN if ready else UI.BORDER)
-		var p := PanelContainer.new()   # interface pass: slate steps; gold = reached, green = choose now
-		p.add_theme_stylebox_override("panel", UiSkin.bevel(UiSkin.SLATE if reached or ready else UI.PANEL, UI.GOLD_DULL if reached else (UI.GREEN if ready else UI.EMPTY), 6))
-		p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(p)
-		var v := UI.vbox(1)
-		p.add_child(v)
-		v.add_child(UI.label("Start" if i == 0 else "Level %d" % int(st["level"]), UI.FONT_CAPTION, UI.DIM))
-		v.add_child(outfit_stage(state, state.hero_class, 0 if i == 0 else int(st["level"]), 1, not reached))
-		var name_text: String = String(n["name"]) if reached else ("Choose now!" if ready else "???")
-		var nl := UI.label(name_text, UI.FONT_CAPTION, UI.GOLD if reached else (UI.GREEN if ready else UI.DIM))
+		var next_reached := i + 1 < steps.size() and (String(steps[i + 1]["id"]) != "")
+		var v := UI.vbox(2)
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(v)
+		var pic := outfit_stage(state, state.hero_class, 0 if i == 0 else int(st["level"]), 1, not reached)
+		if not reached:
+			var q := UI.label("?", UI.FONT_TITLE, UI.DIM)
+			q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			q.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			q.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			pic.add_child(q)
+		v.add_child(pic)
+		var track := Control.new()   # this node's dot and its half of the line either side
+		track.custom_minimum_size = Vector2(0, 16)
+		var first := i == 0
+		var last := i == steps.size() - 1
+		track.draw.connect(func():
+			var cy := roundf(track.size.y / 2.0)
+			var cx := roundf(track.size.x / 2.0)
+			if not first:
+				track.draw_rect(Rect2(0, cy - 1, cx, 2), UI.GOLD_DULL if reached else UI.EMPTY)
+			if not last:
+				track.draw_rect(Rect2(cx, cy - 1, track.size.x - cx, 2), UI.GOLD_DULL if next_reached else UI.EMPTY)
+			track.draw_rect(Rect2(cx - 7, cy - 7, 14, 14), UiSkin.SOOT)
+			track.draw_rect(Rect2(cx - 5, cy - 5, 10, 10), UI.GOLD if reached else UI.EMPTY))
+		v.add_child(track)
+		var lv := UI.label("Start" if i == 0 else "Lv %d" % int(st["level"]), UI.FONT_BODY, UI.DIM)
+		lv.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(lv)
+		var nl := UI.label(String(n["name"]) if reached else "?", UI.FONT_BODY, UI.GOLD if reached else UI.DIM)
+		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(nl)
 	# Dev Mode still shows the whole branching tree
@@ -336,7 +382,7 @@ func _signatures() -> void:
 			var b := UI.button("Use", func(): state.set_signature(sid); main.refresh())
 			b.custom_minimum_size = Vector2(64, UI.TAP)
 			h.add_child(b)
-		var t := UI.rich(UI.FONT_CAPTION)
+		var t := UI.rich(UI.FONT_BODY)
 		var els: Array = []
 		for tg in s["tags"]:
 			els.append("[color=%s]%s[/color]" % [Classes.tag_color(tg), tg])
@@ -356,7 +402,7 @@ func _god_classes() -> void:
 		var me := ClassTree.node(state.god_class)
 		box.add_child(class_card(main, me, false, Callable()))
 		return
-	box.add_child(UI.wrap("Your deeds were seen. A God class answers you: you can swap into it now, or later from here. It's for good.", UI.FONT_CAPTION, Color(ClassTree.RANK_COLORS["God"])))
+	box.add_child(UI.wrap("Your deeds were seen. A God class answers you: you can swap into it now, or later from here. It's for good.", UI.FONT_BODY, Color(ClassTree.RANK_COLORS["God"])))
 	for id in state.god_offers:
 		box.add_child(class_card(main, ClassTree.node(id), true, func():
 			main.confirm("Become %s?" % ClassTree.node(id)["name"], "A God class is the rank above every other. It replaces your class for good.", "Swap", func():
@@ -386,8 +432,8 @@ func _hidden_classes() -> void:
 		var nl := UI.label(Hidden.title(state), 16, col)
 		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(nl)
-		head.add_child(UI.label(Hidden.TIER_NAMES[int(c["tier"])], UI.FONT_CAPTION, Color(Hidden.TIER_COLORS[int(c["tier"])])))
-		var t := UI.rich(UI.FONT_CAPTION)
+		head.add_child(UI.label(Hidden.TIER_NAMES[int(c["tier"])], UI.FONT_BODY, Color(Hidden.TIER_COLORS[int(c["tier"])])))
+		var t := UI.rich(UI.FONT_BODY)
 		var lines: Array = ["[color=%s]%s[/color]" % [UI.hex(UI.DIM), c["lore"]],
 			"Step %d of 3:  %s" % [st, " > ".join(c["stages"])],
 			"[color=#4ade80]Now:[/color] %s" % Hidden.stage_text(id, st)]
@@ -403,19 +449,22 @@ func _hidden_classes() -> void:
 		return
 	var whispers := ClassHints.riddles(state)  # 2.1 G7: riddles, never names; more open as you go deeper
 	if not whispers.is_empty():
-		box.add_child(UI.heading("Whispers"))
-		var wl := UI.rich(13)
+		# Fable r1 #12: one whisper on the page, all of them on a tap
+		var wh := UI.heading("Whispers", ("Rumours of secret classes. Tap for all %d." % whispers.size()) if whispers.size() > 1 else "A rumour of a secret class.")
 		var quoted: Array = []
 		for w in whispers:
-			quoted.append("[i]\"%s\"[/i]" % w)
-		wl.text = "[color=%s]Things people say about secret classes. Nobody knows if they're true.[/color]\n%s" % [UI.hex(UI.DIM), "\n".join(quoted)]
+			quoted.append("\"%s\"" % w)
+		UI.tip(wh, "\n".join(quoted))
+		box.add_child(wh)
+		var wl := UI.rich(UI.FONT_BODY)
+		wl.text = "[i]\"%s\"[/i]" % whispers[0]
 		box.add_child(wl)
 	if not state.dev_mode:
 		return
 	box.add_child(UI.heading("Hidden classes (Dev Mode)"))
 	for id in Hidden.ORDER:
 		var c := Hidden.info(id)
-		var r := UI.rich(UI.FONT_CAPTION)
+		var r := UI.rich(UI.FONT_BODY)
 		var lines: Array = ["[b]%s[/b]  %s  [color=%s]%s[/color]" % [c["name"], "EARNED" if state.hidden.has(id) else "", UI.hex(UI.DIM), c["rumor"]]]
 		for line in Hidden.progress(state, id):
 			lines.append(_line(line))
@@ -426,7 +475,7 @@ func _hidden_classes() -> void:
 static func hidden_offer_cards(m, parent: Control, on_done: Callable) -> void:
 	var st: GameState = m.state
 	var stage := Hidden.stage(st)
-	var note := UI.wrap("Secret classes you earned by how you play. Take one instead of the main route, until level %d. It becomes your class for good: no more evolutions." % (st.hidden_offer_level + 1), UI.FONT_CAPTION, Color("#c4b5fd"))
+	var note := UI.wrap("Secret classes you earned by how you play. Take one instead of the main route, until level %d. It becomes your class for good: no more evolutions." % (st.hidden_offer_level + 1), UI.FONT_BODY, Color("#c4b5fd"))
 	parent.add_child(note)
 	for id in st.hidden_offer:
 		var c := Hidden.info(id)
@@ -440,8 +489,8 @@ static func hidden_offer_cards(m, parent: Control, on_done: Callable) -> void:
 		var nl := UI.label(c["stages"][stage - 1], 16, col)
 		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(nl)
-		head.add_child(UI.label(Hidden.TIER_NAMES[int(c["tier"])], UI.FONT_CAPTION, Color(Hidden.TIER_COLORS[int(c["tier"])])))
-		var t := UI.rich(UI.FONT_CAPTION)
+		head.add_child(UI.label(Hidden.TIER_NAMES[int(c["tier"])], UI.FONT_BODY, Color(Hidden.TIER_COLORS[int(c["tier"])])))
+		var t := UI.rich(UI.FONT_BODY)
 		var lines: Array = ["[color=%s]%s[/color]" % [UI.hex(UI.DIM), c["lore"]], "[color=#4ade80]Gives:[/color] %s" % Hidden.stage_text(id, stage)]
 		if stage < 3:
 			lines.append("[color=%s]Grows at level %s into %s.[/color]" % [UI.hex(UI.DIM), " and ".join(Hidden.STAGE_LEVELS.slice(stage).map(func(x): return str(x))), " and ".join(c["stages"].slice(stage))])

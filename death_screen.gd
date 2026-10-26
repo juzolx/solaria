@@ -29,7 +29,7 @@ static func regular(r: Dictionary, on_ok: Callable, on_never: Callable) -> Panel
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	plate.add_child(title)
 	var who := UI.wrap("%s got you.%s" % [String(r.get("enemy", "A monster")),
-		(" You wake at the checkpoint on floor %d." % int(r["woke"])) if r.has("woke") else ""], UI.FONT_CAPTION, UI.TEXT)
+		(" You wake at the checkpoint on floor %d." % int(r["woke"])) if r.has("woke") else ""], UI.FONT_BODY, UI.TEXT)
 	who.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(who)
 	# What you keep / what you lose
@@ -39,10 +39,10 @@ static func regular(r: Dictionary, on_ok: Callable, on_never: Callable) -> Panel
 	var lost := String(r.get("lost", ""))
 	if r.has("woke"):
 		v.add_child(_head("You lose"))
-		var ll := UI.wrap(lost if lost != "" else "Nothing: you carried nothing in.", UI.FONT_CAPTION, UI.RED if lost != "" else UI.DIM)
+		var ll := UI.wrap(lost if lost != "" else "Nothing: you carried nothing in.", UI.FONT_BODY, UI.RED if lost != "" else UI.DIM)
 		v.add_child(ll)
 		if lost.contains("guarded by your killer"):
-			var back := UI.wrap("Beat %s on floor %d to get it all back." % [String(r.get("enemy", "it")), int(r.get("floor", 0))], UI.FONT_CAPTION, UI.GOLD)
+			var back := UI.wrap("Beat %s on floor %d to get it all back." % [String(r.get("enemy", "it")), int(r.get("floor", 0))], UI.FONT_BODY, UI.GOLD)
 			v.add_child(back)
 	# What hurt, in one line, and the tips
 	var taken: Dictionary = r.get("taken", {})
@@ -54,9 +54,9 @@ static func regular(r: Dictionary, on_ok: Callable, on_never: Callable) -> Panel
 	for k in keys.slice(0, 3):
 		parts.append("%s %d%%" % [names.get(k, String(k)), int(round(float(taken[k]) * 100.0 / total))])
 	if not parts.is_empty():
-		v.add_child(UI.wrap("What hurt: %s. It had %d%% health left." % [", ".join(parts), int(float(r.get("enemy_left", 0.0)) * 100)], UI.FONT_CAPTION, UI.DIM))
+		v.add_child(UI.wrap("What hurt: %s. It had %d%% health left." % [", ".join(parts), int(float(r.get("enemy_left", 0.0)) * 100)], UI.FONT_BODY, UI.DIM))
 	for tip_text in r.get("tips", []):
-		var t := UI.rich(UI.FONT_CAPTION)
+		var t := UI.rich(UI.FONT_BODY)
 		t.text = "[color=%s]Tip:[/color] %s" % [UI.hex(UI.GOLD), tip_text]
 		v.add_child(t)
 	var row := UI.hbox(8)
@@ -68,6 +68,18 @@ static func regular(r: Dictionary, on_ok: Callable, on_never: Callable) -> Panel
 		b.custom_minimum_size = Vector2(0, UI.TAP)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(b)
+	# Fable r1 #15: the fight dims under the card (like the Hardcore Overlay): a screen-wide
+	# veil drawn just under the card, above the action row and the nav bar
+	p.z_index = 60
+	var veil := ColorRect.new()
+	veil.color = Color(UiSkin.SOOT, 0.62)
+	veil.top_level = true
+	veil.show_behind_parent = true
+	veil.mouse_filter = Control.MOUSE_FILTER_STOP   # taps on the dimmed fight do nothing
+	p.add_child(veil, false, Node.INTERNAL_MODE_FRONT)
+	p.ready.connect(func():
+		veil.position = Vector2.ZERO
+		veil.size = p.get_viewport_rect().size)
 	return p
 
 ## Fits the fall card into max_h: the story scrolls, the buttons always show. Call once
@@ -93,10 +105,10 @@ static func hardcore(content: VBoxContainer, hero: String, level: int, race: Str
 	var name_l := UI.label("%s is gone" % hero, 21, Color("#f6757a"))
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(name_l)
-	var line := UI.wrap("Level %d %s %s. Fell on floor %d. Hardcore heroes get one life." % [level, race, title, floor_num], UI.FONT_CAPTION, UI.TEXT)
+	var line := UI.wrap("Level %d %s %s. Fell on floor %d. Hardcore heroes get one life." % [level, race, title, floor_num], UI.FONT_BODY, UI.TEXT)
 	line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(line)
-	var rec := UI.label("A new Hardcore record!" if new_best else "Your best is still floor %d." % best, UI.FONT_CAPTION, UI.GOLD if new_best else UI.DIM)
+	var rec := UI.label("A new Hardcore record!" if new_best else "Your best is still floor %d." % best, UI.FONT_BODY, UI.GOLD if new_best else UI.DIM)
 	rec.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(rec)
 	content.add_child(_head("What stays"))
@@ -111,16 +123,16 @@ static func hardcore(content: VBoxContainer, hero: String, level: int, race: Str
 		b.custom_minimum_size = Vector2(0, UI.TAP)
 		row.add_child(b)
 
-static func _head(t: String) -> Label:
-	return UI.label("◆ " + t.to_upper(), UI.FONT_CAPTION, UI.GOLD_DULL)
+static func _head(t: String) -> Control:
+	return UI.heading(t)
 
 static func _pair(what: String, state_text: String, col: Color) -> HBoxContainer:
 	var h := UI.hbox(8)
-	var l := UI.label(what, UI.FONT_CAPTION, UI.TEXT)
+	var l := UI.label(what, UI.FONT_BODY, UI.TEXT)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	h.add_child(l)
-	h.add_child(UI.label(state_text, UI.FONT_CAPTION, col))
+	h.add_child(UI.label(state_text, UI.FONT_BODY, col))
 	return h
 
 ## Ink outline, slate stone with a lit top edge, a carved cross, a strip of ground.

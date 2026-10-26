@@ -39,7 +39,7 @@ func _load() -> void:
 		box.add_child(OnlineUI.name_card(main, reload))
 		loading = false
 		return
-	box.add_child(UI.label("Loading...", UI.FONT_CAPTION, UI.DIM))
+	box.add_child(UI.label("Loading...", UI.FONT_BODY, UI.DIM))
 	var g: Dictionary = await online.my_guild()
 	OnlineUI.clear(box)
 	if not g["ok"]:
@@ -49,7 +49,7 @@ func _load() -> void:
 		return
 	if g["data"] == null:
 		box.add_child(UI.label("Raids are for guilds", 18, UI.GOLD))
-		box.add_child(UI.label("Join or start a guild in the Guild tab. Then everyone fights the same weekly boss and the damage adds up.", UI.FONT_CAPTION, UI.DIM))
+		box.add_child(UI.label("Join or start a guild in the Guild tab. Then everyone fights the same weekly boss and the damage adds up.", UI.FONT_BODY, UI.DIM))
 		box.add_child(UI.primary("Go to Guild", func(): main.show_tab(4, 1)))
 		loading = false
 		return
@@ -81,7 +81,7 @@ func _show(gid: int, d: Dictionary) -> void:
 	var v := UI.vbox(8)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(v)
-	v.add_child(UI.label("THIS WEEK'S RAID BOSS", UI.FONT_CAPTION, UI.DIM))
+	v.add_child(UI.heading("This week's raid boss"))
 	v.add_child(UI.label(str(boss["name"]), 22, UI.RED.lightened(0.2) if not d["dead"] else UI.GREEN))
 	var hp := int(d["hp"])
 	var dealt := mini(int(d["dealt"]), hp)
@@ -89,8 +89,8 @@ func _show(gid: int, d: Dictionary) -> void:
 	bar.max_value = hp
 	bar.value = hp - dealt
 	v.add_child(bar)
-	v.add_child(UI.label("%s / %s HP left  -  %d guild members" % [_num(hp - dealt), _num(hp), int(d["members"])], 12, UI.DIM))
-	v.add_child(UI.label("Resets in %s" % _time_left(), UI.FONT_CAPTION, UI.DIM))
+	v.add_child(UI.label("%s / %s HP left  -  %d guild members" % [_num(hp - dealt), _num(hp), int(d["members"])], UI.FONT_BODY, UI.DIM))
+	v.add_child(UI.label("Resets in %s" % _time_left(), UI.FONT_BODY, UI.DIM))
 
 	var actions := UI.hbox(8)
 	v.add_child(actions)
@@ -113,7 +113,7 @@ func _show(gid: int, d: Dictionary) -> void:
 			reload())
 		actions.add_child(atk)
 		if left <= 0:
-			v.add_child(UI.label("Come back tomorrow for 3 more attacks.", UI.FONT_CAPTION, UI.DIM))
+			v.add_child(UI.label("Come back tomorrow for 3 more attacks.", UI.FONT_BODY, UI.DIM))
 	elif not d["claimed"]:
 		var claim := UI.primary("Claim reward", func(): pass, UI.GREEN)
 		claim.pressed.connect(func():
@@ -127,20 +127,20 @@ func _show(gid: int, d: Dictionary) -> void:
 			reload())
 		actions.add_child(claim)
 	else:
-		v.add_child(UI.label("Defeated! You've claimed this week's reward. A new boss arrives Monday.", UI.FONT_CAPTION, UI.GREEN))
+		v.add_child(UI.label("Defeated! You've claimed this week's reward. A new boss arrives Monday.", UI.FONT_BODY, UI.GREEN))
 
 	box.add_child(UI.heading("Damage this week"))
 	var by: Dictionary = d["damage_by"]
 	var names := by.keys()
 	names.sort_custom(func(a, b): return int(by[a]) > int(by[b]))
 	if names.is_empty():
-		box.add_child(UI.label("Nobody has attacked yet. Be first!", UI.FONT_CAPTION, UI.DIM))
+		box.add_child(UI.label("Nobody has attacked yet. Be first!", UI.FONT_BODY, UI.DIM))
 	for n in names:
 		var line := UI.hbox(8)
-		var l := UI.label(str(n), UI.FONT_CAPTION, UI.GOLD if n == main.profile.player_name else UI.TEXT)
+		var l := UI.label(str(n), UI.FONT_BODY, UI.GOLD if n == main.profile.player_name else UI.TEXT)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		line.add_child(l)
-		line.add_child(UI.label(_num(int(by[n])), UI.FONT_CAPTION, UI.TEXT))
+		line.add_child(UI.label(_num(int(by[n])), UI.FONT_BODY, UI.TEXT))
 		box.add_child(line)
 
 func _num(n: int) -> String:

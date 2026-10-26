@@ -21,24 +21,28 @@ var slot_cards := {}          # slot -> its square (tap-tip = the full line)
 var slot_info := {}           # slot -> "RING: Bone Band  +12 Defense  (2 in bag)  UPGRADE!" (the tap-tip, tests read it)
 var slot_detail: RichTextLabel  # the picked slot's item, one line under the hero
 var pills := {}               # "ATK"/"DEF"/"HP"/"Score" -> value Label
-const SLOT_PX := 64
+const SLOT_PX := 60   # Fable r1: 60 keeps Gear on a 375x667 screen with body-20 captions
 
 func setup(m) -> void:
 	main = m
 	state = m.state
 	name = "Gear"
-	add_theme_constant_override("separation", 6)   # phone sweep: fits a 375x667 phone (896 design px)
+	add_theme_constant_override("separation", 3)   # phone sweep: fits a 375x667 phone (896 design px)
 
 	var head := UI.hbox(8)
 	add_child(head)
-	var hint := UI.wrap("Tap a slot, then an item to wear it.", UI.FONT_CAPTION, UI.DIM)
-	hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	head.add_child(hint)
+	# Fable r1 (SE fit, fewer words): Presets and Equip Best share the top row; no hint line
+	# 2.1: gear loadouts are part of the one Presets screen (gear, skills, team, supplies)
+	var pb := UI.button("Presets", func(): PresetsScreen.new().show_for(main))
+	pb.tooltip_text = "Save or swap gear, skills and team"
+	pb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(pb)
 	equip_best_button = UI.primary("Equip Best", func():
 		state.equip_best()
 		main.sfx.play("equip")
 		main.refresh(), UI.GREEN)
 	equip_best_button.tooltip_text = "Wear whatever makes your whole build strongest, counting set bonuses and special effects"
+	equip_best_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(equip_best_button)
 
 	# 0.13+: a paper doll: your hero in the middle wearing it all, slots on either side.
@@ -88,7 +92,7 @@ func setup(m) -> void:
 		card.add_child(pic)
 		slot_pics[s] = pic
 		col.add_child(card)
-		var cap := UI.label(s.replace("Off Hand", "Off-hand").replace("Helmet", "Head").replace("Necklace", "Neck"), UI.FONT_CAPTION, UI.DIM)
+		var cap := UI.label(s.replace("Off Hand", "Off-hand").replace("Helmet", "Head").replace("Necklace", "Neck"), UI.FONT_BODY, UI.DIM)
 		cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		cap.custom_minimum_size = Vector2(SLOT_PX, 0)
 		col.add_child(cap)
@@ -97,7 +101,7 @@ func setup(m) -> void:
 		slot_cards[s] = card
 		UI.tip(card, s)
 		slot_styles[s] = st
-	slot_detail = UI.rich(UI.FONT_CAPTION)
+	slot_detail = UI.rich(UI.FONT_BODY)
 	slot_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(slot_detail)
 	# Your numbers as four pills (icon-free words, big values): Attack, Defense, HP, Gear Score
@@ -110,7 +114,7 @@ func setup(m) -> void:
 		prow.add_child(pp)
 		var pv := UI.vbox(0)
 		pp.add_child(pv)
-		var kl := UI.label(k, UI.FONT_CAPTION, UI.DIM)
+		var kl := UI.label(k, UI.FONT_BODY, UI.DIM)
 		kl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		pv.add_child(kl)
 		var vl := UI.label("0", UI.FONT_TITLE, Color("#f4e6c4"))
@@ -118,9 +122,14 @@ func setup(m) -> void:
 		pv.add_child(vl)
 		pills[k] = vl
 
-	stats_label = UI.rich(UI.FONT_CAPTION)
+	stats_label = UI.rich(UI.FONT_BODY)
+	stats_label.custom_minimum_size = Vector2(0, 26)   # one line shows; the whole list is a tap away
+	stats_label.clip_contents = true
+	stats_label.fit_content = false
+	stats_label.scroll_active = false
+	UI.tip(stats_label, "")
 	add_child(stats_label)
-	list_title = UI.wrap("", UI.FONT_CAPTION, UI.TEXT)
+	list_title = UI.wrap("", UI.FONT_BODY, UI.TEXT)
 	add_child(list_title)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -131,14 +140,10 @@ func setup(m) -> void:
 	scroll.add_child(sv)
 	item_grid = ItemGrid.grid()
 	sv.add_child(item_grid)
-	empty_note = UI.label("", UI.FONT_CAPTION, UI.DIM)
+	empty_note = UI.label("", UI.FONT_BODY, UI.DIM)
 	sv.add_child(empty_note)
 	resized.connect(_on_resized)
 
-	# 2.1: gear loadouts are part of the one Presets screen (gear, skills, team, supplies)
-	var pb := UI.button("Presets: save or swap gear, skills and team", func(): PresetsScreen.new().show_for(main))
-	pb.custom_minimum_size = Vector2(0, UI.TAP)
-	add_child(pb)
 
 func _on_resized() -> void:
 	ItemGrid.fit([item_grid], size.x)
@@ -205,11 +210,11 @@ func refresh() -> void:
 		cap.text = nm + (" !" if upg else "")   # "!" = an upgrade is waiting in your bag
 		cap.add_theme_color_override("font_color", UI.GREEN if upg else (UI.GOLD if picked else UI.DIM))
 		var cnt := _count(s)
-		var info := "%s: %s" % [String(s).to_upper(), (GameData.display_name(state.equipped[s]) + "  +%d %s" % [GameData.item_power(state.equipped[s]), state.equipped[s]["stat"]]) if state.equipped.has(s) else "Empty"]
+		var info := "%s · %s" % [nm, (GameData.display_name(state.equipped[s]) + "  +%d %s" % [GameData.item_power(state.equipped[s]), state.equipped[s]["stat"]]) if state.equipped.has(s) else "Empty"]
 		if cnt > 0:
 			info += "  (%d in bag)" % cnt
 		if upg:
-			info += "  UPGRADE!"
+			info += " · upgrade in your bag"
 		slot_info[s] = info
 		(slot_cards[s] as Control).tooltip_text = info
 	# the picked slot, in one line: what's worn there and what's waiting in the bag
@@ -219,10 +224,10 @@ func refresh() -> void:
 		extra += "  [color=%s]upgrade![/color]" % UI.hex(UI.GREEN)
 	if state.equipped.has(slot):
 		var item: Dictionary = state.equipped[slot]
-		slot_detail.text = "[color=%s]%s[/color]  [color=%s]%s[/color]  +%d %s%s" % [UI.hex(UI.GOLD), slot.to_upper(), GameData.color_of(item["rarity"]),
+		slot_detail.text = "[color=%s]%s[/color] · [color=%s]%s[/color]  +%d %s%s" % [UI.hex(UI.GOLD), slot, GameData.color_of(item["rarity"]),
 			GameData.display_name(item), GameData.item_power(item), item["stat"], extra]
 	else:
-		slot_detail.text = "[color=%s]%s[/color]  [color=%s]Empty[/color]%s" % [UI.hex(UI.GOLD), slot.to_upper(), UI.hex(UI.DIM), extra]
+		slot_detail.text = "[color=%s]%s[/color] · [color=%s]Empty[/color]%s" % [UI.hex(UI.GOLD), slot, UI.hex(UI.DIM), extra]
 	equip_best_button.text = "Equip Best (%d)" % ups if ups > 0 else "Equip Best"
 	equip_best_button.disabled = ups == 0
 
@@ -246,7 +251,9 @@ func refresh() -> void:
 	for set_name in counts:
 		if int(counts[set_name]) >= 2:
 			text += ("\n" if text != "" else "") + "[color=%s]%s set: %d pieces active[/color]" % [UI.hex(UI.GOLD_DULL), GameData.set_name_of(set_name), counts[set_name]]
-	stats_label.text = text
+	stats_label.tooltip_text = RegEx.create_from_string("\\[[^\\]]*\\]").sub(text, "", true)   # the tip: plain text
+	stats_label.text = text.get_slice("
+", 0)
 	stats_label.visible = text != ""
 
 	var key := "%s|%d" % [slot, state.bag_version]
@@ -255,7 +262,7 @@ func refresh() -> void:
 		_rebuild()
 
 func _rebuild() -> void:
-	list_title.text = "%s  -  %d in your bag  (tap one to compare and wear it)" % [slot.to_upper(), _count(slot)]
+	list_title.text = "%s · %d in your bag" % [slot, _count(slot)]
 	ItemGrid.fit([item_grid], size.x)
 	for c in item_grid.get_children():
 		c.queue_free()

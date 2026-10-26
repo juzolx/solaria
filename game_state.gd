@@ -1802,7 +1802,7 @@ func _enemy_defeated() -> void:
 	var species := enemy_species
 	var zone_i := GameData.zone_index(floor_num)
 	events.append({"type": "enemy_dead", "shape": enemy_shape, "color": enemy_color, "boss": was_boss, "name": enemy_name,
-		"art": enemy_art, "tier": tier})
+		"art": enemy_art, "tier": tier, "calamity": was_calamity})
 	if not was_boss:
 		Combat.on_enemy_death(self)
 	if enemy_boss_kind == "trial":
@@ -1837,18 +1837,14 @@ func _enemy_defeated() -> void:
 	gain_xp(xp_gain)
 	if party != null:
 		party.on_kill(xp_gain)
-	Menagerie.on_kill(self)
+	# the drop first (Fable pets R3): pets' gold signatures pay a share of what really falls
+	var gold_gain := kill_gold(bonus_pct)
+	if was_goblin:
+		gold_gain = (2 + floor_num) * GameData.GOBLIN_GOLD
+	Menagerie.on_kill(self, gold_gain)
 	EggQuests.on_kill(self, tier, was_boss)
 	if was_boss:
 		Milestones.on_boss(self, Monsters.name_of(species))
-	var gold_gain := (2 + floor_num) * (10 if was_boss else 1)
-	if enemy_variant == "Gilded":
-		gold_gain = int(gold_gain * Variants.GOLD_MULT)
-	gold_gain = int(gold_gain * float(t["gold"]) * (1.0 + (effect_total("gold_find") + bonus_pct + World.curse_gold(self)) / 100.0) * GameData.event_bonus("gold"))
-	if curse_turns > 0:
-		gold_gain *= 2
-	if was_goblin:
-		gold_gain = (2 + floor_num) * GameData.GOBLIN_GOLD
 	_add_gold(gold_gain)
 	Bench.on_kill(self)  # next update: heroes at home find things too
 	_maybe_find_pack(was_boss)
@@ -2004,6 +2000,19 @@ func _give_signature(monster: String) -> void:
 	say("[color=#ff6b9d]*** SIGNATURE DROP! *** The %s dropped %s![/color]" % [Monsters.name_of(monster), item["name"]])
 	events.append({"type": "signature", "name": item["name"], "monster": Monsters.name_of(monster)})
 	_give_item(item)
+
+## What killing the monster in front of you pays in gold (goblins aside): floor coin, x10
+## for a boss, Gilded, its rank, gold find, curse and events. Pet gold (Pickpocket, Fairy
+## Gold) takes a share of this, so it always matches the real drop (Fable pets R2).
+func kill_gold(bonus_pct := 0.0) -> int:
+	var g := (2 + floor_num) * (10 if enemy_is_boss else 1)
+	if enemy_variant == "Gilded":
+		g = int(g * Variants.GOLD_MULT)
+	var t: Dictionary = Monsters.TIERS[clampi(enemy_tier, 0, Monsters.TIERS.size() - 1)]
+	g = int(g * float(t["gold"]) * (1.0 + (effect_total("gold_find") + bonus_pct + World.curse_gold(self)) / 100.0) * GameData.event_bonus("gold"))
+	if curse_turns > 0:
+		g *= 2
+	return g
 
 func _add_gold(amount: int) -> void:
 	amount = int(amount * TownEvents.gold_mult(self) * (Synergies.reward_mult(self) if not in_town else 1.0))
@@ -3536,6 +3545,10 @@ func load_game() -> bool:
 	return_scrolls = int(data.get("return_scrolls", 0))
 	pets = data.get("pets", [])
 	pets_out = data.get("pets_out", [])
+	Menagerie.convert_levels(self)   # the Oct 25 level curve (never lowers a level)
+	var home := Menagerie.one_of_each(self)   # Juzo (Oct 25): one of each kind; older saves could have two
+	if not home.is_empty():
+		say("[color=#d9a066]New rule: one of each kind of pet per team. %s went home to rest (nothing is lost).[/color]" % ", ".join(home))
 	eggs = data.get("eggs", [])
 	checkpoint = int(data.get("checkpoint", 0))
 	curses = data.get("curses", {})

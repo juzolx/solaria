@@ -8,6 +8,8 @@ const SORTS := ["Newest", "Rarity", "Power", "Slot"]
 var main
 var state: GameState
 var title: Label
+var over_chip: Control     # Fable r1 #8: "4 over" beside the count, the why in its tip
+var extra_label: Label     # backpacks and Return Scrolls carried, quiet
 var sort_pick: OptionButton
 var filter_pick: OptionButton
 var grid: GridContainer
@@ -24,6 +26,8 @@ var upgrade_button: Button
 var reroll_button: Button
 var salvage_all_buttons := {}
 var auto_salvage_button: Button
+var bulk_label: Label
+var bulk_row: HBoxContainer   # "Salvage all" by rarity: only when there is something to salvage
 var selected_id := -1
 var shown := ""
 var select_button: Button
@@ -39,20 +43,37 @@ func setup(m) -> void:
 	name = "Bag"
 	add_theme_constant_override("separation", 6)
 
+	# Fable r1 #8: row 1 = "Bag 14 / 10" and a red "4 over" chip; row 2 = Sort | Slot | Select
+	var top := UI.hbox(8)
+	add_child(top)
+	title = UI.label("", UI.FONT_TITLE, UI.TEXT)
+	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(title)
+	over_chip = UI.chip("", UI.RED, UI.FONT_BODY)
+	over_chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	UI.tip(over_chip, "Your bag holds more than it can carry. Sell or salvage items to use the ones past the limit.")
+	top.add_child(over_chip)
+	extra_label = UI.label("", UI.FONT_BODY, UI.DIM)
+	extra_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	extra_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	extra_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	extra_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	top.add_child(extra_label)
 	var head := UI.hbox(6)
 	add_child(head)
-	title = UI.label("", UI.FONT_CAPTION, UI.TEXT)
-	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # long notes wrap instead of widening the page
-	title.custom_minimum_size = Vector2(60, 0)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	head.add_child(title)
 	sort_pick = OptionButton.new()
 	for sname in SORTS:
 		sort_pick.add_item("Sort: " + sname)
 	sort_pick.item_selected.connect(func(_i): shown = ""; main.refresh())
+	sort_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sort_pick.fit_to_longest_item = false   # sized to what it shows (the chevron made the row 5 px too wide on a phone)
+	sort_pick.clip_text = true
+	sort_pick.clip_text = true
 	head.add_child(sort_pick)
 	filter_pick = OptionButton.new()
+	filter_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	filter_pick.clip_text = true
+	filter_pick.fit_to_longest_item = false
 	filter_pick.add_item("All slots")
 	for s in GameData.SLOT_ORDER:
 		filter_pick.add_item(s)
@@ -71,11 +92,14 @@ func setup(m) -> void:
 	scroll.add_child(sv)
 	grid = ItemGrid.grid()
 	sv.add_child(grid)
-	empty_note = UI.label("", UI.FONT_CAPTION, UI.DIM)
+	empty_note = UI.label("", UI.FONT_BODY, UI.DIM)
 	sv.add_child(empty_note)
 	resized.connect(_on_resized)
 
+	# Fable r2 #4: what an item does and what you can do with it is its tap popup (like Skills);
+	# the old detail box and its two rows of buttons stay hidden (drag targets and tests use them)
 	var box := UI.panel(UI.INSET, UI.EMPTY, 8, 8, 1)
+	box.visible = false
 	add_child(box)
 	var drow := UI.hbox(10)   # interface pass: the picked item's picture beside its text
 	box.add_child(drow)
@@ -84,7 +108,7 @@ func setup(m) -> void:
 	detail_pic.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	detail_pic.visible = false
 	drow.add_child(detail_pic)
-	details = UI.rich(UI.FONT_CAPTION)
+	details = UI.rich(UI.FONT_BODY)
 	details.custom_minimum_size = Vector2(0, 74)
 	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	drow.add_child(details)
@@ -103,6 +127,8 @@ func setup(m) -> void:
 
 	var row1 := UI.hbox(6)
 	var row2 := UI.hbox(6)
+	row1.visible = false
+	row2.visible = false
 	add_child(row1)
 	add_child(row2)
 	equip_button = UI.primary("Equip", func(): _act("equip"))   # the main action on this page
@@ -121,13 +147,15 @@ func setup(m) -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row2.add_child(b)
 
-	var bulk := UI.hbox(6)
+	bulk_label = UI.label("Salvage all", UI.FONT_BODY, UI.DIM)
+	add_child(bulk_label)
+	bulk_row = UI.hbox(6)
+	var bulk := bulk_row
 	add_child(bulk)
-	bulk.add_child(UI.label("Salvage all:", UI.FONT_CAPTION, UI.DIM))
 	for r in [0, 1, 2, 3]:
 		var b := UI.button("", _salvage_all.bind(r))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size.y = 52   # two lines ("Uncommon" over "(12)"): four fit a phone and the count stays visible
+		b.custom_minimum_size.y = UI.BUTTON_H   # two lines ("Uncommon" over "(12)"): four fit a phone and the count stays visible
 		b.add_theme_color_override("font_color", Color(GameData.color_of(r)))
 		b.tooltip_text = "Salvage every %s item. Locked items and upgrades are kept." % GameData.RARITY_NAMES[r]
 		bulk.add_child(b)
@@ -218,11 +246,21 @@ func _popup(id: int) -> void:
 	selected_id = id
 	var item: Dictionary = found["item"]
 	var acts := []
+	var locked: bool = item.get("locked", false)
 	if found["where"] == "bag":
 		acts.append(["Equip", func(): state.equip(id); main.sfx.play("equip"); main.refresh(), UI.GREEN])
-		if not item.get("locked", false):
-			acts.append(["Salvage (%d scrap)" % GameData.scrap_value(item, state.scrap_mult()), func(): _act("salvage"), UI.BLUE])
-			acts.append(["Sell (%d gold)" % state.sell_price(item), func(): _act("sell"), UI.GOLD])
+		if not locked:
+			acts.append(["Sell · %dg" % state.sell_price(item), func(): _act("sell"), UI.GOLD])
+			acts.append(["Salvage · %d scrap" % GameData.scrap_value(item, state.scrap_mult()), func(): _act("salvage"), UI.BLUE])
+	else:
+		acts.append(["Unequip", func(): _act("equip"), UI.GREEN])
+	acts.append(["Unlock" if locked else "Lock", func(): _act("lock"), null])
+	# Fable r2 #4: upgrade and reroll come only when they can happen; the price is on the button
+	if int(item["level"]) < GameData.MAX_UPGRADE and Economy.upgrade_short(state, item) == "":
+		acts.append(["Upgrade +%d" % (int(item["level"]) + 1), func(): _act("upgrade"), null])
+	if GameData.can_reroll(item) and Economy.reroll_short(state, item) == "":
+		acts.append(["Reroll · %d%%" % GameData.reroll_chance(item), func(): _act("reroll"), null])
+	_refresh_details()
 	ItemPopup.show_item(main, item, acts)
 
 func _act(action: String) -> void:
@@ -295,11 +333,17 @@ func _sorted_items() -> Array:
 	return items
 
 func refresh() -> void:
-	title.text = "BAG  %d / %d%s" % [state.bag.size(), state.bag_capacity(), ("  (%d over: sell to use them)" % (state.bag.size() - state.bag_capacity())) if state.bag.size() > state.bag_capacity() else ""]
+	title.text = "Bag %d / %d" % [state.bag.size(), state.bag_capacity()]
+	var over_n := state.bag.size() - state.bag_capacity()
+	over_chip.visible = over_n > 0
+	if over_n > 0:
+		(over_chip.get_child(0) as Label).text = "%d over" % over_n
+	var extras: Array = []
 	if state.packs_carried > 0:
-		title.text += "   +%d backpack%s to bring home" % [state.packs_carried, "" if state.packs_carried == 1 else "s"]
+		extras.append("+%d backpack%s" % [state.packs_carried, "" if state.packs_carried == 1 else "s"])
 	if state.return_scrolls > 0:
-		title.text += "   ·  %d Return Scroll%s" % [state.return_scrolls, "" if state.return_scrolls == 1 else "s"]
+		extras.append("%d Return Scroll%s" % [state.return_scrolls, "" if state.return_scrolls == 1 else "s"])
+	extra_label.text = " · ".join(extras)
 	title.add_theme_color_override("font_color", UI.RED if state.bag_full() else UI.TEXT)
 	auto_salvage_button.text = "Loot filter: %s" % LootRules.summary(state)
 	select_button.text = "Done" if picking else "Select"
@@ -320,6 +364,9 @@ func refresh() -> void:
 		var b: Button = salvage_all_buttons[r]
 		b.text = "%s\n(%d)" % [GameData.RARITY_NAMES[r], n]
 		b.disabled = n == 0
+		b.visible = n > 0
+	bulk_row.visible = salvage_all_buttons.keys().any(func(r): return state.salvage_all_count(r) > 0)
+	bulk_label.visible = bulk_row.visible
 
 	var key := "%d|%d|%d|%d|%s|%s" % [state.bag_version, sort_pick.selected, filter_pick.selected, selected_id, picking, str(picked.keys())]
 	if key != shown:

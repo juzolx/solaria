@@ -1,5 +1,5 @@
 class_name BestiaryTab
-extends HBoxContainer
+extends BoxContainer   # a row on wide screens, stacked on phones (refresh sets vertical)
 ## Codex > Bestiary: every creature, zone by zone. Ones you haven't met are
 ## "???". Once you've met one you see its lore, your kills, the gear it likes
 ## to drop and the real drop odds. Its Signature item stays a secret until
@@ -15,7 +15,9 @@ var plate: PanelContainer
 var backdrop: TextureRect
 static var _grounds := {}
 static var _heads := {}
+const TALLEST := 121.0   # rows of the tallest boss (charybdis, forgemaster_brann, jester_of_thorns)
 const PLATE := 296  # design px tall: a 121-row boss at 2 screen px per art pixel on a 430 pt phone
+const HEADS := "res://art/ui/bestiary_heads.png"   # every list icon, baked (tools/monster_import.py --heads)
 const ICON := 32    # list icon: ICON art pixels around the upper body, shown 1:1 (ICON screen pixels)
 var pic_size := Vector2.ZERO
 var text: RichTextLabel
@@ -23,6 +25,7 @@ var strip: VBoxContainer  # 2.1 G4: this region's Bestiary progress and its next
 var strip_key := ""
 var selected := ""
 var shown := ""
+var shown_kills := -1
 
 func setup(m) -> void:
 	main = m
@@ -66,23 +69,47 @@ func setup(m) -> void:
 	pic.stretch_mode = TextureRect.STRETCH_SCALE  # sized by _place_pic to whole screen pixels
 	backdrop.add_child(pic)
 	backdrop.resized.connect(_place_pic)
-	text = UI.rich(UI.FONT_CAPTION)
+	text = UI.rich(UI.FONT_BODY)
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	detail.add_child(text)
 
 func refresh() -> void:
-	var key := "%d|%d" % [codex.stat("kills"), codex.bestiary.size()]
+	# fable r3: a kill only changes counts, so those rows are relabelled in place; the list is
+	# rebuilt (icons and all) only when a monster is met
+	var key := "%d|%d" % [codex.bestiary.size(), _slain().size()]
 	if key == shown:
+		var kills := int(codex.stat("kills"))
+		if kills != shown_kills:
+			shown_kills = kills
+			for i in keys.size():
+				if keys[i] != "":
+					list.set_item_text(i, _label(keys[i]))
+			_show()
 		return
 	shown = key
+	shown_kills = int(codex.stat("kills"))
+	# Phones (lead, interface r2): the list sits over the plate in two columns, so every name is
+	# whole (single words reach 113 px at 15, more than a side column can give), and the plate
+	# gets the full width, so every boss keeps 2 screen px per art px (fable r4)
+	var stacked := bool(main.is_tall)
+	vertical = stacked
+	add_theme_constant_override("separation", 8 if stacked else 10)
+	list.custom_minimum_size = Vector2(0, 186) if stacked else Vector2(200, 0)
+	list.size_flags_vertical = Control.SIZE_FILL if stacked else Control.SIZE_EXPAND_FILL
+	list.max_columns = 2 if stacked else 1
+	list.same_column_width = stacked
+	(get_child(1) as Control).size_flags_vertical = Control.SIZE_EXPAND_FILL   # the plate and its text
+	# ...and the plate as tall as the tallest boss (121 rows) at 2 screen px: 326 design on an SE
+	backdrop.custom_minimum_size.y = maxf(PLATE, ceilf(TALLEST * 2.0 / _screen_scale()) + 2.0)
 	list.clear()
 	keys.clear()
 	# Icons are a head crop shown 1:1 on screen (fable r1: whole 76 px monsters squeezed to 22 px were blobs)
 	var icon := int(round(ICON / _screen_scale()))
 	list.fixed_icon_size = Vector2i(icon, icon)
+	list.add_theme_constant_override("v_separation", maxi(6, UI.TAP - icon))   # a row is one tap tall: the icon plus the gap
 	for zi in GameData.ZONES.size():
 		var z: Dictionary = GameData.ZONES[zi]
-		var h := list.add_item(str(z["name"]).to_upper())
+		var h := list.add_item(str(z["name"]))
 		list.set_item_selectable(h, false)
 		list.set_item_custom_fg_color(h, Color(z["color"]).lightened(0.4))
 		keys.append("")
@@ -96,10 +123,7 @@ func refresh() -> void:
 		for n in ids:
 			var met := codex.seen(n)
 			var boss: bool = Monsters.info(n).get("boss", false)
-			var label := ("  %s%s  (%d)" % ["[Boss] " if boss else "", Monsters.name_of(n), codex.kills(n)]) if met else "  ???"
-			if met and bool(codex.bestiary[n].get("sig", false)):
-				label += "  *"
-			var i := list.add_item(label)
+			var i := list.add_item(_label(n))
 			var head := _head(_art_key(n, GameData.monster_home(n)), met)
 			if head != null:
 				list.set_item_icon(i, head)
@@ -111,6 +135,25 @@ func refresh() -> void:
 			keys.append(n)
 			if n == selected:
 				list.select(i)
+	# fable r4: the ten Calamities get their page too, after the last zone (slain ones lit)
+	var ch := list.add_item("CALAMITIES")
+	list.set_item_selectable(ch, false)
+	list.set_item_custom_fg_color(ch, Color("#ff6b6b"))
+	keys.append("")
+	for ci in Calamity.LIST.size():
+		var ck := String(Calamity.info(ci)[1])
+		var slain := _slain().has(str(ci))
+		var row := list.add_item(_label(ck))
+		var cicon := _head(ck, slain)
+		if cicon != null:
+			list.set_item_icon(row, cicon)
+			if not slain:
+				list.set_item_icon_modulate(row, Color(0.5, 0.48, 0.6))
+		list.set_item_custom_fg_color(row, Color("#ff6b6b") if slain else UI.DIM)
+		keys.append(ck)
+		if ck == selected:
+			list.select(row)
+	list.ensure_current_is_visible.call_deferred()   # fable r4: the picked row was parked off-screen
 	if selected == "":
 		for k in keys:
 			if k != "" and codex.seen(k):
@@ -118,8 +161,27 @@ func refresh() -> void:
 				break
 	_show()
 
+## A list row: "[Boss] Name  (kills)", a * once its Signature is found, "???" until met.
+func _label(n: String) -> String:
+	if n.begins_with("calamity_"):
+		var ci := int(n.trim_prefix("calamity_"))
+		return "  " + (String(Calamity.info(ci)[0]) if _slain().has(str(ci)) else "???")
+	if not codex.seen(n):
+		return "  ???"
+	var boss: bool = Monsters.info(n).get("boss", false)
+	if bool(main.is_tall):   # phones: the whole name and its kills (boss rows are red)
+		return "%s · %d" % [Monsters.name_of(n), codex.kills(n)]
+	var label := "  %s%s  (%d)" % ["[Boss] " if boss else "", Monsters.name_of(n), codex.kills(n)]
+	if bool(codex.bestiary[n].get("sig", false)):
+		label += "  *"
+	return label
+
 func _show() -> void:
 	_strip()
+	list.ensure_current_is_visible.call_deferred()
+	if selected.begins_with("calamity_"):
+		_show_calamity(int(selected.trim_prefix("calamity_")))
+		return
 	if selected == "" or not codex.seen(selected):
 		# An unmet monster shows as its shape (the "???" goal), a blank plate before any pick
 		var ua := Sprites.enemy_by_key(_art_key(selected, GameData.monster_home(selected))) if selected != "" else {}
@@ -134,7 +196,7 @@ func _show() -> void:
 	var home := GameData.monster_home(selected)
 	var art := Sprites.enemy_by_key(_art_key(selected, home))
 	var zi := clampi(int(home.get("zone", 0)), 0, 9)
-	pic.texture = SpriteLight.lit(art.get("tex", null), zi) if art.has("tex") else null
+	pic.texture = _lit_pic(_art_key(selected, home), art, zi)
 	pic.modulate = Color.WHITE
 	pic_size = art.get("size", Vector2.ZERO)
 	_place_pic()
@@ -222,6 +284,36 @@ func _show() -> void:
 			lines.append(("[color=#fbbf24]%s[/color] - %s" % [u["name"], GameData.effect_text(u["effect"], int(u["value"]))]) if have else "[color=#fbbf24]???[/color] [color=%s](a Unique %s)[/color]" % [dim, str(u["slot"]).to_lower()])
 	text.text = "\n".join(lines)
 
+## The Calamities this account has slain (Profile.calamities: index -> who and when).
+func _slain() -> Dictionary:
+	return main.profile.calamities if main != null and main.profile != null else {}
+
+## A Calamity's page: slain = its picture, who killed it and when, its lore; else its shape.
+func _show_calamity(ci: int) -> void:
+	var c: Array = Calamity.info(ci)
+	var art := Sprites.enemy_by_key(String(c[1]))
+	var rec: Dictionary = _slain().get(str(ci), {})
+	var dim := UI.hex(UI.DIM)
+	pic_size = art.get("size", Vector2.ZERO)
+	backdrop.texture = _ground(9)
+	plate.add_theme_stylebox_override("panel", UI.style(Color(0.02, 0.02, 0.04), Color("#e43b44"), 6, 3, 2))
+	var lines: Array = []
+	if rec.is_empty():
+		pic.texture = art.get("white", null)
+		pic.modulate = Color(0.5, 0.48, 0.6)
+		lines.append("[font_size=18][color=#ff6b6b]???[/color][/font_size]")
+		lines.append("[color=%s]A Calamity: it waits somewhere in region %d. About 1 fight in 20,000 is one.[/color]" % [dim, ci + 1])
+	else:
+		pic.texture = _lit_pic(String(c[1]), art, 9)
+		pic.modulate = Color.WHITE
+		lines.append("[font_size=18][color=#ff6b6b]%s[/color][/font_size]" % c[0])
+		lines.append("[color=%s]Slain by %s, %s. It never comes back.[/color]" % [dim, rec.get("hero", "?"), rec.get("date", "?")])
+		lines.append("[i]%s[/i]" % c[3])
+		lines.append("")
+		lines.append("Title: [color=#fbbf24]%s[/color]   Pet: %s   Unique: %s (%s)" % [c[4], c[5], c[7], String(c[6]).to_lower()])
+	_place_pic()
+	text.text = "\n".join(lines)
+
 func _art_key(n: String, home: Dictionary) -> String:
 	if home.has("boss"):
 		var z: Dictionary = GameData.ZONES[int(home["zone"])]
@@ -249,7 +341,7 @@ func _num(n: int) -> String:
 
 ## Screen pixels per design pixel (the window's stretch factor).
 func _screen_scale() -> float:
-	var sc := get_global_transform_with_canvas().get_scale().x if is_inside_tree() else 1.0
+	var sc := PixelPic.stretch(self) if is_inside_tree() else 1.0   # the window's stretch, not the canvas
 	return sc if sc > 0.01 else 1.0
 
 ## Puts the monster on the plate at a whole number of screen pixels per art pixel
@@ -258,10 +350,10 @@ func _place_pic() -> void:
 	if pic == null or pic_size.x <= 0.0:
 		return
 	var sc := _screen_scale()
-	var room := (backdrop.size - Vector2(12, 12)) * sc
+	var room := backdrop.size * sc   # the picture may reach the plate's padding (fable r4)
 	var k := maxf(1.0, floorf(minf(room.x / pic_size.x, room.y / pic_size.y)))
 	# Commons never outsize the bosses (2x on a phone): one scale for the whole Bestiary
-	k = minf(k, float(maxi(1, ArtStyle.unit(sc) - 1)))
+	k = minf(k, float(maxi(2, ArtStyle.unit(sc) - 1)))
 	var sz := pic_size * k / sc
 	var pos := Vector2((backdrop.size.x - sz.x) * 0.5, backdrop.size.y - 8.0 - sz.y)
 	# snap the top-left corner onto the screen's pixel grid
@@ -278,6 +370,18 @@ static func _head(key: String, met: bool) -> Texture2D:
 	var ck := "%s|%s" % [key, met]
 	if _heads.has(ck):
 		return _heads[ck]
+	# Baked into one atlas by tools/monster_import.py (fable r4: 144 loads and readbacks on the
+	# Codex's first open); the code below is only for a picture added without a re-bake
+	var hd: Dictionary = ArtInfo.DATA.get("heads", {})
+	var idx: int = (hd.get("keys", []) as Array).find(key)
+	if idx >= 0 and ResourceLoader.exists(HEADS):
+		var at := AtlasTexture.new()
+		at.atlas = load(HEADS)
+		var cols := int(hd["cols"])
+		var row := idx / cols + (0 if met else int(hd["rows"]))
+		at.region = Rect2((idx % cols) * ICON, row * ICON, ICON, ICON)
+		_heads[ck] = at
+		return at
 	var img := Sprites._img("enemies/%s.png" % key)
 	if img == null:
 		_heads[ck] = null
@@ -306,6 +410,19 @@ static func _head(key: String, met: bool) -> Texture2D:
 	var tex := ImageTexture.create_from_image(out)
 	_heads[ck] = tex
 	return tex
+
+## The detail picture in its zone's rim light, from the kept Image (no texture readback).
+static func _lit_pic(key: String, art: Dictionary, zi: int) -> Texture2D:
+	if not art.has("img"):
+		return art.get("tex", null)
+	var ck := "%s|%d" % [key, zi]
+	if not _pics.has(ck):
+		if _pics.size() > 12:
+			_pics.clear()
+		_pics[ck] = ImageTexture.create_from_image(SpriteLight.lit_image(art["img"], zi))
+	return _pics[ck]
+
+static var _pics := {}
 
 ## The plate's backdrop for a region: dark, with its mood light glowing up from the ground.
 static func _ground(zi: int) -> Texture2D:

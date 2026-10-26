@@ -16,8 +16,8 @@ func show_for(main_node, from_title = null) -> void:
 	for n in range(1, GameData.MAX_HEROES + 1):
 		if GameState.has_slot(n):
 			count += 1
-	var note := UI.label("Roster %d / %d  ·  %d slots open. Pick any 3 Regular heroes to go down together from the Party page. Heroes in this town share its stash and skill book; the Codex is shared by every town." % [count, GameData.MAX_HEROES, p.slots_open()], 13, UI.DIM)
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var note := UI.label("Roster %d / %d · %d slots open" % [count, GameData.MAX_HEROES, p.slots_open()], UI.FONT_BODY, UI.DIM)
+	UI.tip(note, "Pick any 3 Regular heroes to go down together from the Party page. Heroes in this town share its stash and skill book; the Codex is shared by every town.")   # Fable r2: one line, the rest on a tap
 	content.add_child(note)
 	var towns_b := UI.button("Switch town...", func(): close(); TownSelect.new().show_for(m, title_screen))
 	towns_b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -39,7 +39,7 @@ func show_for(main_node, from_title = null) -> void:
 			locked.append(n)
 	if not locked.is_empty():
 		var n0: int = locked[0]
-		var more := UI.label(p.slot_lock_note(n0) + ((" %d more locked." % (locked.size() - 1)) if locked.size() > 1 else ""), 12, UI.DIM)
+		var more := UI.label(p.slot_lock_note(n0) + ((" %d more locked." % (locked.size() - 1)) if locked.size() > 1 else ""), UI.FONT_BODY, UI.DIM)
 		more.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		content.add_child(more)
 
@@ -65,9 +65,9 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 		var v0 := UI.vbox(6)
 		v0.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(v0)
-		v0.add_child(UI.label("SLOT %d" % n, UI.FONT_CAPTION, UI.DIM))
-		v0.add_child(UI.label("Empty slot" if open_slot else "Locked", UI.FONT_CAPTION, UI.TEXT if open_slot else UI.DIM))
-		v0.add_child(UI.wrap("Recruit a new hero at the Inn in town." if open_slot else m.profile.slot_lock_note(n), UI.FONT_CAPTION, UI.DIM))
+		v0.add_child(UI.label("SLOT %d" % n, UI.FONT_BODY, UI.DIM))
+		v0.add_child(UI.label("Empty slot" if open_slot else "Locked", UI.FONT_BODY, UI.TEXT if open_slot else UI.DIM))
+		v0.add_child(UI.wrap("Recruit a new hero at the Inn in town." if open_slot else m.profile.slot_lock_note(n), UI.FONT_BODY, UI.DIM))
 		return card
 	var pic := TextureRect.new()
 	pic.texture = Sprites.portrait(meta.get("appearance", {}), HeroArt.meta_looks(meta))
@@ -82,10 +82,10 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 	h.add_child(v)
 	var top := UI.hbox(6)
 	v.add_child(top)
-	top.add_child(UI.label("SLOT %d" % n, UI.FONT_CAPTION, UI.DIM))
+	top.add_child(UI.label("SLOT %d" % n, UI.FONT_BODY, UI.DIM))
 	if m.started and m.state != null and n in m.state.party_slots:
-		top.add_child(UI.chip("IN TEAM", UI.GREEN, UI.FONT_CAPTION))
-	var info := UI.rich(UI.FONT_CAPTION)
+		top.add_child(UI.chip("IN TEAM", UI.GREEN, UI.FONT_BODY))
+	var info := UI.rich(UI.FONT_BODY)
 	info.text = describe(meta)
 	v.add_child(info)
 	var row := UI.hbox(6)

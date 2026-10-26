@@ -37,7 +37,7 @@ def doors():
     d["gate"] = GATE_DOOR
     d["church"] = CHURCH_DOOR
     d["market"] = (17, 20)
-    d["bounty"] = (22, 9)
+    d["bounty"] = (17, 9)
     d["mail"] = (12, 15)
     return d
 

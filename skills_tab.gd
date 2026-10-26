@@ -9,7 +9,8 @@ var state: GameState
 var slot_row_a: HBoxContainer
 var slot_row_p: HBoxContainer
 var sig_row: HBoxContainer
-var filter_pick: OptionButton
+var filter_pick: OptionButton   # the filter's state; the page shows it as chips (filter_chips)
+var filter_chips: HFlowContainer
 var cards: GridContainer
 var empty_note: Label
 var ids: Array[String] = []
@@ -30,22 +31,29 @@ func setup(m) -> void:
 	add_theme_constant_override("separation", 6)
 	var head := UI.hbox(8)
 	add_child(head)
-	var t := UI.label("SKILL BOOK", UI.FONT_CAPTION, UI.TEXT)
-	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(t)
-	dust_label = UI.label("", UI.FONT_CAPTION, Color("#c4b5fd"))
+	# Fable r1 #13: no literal dots (dots mean cut-off text); the page is slots + book, a tap opens the rest
+	dust_label = UI.label("", UI.FONT_BODY, Color("#c4b5fd"))
+	dust_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dust_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(dust_label)
-	head.add_child(UI.button("Autoplay...", func(): auto_battle_popup(main)))
-	head.add_child(UI.button("Craft...", _craft_popup))
+	head.add_child(UI.button("Autoplay", func(): auto_battle_popup(main)))
+	head.add_child(UI.button("Craft", _craft_popup))
 
-	add_child(UI.label("ACTIVE", UI.FONT_CAPTION, UI.DIM))
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
+	var book := UI.vbox(8)
+	book.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(book)
+	book.add_child(UI.heading("Active"))
 	slot_row_a = UI.hbox(4)
-	add_child(slot_row_a)
+	book.add_child(slot_row_a)
 	sig_row = UI.hbox(4)
-	add_child(sig_row)
-	add_child(UI.label("PASSIVE", UI.FONT_CAPTION, UI.DIM))
+	book.add_child(sig_row)
+	book.add_child(UI.heading("Passive"))
 	slot_row_p = UI.hbox(4)
-	add_child(slot_row_p)
+	book.add_child(slot_row_p)
 
 	filter_pick = OptionButton.new()
 	for f in FILTERS:
@@ -53,27 +61,40 @@ func setup(m) -> void:
 	for tag in Classes.TAGS:
 		filter_pick.add_item(tag)
 	filter_pick.item_selected.connect(func(_i): shown = ""; refresh())
+	filter_pick.visible = false
 	add_child(filter_pick)
+	# Fable r2 #7: the chips wrap (every filter in sight), like the sub-tab chips
+	filter_chips = HFlowContainer.new()
+	filter_chips.add_theme_constant_override("h_separation", 6)
+	filter_chips.add_theme_constant_override("v_separation", 6)
+	filter_chips.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for i in filter_pick.item_count:
+		var c := UI.button(filter_pick.get_item_text(i), func():
+			filter_pick.select(i)
+			shown = ""
+			refresh())
+		c.focus_mode = Control.FOCUS_NONE
+		filter_chips.add_child(c)
 	# 0.13+ (Juzo): the skill book as cards, like the bag: icon, name, rank pips, rarity frame
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	add_child(scroll)
+	book.add_child(UI.heading("Skill book"))
+	book.add_child(filter_chips)
 	cards = GridContainer.new()
 	cards.columns = 4
 	cards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cards.add_theme_constant_override("h_separation", 6)
 	cards.add_theme_constant_override("v_separation", 6)
-	scroll.add_child(cards)
-	empty_note = UI.label("", UI.FONT_CAPTION, UI.DIM)
+	book.add_child(cards)
+	empty_note = UI.label("", UI.FONT_BODY, UI.DIM)
 	empty_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	add_child(empty_note)
+	book.add_child(empty_note)
 	var box := UI.panel(UI.INSET, UI.EMPTY, 8, 8, 1)
+	box.visible = false   # the detail and its buttons are copied into the tap popup (_popup)
 	add_child(box)
-	detail = UI.rich(UI.FONT_CAPTION)
+	detail = UI.rich(UI.FONT_BODY)
 	detail.custom_minimum_size = Vector2(0, 62)
 	box.add_child(detail)
 	var row := UI.hbox(6)
+	row.visible = false
 	add_child(row)
 	equip_button = UI.primary("Equip", _toggle_equip, UI.GREEN)
 	sell_button = UI.button("Sell", func():
@@ -142,7 +163,7 @@ Rank %d" % [s["name"], state.skill_rank(id)]
 	b.tooltip_text = SkillData.describe(id, state.skill_rank(id))
 	b.pressed.connect(func():
 		selected = id
-		_show_detail())
+		_popup())
 	return b
 
 func _passes(id: String) -> bool:
@@ -161,6 +182,11 @@ func _passes(id: String) -> bool:
 
 func refresh() -> void:
 	dust_label.text = "Dust %d" % state.dust
+	for i in filter_chips.get_child_count():
+		var c := filter_chips.get_child(i) as Button
+		var on := i == filter_pick.selected
+		_face(c, UiSkin.SLATE if on else UI.PANEL, UI.GOLD_DULL if on else UI.EMPTY)
+		c.add_theme_color_override("font_color", UI.GOLD if on else UI.DIM)
 	var key := "%s|%s|%s|%d|%d|%d|%s" % [str(state.skill_book), str(state.active_slots), str(state.passive_slots), filter_pick.selected, state.level, state.dust, state.sig_slot]
 	if key == shown:
 		return
@@ -172,9 +198,8 @@ func refresh() -> void:
 		var sb := Button.new()
 		sb.focus_mode = Control.FOCUS_NONE
 		sb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		sb.custom_minimum_size = Vector2(0, 34)
 		sb.clip_text = true
-		sb.add_theme_font_size_override("font_size", UI.MIN_FONT)
+		sb.add_theme_font_size_override("font_size", UI.FONT_BODY)
 		sb.text = "Signature: %s" % (SkillData.skill_name(state.sig_slot) if state.sig_slot != "" else "(none)")
 		sb.custom_minimum_size = Vector2(0, UI.TAP)
 		_face(sb, UiSkin.SLATE, UI.GOLD_DULL)   # interface pass: the signature slot is gold-edged
@@ -217,8 +242,8 @@ func _card(id: String) -> Button:
 	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 	b.add_theme_constant_override("icon_max_width", 32)   # native size: crisp pixels
 	b.clip_text = true
-	b.add_theme_font_size_override("font_size", UI.FONT_CAPTION)
-	b.text = "%s\n%s" % [s["name"], "●".repeat(r) + "○".repeat(maxi(0, SkillData.MAX_RANK - r))]
+	b.add_theme_font_size_override("font_size", UI.FONT_BODY)
+	b.text = "%s\n%s" % [s["name"], "Rank %d" % r if r > 0 else "Not learned"]   # (the font has no ● ○)
 	var rc := Color(SkillData.RARITY_COLORS[int(s["rarity"])])
 	var eq := state.is_skill_equipped(id)
 	var sel := id == selected
@@ -234,13 +259,30 @@ func _card(id: String) -> Button:
 			shown = ""
 			refresh())
 	b.pressed.connect(func():
-		if selected == id:
-			_toggle_equip()  # second tap: equip or unequip
-		else:
-			selected = id
-			shown = ""
-			refresh())
+		selected = id
+		shown = ""
+		refresh()
+		_popup())
 	return b
+
+## Fable r1 #13: a tapped skill opens like an item: what it does, then Equip / Rank up / Sell.
+func _popup() -> void:
+	if selected == "" or not SkillData.SKILLS.has(selected):
+		return
+	_show_detail()
+	var s := SkillData.info(selected)
+	var o := Overlay.new().open(main, String(s["name"]), 560.0, Color(SkillData.RARITY_COLORS[int(s["rarity"])]))
+	var d := UI.rich(UI.FONT_BODY)
+	d.text = detail.text
+	o.content.add_child(d)
+	o.foot.visible = true
+	for src: Button in [equip_button, craft_button, sell_button]:
+		var b := UI.primary(src.text, func(): o.close(); src.pressed.emit(), UI.GREEN) if src == equip_button else UI.button(src.text, func(): o.close(); src.pressed.emit())
+		b.disabled = src.disabled
+		b.tooltip_text = src.tooltip_text
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size.y = UI.TAP
+		o.foot.add_child(b)
 
 func _show_detail() -> void:
 	if selected == "" or not SkillData.SKILLS.has(selected):
@@ -290,7 +332,7 @@ func _toggle_equip() -> void:
 ## Pick any skill in the game to craft with dust.
 func _craft_popup() -> void:
 	var o := Overlay.new().open(main, "Craft a skill with dust", 640.0, Color("#c4b5fd"))
-	o.content.add_child(UI.label("You have %d dust. Dust comes from bosses, rare monsters, vaults and stones of skills you have already maxed." % state.dust, UI.FONT_CAPTION, UI.DIM))
+	o.content.add_child(UI.label("You have %d dust. Dust comes from bosses, rare monsters, vaults and stones of skills you have already maxed." % state.dust, UI.FONT_BODY, UI.DIM))
 	var l := ItemList.new()
 	l.custom_minimum_size = Vector2(0, 340)
 	l.add_theme_font_size_override("font_size", UI.MIN_FONT)
@@ -316,7 +358,7 @@ func _craft_popup() -> void:
 			selected = picks[i]
 			shown = ""
 			main.refresh())
-	o.content.add_child(UI.label("Double-tap a skill to craft it.", UI.FONT_CAPTION, UI.DIM))
+	o.content.add_child(UI.label("Double-tap a skill to craft it.", UI.FONT_BODY, UI.DIM))
 
 ## Autoplay settings: whether the fight runs by itself, and what it does for you.
 static func auto_battle_popup(m) -> void:
@@ -325,9 +367,8 @@ static func auto_battle_popup(m) -> void:
 	_fill_auto(m, o, st)
 
 static func _fill_auto(m, o: Overlay, st: GameState) -> void:
-	for c in o.content.get_children():
-		if c != o.content.get_child(0):
-			c.queue_free()
+	for c in o.content.get_children():   # the title row lives above the scroll now (Fable r1 #3)
+		c.queue_free()
 	# The big switch
 	var mode := UI.primary("Autoplay: ON  (the fight runs by itself)" if st.autoplay else "Autoplay: OFF  (you take every turn)", func():
 		st.autoplay = not st.autoplay
@@ -336,7 +377,7 @@ static func _fill_auto(m, o: Overlay, st: GameState) -> void:
 		_fill_auto(m, o, st), UI.TEAL if st.autoplay else UI.RED)
 	mode.custom_minimum_size = Vector2(0, UI.TAP + 8)
 	o.content.add_child(mode)
-	var note := UI.label("With Autoplay off, nothing happens until you act: tap Attack (or the enemy) to take a turn, and use your skills when you choose.", UI.FONT_CAPTION, UI.DIM)
+	var note := UI.label("With Autoplay off, nothing happens until you act: tap Attack (or the enemy) to take a turn, and use your skills when you choose.", UI.FONT_BODY, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	o.content.add_child(note)
 	UI.section(o.content, "What runs by itself", "Each of these works in both modes.")
@@ -370,14 +411,14 @@ static func _fill_auto(m, o: Overlay, st: GameState) -> void:
 	UI.section(o.content, "Skill order", "Auto tries your skills top to bottom and uses the first one that makes sense right now (it won't heal you at full HP, or waste a big hit on a monster that resists it). Turn a skill off to only use it yourself.")
 	var order := st.auto_order()
 	if order.is_empty():
-		o.content.add_child(UI.label("No active skills equipped yet.", UI.FONT_CAPTION, UI.DIM))
+		o.content.add_child(UI.label("No active skills equipped yet.", UI.FONT_BODY, UI.DIM))
 	for i in order.size():
 		var id: String = order[i]
 		var s := SkillData.info(id)
 		var c := Color(Classes.tag_color(String(s["tags"][0]))) if not Signatures.is_signature(id) else Color(Signatures.COLOR)
 		var row := UI.hbox(6)
 		o.content.add_child(row)
-		var nl := UI.label("%d. %s" % [i + 1, s["name"]], 15, c.lightened(0.3) if not st.skill_auto_off.has(id) else UI.DIM)
+		var nl := UI.label("%d. %s" % [i + 1, s["name"]], UI.FONT_BODY, c.lightened(0.3) if not st.skill_auto_off.has(id) else UI.DIM)
 		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nl.clip_text = true
 		row.add_child(nl)

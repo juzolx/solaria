@@ -21,10 +21,10 @@ func setup(m) -> void:
 	add_theme_constant_override("separation", 8)
 	var top := UI.hbox(8)
 	add_child(top)
-	head = UI.label("", 15, UI.GOLD)
+	head = UI.label("", UI.FONT_BODY, UI.GOLD)
 	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(head)
-	top.add_child(UI.label("Title:", UI.FONT_CAPTION, UI.DIM))
+	top.add_child(UI.label("Title:", UI.FONT_BODY, UI.DIM))
 	title_pick = OptionButton.new()
 	title_pick.item_selected.connect(func(i: int):
 		codex.title = "" if i == 0 else title_pick.get_item_text(i)
@@ -34,7 +34,7 @@ func setup(m) -> void:
 	# Name colors and plate frames earned by deeds (looks only)
 	var looks := UI.hbox(8)
 	add_child(looks)
-	looks.add_child(UI.label("Name:", UI.FONT_CAPTION, UI.DIM))
+	looks.add_child(UI.label("Name:", UI.FONT_BODY, UI.DIM))
 	color_pick = OptionButton.new()
 	color_pick.fit_to_longest_item = false  # long locked names would push the screen wider than a phone
 	color_pick.clip_text = true
@@ -44,7 +44,7 @@ func setup(m) -> void:
 		codex.save()
 		main.refresh())
 	looks.add_child(color_pick)
-	looks.add_child(UI.label("Frame:", UI.FONT_CAPTION, UI.DIM))
+	looks.add_child(UI.label("Frame:", UI.FONT_BODY, UI.DIM))
 	frame_pick = OptionButton.new()
 	frame_pick.fit_to_longest_item = false
 	frame_pick.clip_text = true
@@ -81,12 +81,12 @@ func refresh() -> void:
 	_looks_shop()
 	# Rewards waiting to be claimed come first
 	if not codex.deeds.is_empty():
-		box.add_child(UI.label("REWARDS WAITING FOR YOU", UI.FONT_CAPTION, UI.GOLD))
+		box.add_child(UI.heading("Rewards waiting"))
 		for id in codex.deeds.duplicate():
 			for a in Codex.ACHIEVEMENTS:
 				if a["id"] == id:
 					box.add_child(_claim_row(a))
-		box.add_child(UI.label("ALL DEEDS", UI.FONT_CAPTION, UI.DIM))
+		box.add_child(UI.label("ALL DEEDS", UI.FONT_BODY, UI.DIM))
 	# Done ones last, so what's left to do is on top
 	var todo: Array = []
 	var done: Array = []
@@ -106,7 +106,7 @@ func _row(a: Dictionary) -> PanelContainer:
 	var v := UI.vbox(2)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
-	var nl := UI.label(a["name"], UI.FONT_CAPTION, UI.GOLD if have else UI.TEXT)
+	var nl := UI.label(a["name"], UI.FONT_BODY, UI.GOLD if have else UI.TEXT)
 	nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(nl)
 	var reward := Town.reward_text(Town.deed_reward(a), main.state)
@@ -118,7 +118,7 @@ func _row(a: Dictionary) -> PanelContainer:
 	for e in Cosmetics.FRAMES:
 		if e["need"] == a["id"]:
 			reward += ", frame \"%s\"" % e["name"]
-	var dl := UI.label("%s  -  Reward: %s" % [a["text"], reward], UI.FONT_CAPTION, UI.DIM)
+	var dl := UI.label("%s  -  Reward: %s" % [a["text"], reward], UI.FONT_BODY, UI.DIM)
 	dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	dl.custom_minimum_size = Vector2(120, 0)
 	v.add_child(dl)
@@ -126,14 +126,14 @@ func _row(a: Dictionary) -> PanelContainer:
 	right.custom_minimum_size = Vector2(96, 0)
 	h.add_child(right)
 	if have:
-		right.add_child(UI.label(str(codex.achievements[a["id"]]), UI.FONT_CAPTION, UI.DIM))
+		right.add_child(UI.label(str(codex.achievements[a["id"]]), UI.FONT_BODY, UI.DIM))
 	else:
 		var val := mini(codex.value(a["key"], main.state), int(a["target"]))
 		var bar := UI.bar(UI.GOLD, 6)
 		bar.max_value = int(a["target"])
 		bar.value = val
 		right.add_child(bar)
-		right.add_child(UI.label("%d / %d" % [val, int(a["target"])], UI.FONT_CAPTION, UI.DIM))
+		right.add_child(UI.label("%d / %d" % [val, int(a["target"])], UI.FONT_BODY, UI.DIM))
 	return card
 
 func _claim_row(a: Dictionary) -> PanelContainer:
@@ -143,10 +143,10 @@ func _claim_row(a: Dictionary) -> PanelContainer:
 	var v := UI.vbox(2)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
-	var cn := UI.label(a["name"], 15, UI.GOLD)
+	var cn := UI.label(a["name"], UI.FONT_BODY, UI.GOLD)
 	cn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(cn)
-	var rw := UI.rich(UI.FONT_CAPTION)
+	var rw := UI.rich(UI.FONT_BODY)
 	rw.custom_minimum_size = Vector2(120, 0)
 	rw.text = "%s  -  [color=#f6d88f]%s[/color]" % [a["text"], Town.reward_text(Town.deed_reward(a), main.state)]
 	v.add_child(rw)
@@ -187,7 +187,7 @@ func _looks_shop() -> void:
 	box.add_child(b)
 	if not shop_open:
 		return
-	var note := UI.label("Looks only: they never change your power. Paid with this hero's gold; every hero in every town can wear them.", UI.FONT_CAPTION, UI.DIM)
+	var note := UI.label("Looks only: they never change your power. Paid with this hero's gold; every hero in every town can wear them.", UI.FONT_BODY, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.custom_minimum_size = Vector2(120, 0)
 	box.add_child(note)
@@ -209,12 +209,12 @@ func _shop_row(kind: String, e: Dictionary) -> PanelContainer:
 	var v := UI.vbox(0)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
-	var nl := UI.label(String(e["name"]), UI.FONT_CAPTION, col if kind == "Name color" else UI.TEXT)
+	var nl := UI.label(String(e["name"]), UI.FONT_BODY, col if kind == "Name color" else UI.TEXT)
 	nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(nl)
-	v.add_child(UI.label(kind, UI.FONT_CAPTION, UI.DIM))
+	v.add_child(UI.label(kind, UI.FONT_BODY, UI.DIM))
 	if got:
-		h.add_child(UI.label("Owned", UI.FONT_CAPTION, UI.GREEN))
+		h.add_child(UI.label("Owned", UI.FONT_BODY, UI.GREEN))
 	else:
 		var cost := Cosmetics.shop_price(main.state, e)
 		var buy := UI.primary("%d gold" % cost, func():

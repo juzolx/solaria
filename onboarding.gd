@@ -139,7 +139,7 @@ static func holds_page(p: Profile, page_id: String) -> bool:
 static func show_welcome(m, on_done := Callable()) -> Overlay:
 	var o := Overlay.new().open(m, "Welcome to Solaria", 460.0, UI.GOLD, false)
 	o.content.add_child(UI.wrap("Lead heroes down into a deep dungeon, bring the loot home, and grow your town.", 17, UI.TEXT))
-	o.content.add_child(UI.wrap("Want a few short tips as you go?", 15, UI.DIM))
+	o.content.add_child(UI.wrap("Want a few short tips as you go?", UI.FONT_BODY, UI.DIM))
 	var yes := UI.primary("Yes, show me the way", func():
 		set_on(m.profile, true)
 		o.close()

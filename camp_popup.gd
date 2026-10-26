@@ -12,10 +12,10 @@ func show_for(main_node) -> void:
 	m = main_node
 	state = m.state
 	open(m, "Descenders' Camp", 560.0, Color("#fbbf24"))
-	var t := UI.label("Tents around a fire, a few tired descenders, a quartermaster and a courier who knows the way up. You've rested here: full health, abilities ready.", UI.FONT_CAPTION, UI.DIM)
+	var t := UI.label("Tents around a fire, a few tired descenders, a quartermaster and a courier who knows the way up. You've rested here: full health, abilities ready.", UI.FONT_BODY, UI.DIM)
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(t)
-	info = UI.label("", UI.FONT_CAPTION, UI.GOLD)
+	info = UI.label("", UI.FONT_BODY, UI.GOLD)
 	content.add_child(info)
 	qm = UI.primary("", func():
 		if Camp.buy_potions(state):

@@ -33,6 +33,8 @@ const MOODS := [
 	{"kind": "motes", "dark": 0.3, "deep": Color("#1f1d24"), "amb": Color("#6a4a28"), "accent": Color("#c8a060"), "light": Color("#c8a060")},
 	{"kind": "embers", "dark": 0.55, "deep": Color("#2a1a1e"), "amb": Color("#733e39"), "accent": Color("#e43b44"), "light": Color("#f77622")},
 ]
+const UNREAD_FRAME := Color("#c0cbdc")   # an unread door's frame when the accent is the light's colour
+const DOOR_LABEL_W := 120.0   # a door label's box, centred on its door
 const TEXELS := 16.0      # texels per world unit on walls, floors and ceilings (same as Room3D)
 
 var focal := 300.0
@@ -47,9 +49,19 @@ var t := 0.0
 var key := ""
 var gate := false          # a champion's gate waits here: the middle door is a portal
 var _tex := {}
-var r3: Room3D = null      # the real 3D room (not on Low graphics)
+var r3: Room3D = null      # the real 3D room (not on Low graphics): `shared`, while this view draws it
 var _r3_key := ""
 var _seed := 0
+var event := ""            # the room's one thing (room_props[0].kind), so its layout matches
+var small := false         # a short screen (the SE): the horizon sits higher, the team lower
+var room_key := ""         # the room alone (not the view's size): the shared Room3D shows one room
+var _wipe := 0             # frames of the checker wipe left after a room change
+var _wipe_tex := {}
+var _vig_tex: Texture2D = null
+var _vig_at := Vector3.ZERO
+## One 3D room for every view (room view and fights), moved to whichever draws: a second one
+## would show the last fight's room for a frame and build every room twice (Fable round 3).
+static var shared: Room3D = null
 
 func tx(path: String) -> Texture2D:
 	if not _tex.has(path):
@@ -65,15 +77,22 @@ static func ambient(zi: int) -> Color:
 	return c * (0.68 / maxf(0.05, maxf(c.r, maxf(c.g, c.b))))
 
 ## Lays out the room (same floor and room = same room). Rebuilds only when needed.
-func build(st: GameState, sz: Vector2) -> void:
+## scr is the view's screen px per design px: under 400 screen px tall the horizon rises to
+## 0.34 so the floor between the hero and the doors stays (the SE).
+func build(st: GameState, sz: Vector2, scr := 1.0) -> void:
 	var g: bool = not st.room_props.is_empty() and String(st.room_props[0]["kind"]) == "gate" and not st.room_props[0].get("used", false)
-	var k := "%d|%d|%d|%d" % [st.floor_num, st.room_count, int(sz.x) * 10000 + int(sz.y), int(g)]
+	var ev := "" if st.room_props.is_empty() else String(st.room_props[0]["kind"])
+	var sm := sz.y * scr < 400.0
+	var k := "%d|%d|%d|%d|%s|%d" % [st.floor_num, st.room_count, int(sz.x) * 10000 + int(sz.y), int(g), ev, int(sm)]
 	if k == key:
 		return
 	key = k
 	gate = g
+	event = ev
+	small = sm
+	room_key = "%d|%d|%d|%s" % [st.floor_num, st.room_count, int(g), ev]
 	focal = sz.x * 0.62
-	center = Vector2(sz.x / 2.0, sz.y * 0.40)
+	center = Vector2(sz.x / 2.0, sz.y * (0.28 if small else 0.40))   # 0.28: 60+ px of floor over the hero on the SE (stage6)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash("%d-%d" % [st.floor_num, st.room_count])
 	_seed = rng.seed
@@ -170,15 +189,23 @@ func glow(ci: CanvasItem, at: Vector2, w: float, c: Color) -> void:
 
 ## A sprite standing on the floor at (x, z), about h world units tall. Returns its screen rect.
 ## Drawn at a whole-number scale of its art (1x, 2x, 3x...), never in between.
+## Where sprite() draws tex: k whole SCREEN pixels per art pixel (not design pixels: those are
+## 0.85 screen px on a phone), its lowest opaque row on the floor at (x, z) (transparent rows
+## under the art would lift it off the floor).
+func sprite_rect(tex: Texture2D, x: float, z: float, h: float, scr: float, bob := 0.0) -> Rect2:
+	var feet := ((proj(x, FLOOR_Y, z) + Vector2(0, bob)) * scr).round() / scr
+	var k := float(maxi(1, roundi(focal * h / z / tex.get_size().y * scr))) / scr
+	var hpx := tex.get_size().y * k
+	var wpx := tex.get_size().x * k
+	return Rect2(feet - Vector2(wpx / 2.0, hpx - Room3D.base_pad(tex) * k), Vector2(wpx, hpx))
+
 func sprite(ci: CanvasItem, tex: Texture2D, x: float, z: float, h: float, tint := Color.WHITE, bob := 0.0) -> Rect2:
 	if tex == null:
 		return Rect2()
-	var feet := (proj(x, FLOOR_Y, z) + Vector2(0, bob)).round()
-	var k := maxi(1, roundi(focal * h / z / tex.get_size().y))
-	var hpx := tex.get_size().y * k
-	var wpx := tex.get_size().x * k
-	var rect := Rect2(feet - Vector2(wpx / 2.0, hpx), Vector2(wpx, hpx))
-	shadow(ci, feet, wpx * 0.35)
+	var scr := screen_scale(ci)
+	var rect := sprite_rect(tex, x, z, h, scr, bob)
+	var feet := (proj(x, FLOOR_Y, z) * scr).round() / scr   # the shadow stays on the floor when it bobs
+	shadow(ci, feet, rect.size.x * 0.35)
 	var lc := lit(x, FLOOR_Y + h * 0.6, z)
 	ci.draw_texture_rect(tex, rect, false, Color(lc.r * tint.r, lc.g * tint.g, lc.b * tint.b, tint.a))
 	return rect
@@ -255,36 +282,91 @@ func draw_shell(ci: CanvasItem, sz: Vector2) -> void:
 ## True while the 3D room stands in for the 2D one (doors, scenery and torches
 ## are part of it then; the views still draw what's in the room on top).
 func is_3d() -> bool:
-	return r3 != null and _r3_key == key and key != "" and not low and allow_3d
+	return r3 != null and _r3_key == room_key and key != "" and not low and allow_3d
 
-## Draws the 3D room as the backdrop. The first frame of a new room (or with Low
-## graphics on) falls back to the 2D drawer while the 3D one is set up.
+## Draws the 3D room as the backdrop, one viewport pixel per ArtStyle.unit screen pixels.
+## Only the very first frame (or Low graphics, or headless) uses the 2D drawer.
 func _draw_3d(ci: CanvasItem, sz: Vector2) -> bool:
 	if low or not allow_3d or DisplayServer.get_name() == "headless":
-		if r3 != null:
-			r3.queue_free()
-			r3 = null
-			_r3_key = ""
+		if shared != null and is_instance_valid(shared):
+			shared.queue_free()
+		shared = null
+		r3 = null
+		_r3_key = ""
 		return false
-	if r3 == null:
-		r3 = Room3D.new()
-		ci.add_child.call_deferred(r3)
-		return false
+	if shared == null or not is_instance_valid(shared):
+		shared = Room3D.new()
+		ci.add_child.call_deferred(shared)
+	r3 = shared
+	if r3.get_parent() != ci and not r3.has_meta("moving"):
+		# this view draws now: the room moves here (it only renders under a visible parent)
+		r3.set_meta("moving", true)
+		_move_room.call_deferred(ci)
+	var deep: Color = mood()["deep"]
 	if not r3.is_inside_tree():
-		return false
-	if _r3_key != key:
-		_r3_key = key
-		r3.fit(sz)
-		r3.rebuild.call_deferred(zone, _seed, {"light": light, "amb": amb, "accent": mood()["accent"], "kind": mood()["kind"], "dark": dark, "gate": gate})
-		return false
-	r3.fit(sz)
-	ci.draw_texture_rect(r3.texture(), Rect2(Vector2.ZERO, sz), false)
+		ci.draw_rect(Rect2(Vector2.ZERO, sz), deep)
+		_r3_key = room_key
+		return true
+	var scr := screen_scale(ci)
+	r3.horizon = center.y / maxf(1.0, sz.y)
+	r3.fit(sz, scr if scr > 0.01 else 1.0)
+	if r3.get_meta("want", "") != room_key:
+		# a new room: build it next frame; until it's built, the zone's deep colour (never the last room)
+		r3.set_meta("want", room_key)
+		r3.rebuild.call_deferred(zone, _seed, {"light": light, "amb": amb, "accent": mood()["accent"], "kind": mood()["kind"], "dark": dark,
+			"gate": gate, "event": event, "small": small, "key": room_key})
+	_r3_key = room_key
+	if r3.built_key != room_key:
+		ci.draw_rect(Rect2(Vector2.ZERO, sz), deep)
+		_wipe = 4
+		return true
+	ci.draw_texture_rect(r3.texture(), Rect2(Vector2.ZERO, r3.drawn_size()), false)
+	if _wipe > 0:
+		# the new room comes out of the dark in two checker steps (hard pixels, no fade)
+		_wipe -= 1
+		ci.draw_texture_rect(_wipe_checker(sz, scr, 2 if _wipe >= 2 else 1, deep), Rect2(Vector2.ZERO, sz), false)
 	return true
+
+func _move_room(ci: CanvasItem) -> void:
+	if shared == null or not is_instance_valid(shared) or not is_instance_valid(ci):
+		return
+	shared.remove_meta("moving")
+	if shared.get_parent() == ci:
+		return
+	if shared.get_parent():
+		shared.reparent(ci, false)
+	else:
+		ci.add_child(shared)
+
+## A checker over the whole view in ArtStyle.unit cells: 2 of 4 cells dark, then 1 of 4.
+func _wipe_checker(sz: Vector2, scr: float, cells: int, c: Color) -> Texture2D:
+	var u := float(ArtStyle.unit(scr)) / maxf(0.01, scr)
+	var w := int(ceilf(sz.x / u))
+	var h := int(ceilf(sz.y / u))
+	var k := "%d|%d|%d|%s" % [w, h, cells, c.to_html()]
+	if not _wipe_tex.has(k):
+		var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+		for y in h:
+			for x in w:
+				var on := (x + y) % 2 == 0 if cells == 2 else (x % 2 == 0 and y % 2 == 0)
+				if on:
+					img.set_pixel(x, y, c)
+		_wipe_tex[k] = ImageTexture.create_from_image(img)
+	return _wipe_tex[k]
+
+## Screen pixels per design pixel for ci: the window's stretch (canvas_items mode leaves the
+## canvas transform at 1.0 on phones, so read the viewport's final transform) times any canvas zoom.
+static func screen_scale(ci: CanvasItem) -> float:
+	return maxf(0.01, PixelPic.stretch(ci) * ci.get_global_transform_with_canvas().get_scale().x)
 
 ## The three doors on the far wall. When `st` has doors to pick, they glow and
 ## become tap targets in `hit` ("d0".."d2").
 func draw_doors(ci: CanvasItem, st: GameState, hit: Dictionary, font: Font) -> void:
 	var open := st != null and st.door_pending()
+	var in3d := is_3d() and r3 != null and r3.built_key == room_key
+	if in3d:
+		for i in 3:
+			r3.mark_door(i, Color.WHITE, 0.0, 0.0)
 	var dt := tx("res://art/halls/z%d_door.png" % zone)
 	if dt == null:
 		dt = tx("res://art/halls/door.png")
@@ -301,18 +383,37 @@ func draw_doors(ci: CanvasItem, st: GameState, hit: Dictionary, font: Font) -> v
 			continue
 		# a door reader on the team senses what's behind: a glow, later the room itself
 		var rd := Halls.read_door(st, i)
-		var col := Color(String(rd["color"])) if String(rd["color"]) != "" else Color(1.0, 0.85, 0.45)
-		var pulse := 0.45 + 0.35 * sin(t * 3.0 + i)
-		if String(rd["color"]) != "":
-			glow(ci, Vector2(rect.get_center().x, rect.end.y), rect.size.x * 1.8, Color(col, 0.6 + 0.2 * sin(t * 2.0 + i)))
-		ci.draw_rect(rect.grow(2), Color(col, pulse), false, 2.0)
+		var sensed := String(rd["color"]) != ""
+		# every door you can pick glows at its foot (in the zone's accent until a reader senses more),
+		# so the main tap target never sinks into a dark far wall
+		var col := ArtStyle.nearest(Color(String(rd["color"]))) if sensed else Color(mood()["accent"])
+		if not sensed and ArtStyle.oklab(col).distance_to(ArtStyle.oklab(Color(mood()["light"]))) < 0.12:
+			col = UNREAD_FRAME   # an accent like the zone's light would vanish on its lit doors
+		var pulse := 0.6 + 0.3 * sin(t * 3.0 + i)
+		var glow_a := 0.6 + 0.2 * sin(t * 2.0 + i) if sensed else 0.45
+		if in3d:
+			# in the room itself, so props standing in front of a door cover its frame and glow
+			r3.mark_door(i, col, pulse, glow_a)
+		else:
+			glow(ci, Vector2(rect.get_center().x, rect.end.y), rect.size.x * 1.8, Color(col, glow_a))
+			# a 1 px outline-black frame under the coloured one, so a red frame reads on a red door
+			ci.draw_rect(rect.grow(4.5), Color("#0e0812"), false, 1.0)
+			ci.draw_rect(rect.grow(3), Color(col, pulse), false, 3.0)
 		hit["d%d" % i] = rect.grow(12)
-		var lab := String(rd["label"])
+		var lab := door_label(st, i)
 		if lab != "":
 			var fs := 18 if lab == "?" else 16
-			var at := Vector2(rect.position.x - 30, rect.position.y - 6)
-			ci.draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x + 60, fs, 4, Color(0, 0, 0, 0.9))
-			ci.draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x + 60, fs, col.lightened(0.3))
+			# the middle label sits one line higher, so neighbours never touch
+			var at := Vector2(rect.get_center().x - DOOR_LABEL_W / 2.0, rect.position.y - 6 - (fs if i == 1 else 0))
+			ci.draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, DOOR_LABEL_W, fs, 4, Color(0, 0, 0, 0.9))
+			ci.draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, DOOR_LABEL_W, fs, col.lightened(0.3))
+
+## What door i says over it ("" for nothing): the gate's middle door carries the gate's own
+## name ("Champion", drawn by the room view), so a read there would make two labels.
+func door_label(st: GameState, i: int) -> String:
+	if gate and i == 1:
+		return ""
+	return String(Halls.read_door(st, i)["label"])
 
 ## Scenery and torches as depth-sorted entries ({"z", "kind": "decor"/"torch"}).
 func scenery() -> Array:
@@ -344,11 +445,25 @@ func draw_scenery(ci: CanvasItem, th: Dictionary) -> bool:
 			return true
 	return false
 
-## The edges of your view fall into shadow.
+## The edges of your view fall into shadow: a thin outline-coloured frame and one band of
+## checker dither inside it (hard pixels, no soft gradient over the art).
+## Baked once per size into a 3-cell-wide strip, drawn as two texture rects (the right one mirrored).
 func vignette(ci: CanvasItem, sz: Vector2) -> void:
-	for i in 8:
-		var f := float(i) / 8.0
-		var a := (0.1 + dark * 0.12) * (1.0 - f)
-		ci.draw_rect(Rect2(0, 0, sz.x * 0.1 * (1.0 - f), sz.y), Color(0, 0, 0, a))
-		ci.draw_rect(Rect2(sz.x - sz.x * 0.1 * (1.0 - f), 0, sz.x * 0.1 * (1.0 - f), sz.y), Color(0, 0, 0, a))
-		ci.draw_rect(Rect2(0, 0, sz.x, sz.y * 0.1 * (1.0 - f)), Color(0, 0, 0, a))
+	if sz.x < 1.0 or sz.y < 1.0:  # first draw before layout
+		return
+	var scr := screen_scale(ci)
+	var u := float(ArtStyle.unit(scr)) / scr
+	var edge := Color("#0e0812")
+	var rows := int(ceilf(sz.y / u))
+	if _vig_tex == null or _vig_at != Vector3(sz.x, sz.y, u):
+		_vig_at = Vector3(sz.x, sz.y, u)
+		var img := Image.create(3, rows, false, Image.FORMAT_RGBA8)
+		for k in rows:
+			img.set_pixel(0, k, edge)
+			for row in 2:
+				if (k + row) % 2 == 0:
+					img.set_pixel(1 + row, k, edge)
+		_vig_tex = ImageTexture.create_from_image(img)
+	ci.draw_texture_rect(_vig_tex, Rect2(0, 0, 3.0 * u, rows * u), false)
+	ci.draw_texture_rect(_vig_tex, Rect2(sz.x, 0, -3.0 * u, rows * u), false)
+	ci.draw_rect(Rect2(0, 0, sz.x, u), edge)

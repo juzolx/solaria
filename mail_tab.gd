@@ -32,11 +32,11 @@ func refresh() -> void:
 	var all := UI.primary("Collect all (%d)" % waiting, _collect_all, UI.GREEN)
 	all.disabled = waiting == 0
 	head.add_child(all)
-	var note := UI.label("Rewards from bounties, deeds and gifts arrive here. Mail is always safe: it can't be lost in the dungeon. Gear that doesn't fit in your bag (%d / %d) waits in its letter." % [g.bag.size(), g.bag_capacity()], 11, UI.DIM)
+	var note := UI.label("Rewards from bounties, deeds and gifts arrive here. Mail is always safe: it can't be lost in the dungeon. Gear that doesn't fit in your bag (%d / %d) waits in its letter." % [g.bag.size(), g.bag_capacity()], UI.FONT_BODY, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(note)
 	if g.mail.is_empty():
-		var empty := UI.label("No mail yet. Finish a bounty or a deed and your reward comes here.", UI.FONT_CAPTION, UI.DIM)
+		var empty := UI.label("No mail yet. Finish a bounty or a deed and your reward comes here.", UI.FONT_BODY, UI.DIM)
 		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(empty)
 		return
@@ -72,19 +72,19 @@ func _letter(l: Dictionary) -> PanelContainer:
 	var top := UI.hbox(8)
 	v.add_child(top)
 	if fresh:
-		top.add_child(UI.chip("NEW", UI.GOLD, UI.FONT_CAPTION))
-	var t := UI.label(String(l["title"]), UI.FONT_CAPTION, UI.DIM if empty else UI.TEXT)
+		top.add_child(UI.chip("NEW", UI.GOLD, UI.FONT_BODY))
+	var t := UI.label(String(l["title"]), UI.FONT_BODY, UI.DIM if empty else UI.TEXT)
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(t)
 	var when := Time.get_date_string_from_unix_time(int(l.get("time", 0)))
-	top.add_child(UI.label(when, UI.FONT_CAPTION, UI.DIM))
-	v.add_child(UI.label("From: %s" % l["from"], UI.FONT_CAPTION, UI.DIM))
-	var body := UI.label(String(l["body"]), UI.FONT_CAPTION, UI.TEXT if not empty else UI.DIM)
+	top.add_child(UI.label(when, UI.FONT_BODY, UI.DIM))
+	v.add_child(UI.label("From: %s" % l["from"], UI.FONT_BODY, UI.DIM))
+	var body := UI.label(String(l["body"]), UI.FONT_BODY, UI.TEXT if not empty else UI.DIM)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(body)
 	if empty:
-		v.add_child(UI.label("Collected.", UI.FONT_CAPTION, UI.DIM))
+		v.add_child(UI.label("Collected.", UI.FONT_BODY, UI.DIM))
 		return card
 	# What's inside: gear as pictures, the rest in words
 	var items: Array = l["items"]
@@ -97,7 +97,7 @@ func _letter(l: Dictionary) -> PanelContainer:
 			row.add_child(ItemGrid.cell(it, _peek.bind(it), false, 46))
 	var other := Mail.summary({"gold": l["gold"], "scrap": l["scrap"], "potions": l["potions"], "extra": l["extra"], "items": []})
 	if other != "":
-		var r := UI.rich(UI.FONT_CAPTION)
+		var r := UI.rich(UI.FONT_BODY)
 		r.text = "[color=#f6d88f]%s[/color]" % other
 		v.add_child(r)
 	var id := String(l["id"])

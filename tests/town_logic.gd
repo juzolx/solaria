@@ -174,19 +174,46 @@ func _initialize() -> void:
 		# name plates at 2x never cover each other (a plate takes the tap first)
 		var th := ThemeDB.get_project_theme()
 		var font: Font = th.default_font if th and th.default_font else ThemeDB.fallback_font   # the font the game draws plates with
-		var plates: Array = []
-		for sp in d["spots"]:
-			if sp.has("plate") and sp["plate"] == null:
-				continue
-			var w := font.get_string_size(String(sp["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 18.0
-			var c: Vector2 = TownView.plate_anchor(sp) * 2.0
-			plates.append([sp["id"], Rect2(c.x - w / 2.0, c.y - 15.0, w, 30.0)])
-		var piled: Array = []
-		for a in plates.size():
-			for b in range(a + 1, plates.size()):
-				if (plates[a][1] as Rect2).intersects(plates[b][1]):
-					piled.append([plates[a][0], plates[b][0]])
-		check(piled.is_empty(), "no two name plates overlap at 2x (%s)" % [piled])
+		var o0: Array = d["origin"]
+		var cell_px := func(c: Vector2i) -> Vector2:
+			return Vector2(float(o0[0]) + (c.x - c.y) * 16.0, float(o0[1]) + (c.x + c.y + 1) * 8.0)
+		for fs in [20, 22]:   # 2x draws plates at 20, 3x at 22
+			var k := 2.0 if fs == 20 else 3.0
+			var plates: Array = []
+			for sp in d["spots"]:
+				if sp.has("plate") and sp["plate"] == null:
+					continue
+				var w := font.get_string_size(String(sp["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 18.0
+				var c: Vector2 = TownView.plate_anchor(sp) * k
+				plates.append([sp["id"], Rect2(c.x - w / 2.0, c.y - (fs + 10) / 2.0, w, fs + 10.0)])
+			var piled: Array = []
+			for a in plates.size():
+				for b in range(a + 1, plates.size()):
+					if (plates[a][1] as Rect2).intersects(plates[b][1]):
+						piled.append([plates[a][0], plates[b][0]])
+			check(piled.is_empty(), "no two name plates overlap at %dx (%s)" % [k, piled])
+			# nobody standing at a stop has a plate across them
+			var covered: Array = []
+			for st in d["stops"]:
+				var p: Vector2 = cell_px.call(Vector2i(int(st[0]), int(st[1])))
+				var head := Rect2((p + Vector2(-6, -32)) * k, Vector2(12, 32) * k)
+				for pl in plates:
+					if (pl[1] as Rect2).intersects(head):
+						covered.append([pl[0], st])
+			check(covered.is_empty(), "no plate covers a walker at a stop at %dx (%s)" % [k, covered])
+		# every stop faces something: a cell people can't walk on lies within 24 px of face_x beside it
+		var blank: Array = []
+		for st in d["stops"]:
+			var sc := Vector2i(int(st[0]), int(st[1]))
+			var faces := false
+			for dx in [-1, 0, 1]:
+				for dy in [-1, 0, 1]:
+					var nc := sc + Vector2i(dx, dy)
+					if not walk.has(nc) and absf((cell_px.call(nc) as Vector2).x - float(st[2])) <= 24.0:
+						faces = true
+			if not faces:
+				blank.append(st)
+		check(blank.is_empty(), "every stop faces a stall, the well or a board, not open street (%s)" % [blank])
 		# the hope path: walkers climb the stairs to the portal (the Dungeon door is up there)
 		var gate: Array = d["spots"].filter(func(sp): return sp["id"] == "gate")[0]["door"]
 		var up: Array = d["raised"].filter(func(c): return int(c[0]) == int(gate[0]) and int(c[1]) == int(gate[1]))
@@ -216,6 +243,124 @@ func _initialize() -> void:
 			check(through.is_empty(), "level %d props stand off the walk grid (walked through: %s)" % [lvl, through])
 			var lost2: Array = targets.filter(func(c): return walk.has(c) and not TownView._reaches(w, inns[0], [c]))
 			check(lost2.is_empty(), "level %d props cut no door or stop off (%s)" % [lvl, lost2])
+		# every picture the town loads exists: occluders (day and lit), level props, bases and overlays
+		var missing: Array = []
+		for o in d["occluders"]:
+			for k in ([0, 6] if o.size() > 6 and String(o[6]) != "" else [0]):
+				var path := "res://art/town/iso/occ/%s.png" % String(o[k])
+				if not ResourceLoader.exists(path):
+					missing.append(path)
+		for id in d["levels"]:
+			for e in d["levels"][id]:
+				if not ResourceLoader.exists("res://art/town/iso/up/%s.png" % String(e[0])):
+					missing.append(String(e[0]))
+		for church in ["lot", "holy", "ruin"]:
+			for cabin in ["lot", "built"]:
+				for path in [String(d["art"]) % [church, cabin], String(d["art_lit"]) % [church, cabin], (String(d["art_lit"]) % [church, cabin]).replace("_lit.png", "_lit2.png")]:
+					if not ResourceLoader.exists(path):
+						missing.append(path)
+		check(missing.is_empty(), "every occluder, level prop and town picture exists (%s)" % [missing])
+		# by day no flame burns: no bright flame pixel within 6 px of a lamp, torch or lantern in any
+		# base picture (the forge, its smithy and the blue portal and beam lights burn by day)
+		var smith: Array = d["spots"].filter(func(sp): return sp["id"] == "smith")[0]["rect"]
+		var forge := Rect2(smith[0], smith[1], smith[2], smith[3])
+		var burning: Array = []
+		for church in ["lot", "holy", "ruin"]:
+			for cabin in ["lot", "built"]:
+				var im := (load(String(d["art"]) % [church, cabin]) as Texture2D).get_image()
+				if im.is_compressed():
+					im.decompress()
+				for l in d["lights"]:
+					var col: Array = l[2]
+					if float(col[2]) > float(col[0]) or (int(col[1]) == 120 and int(col[2]) == 50):
+						continue
+					for y in range(int(l[1]) - 6, int(l[1]) + 7):
+						for x in range(int(l[0]) - 6, int(l[0]) + 7):
+							if x < 0 or y < 0 or x >= im.get_width() or y >= im.get_height() or forge.has_point(Vector2(x, y)):
+								continue
+							var c := im.get_pixel(x, y)
+							var r8 := c.r8
+							var g8 := c.g8
+							var b8 := c.b8
+							if (r8 > 220 and g8 > 150 and b8 < 110 and r8 - b8 > 110) or (r8 > 200 and g8 < 120 and b8 < 50 and r8 > g8 + 100):
+								burning.append([church, cabin, l[0], l[1]])
+		check(burning.is_empty(), "the day pictures have every flame out (%s)" % [burning.slice(0, 6)])
+		# lot plates too: an unbuilt Church or Trophy Cabin's plate ("Church · lot", on its ground)
+		# overlaps no other plate at 2x and 3x
+		for fs in [20, 22]:
+			var k := 2.0 if fs == 20 else 3.0
+			var plates: Array = []
+			for sp in d["spots"]:
+				if sp.has("plate") and sp["plate"] == null:
+					continue
+				var w := font.get_string_size(String(sp["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 18.0
+				var c: Vector2 = TownView.plate_anchor(sp) * k
+				plates.append([sp["id"], Rect2(c.x - w / 2.0, c.y - (fs + 10) / 2.0, w, fs + 10.0)])
+			var piled: Array = []
+			for sp in d["spots"].filter(func(s): return s.has("lot_plate")):
+				var w := font.get_string_size(String(sp["label"]) + " · lot", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 18.0
+				var c := Vector2(float(sp["lot_plate"][0]), float(sp["lot_plate"][1])) * k
+				var lr := Rect2(c.x - w / 2.0, c.y - (fs + 10) / 2.0, w, fs + 10.0)
+				for pl in plates:
+					if pl[0] != sp["id"] and (pl[1] as Rect2).intersects(lr):
+						piled.append([String(sp["id"]) + " lot", pl[0]])
+			check(piled.is_empty(), "no lot plate overlaps another plate at %dx (%s)" % [k, piled])
+		# a plate pulled into the view stays on its own building, or hides; a building wholly in view
+		# keeps its plate (430 and 375 wide phones, 2x and 3x, the view swept over the town)
+		var strays: Array = []
+		var lost_plates: Array = []
+		for view in [Vector2(430, 760), Vector2(375, 520)]:
+			for k in [2.0, 3.0]:
+				var fs := 20 if k == 2.0 else 22
+				for ox in range(0, 1480, 60):
+					for oy in range(0, 1030, 60):
+						var origin: Vector2 = -Vector2(ox, oy) * k
+						for sp in d["spots"]:
+							if sp.has("plate") and sp["plate"] == null:
+								continue
+							var r: Array = sp["rect"]
+							var bvr := Rect2(origin + Vector2(r[0], r[1]) * k, Vector2(r[2], r[3]) * k)
+							if bvr.intersection(Rect2(Vector2.ZERO, view)).get_area() < 0.3 * bvr.get_area():
+								continue
+							var w := font.get_string_size(String(sp["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 18.0
+							var a: Vector2 = origin + TownView.plate_anchor(sp) * k
+							var pr := TownView.clamp_plate(Rect2(a.x - w / 2.0, a.y - (fs + 10) / 2.0, w, fs + 10.0), view, bvr)
+							var moved := pr.position != Vector2(a.x - w / 2.0, a.y - (fs + 10) / 2.0)
+							if pr.has_area() and moved and not pr.intersects(bvr.grow(8.0)):
+								strays.append(sp["id"])
+							if not pr.has_area() and Rect2(Vector2.ZERO, view).encloses(bvr):
+								lost_plates.append(sp["id"])
+		check(strays.is_empty(), "a plate clamped into the view never leaves its building (%s)" % [strays.slice(0, 6)])
+		check(lost_plates.is_empty(), "a building wholly in view keeps its plate (%s)" % [lost_plates.slice(0, 6)])
+	# chats start only on the grid: a partner walking between cells can't be stopped; one standing can
+	var f0 := {"x": 100.0, "y": 100.0, "wait": 0.0}
+	check(not TownView.chat_ok(f0, {"x": 108.0, "y": 104.0, "wait": 0.0}, Vector2(116, 108)), "no chat with a walker between cells")
+	check(TownView.chat_ok(f0, {"x": 108.0, "y": 104.0, "wait": 2.0}, Vector2(116, 108)), "a chat with someone standing nearby")
+	check(TownView.chat_ok(f0, {"x": 116.0, "y": 108.0, "wait": 0.0}, Vector2(116, 108)), "a chat with a walker right on a cell")
+	check(not TownView.chat_ok(f0, {"x": 140.0, "y": 100.0, "wait": 2.0}, Vector2(140, 100)), "no chat across the street (over 22 px)")
+	# Hardcore: nobody goes into the ruined Church or the locked Vault; lots and hidden buildings never
+	check(not TownView.enterable("church", true, true, false) and not TownView.enterable("stash", true, true, false), "Hardcore walkers never enter the ruined Church or the Vault")
+	check(TownView.enterable("church", false, true, false) and TownView.enterable("stash", false, true, false) and TownView.enterable("inn", true, true, false), "regular walkers go into the Church and the Vault")
+	check(not TownView.enterable("cabin", false, false, false) and not TownView.enterable("clinic", false, true, true), "nobody walks into an empty lot or a building not in town yet")
+	# today's townsfolk: six different people, no race twice among three in a row, another cast most days
+	var races := TownFolk.PEOPLE.map(func(p): return String(p[0]["race"]))
+	var mixed := true
+	var casts := {}
+	for day in range(20000, 20030):
+		var cst: Array = TownView.cast(TownView.MAX_FOLK, races.size(), float(day), races)
+		casts[str(cst)] = true
+		var uniq := {}
+		for i in cst:
+			uniq[i] = true
+		if cst.size() != TownView.MAX_FOLK or uniq.size() != cst.size():
+			mixed = false
+		for n in range(2, cst.size()):
+			if races[cst[n]] == races[cst[n - 1]] or races[cst[n]] == races[cst[n - 2]]:
+				mixed = false
+	check(mixed and casts.size() > 10, "the townsfolk: six different people a day, mixed, a new cast most days (%d casts in 30 days)" % casts.size())
+	check(TownView.cast(6, races.size(), 20001.2, races) == TownView.cast(6, races.size(), 20001.9, races), "the same cast all day")
+	# the lamps' glow is plain at the rainy look (where every window is lit) and as strong as before at night
+	check(TownView.glow_alpha(0.3) >= 0.3 and absf(TownView.glow_alpha(0.75) - 0.5) < 0.01, "lamp glow matches the lit windows at dark 0.3 and 0.75")
 	# the town map lands on whole device pixels wherever the view sits in the UI
 	var snapped := true
 	for cs in [1.488, 2.56, 3.0]:
@@ -226,6 +371,17 @@ func _initialize() -> void:
 				if absf(dev.x - roundf(dev.x)) > 0.01 or absf(dev.y - roundf(dev.y)) > 0.01:
 					snapped = false
 	check(snapped, "the town map's origin is a whole device pixel for any UI offset")
+	# a pinch keeps the map point under the fingers where it is, at the scale really drawn
+	var still := true
+	for cs in [1.488, 2.56]:
+		for z in [2.0, 3.0]:
+			var at := Vector2(215, 400)
+			var m := Vector2(740, 560)
+			var pan := TownView.zoom_pan(at, m, z, cs)
+			var sf: float = maxf(1.0, roundf(z * cs)) / cs
+			if not ((at - pan) / sf).is_equal_approx(m):
+				still = false
+	check(still, "a pinch zoom keeps the point under the fingers still")
 	GameState.delete_saves()
 	print("TOWN TESTS DONE, failures: ", fails)
 	quit()

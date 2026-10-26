@@ -78,14 +78,33 @@ func _native_rules(path: String, img: Image) -> void:
 	check(bare == 0, "%s: %d edge pixels without the dark outline" % [path, bare])
 
 ## Fable r1: on a 430 pt phone (504 design wide, 0.853 stretch) every monster must show at the
-## hero's 3x inside its share of the stage (battle_view._width_cap): commons 56%, bosses 92%,
+## hero's 3x inside its share of the stage (battle_view._width_cap): commons 60% (ArtStyle.COMMON_SHARE), bosses 92%,
 ## Calamities 96%. A wider picture would drop to 2x and look smaller than a common.
 func _phone_width(key: String, w: int) -> void:
-	var share := 0.96 if key.begins_with("calamity_") else (0.92 if key.begins_with("boss_") else 0.56)
+	var share := 0.96 if key.begins_with("calamity_") else (0.92 if key.begins_with("boss_") else ArtStyle.COMMON_SHARE)
 	check(w * 3 <= int(504.0 * share * 0.853), "%s is %d px wide: over %d it draws below 3x on a phone" % [key, w, int(504.0 * share * 0.853) / 3])
 
 ## Fable r2: monsters must not sink into their dark halls (38-94 mean luma): the whole picture,
 ## outline included, averages at least 68 (commons) or 60 (bosses and Calamities, which glow).
+## Fable r4: the grey monsters it named were pulled toward their zone's colour at import
+## (tools/monster_import.py TINT); none may slide back to grey on a re-import.
+const TINTED := ["barghest", "pooka", "spriggan", "leshy", "boss_black_annis", "draugr", "ankou", "revenant",
+	"vetala", "boss_dullahan", "boss_hel", "bunyip", "afanc"]
+func _tinted(key: String, img: Image) -> void:
+	if not key in TINTED:
+		return
+	var total := 0.0
+	var n := 0
+	for y in img.get_height():
+		for x in img.get_width():
+			var c := img.get_pixel(x, y)
+			if c.a8 == 0 or ArtStyle.is_outline(c):
+				continue
+			total += maxf(c.r, maxf(c.g, c.b)) - minf(c.r, minf(c.g, c.b))
+			n += 1
+	var ch := total / maxf(1.0, n)
+	check(ch >= 0.07, "%s: mean chroma %.3f, grey again (tools/monster_import.py TINT)" % [key, ch])
+
 func _luma_floor(key: String, img: Image) -> void:
 	var total := 0.0
 	var n := 0
@@ -98,6 +117,45 @@ func _luma_floor(key: String, img: Image) -> void:
 			n += 1
 	var floor_y := 59.5 if key.begins_with("boss_") or key.begins_with("calamity_") else 67.5
 	check(n > 0 and total / n >= floor_y, "%s averages luma %.1f (at least %.0f, monster_import.py lifts it)" % [key, total / maxi(1, n), floor_y + 0.5])
+
+## Fable pets R2: every 32 px pet still has a dark silhouette (half its edge pixels near-black by
+## their brightest channel, so pale pets read on pale halls) and no idle frame ends below the
+## still (a bob goes up from the ground). Fix with claude/pets2/tools/outline.gd / idle_fix.gd.
+func _pet32_rules() -> void:
+	var dir := "res://art/pets/32/"
+	for f in _pngs(dir):
+		if f.ends_with("_idle.png"):
+			continue
+		var img := _load(dir + f)
+		var edge := 0
+		var dark := 0
+		for y in img.get_height():
+			for x in img.get_width():
+				if img.get_pixel(x, y).a <= 0.5:
+					continue
+				var open := false
+				for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+					var n: Vector2i = Vector2i(x, y) + d
+					if n.x < 0 or n.y < 0 or n.x >= img.get_width() or n.y >= img.get_height() or img.get_pixelv(n).a <= 0.5:
+						open = true
+						break
+				if open:
+					edge += 1
+					var c := img.get_pixel(x, y)
+					if maxf(c.r, maxf(c.g, c.b)) * 255.0 < 70.0:
+						dark += 1
+		check(edge > 0 and dark >= edge * 0.5, "pet %s has a dark outline (%d of %d edge pixels)" % [f, dark, edge])
+		var strip_path: String = dir + String(f).get_basename() + "_idle.png"
+		if FileAccess.file_exists(strip_path):
+			var strip := _load(strip_path)
+			for fi in 2:
+				check(strip.get_region(Rect2i(fi * 32, 0, 32, 32)).get_used_rect().end.y <= img.get_used_rect().end.y, "pet %s idle frame %d stays above its ground row" % [f, fi])
+			# Fable pets R3: frame 0 is the still, pixel for pixel (an outline pass on the stills alone would split them)
+			var f0 := strip.get_region(Rect2i(0, 0, 32, 32))
+			var still := img.duplicate() as Image
+			f0.convert(Image.FORMAT_RGBA8)
+			still.convert(Image.FORMAT_RGBA8)
+			check(f0.get_data() == still.get_data(), "pet %s idle frame 0 is its still" % f)
 
 func _initialize() -> void:
 	check(not ArtStyle.in_palette(ArtStyle.OUTLINE), "the outline color is not a palette color")
@@ -116,6 +174,7 @@ func _initialize() -> void:
 				_native_rules(d + f, img)
 				_phone_width(f.get_basename(), img.get_width())
 				_luma_floor(f.get_basename(), img)
+				_tinted(f.get_basename(), img)
 				continue
 			check(img.get_size() == ArtStyle.MONSTER_SIZE or img.get_size() == ArtStyle.TALL_SIZE, "%s%s is %s (68x68 or 68x132)" % [d, f, img.get_size()])
 			var rough := 0
@@ -355,6 +414,7 @@ func _initialize() -> void:
 	check(fay.size.y < man.size.y * 0.85 and fay.end.y < man.end.y, "a fairy is tiny and floats")
 	# ONE scale: battle draws every art pixel at the same whole number of screen pixels
 	check(ArtStyle.unit(1.0) == 3 and ArtStyle.unit(2.0) == 6 and ArtStyle.unit(1.0 / 3.0) == 1, "one integer battle scale (3 pt per art pixel)")
+	_pet32_rules()
 	print("ART RULES DONE, failures: ", fails)
 	quit()
 

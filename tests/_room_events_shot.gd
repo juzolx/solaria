@@ -18,6 +18,12 @@ func _initialize() -> void:
 	await process_frame
 	main.timer.stop()
 	var st: GameState = main.state
+	# another run sharing this user folder (check.sh) can swap the save under us: say so, loudly
+	print("user data: %s" % OS.get_user_data_dir())
+	assert(st.hero_name == "Thorin", "shots: the test hero is %s, not Thorin (another run shares %s)" % [st.hero_name, OS.get_user_data_dir()])
+	if st.hero_name != "Thorin":
+		quit(1)
+		return
 	st.in_town = false
 	st.floor_num = zone * GameData.ZONE_FLOORS + 12
 	st.autoplay = false   # Auto would use the event before the shot
@@ -59,7 +65,7 @@ func _initialize() -> void:
 		main.refresh()
 		await create_timer(1.0).timeout
 		for c in main.get_children():
-			if c is Overlay:
+			if c is Overlay or c is Moments:   # Moments: the realm's title card
 				c.queue_free()
 		await create_timer(0.3).timeout
 		await RenderingServer.frame_post_draw

@@ -46,7 +46,7 @@ func _idle(src: Image, floats: bool) -> Image:
 	var w := src.get_width(); var h := src.get_height()
 	var f1 := Image.create(w, h, false, Image.FORMAT_RGBA8)
 	if floats:
-		f1.blit_rect(src, Rect2i(0, 0, w, h - 1), Vector2i(0, 1))
+		f1.blit_rect(src, Rect2i(0, 1, w, h - 1), Vector2i(0, 0))  # bob UP from the ground line (Fable pets R2)
 	else:
 		var used := src.get_used_rect()
 		var cut := used.position.y + int(used.size.y * 0.55)

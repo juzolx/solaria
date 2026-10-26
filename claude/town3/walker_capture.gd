@@ -70,6 +70,7 @@ func _initialize() -> void:
 	main.refresh()
 	for n in 3:
 		await create_timer(0.5).timeout
+		root.get_texture().get_image().save_png(OUT + "start%d.png" % n)   # the first 1.5 s: walkers fade in about town
 		for c in main.get_children():
 			if c is Overlay or c is Moments:
 				c.queue_free()
@@ -110,5 +111,27 @@ func _initialize() -> void:
 	tv._layout()
 	await create_timer(0.3).timeout
 	root.get_texture().get_image().save_png(OUT + "corner.png")
+	# the level props (scaffold, lantern post, banners) at the Inn and the Guild, levels 1-3
+	for l in [1, 2, 3]:
+		Buildings.levels = {"inn": l, "guild": l, "tavern": l}
+		tv.refresh_levels()
+		for id in ["inn", "guild"]:
+			var mid := Vector2.ZERO   # centred on the building's level props
+			for e in tv.data["levels"][id]:
+				mid += Vector2(float(e[1]) + 16.0, float(e[2]) + 24.0) / float(tv.data["levels"][id].size())
+			tv.pan_v = tv.size / 2.0 - mid * tv.scale_f
+			tv._layout()
+			await create_timer(0.3).timeout
+			root.get_texture().get_image().save_png(OUT + "lv%d_%s.png" % [l, id])
+	# the dark zones: windows and flames through the night grade, and the glow at the rainy look
+	var sq: Rect2 = tv._spot_rect("inn")
+	tv.pan_v = tv.size / 2.0 - (sq.get_center() + Vector2(0, sq.size.y * 0.6)) * tv.scale_f
+	tv._layout()
+	for zone in ["the_shadow_deep", "ember_halls", "flooded_depths"]:
+		for lk in Town.LOOKS:
+			if lk["zone"] == zone:
+				tv.set_look(lk)
+		await create_timer(0.4).timeout
+		root.get_texture().get_image().save_png(OUT + "look_%s.png" % zone)
 	print("CAPTURE DONE")
 	quit()

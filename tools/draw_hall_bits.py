@@ -14,6 +14,11 @@ from PIL import Image
 #   art/halls/z5_wisp.png    16x16 pale ghost wisp, the Hushwood's "torch"
 #   art/halls/z6_crystal.png 16x24 crystal shard (Glimmer Court)
 #   art/halls/z9_spikes.png  32x16 row of iron spikes (Cinder Abyss)
+#   art/halls/z5_floor.png   32x32 leaf-littered flagstones (Hushwood floor, tiles)
+#   art/halls/z2_pool_0..1   64x32 dark pool with a rippling rim, two frames (Flooded Vaults)
+#   art/halls/z7_pipe.png    16x16 brass pipe, tiles along its length (Clockwork Depths)
+#   art/halls/z8_pillar.png  16x64 gilded pillar, tiles up (Gilded Spire)
+# and gives z5_wall / z6_floor a top light and bottom shade on their main stone (>= 5 colours).
 ROOT = sys.argv[1] if len(sys.argv) > 1 else "."
 OUT = (0x0e, 0x08, 0x12, 255)
 
@@ -163,4 +168,117 @@ for cx in (4, 12, 20, 28):
             px[x, y] = hexc("#a3825f") if x < cx else hexc("#733e39")
     px[cx, 2] = hexc("#e43b44")
 save(outline(img), "art", "halls", "z9_spikes.png")
+
+# --- Hushwood floor: flagstones with moss and pale leaves (tiles: stones wrap at the edges) ---
+rng = random.Random(55)
+img = Image.new("RGBA", (32, 32), hexc("#1f1d24"))
+px = img.load()
+stones = [(0, 0, 14, 9), (15, 0, 16, 12), (0, 10, 9, 12), (10, 10, 12, 9), (23, 13, 9, 10), (0, 23, 13, 9), (14, 20, 8, 12), (23, 24, 9, 8)]
+for sx, sy, sw, sh in stones:
+    base = hexc("#4a4852") if rng.random() < 0.5 else hexc("#34323b")
+    for yy in range(sh - 1):
+        for xx in range(sw - 1):
+            x, y = (sx + xx) % 32, (sy + yy) % 32
+            c = base
+            if yy == 0 or xx == 0:
+                c = hexc("#566a56") if base == hexc("#4a4852") else hexc("#4a4852")   # lit top/left edge
+            elif yy == sh - 2 or xx == sw - 2:
+                c = hexc("#34323b") if base == hexc("#4a4852") else hexc("#1f1d24")   # shaded bottom/right edge
+            px[x, y] = c
+for i in range(14):   # moss in the cracks
+    x, y = rng.randrange(32), rng.randrange(32)
+    if px[x, y] == hexc("#1f1d24"):
+        px[x, y] = hexc("#193c3e")
+for i in range(7):    # fallen pale leaves
+    x, y = rng.randrange(32), rng.randrange(32)
+    px[x, y] = hexc("#d0dcc8")
+    px[(x + 1) % 32, y] = hexc("#566a56")
+save(img, "art", "halls", "z5_floor.png")
+
+# --- Flooded Vaults: a dark pool with a rim that ripples (two frames) ---
+for f in range(2):
+    img = Image.new("RGBA", (64, 32))
+    px = img.load()
+    for y in range(32):
+        for x in range(64):
+            d = math.hypot((x - 31.5) / 31.0, (y - 15.5) / 15.0)
+            if d < 1.0:
+                c = hexc("#172038") if d < 0.62 else hexc("#253a5e")
+                # the rim ring moves 2 px in on frame 1 (and its dashes turn), so the ripple shows
+                lo = 0.80 - f * 2.0 / 31.0
+                if lo <= d < lo + 0.10 and (int(math.degrees(math.atan2((y - 15.5) * 2.0, x - 31.5))) // 20 + f) % 2 == 0:
+                    c = hexc("#4fb0c6")   # the rippling rim
+                if 0.30 <= d < 0.38 and (x + y + f) % 7 == 0:
+                    c = hexc("#3a4466")
+                if y == 11 + f * 3 and 22 + f * 4 <= x < 34 + f * 4:
+                    c = hexc("#c0cbdc")   # a glint on the water, one row lower each frame
+                px[x, y] = c
+    save(img, "art", "halls", "z2_pool_%d.png" % f)
+
+# --- Clockwork Depths: a brass pipe (runs left-right, tiles along its length) ---
+img = Image.new("RGBA", (16, 16))
+px = img.load()
+band = ["#0e0812", "#5a3f35", "#8f563b", "#c8a060", "#fee761", "#c8a060", "#c8a060", "#8f563b", "#8f563b", "#5a3f35", "#0e0812"]
+for i, c in enumerate(band):
+    for x in range(16):
+        px[x, 3 + i] = hexc(c)
+for y in range(3, 14):   # a collar every tile
+    for x in (6, 7):
+        px[x, y] = hexc("#5a3f35") if y in (3, 13) else hexc("#feae34" if y < 8 else "#8f563b")
+save(img, "art", "halls", "z7_pipe.png")
+
+# --- Gilded Spire: a gilded pillar (tiles upward) ---
+img = Image.new("RGBA", (16, 64))
+px = img.load()
+cols = ["#0e0812", "#6a4a28", "#c8a060", "#fee761", "#c8a060", "#c8a060", "#c8a060", "#a3825f", "#a3825f", "#a3825f", "#6a4a28", "#6a4a28", "#5a3f35", "#5a3f35", "#3e2731", "#0e0812"]
+for y in range(64):
+    for x in range(16):
+        px[x, y] = hexc(cols[x])
+    if y % 16 in (0, 1):   # gold rings
+        for x in range(1, 15):
+            px[x, y] = hexc("#fee761" if y % 16 == 0 else "#6a4a28")
+save(img, "art", "halls", "z8_pillar.png")
+
+# --- more shades on the flattest PixelLab tiles: top light, bottom shade on the main stone ---
+PAL = []
+for line in open(os.path.join(ROOT, "art", "palette.gpl"), encoding="utf8"):
+    parts = line.split()
+    if len(parts) >= 3 and all(p.isdigit() for p in parts[:3]):
+        PAL.append(tuple(int(p) for p in parts[:3]) + (255,))
+
+
+def lum(c):
+    return 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]
+
+
+def step(c, up, used):
+    # the nearest palette colour clearly lighter (or darker) than c that the tile doesn't use yet
+    pick = [p for p in PAL if p not in used and (lum(p) > lum(c) + 12 if up else lum(p) < lum(c) - 12)]
+    return min(pick, key=lambda p: sum((p[i] - c[i]) ** 2 for i in range(3))) if pick else c
+
+
+for name in ("z5_wall", "z6_floor"):
+    path = os.path.join(ROOT, "art", "halls", name + ".png")
+    img = Image.open(path).convert("RGBA")
+    if len(img.getcolors(4096)) >= 5:
+        continue   # already shaded
+    px = img.load()
+    w, h = img.size
+    counts = {}
+    for y in range(h):
+        for x in range(w):
+            counts[px[x, y]] = counts.get(px[x, y], 0) + 1
+    main = max(counts, key=counts.get)
+    hi, lo = step(main, True, counts), step(main, False, counts)
+    src = img.copy().load()
+    for y in range(h):
+        for x in range(w):
+            if src[x, y] != main:
+                continue
+            if src[x, (y - 1) % h] != main:
+                px[x, y] = hi
+            elif src[x, (y + 1) % h] != main:
+                px[x, y] = lo
+    img.save(path)
+
 print("hall bits drawn")

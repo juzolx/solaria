@@ -119,14 +119,14 @@ func set_volumes(effects: float, music: float) -> void:
 func _music_db() -> float:
 	return linear_to_db(maxf(music_linear * 0.6, 0.0001)) if enabled and music_linear > 0.0 else -80.0
 
-func play(sound_name: String, pitch := 1.0) -> void:
+func play(sound_name: String, pitch := 1.0, db := 0.0) -> void:
 	if not enabled or not sounds.has(sound_name):
 		return
 	var p := players[next_player]
 	next_player = (next_player + 1) % VOICES
 	p.stream = sounds[sound_name]
 	p.pitch_scale = pitch
-	p.volume_db = sfx_db
+	p.volume_db = sfx_db + db   # db: a quieter one-off (the town's chatter and doors)
 	p.play()
 	if haptics and HAPTIC.has(sound_name) and OS.has_feature("mobile"):
 		Input.vibrate_handheld(int(HAPTIC[sound_name]), 0.6)
