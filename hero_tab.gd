@@ -30,6 +30,7 @@ var numbers := {}
 var path_label: RichTextLabel
 var respec_button: Button
 var _look_key := ""
+var _chip_key := ""
 var title_pick: OptionButton  # 2.1 G4: the title you show (shared with the Guild Hall picker)
 var _title_key := ""
 var doll := {}       # slot -> [Button, caption Label]
@@ -66,11 +67,11 @@ func setup(m) -> void:
 	title_label.clip_text = true   # a long name never widens the screen
 	title_label.custom_minimum_size = Vector2(220, 0)
 	pv0.add_child(title_label)
-	level_label = UI.label("", UI.FONT_CAPTION, UI.DIM_CONTRAST)
+	level_label = UI.label("", UI.FONT_BODY, UI.DIM_CONTRAST)
 	level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	level_label.clip_text = true
 	pv0.add_child(level_label)
-	role_label = UI.wrap("", UI.FONT_CAPTION, UI.DIM)   # the class blurb lives in the plate's tap-tip now (fewer words)
+	role_label = UI.wrap("", UI.FONT_BODY, UI.DIM)   # the class blurb lives in the plate's tap-tip now (fewer words)
 	role_label.visible = false
 	sv.add_child(role_label)
 	var mid := UI.hbox(4)
@@ -108,7 +109,7 @@ func setup(m) -> void:
 	sv.add_child(chips)
 	xp_bar = UI.bar(UI.GOLD, 10)
 	sv.add_child(xp_bar)
-	xp_label = UI.label("", UI.FONT_CAPTION, UI.DIM)
+	xp_label = UI.label("", UI.FONT_BODY, UI.DIM)
 	xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sv.add_child(xp_label)
 	UI.tip(plate, "Your hero. Tap a gear slot to change what you wear.")
@@ -116,7 +117,7 @@ func setup(m) -> void:
 	# ---- 2.1 G4 + G8: your title, and a picture of your hero to share ----
 	var trow := UI.hbox(8)
 	v.add_child(trow)
-	trow.add_child(UI.label("Title:", UI.FONT_CAPTION, UI.DIM))
+	trow.add_child(UI.label("Title:", UI.FONT_BODY, UI.DIM))
 	title_pick = OptionButton.new()
 	title_pick.fit_to_longest_item = false  # long titles would push the screen wider than a phone
 	title_pick.clip_text = true
@@ -138,7 +139,7 @@ func setup(m) -> void:
 	v.add_child(points_panel)
 	var pv := UI.vbox(8)
 	points_panel.add_child(pv)
-	points_label = UI.rich(UI.FONT_CAPTION)
+	points_label = UI.rich(UI.FONT_BODY)
 	pv.add_child(points_label)
 	var prow := UI.hbox(8)
 	pv.add_child(prow)
@@ -190,7 +191,7 @@ func setup(m) -> void:
 	nums.add_child(ng)
 	for key in ["Attack", "Defense", "Max HP", "Skill dmg", "Crit", "Crit dmg", "Double strike", "Cooldowns",
 			"Dodge", "Extra attack", "Strike first", "Heal power", "Regen", "Resist", "Loot bonus", "Gold", "Prices", "Charm"]:
-		var k := UI.label(key, UI.FONT_CAPTION, UI.DIM)
+		var k := UI.label(key, UI.FONT_BODY, UI.DIM)
 		k.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		ng.add_child(k)
 		var val := UI.label("", UI.FONT_BODY, UI.TEXT)
@@ -198,7 +199,7 @@ func setup(m) -> void:
 		numbers[key] = val
 
 	# ---- Path + respec ----
-	path_label = UI.rich(UI.FONT_CAPTION)
+	path_label = UI.rich(UI.FONT_BODY)
 	v.add_child(path_label)
 	respec_button = UI.button("", func(): main.confirm("Respec all stat points?", "You'll get every stat point back to spend again. Your class stays the same.", "Respec", func(): state.respec(); main.refresh()))
 	respec_button.custom_minimum_size = Vector2(0, UI.TAP)
@@ -230,12 +231,12 @@ func _stat_row(st: String) -> PanelContainer:
 	var val := UI.label("0", UI.FONT_DISPLAY, Color("#f4e6c4"))
 	val.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	nh.add_child(val)
-	var chip := UI.label("★", UI.FONT_CAPTION, UI.GOLD)
+	var chip := UI.label("★", UI.FONT_BODY, UI.GOLD)
 	chip.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	UI.tip(chip, "Suggested for your class")
 	nh.add_child(chip)
 	# What it gives: in the tap-tip and the numbers below; shown here only while you spend points
-	var gives := UI.rich(UI.FONT_CAPTION)
+	var gives := UI.rich(UI.FONT_BODY)
 	gives.visible = false
 	bv.add_child(gives)
 	var br := UI.hbox(4)
@@ -261,7 +262,7 @@ func _doll_slot(slot: String) -> Control:
 	b.pressed.connect(func(): main.show_tab(1, 0))
 	b.tooltip_text = slot
 	col.add_child(b)
-	var cap := UI.label(slot.replace("Off Hand", "Off-hand").replace("Helmet", "Head"), UI.FONT_CAPTION, UI.DIM)
+	var cap := UI.label(slot.replace("Off Hand", "Off-hand").replace("Helmet", "Head"), UI.FONT_BODY, UI.DIM)
 	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(cap)
 	doll[slot] = [b, cap]
@@ -339,13 +340,16 @@ func refresh() -> void:
 	level_label.add_theme_color_override("font_color", color.lightened(0.3))   # the class colour lives in the class name
 	_refresh_doll()
 	_fill_titles()
-	for c in chips.get_children():
-		c.queue_free()
-	chips.add_child(UI.chip(state.race().to_upper(), Color(state.race_info().get("color", "#e8b14a"))))
 	var al := ClassTree.alignment(state)
-	chips.add_child(UI.chip(String(ClassTree.ALIGN_NAMES[al]).to_upper(), Color(ClassTree.ALIGN_COLORS[al])))
-	if ClassTree.rank_of(cur) != "":
-		chips.add_child(UI.chip("%s RANK" % ClassTree.rank_of(cur), Color(ClassTree.RANK_COLORS[ClassTree.rank_of(cur)])))
+	var chip_key := "%s|%s|%s" % [state.race(), al, ClassTree.rank_of(cur)]
+	if chip_key != _chip_key:   # Fable r1 #11: only rebuilt when race, faith side or rank change
+		_chip_key = chip_key
+		for c in chips.get_children():
+			c.queue_free()
+		chips.add_child(UI.chip(state.race(), Color(state.race_info().get("color", "#e8b14a")), UI.FONT_BODY))
+		chips.add_child(UI.chip(String(ClassTree.ALIGN_NAMES[al]), Color(ClassTree.ALIGN_COLORS[al]), UI.FONT_BODY))
+		if ClassTree.rank_of(cur) != "":
+			chips.add_child(UI.chip("%s rank" % ClassTree.rank_of(cur), Color(ClassTree.RANK_COLORS[ClassTree.rank_of(cur)]), UI.FONT_BODY))
 	xp_bar.max_value = GameData.xp_to_next(state.level)
 	xp_bar.value = state.xp
 	xp_label.text = "%d / %d XP to level %d" % [state.xp, GameData.xp_to_next(state.level), state.level + 1]
@@ -455,7 +459,7 @@ func _build_special_rows(names: Array) -> void:
 		h.add_child(val)
 		var bar := UI.bar(col, 6)
 		c[1].add_child(bar)
-		var txt := UI.rich(UI.FONT_CAPTION)
+		var txt := UI.rich(UI.FONT_BODY)
 		c[1].add_child(txt)
 		special_rows[n] = [val, txt, bar, c[0]]
 

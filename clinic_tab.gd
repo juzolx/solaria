@@ -23,9 +23,9 @@ func refresh() -> void:
 	shown = key
 	OnlineUI.clear(box)
 	box.add_child(UI.heading("Clinic"))
-	box.add_child(UI.wrap("The keeper looks after your pets between dives. A hurt pet heals by resting (%d cleared floors), or the keeper can patch it up now for gold. Pets are never lost." % Menagerie.HEAL_FLOORS, UI.FONT_CAPTION, UI.DIM))
+	box.add_child(UI.wrap("The keeper looks after your pets between dives. A hurt pet heals by resting (%d cleared floors), or the keeper can patch it up now for gold. Pets are never lost." % Menagerie.HEAL_FLOORS, UI.FONT_BODY, UI.DIM))
 	if not g.pets.is_empty():
-		box.add_child(UI.label("COMING ALONG ON YOUR NEXT DIVE  %d / %d" % [Menagerie.out(g).size(), Menagerie.max_out(g)], 11, UI.GOLD))
+		box.add_child(UI.heading("Coming along", "%d of %d on your next dive" % [Menagerie.out(g).size(), Menagerie.max_out(g)]))
 	var any_hurt := false
 	for p in g.pets:
 		var hurt := int(p["hurt"]) > 0
@@ -44,8 +44,8 @@ func refresh() -> void:
 		var v := UI.vbox(2)
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(v)
-		v.add_child(UI.label(String(p["name"]), UI.FONT_CAPTION, UI.TEXT))
-		v.add_child(UI.label(("Hurt: %d floor%s of rest left" % [int(p["hurt"]), "" if int(p["hurt"]) == 1 else "s"]) if hurt else "Healthy and ready", UI.FONT_CAPTION, UI.RED if hurt else UI.GREEN))
+		v.add_child(UI.label(String(p["name"]), UI.FONT_BODY, UI.TEXT))
+		v.add_child(UI.label(("Hurt: %d floor%s of rest left" % [int(p["hurt"]), "" if int(p["hurt"]) == 1 else "s"]) if hurt else "Healthy and ready", UI.FONT_BODY, UI.RED if hurt else UI.GREEN))
 		if hurt:
 			var cost := Menagerie.heal_cost(p)
 			var id := int(p["id"])
@@ -74,6 +74,6 @@ func refresh() -> void:
 			eb.tooltip_text = "Tap to leave it at home" if going else "Tap to bring it on your next dive"
 			h.add_child(eb)
 	if g.pets.is_empty():
-		box.add_child(UI.wrap("No pets yet. The pen is ready for whatever hatches.", UI.FONT_CAPTION, UI.DIM))
+		box.add_child(UI.wrap("No pets yet. The pen is ready for whatever hatches.", UI.FONT_BODY, UI.DIM))
 	elif not any_hurt:
-		box.add_child(UI.wrap("Everyone is healthy.", UI.FONT_CAPTION, UI.DIM))
+		box.add_child(UI.wrap("Everyone is healthy.", UI.FONT_BODY, UI.DIM))

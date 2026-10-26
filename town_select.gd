@@ -11,7 +11,7 @@ func show_for(main_node, from_title = null) -> void:
 	m = main_node
 	title_screen = from_title
 	open(m, "Your towns", 720.0)
-	var note := UI.wrap("Each town has its own heroes, stash and skill book. Build a team in one, or start fresh in another. Settings and the Codex are shared.", UI.FONT_CAPTION, UI.DIM)
+	var note := UI.wrap("Each town has its own heroes, stash and skill book. Build a team in one, or start fresh in another. Settings and the Codex are shared.", UI.FONT_BODY, UI.DIM)
 	content.add_child(note)
 	for t in range(1, GameData.MAX_TOWNS + 1):
 		content.add_child(_card(t))
@@ -33,10 +33,10 @@ func _card(t: int) -> PanelContainer:
 	top.add_child(UI.label(p.town_name(t).to_upper() if founded else "TOWN %d" % t, 15, UI.GOLD if founded else UI.DIM))
 	if founded:
 		var hc := p.town_hardcore(t)
-		top.add_child(UI.chip("HARDCORE" if hc else "REGULAR", UI.RED if hc else UI.GREEN, UI.FONT_CAPTION))
+		top.add_child(UI.chip("HARDCORE" if hc else "REGULAR", UI.RED if hc else UI.GREEN, UI.FONT_BODY))
 	if here and founded:
-		top.add_child(UI.chip("YOU'RE HERE", UI.GOLD, UI.FONT_CAPTION))
-	var info := UI.wrap("", UI.FONT_CAPTION, UI.DIM)
+		top.add_child(UI.chip("YOU'RE HERE", UI.GOLD, UI.FONT_BODY))
+	var info := UI.wrap("", UI.FONT_BODY, UI.DIM)
 	if founded:
 		var heroes := GameState.town_heroes(t)
 		var best := p.max_floor if here else int(p.towns.get(str(t), {}).get("max_floor", 0))

@@ -272,8 +272,9 @@ func _initialize() -> void:
 			main.craft_tab.bag_button.pressed.emit()
 			for set_name in main.craft_tab.set_buttons:
 				(main.craft_tab.set_buttons[set_name][0][0] as Button).pressed.emit()
-			for slot in main.craft_tab.gear_buttons:
-				(main.craft_tab.gear_buttons[slot] as Button).pressed.emit()
+			for si in main.craft_tab.mystery_slot.item_count:   # Fable r1 #10: one Roll button and a slot picker
+				main.craft_tab.mystery_slot.select(si)
+				main.craft_tab.mystery_roll.pressed.emit()
 			# Fight buttons
 			for b in main.skill_buttons:
 				b.pressed.emit()

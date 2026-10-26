@@ -18,7 +18,7 @@ func show_for(main_node, town_n: int) -> void:
 		var ct := UI.rich(17)
 		ct.text = "[color=#e8b14a]%s[/color]" % coach
 		content.add_child(ct)
-	content.add_child(UI.wrap("Name your town, then choose how it plays. You can't change Regular or Hardcore later.", UI.FONT_CAPTION, UI.DIM))
+	content.add_child(UI.wrap("Name your town, then choose how it plays. You can't change Regular or Hardcore later.", UI.FONT_BODY, UI.DIM))
 	name_edit = LineEdit.new()
 	name_edit.placeholder_text = p.town_name(t)
 	name_edit.max_length = Profile.TOWN_NAME_MAX
@@ -41,7 +41,7 @@ func _card(hc: bool, title: String, color: Color, text: String) -> PanelContaine
 	var v := UI.vbox(10)
 	card.add_child(v)
 	v.add_child(UI.label(title, 20, color.lightened(0.2)))
-	var r := UI.rich(UI.FONT_CAPTION)
+	var r := UI.rich(UI.FONT_BODY)
 	r.text = text
 	v.add_child(r)
 	var b := UI.primary("Found a %s town" % title.capitalize(), func(): _go(hc), color)

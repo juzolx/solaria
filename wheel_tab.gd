@@ -106,11 +106,11 @@ func setup(m) -> void:
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cols.add_child(left)
 	left_col = left
-	left.add_child(UI.label("FORTUNE'S WHEEL", 18, UI.GOLD))
-	var note := UI.label("Put an item on the Wheel. Win: it comes back one rarity higher. Lose: it's gone. Common %d%%, Uncommon %d%%, Rare %d%%, Epic %d%%." % GameData.GAMBLE_CHANCES, UI.FONT_CAPTION, UI.DIM)
+	# Fable r1 #12: one line; the odds sit on each item and behind the Odds button
+	left.add_child(UI.heading("Fortune's Wheel"))
+	var note := UI.label("Win: it comes back one rarity higher. Lose: it's gone.", UI.FONT_BODY, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	left.add_child(note)
-	left.add_child(UI.label("TAP AN ITEM TO SPIN FOR IT  (its odds are on it)", UI.FONT_CAPTION, UI.DIM))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -121,7 +121,7 @@ func setup(m) -> void:
 	scroll.add_child(sv)
 	grid = ItemGrid.grid()
 	sv.add_child(grid)
-	empty_note = UI.label("Nothing to put on the Wheel. Locked items and Legendary or better can't go on the wheel.", UI.FONT_CAPTION, UI.DIM)
+	empty_note = UI.label("Nothing to put on the Wheel. Locked items and Legendary or better can't go on the wheel.", UI.FONT_BODY, UI.DIM)
 	empty_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	sv.add_child(empty_note)
 	left.resized.connect(_on_left_resized.bind(left))
@@ -155,7 +155,7 @@ func setup(m) -> void:
 	high_box = UI.vbox(6)
 	high_box.visible = false
 	right.add_child(high_box)
-	heat_label = UI.rich(UI.FONT_CAPTION)
+	heat_label = UI.rich(UI.FONT_BODY)
 	high_box.add_child(heat_label)
 	mini_grid = GridContainer.new()
 	mini_grid.columns = 2
@@ -167,8 +167,8 @@ func setup(m) -> void:
 	leg_box = UI.vbox(6)
 	leg_box.visible = false
 	right.add_child(leg_box)
-	leg_box.add_child(UI.label("LEGENDARY TABLE", 16, UI.GOLD))
-	leg_info = UI.rich(UI.FONT_CAPTION)
+	leg_box.add_child(UI.heading("Legendary table"))
+	leg_info = UI.rich(UI.FONT_BODY)
 	leg_box.add_child(leg_info)
 	for r in [0, 1, 2]:
 		var lb := UI.button("+ all %s" % GameData.RARITY_NAMES[r], _load_rarity.bind(r))
@@ -176,7 +176,7 @@ func setup(m) -> void:
 		lb.add_theme_font_size_override("font_size", UI.MIN_FONT)
 		lb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		load_row.add_child(lb)
-	info = UI.rich(UI.FONT_CAPTION)
+	info = UI.rich(UI.FONT_BODY)
 	right.add_child(info)
 	spin_button = UI.primary("Spin!", _spin, UI.GOLD)
 	spin_button.custom_minimum_size = Vector2(0, 44)
@@ -243,9 +243,11 @@ func refresh() -> void:
 func _update() -> void:
 	if state.bag.size() >= state.bag_capacity() and not spinning and result_label.text == "":
 		result_label.text = "[color=#f87171]Your bag is full (%d / %d). You can still spin items in it, but items over the limit can't go on the wheel until you sell or salvage.[/color]" % [state.bag.size(), state.bag_capacity()]
-	mode_button.text = "Many wheels: ON" if high else "Many wheels: OFF"
+	mode_button.text = "Many wheels"
+	UI.toggle_look(mode_button, high)   # Fable r1 #4: a check box, not ": ON / OFF"
 	mode_button.tooltip_text = "Spin several items at once, each on its own wheel" if not high else "Back to one wheel"
-	leg_button.text = "Item Wheel" if leg else ("Legendary" if WheelTables.legendary_unlocked(state) else "Legendary (locked)")
+	leg_button.text = "Item Wheel" if leg else "Legendary"
+	leg_button.add_theme_color_override("font_color", UI.TEXT if leg or WheelTables.legendary_unlocked(state) else UI.DIM)   # dim = locked (the tip says why)
 	leg_button.tooltip_text = "Back to the item Wheel" if leg else "The Legendary table: pay gold for one prize"
 	mode_button.visible = not leg
 	left_col.visible = not leg
@@ -522,18 +524,18 @@ func _spin_leg() -> void:
 ## WheelTables: the same numbers the Wheel rolls.
 func show_odds() -> void:
 	var o := Overlay.new().open(main, "WHEEL ODDS", 480.0, UI.GOLD)
-	o.content.add_child(UI.label("ITEM WHEEL", 15, UI.GOLD))
-	o.content.add_child(UI.wrap("Win: the item comes back one rarity higher. Lose: it's gone.", UI.FONT_CAPTION, UI.DIM))
-	var nt := UI.rich(UI.FONT_CAPTION)
+	o.content.add_child(UI.heading("Item Wheel"))
+	o.content.add_child(UI.wrap("Win: the item comes back one rarity higher. Lose: it's gone.", UI.FONT_BODY, UI.DIM))
+	var nt := UI.rich(UI.FONT_BODY)
 	var lines: Array = []
 	for row in WheelTables.normal_rows():
 		lines.append("[color=%s]%s[/color] to %s: [b]%d%%[/b]" % [GameData.color_of(int(row["rarity"])), row["name"], row["to"], int(row["pct"])])
 	nt.text = "\n".join(lines)
 	o.content.add_child(nt)
-	o.content.add_child(UI.label("LEGENDARY TABLE", 15, UI.GOLD))
+	o.content.add_child(UI.heading("Legendary table"))
 	var fort := WheelTables.fortune(state)
 	if not WheelTables.legendary_unlocked(state):
-		o.content.add_child(UI.wrap(WheelTables.lock_text(state), UI.FONT_CAPTION, UI.RED))
+		o.content.add_child(UI.wrap(WheelTables.lock_text(state), UI.FONT_BODY, UI.RED))
 	var parts: Array = []
 	for p in WheelTables.fortune_parts(state):
 		if float(p[1]) > 0.0:
@@ -542,7 +544,7 @@ func show_odds() -> void:
 	o.content.add_child(UI.wrap("Your Fortune: %d%s. Each point raises top prizes by %d%% (up to x%d) and Legendary items by %d%% (up to x%d)." % [
 		int(fort), src, int(round(WheelTables.TOP_PER_POINT * 100)), int(WheelTables.TOP_CAP),
 		int(round(WheelTables.RARE_PER_POINT * 100)), int(WheelTables.RARE_CAP)], 12, UI.DIM))
-	var lt := UI.rich(UI.FONT_CAPTION)
+	var lt := UI.rich(UI.FONT_BODY)
 	lines = []
 	var rows := WheelTables.legendary_rows(fort)
 	for i in rows.size():

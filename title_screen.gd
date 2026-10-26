@@ -32,7 +32,7 @@ var key_tex: Texture2D
 func show_for(main_node) -> void:
 	m = main_node
 	m.add_child(self)
-	theme = UI.make_theme()
+	theme = UI.theme()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	size = get_viewport().get_visible_rect().size
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -256,7 +256,7 @@ func _build() -> void:
 	_fit()
 	_fill_menu()
 	_fill_side()
-	var ver := UI.label("v" + PatchNotes.VERSION, UI.FONT_CAPTION, UI.DIM)
+	var ver := UI.label("v" + PatchNotes.VERSION, UI.FONT_BODY, UI.DIM)
 	ver.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	col.add_child(ver)
 
@@ -274,7 +274,7 @@ func _fill_menu() -> void:
 				p.active_slot = n
 				meta = GameState.slot_meta(n)
 				break
-	var town_l := UI.label("%s  ·  %s  ·  %d / %d heroes" % [p.town_name(p.town).to_upper(), "HARDCORE" if p.town_hardcore(p.town) else "REGULAR", GameState.town_heroes(p.town), p.slots_open()], UI.FONT_CAPTION, UI.GOLD)
+	var town_l := UI.label("%s  ·  %s  ·  %d / %d heroes" % [p.town_name(p.town).to_upper(), "HARDCORE" if p.town_hardcore(p.town) else "REGULAR", GameState.town_heroes(p.town), p.slots_open()], UI.FONT_BODY, UI.GOLD)
 	town_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	town_l.tooltip_text = "The town you're in. Switch or found another from Towns."
 	menu_box.add_child(town_l)
@@ -312,7 +312,7 @@ func _hero_line(meta: Dictionary) -> Control:
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	row.add_child(pic)
-	var info := UI.rich(UI.FONT_CAPTION)
+	var info := UI.rich(UI.FONT_BODY)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.text = HeroSelect.describe(meta)
 	row.add_child(info)
@@ -324,7 +324,7 @@ func _fill_side() -> void:
 	if m.profile.notes_seen != PatchNotes.VERSION:
 		var up := UI.panel(Color("#2a1a2e"), Color("#e8b14a"), 8, 10, 2)
 		side_box.add_child(up)
-		var ut := UI.rich(UI.FONT_CAPTION)
+		var ut := UI.rich(UI.FONT_BODY)
 		ut.text = "[color=#e8b14a][b]%s[/b][/color]  [color=%s]v%s[/color]\nNew class rules with God classes, pets from region nests, three currencies, the Legendary Wheel and safer saves." % [String(PatchNotes.NOTES[0]["name"]).to_upper(), UI.hex(UI.DIM), PatchNotes.VERSION]
 		up.add_child(ut)
 		var pulse := up.create_tween().set_loops()
@@ -334,7 +334,7 @@ func _fill_side() -> void:
 	wn.custom_minimum_size = Vector2(0, TAP_PHONE)
 	side_box.add_child(wn)
 	var week := Realms.realm_of_week()
-	var wk := UI.rich(UI.FONT_CAPTION)
+	var wk := UI.rich(UI.FONT_BODY)
 	wk.text = "[color=%s]REALM OF THE WEEK[/color]\n[color=%s][b]%s[/b][/color]: double reputation and better loot." % [UI.hex(UI.DIM), Realms.info(week)["color"], Realms.realm_name(week)]
 	side_box.add_child(wk)
 	var ev := GameData.active_events()
@@ -342,14 +342,14 @@ func _fill_side() -> void:
 		var names := []
 		for id in ev:
 			names.append("[color=#f472b6][b]%s[/b][/color]: %s" % [GameData.EVENTS[id]["name"], GameData.EVENTS[id]["text"]])
-		var banner := UI.rich(UI.FONT_CAPTION)
+		var banner := UI.rich(UI.FONT_BODY)
 		banner.text = "[color=#f472b6]EVENT NOW[/color]\n" + "\n".join(names)
 		side_box.add_child(banner)
 	m.profile.notes_seen = PatchNotes.VERSION
 	if size.x < size.y * 0.95:
 		m.profile.save()
 		return   # phone: the scene needs the height; tips are on the loading screen, notes behind the button
-	var tip := UI.rich(UI.FONT_CAPTION)
+	var tip := UI.rich(UI.FONT_BODY)
 	tip.text = "[color=%s]TIP OF THE DAY[/color]\n%s" % [UI.hex(UI.DIM), PatchNotes.tip_of_the_day()]
 	side_box.add_child(tip)
 	side_box.add_child(UI.heading("What's new"))
@@ -357,7 +357,7 @@ func _fill_side() -> void:
 	scroll.custom_minimum_size = Vector2(0, 150)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	side_box.add_child(scroll)
-	var notes := UI.rich(UI.FONT_CAPTION)
+	var notes := UI.rich(UI.FONT_BODY)
 	notes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var lines := []
 	for n in PatchNotes.NOTES:

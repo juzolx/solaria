@@ -120,6 +120,9 @@ const TOWN_PAGES := ["Shop", "Blacksmith", "Tavern", "Inn", "Vault", "Bounty Boa
 const NAV := [["Fight", "sword"], ["Hero", "person"], ["Items", "bag"], ["Town", "house"], ["Codex", "book"], ["Online", "globe"]]
 var left_panel: VBoxContainer
 var title_label: Label
+var menu_button: Button
+var top_spacers: Array = []
+var top_bar: PanelContainer
 var online: Online
 var fallen_shown := false
 
@@ -349,7 +352,7 @@ func _show_save_notices() -> void:
 	var text := "\n\n".join(SaveIO.notices)
 	SaveIO.notices.clear()
 	var o := Overlay.new().open(self, "Save restored", 440.0, UI.GOLD)
-	o.content.add_child(UI.wrap(text, UI.FONT_CAPTION, UI.TEXT))
+	o.content.add_child(UI.wrap(text, UI.FONT_BODY, UI.TEXT))
 	var b := UI.primary("OK", o.close, UI.GOLD)
 	b.custom_minimum_size = Vector2(0, 44)
 	o.content.add_child(b)
@@ -464,15 +467,15 @@ func _daily_login() -> void:
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var v := UI.vbox(2)
 		c.add_child(v)
-		v.add_child(UI.label("Day %d" % (i + 1), UI.FONT_CAPTION, UI.GOLD if today else UI.DIM))
-		var l := UI.label(str(Codex.LOGIN_REWARDS[i]["text"]), UI.FONT_CAPTION, UI.TEXT if (today or done) else UI.DIM)
+		v.add_child(UI.label("Day %d" % (i + 1), UI.FONT_BODY, UI.GOLD if today else UI.DIM))
+		var l := UI.label(str(Codex.LOGIN_REWARDS[i]["text"]), UI.FONT_BODY, UI.TEXT if (today or done) else UI.DIM)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
 		row.add_child(c)
-	var got_label := UI.rich(UI.FONT_CAPTION)
+	var got_label := UI.rich(UI.FONT_BODY)
 	got_label.text = "Today: " + got
 	o.content.add_child(got_label)
-	o.content.add_child(UI.label("Come back tomorrow to keep the streak going.", UI.FONT_CAPTION, UI.DIM))
+	o.content.add_child(UI.label("Come back tomorrow to keep the streak going.", UI.FONT_BODY, UI.DIM))
 	sfx.play("buy")
 	refresh()
 
@@ -551,10 +554,10 @@ func _show_path_choice() -> void:
 		bv.offset_top = 6
 		bv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(bv)
-		var n := UI.label(info["name"], UI.FONT_CAPTION, c)
+		var n := UI.label(info["name"], UI.FONT_BODY, c)
 		n.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		bv.add_child(n)
-		var d := UI.label(info["text"], UI.FONT_CAPTION, UI.TEXT)
+		var d := UI.label(info["text"], UI.FONT_BODY, UI.TEXT)
 		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		d.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		bv.add_child(d)
@@ -563,7 +566,7 @@ func _show_path_choice() -> void:
 	var crow := UI.hbox(8)
 	crow.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(crow)
-	path_count_label = UI.label("", UI.FONT_CAPTION, UI.DIM)
+	path_count_label = UI.label("", UI.FONT_BODY, UI.DIM)
 	path_count_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	crow.add_child(path_count_label)
 	var hold := UI.button("Wait for me", func():
@@ -690,7 +693,7 @@ func _build_ui() -> void:
 	add_child(wall)
 	bg_wall = wall
 	var root := MarginContainer.new()
-	root.theme = UI.make_theme()
+	root.theme = UI.theme()
 	for side in ["left", "right", "top", "bottom"]:
 		root.add_theme_constant_override("margin_" + side, 10)
 	add_child(root)
@@ -748,7 +751,7 @@ func _build_ui() -> void:
 		refresh())
 	back_btn.custom_minimum_size = Vector2(0, UI.TAP)
 	town_back.add_child(back_btn)
-	town_talk = UI.label("", UI.FONT_CAPTION, Color("#d8c9a8"))
+	town_talk = UI.label("", UI.FONT_BODY, Color("#d8c9a8"))
 	town_talk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	town_talk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	talk_col.add_child(town_talk)
@@ -848,6 +851,16 @@ func _fit_layout() -> void:
 	scrap_label.get_parent().visible = not tall
 	dust_label.get_parent().visible = not tall
 	potion_label.get_parent().visible = not tall
+	menu_button.text = "" if tall else "Menu"   # phones: the ≡ glyph alone
+	for sp in top_spacers:   # phones: every pixel of the bar's width goes to the name, floor and gold
+		sp.visible = not tall
+	(menu_button.get_parent() as BoxContainer).add_theme_constant_override("separation", 6 if tall else 10)
+	var tsb: StyleBox = top_bar.get_theme_stylebox("panel")
+	tsb.content_margin_left = 8 if tall else 14
+	tsb.content_margin_right = 6 if tall else 10
+	var gsb: StyleBox = (gold_label.get_parent() as Control).get_theme_stylebox("panel")
+	gsb.content_margin_left = 8 if tall else 12
+	gsb.content_margin_right = 8 if tall else 12
 	xp_bar.custom_minimum_size.x = 100 if tall else 150
 	if log_label:
 		log_label.custom_minimum_size.y = 38 if tall else 80  # phones: the latest two lines
@@ -857,7 +870,7 @@ func _group(title: String) -> TabContainer:
 	t.name = title
 	t.theme_type_variation = "SubTabs"
 	t.tab_changed.connect(func(_i): sfx.play("click"); refresh(); UI.fade_in(t.get_current_tab_control()))
-	tabs.add_child(t)
+	tabs.add_child(UI.wrap_tabs(t))   # Fable r1 #6: chips that wrap, never scroll arrows
 	return t
 
 func _build_top_bar(parent: Control) -> void:
@@ -866,6 +879,7 @@ func _build_top_bar(parent: Control) -> void:
 	bar.get_theme_stylebox("panel").content_margin_left = 14
 	bar.get_theme_stylebox("panel").content_margin_right = 10
 	parent.add_child(bar)
+	top_bar = bar
 	var row := UI.hbox(10)
 	bar.add_child(row)
 
@@ -876,23 +890,24 @@ func _build_top_bar(parent: Control) -> void:
 	title_label = title
 	var hero := UI.vbox(3)
 	hero.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hero.custom_minimum_size.x = 140   # Fable r1 #7: the player's own name is never cut
 	row.add_child(hero)
-	class_label = UI.label("", UI.FONT_CAPTION, UI.TEXT)
+	class_label = UI.label("", UI.FONT_BODY, UI.TEXT)
 	class_label.mouse_filter = Control.MOUSE_FILTER_PASS
-	class_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS  # long names shorten with "..." on phones
 	hero.add_child(class_label)
 	xp_bar = UI.bar(UI.GOLD, 5)
 	xp_bar.custom_minimum_size = Vector2(150, 5)
 	xp_bar.mouse_filter = Control.MOUSE_FILTER_PASS
 	hero.add_child(xp_bar)
 
-	row.add_child(UI.spacer())
+	top_spacers.append(UI.spacer())
+	row.add_child(top_spacers[-1])
 
 	# Middle: where you are
 	var mid := UI.vbox(2)
 	mid.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(mid)
-	zone_label = UI.label("", UI.FONT_CAPTION, UI.DIM)
+	zone_label = UI.label("", UI.FONT_BODY, UI.DIM)
 	zone_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	zone_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -900,15 +915,19 @@ func _build_top_bar(parent: Control) -> void:
 	var frow := UI.hbox(8)
 	frow.alignment = BoxContainer.ALIGNMENT_CENTER
 	mid.add_child(frow)
-	floor_label = UI.label("", UI.FONT_TITLE, UI.TEXT)
+	floor_label = UI.label("", UI.FONT_TITLE, UI.GOLD)   # Fable r1 #18: the bar's one gold
 	frow.add_child(floor_label)
-	var pip_row := UI.hbox(4)
+	# Fable r1 #7/#18: the pips (or the boss pill) sit under the floor, so a phone's bar fits
+	var under := UI.hbox(2)
+	under.alignment = BoxContainer.ALIGNMENT_CENTER
+	mid.add_child(under)
+	var pip_row := UI.hbox(2)
 	pip_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	frow.add_child(pip_row)
+	under.add_child(pip_row)
 	for i in GameData.FIGHTS_PER_FLOOR:
 		var p := PanelContainer.new()
-		p.custom_minimum_size = Vector2(10, 10)
-		p.add_theme_stylebox_override("panel", UI.style(UI.EMPTY, UI.EMPTY, 5, 0, 1))
+		p.custom_minimum_size = Vector2(12, 12)
+		p.add_theme_stylebox_override("panel", UI.style(UI.EMPTY, UI.EMPTY, 6, 0, 1))
 		pip_row.add_child(p)
 		pips.append(p)
 	var bp := UI.pill(UI.RED)
@@ -916,8 +935,8 @@ func _build_top_bar(parent: Control) -> void:
 	boss_label = bp[1]
 	boss_label.add_theme_font_size_override("font_size", UI.MIN_FONT)
 	boss_pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	frow.add_child(boss_pill)
-	best_label = UI.label("", UI.FONT_CAPTION, UI.DIM)
+	under.add_child(boss_pill)
+	best_label = UI.label("", UI.FONT_BODY, UI.DIM)
 	best_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	frow.add_child(best_label)
 	var ep := UI.pill(UI.PINK)
@@ -933,11 +952,12 @@ func _build_top_bar(parent: Control) -> void:
 	event_pill.mouse_filter = Control.MOUSE_FILTER_STOP
 	event_pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 
-	row.add_child(UI.spacer())
+	top_spacers.append(UI.spacer())
+	row.add_child(top_spacers[-1])
 	row.add_child(event_pill)
 
 	# Right: resources + menu
-	var g := UI.pill(UI.GOLD)
+	var g := UI.pill(UI.TEXT, UI.FONT_BODY)
 	var s := UI.pill(Color("#9fb0cc"))
 	var d := UI.pill(Color("#c4b5fd"))
 	var p2 := UI.pill(UI.PINK)
@@ -954,7 +974,11 @@ func _build_top_bar(parent: Control) -> void:
 		row.add_child(pill)
 	var menu := UI.button("Menu", func(): SettingsMenu.new().show_for(self))
 	menu.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	menu.icon = UI.menu_icon()
+	menu.custom_minimum_size = Vector2(UI.TAP, UI.TAP)
+	menu.tooltip_text = "Menu"
 	row.add_child(menu)
+	menu_button = menu
 
 func _build_fight(parent: Control) -> void:
 	var frame := UI.panel(UI.PANEL, UI.BORDER, 10, 2)
@@ -979,12 +1003,12 @@ func _build_fight(parent: Control) -> void:
 	# The next goal: always something to chase (world.gd)
 	var goal_row := UI.vbox(2)
 	col.add_child(goal_row)
-	goal_label = UI.label("", UI.FONT_CAPTION, UI.GOLD)
+	goal_label = UI.label("", UI.FONT_BODY, UI.GOLD)
 	goal_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	goal_row.add_child(goal_label)
 	goal_bar = UI.bar(UI.GOLD, 5)
 	goal_row.add_child(goal_bar)
-	log_label = UI.rich(UI.FONT_CAPTION, false)
+	log_label = UI.rich(UI.FONT_BODY, false)
 	log_label.custom_minimum_size = Vector2(0, 80)
 	col.add_child(log_label)
 
@@ -1091,7 +1115,7 @@ func _build_town(parent: Control) -> void:
 	v.add_child(bar)
 	var row := UI.hbox(8)
 	bar.add_child(row)
-	town_status = UI.wrap("", UI.FONT_CAPTION, UI.TEXT)   # wraps instead of pushing the buttons off a phone screen
+	town_status = UI.wrap("", UI.FONT_BODY, UI.TEXT)   # wraps instead of pushing the buttons off a phone screen
 	town_status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(town_status)
 	var town_map := UI.button("Map", func():   # approved mockup 10: find a building fast in the busy iso town
@@ -1140,7 +1164,7 @@ func toast(text: String) -> void:
 	var vp := get_viewport().get_visible_rect().size
 	var p := UI.panel(Color(0.05, 0.06, 0.11, 0.95), UI.GOLD, 8, 10, 1)
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var l := UI.label(text, UI.FONT_CAPTION, UI.TEXT)
+	var l := UI.label(text, UI.FONT_BODY, UI.TEXT)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.custom_minimum_size = Vector2(minf(420.0, vp.x - 40.0) - 24.0, 0)
@@ -1265,7 +1289,7 @@ func _sync_town() -> void:
 ## "Are you sure?" popup. on_yes runs only if the player confirms.
 func confirm(title: String, text: String, yes_text: String, on_yes: Callable) -> void:
 	var o := Overlay.new().open(self, title, 440.0, UI.RED)
-	var body := UI.rich(UI.FONT_CAPTION)
+	var body := UI.rich(UI.FONT_BODY)
 	body.text = text
 	o.content.add_child(body)
 	var row := UI.hbox(8)
@@ -1285,8 +1309,8 @@ func _show_calamity(e: Dictionary) -> void:
 	var nm := UI.label(String(e["name"]), 24, col.lightened(0.2))
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	o.content.add_child(nm)
-	o.content.add_child(UI.wrap(String(e["lore"]), UI.FONT_CAPTION, UI.DIM))
-	o.content.add_child(UI.wrap("Nothing in this dungeon is stronger. If it beats you, you only pass out: you wake on this floor with everything you carried, and it doesn't count as a death. Running works about half the time.", UI.FONT_CAPTION, UI.TEXT))
+	o.content.add_child(UI.wrap(String(e["lore"]), UI.FONT_BODY, UI.DIM))
+	o.content.add_child(UI.wrap("Nothing in this dungeon is stronger. If it beats you, you only pass out: you wake on this floor with everything you carried, and it doesn't count as a death. Running works about half the time.", UI.FONT_BODY, UI.TEXT))
 	var row := UI.hbox(8)
 	o.content.add_child(row)
 	var run_b := UI.button("Run", func():
@@ -1334,7 +1358,7 @@ func _blackout(who: String) -> void:
 
 func _show_class_picker() -> void:
 	class_overlay = Overlay.new().open(self, "Choose your class", 920.0, UI.GOLD, false)
-	var sub := UI.label("Your class sets your strengths, your first skills and your look. Any class can use any skill stone, but skills sharing your class's tags hit harder.", UI.FONT_CAPTION, UI.DIM)
+	var sub := UI.label("Your class sets your strengths, your first skills and your look. Any class can use any skill stone, but skills sharing your class's tags hit harder.", UI.FONT_BODY, UI.DIM)
 	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	class_overlay.content.add_child(sub)
 	var grid := GridContainer.new()
@@ -1378,7 +1402,7 @@ func _show_god_offer(id: String) -> void:
 	var n := ClassTree.node(id)
 	var o := Overlay.new().open(self, "A God class answers you", 760.0, Color(ClassTree.RANK_COLORS["God"]), true)
 	o.tree_exited.connect(func(): timer.start())
-	o.content.add_child(UI.wrap(String(GodClasses.info(id).get("lore", "")), UI.FONT_CAPTION, UI.TEXT))
+	o.content.add_child(UI.wrap(String(GodClasses.info(id).get("lore", "")), UI.FONT_BODY, UI.TEXT))
 	o.content.add_child(ClassTab.class_card(self, n, true, func():
 		if GodClasses.take(state, id):
 			# A6: a short flourish (the moment plays its own sound)
@@ -1386,7 +1410,7 @@ func _show_god_offer(id: String) -> void:
 			_play_moments.call_deferred()
 		o.close()
 		refresh()))
-	o.content.add_child(UI.wrap("It's for good: the God class replaces your class. Not now? It waits in Character > Class.", UI.FONT_CAPTION, UI.DIM))
+	o.content.add_child(UI.wrap("It's for good: the God class replaces your class. Not now? It waits in Character > Class.", UI.FONT_BODY, UI.DIM))
 
 ## Levels 15, 35 and 75: choose where your Evolution Tree goes.
 func _show_tree_picker() -> void:
@@ -1400,7 +1424,7 @@ func _show_tree_picker() -> void:
 	o.tree_exited.connect(func(): timer.start())
 	if t >= 0:
 		var al := ClassTree.alignment(state)
-		var intro := UI.rich(UI.FONT_CAPTION)
+		var intro := UI.rich(UI.FONT_BODY)
 		intro.text = "[color=%s]Your deeds are [color=%s][b]%s[/b][/color] (faith %+d). %s[/color]" % [UI.hex(UI.DIM), ClassTree.ALIGN_COLORS[al], ClassTree.ALIGN_NAMES[al], int(state.faith),
 			"Good heroes can't take Evil classes, and Evil heroes can't take Good ones." if state.hero_class != "Wanderer" else "The Wanderer is always Neutral."]
 		o.content.add_child(intro)
@@ -1657,11 +1681,12 @@ func _refresh_top() -> void:
 		var nm := state.hero_name + "  " if state.hero_name != "" else ""
 		var honor := "  \"%s\"" % codex.title if codex.title != "" else ""
 
-		class_label.text = "%sLv %d  %s%s" % [nm, state.level, state.title(), honor]  # a hidden class is the title itself now
-		class_label.add_theme_color_override("font_color", Color(state.class_info()["color"]).lightened(0.3))
+		# Fable r1 #7/#18: "Thorin · 30" in bone (the class is on the Hero tab; wide screens add the title)
+		class_label.text = ("%s · %d" % [state.hero_name, state.level] if state.hero_name != "" else "Lv %d" % state.level) + ("" if is_tall else "  %s%s" % [state.title(), honor])
+		class_label.add_theme_color_override("font_color", UI.TEXT)
 		if codex.name_color != "":
 			class_label.add_theme_color_override("font_color", Cosmetics.name_color(codex))  # an earned name color
-		class_label.tooltip_text = "XP %d / %d to level %d" % [state.xp, GameData.xp_to_next(state.level), state.level + 1]
+		class_label.tooltip_text = "%sLevel %d %s%s\nXP %d / %d to level %d" % [nm, state.level, state.title(), honor, state.xp, GameData.xp_to_next(state.level), state.level + 1]
 		xp_bar.max_value = GameData.xp_to_next(state.level)
 		xp_bar.value = state.xp
 		xp_bar.tooltip_text = class_label.tooltip_text
@@ -1685,16 +1710,9 @@ func _refresh_top() -> void:
 	# (0.13+: always in the dungeon, with the gear found this dive as "+N")
 	var two := not state.in_town
 	var finds := Town.dive_finds(state)
-	gold_label.text = ("Risk  %s%s\nBank  %s" % [UI.short(state.gold), (" +%d" % finds) if finds > 0 else "", UI.short(state.bank)]) if two else "Gold  %d" % state.gold
-	gold_label.add_theme_font_size_override("font_size", UI.FONT_CAPTION)   # UX pass: was 11 px, unreadable
-	gold_label.add_theme_constant_override("line_spacing", -4 if two else 0)
-	var gsb := gold_label.get_parent().get_theme_stylebox("panel") as StyleBoxFlat
-	if gsb.content_margin_top != (1 if two else 4):   # only relayout when it changes
-		gsb.content_margin_top = 1 if two else 4
-		gsb.content_margin_bottom = 1 if two else 4
-		gsb.content_margin_left = 9 if two else 12
-		gsb.content_margin_right = 9 if two else 12
-	gold_label.add_theme_color_override("font_color", Color("#fca5a5") if two and (state.gold > 0 or finds > 0) else UI.GOLD)
+	# Fable r1 #18: one line, "◆ 9000 · bank 0" (what you carry first; the gear found is in the tip)
+	gold_label.text = ("%s · bank %s" % [UI.short(state.gold), UI.short(state.bank)]) if two else "%s gold" % UI.short(state.gold)
+	gold_label.add_theme_color_override("font_color", UI.TEXT)
 	gold_label.get_parent().tooltip_text = ("At risk if you fall: %d gold you carry and %d piece%s of gear found this dive (plus what you wear).\nBank: %d (always safe). Head home from the Town tab to keep it all." % [state.gold, finds, "" if finds == 1 else "s", state.bank]) if two else "Gold: from enemies and selling. Spend it in Town."
 	scrap_label.text = "Scrap  %d" % state.scrap
 	dust_label.text = "Dust  %d" % state.dust
@@ -1911,6 +1929,8 @@ func _refresh_tabs() -> void:
 	town_tabs.set_tab_title(5, "Bounty Board (%d)" % Town.ready_count(state) if Town.ready_count(state) > 0 else TOWN_PAGES[5])
 	town_tabs.set_tab_title(6, "Guild Hall (%d)" % codex.deeds.size() if codex.deeds.size() > 0 else TOWN_PAGES[6])
 	town_tabs.set_tab_title(7, "Mailbox (%d)" % Mail.waiting(state) if Mail.waiting(state) > 0 else TOWN_PAGES[7])
+	for g in [char_tabs, item_tabs, codex_tabs, online_tabs]:
+		UI.sync_tabs(g)
 	if nav_buttons.size() == NAV.size():
 		var counts := [0, pts + sk, ups, ready, 0, 0]
 		for i in NAV.size():
@@ -1937,7 +1957,7 @@ func _confirm_leave() -> void:
 	var lines := "You head back to town and bank everything you carry:\n\n[color=#e8b14a]%d gold[/color] carried and [color=#4ade80]%d new item%s[/color] found this dive%s." % [
 		state.gold, finds, "" if finds == 1 else "s", (", plus the %d piece%s you wear" % [worn, "" if worn == 1 else "s"]) if worn > 0 else ""]
 	lines += "\n\n[color=%s]Your next dive starts again from a checkpoint.[/color]" % UI.hex(UI.DIM)
-	var body := UI.rich(UI.FONT_CAPTION)
+	var body := UI.rich(UI.FONT_BODY)
 	body.text = lines
 	o.content.add_child(body)
 	var row := UI.hbox(8)

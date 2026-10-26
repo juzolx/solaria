@@ -66,7 +66,7 @@ func setup(m) -> void:
 	pic.offset_bottom = -10
 	backdrop.add_child(pic)
 	list.fixed_icon_size = Vector2i(22, 22)
-	text = UI.rich(UI.FONT_CAPTION)
+	text = UI.rich(UI.FONT_BODY)
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	detail.add_child(text)
 

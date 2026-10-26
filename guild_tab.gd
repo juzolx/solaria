@@ -42,7 +42,7 @@ func _load() -> void:
 		box.add_child(OnlineUI.name_card(main, reload))
 		loading = false
 		return
-	box.add_child(UI.label("Loading...", UI.FONT_CAPTION, UI.DIM))
+	box.add_child(UI.label("Loading...", UI.FONT_BODY, UI.DIM))
 	var r: Dictionary = await online.my_guild()
 	OnlineUI.clear(box)
 	if not r["ok"]:
@@ -61,7 +61,7 @@ func _load() -> void:
 
 func _no_guild() -> void:
 	box.add_child(UI.label("You're not in a guild", 18, UI.GOLD))
-	box.add_child(UI.label("Guilds fight a raid boss together every week and climb the guild rankings. Up to %d players." % Online.GUILD_MAX, UI.FONT_CAPTION, UI.DIM))
+	box.add_child(UI.label("Guilds fight a raid boss together every week and climb the guild rankings. Up to %d players." % Online.GUILD_MAX, UI.FONT_BODY, UI.DIM))
 
 	# Make one
 	var make := UI.panel(UI.INSET, UI.BORDER, 10, 12, 1)
@@ -81,7 +81,7 @@ func _no_guild() -> void:
 	tag.max_length = 4
 	tag.custom_minimum_size = Vector2(70, 0)
 	row.add_child(tag)
-	var status := UI.label("", UI.FONT_CAPTION, UI.RED)
+	var status := UI.label("", UI.FONT_BODY, UI.RED)
 	var go := UI.primary("Create", func(): pass)
 	go.pressed.connect(func():
 		go.disabled = true
@@ -110,14 +110,14 @@ func _no_guild() -> void:
 	var results := UI.vbox(6)
 	var do_search := func():
 		OnlineUI.clear(results)
-		results.add_child(UI.label("Searching...", UI.FONT_CAPTION, UI.DIM))
+		results.add_child(UI.label("Searching...", UI.FONT_BODY, UI.DIM))
 		var r: Dictionary = await main.online.list_guilds(search.text)
 		OnlineUI.clear(results)
 		if not r["ok"]:
 			results.add_child(OnlineUI.error_label(r["error"]))
 			return
 		if (r["data"] as Array).is_empty():
-			results.add_child(UI.label("No guilds found. Start one!", UI.FONT_CAPTION, UI.DIM))
+			results.add_child(UI.label("No guilds found. Start one!", UI.FONT_BODY, UI.DIM))
 		for g in r["data"]:
 			results.add_child(_guild_row(g, true))
 	srow.add_child(UI.button("Search", do_search))
@@ -127,7 +127,7 @@ func _no_guild() -> void:
 
 func _guild_row(g: Dictionary, joinable: bool) -> HBoxContainer:
 	var row := UI.hbox(8)
-	var t := UI.rich(UI.FONT_CAPTION)
+	var t := UI.rich(UI.FONT_BODY)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	t.text = "[color=#e8b14a][%s][/color] %s  [color=%s]%d/%d members  -  power %d[/color]" % [
 		g["tag"], g["name"], UI.hex(UI.DIM), int(g["members"]), Online.GUILD_MAX, int(g["power"])]
@@ -158,7 +158,7 @@ func _my_guild() -> void:
 			reload()))
 	leave.add_theme_color_override("font_color", UI.RED)
 	head.add_child(leave)
-	box.add_child(UI.label("Go to the Raid tab to hit this week's raid boss with your guild.", UI.FONT_CAPTION, UI.DIM))
+	box.add_child(UI.label("Go to the Raid tab to hit this week's raid boss with your guild.", UI.FONT_BODY, UI.DIM))
 
 	box.add_child(UI.heading("Members"))
 	var r: Dictionary = await main.online.guild_members(int(guild["id"]))
@@ -171,14 +171,14 @@ func _my_guild() -> void:
 	grid.add_theme_constant_override("v_separation", 4)
 	box.add_child(grid)
 	for h in ["Player", "Best floor", ""]:
-		grid.add_child(UI.label(h, UI.FONT_CAPTION, UI.DIM))
+		grid.add_child(UI.label(h, UI.FONT_BODY, UI.DIM))
 	for m in r["data"]:
 		var me: bool = m["player_id"] == main.online.user_id()
-		var n := UI.label(str(m["name"]), UI.FONT_CAPTION, UI.GOLD if me else UI.TEXT)
+		var n := UI.label(str(m["name"]), UI.FONT_BODY, UI.GOLD if me else UI.TEXT)
 		n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(n)
-		grid.add_child(UI.label(str(int(m["best_floor"])), UI.FONT_CAPTION, UI.TEXT))
-		grid.add_child(UI.label("Leader" if m["player_id"] == guild["leader"] else "", UI.FONT_CAPTION, UI.GOLD))
+		grid.add_child(UI.label(str(int(m["best_floor"])), UI.FONT_BODY, UI.TEXT))
+		grid.add_child(UI.label("Leader" if m["player_id"] == guild["leader"] else "", UI.FONT_BODY, UI.GOLD))
 
 func _rankings() -> void:
 	box.add_child(UI.heading("Guild rankings  (power = members' best floors added up)"))
@@ -190,7 +190,7 @@ func _rankings() -> void:
 	for g in r["data"]:
 		i += 1
 		var row := _guild_row(g, false)
-		var rank := UI.label("%d." % i, UI.FONT_CAPTION, UI.DIM)
+		var rank := UI.label("%d." % i, UI.FONT_BODY, UI.DIM)
 		rank.custom_minimum_size = Vector2(28, 0)
 		row.add_child(rank)
 		row.move_child(rank, 0)

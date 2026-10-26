@@ -29,7 +29,7 @@ func refresh() -> void:
 	var title := UI.heading("Bounty Board  -  %s" % String(GameData.zone_for_floor(maxi(1, g.floor_num))["name"]))
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
-	var reroll := UI.button("New postings (%d gold)" % Town.reroll_cost(g), func():
+	var reroll := UI.button("Repost · %dg" % Town.reroll_cost(g), func():
 		if Town.reroll(g):
 			main.sfx.play("buy")
 		shown = ""
@@ -41,16 +41,16 @@ func refresh() -> void:
 	var posted: Array = []
 	for c in g.contracts:
 		(taken if c.get("taken", false) else posted).append(c)
-	box.add_child(UI.label("YOUR CONTRACTS  (%d / %d)" % [taken.size(), Town.max_taken()], 11, UI.DIM))
+	box.add_child(UI.heading("Your contracts", "%d of %d taken." % [taken.size(), Town.max_taken()]))   # Fable r1 #5: one heading style
 	if taken.is_empty():
-		box.add_child(UI.label("No contracts yet. Take one from the board below.", UI.FONT_CAPTION, UI.DIM))
+		box.add_child(UI.wrap("No contracts yet. Take one from the board below.", UI.FONT_BODY, UI.DIM))
 	for c in taken:
 		box.add_child(_card(c, true))
-	box.add_child(UI.label("POSTED", UI.FONT_CAPTION, UI.DIM))
+	box.add_child(UI.heading("Posted"))
 	for c in posted:
 		box.add_child(_card(c, false))
 	var streak := int(main.codex.login.get("streak", 0))
-	var note := UI.label("Hunts pay gold or gear. Elite contracts want Rare or stronger monsters. WANTED posters name a boss and pay with a weapon for your class. Rewards arrive in your Mailbox the moment a contract is done. Login streak: %d day%s." % [streak, "" if streak == 1 else "s"], UI.FONT_CAPTION, UI.DIM)
+	var note := UI.label("Hunts pay gold or gear. Elite contracts want Rare or stronger monsters. WANTED posters name a boss and pay with a weapon for your class. Rewards arrive in your Mailbox the moment a contract is done. Login streak: %d day%s." % [streak, "" if streak == 1 else "s"], UI.FONT_BODY, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(note)
 
@@ -68,12 +68,12 @@ func _card(c: Dictionary, taken: bool) -> PanelContainer:
 	var tag: String = {"hunt": "HUNT", "elite": "ELITE", "wanted": "WANTED"}.get(kind, "")
 	var top := UI.hbox(6)
 	v.add_child(top)
-	top.add_child(UI.chip(tag, accent, UI.FONT_CAPTION))
-	var name_l := UI.label(String(c["text"]).trim_prefix("WANTED: "), UI.FONT_CAPTION, UI.TEXT)
+	top.add_child(UI.chip(tag, accent, UI.FONT_BODY))
+	var name_l := UI.label(String(c["text"]).trim_prefix("WANTED: "), UI.FONT_BODY, UI.TEXT)
 	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(name_l)
-	var rw := UI.rich(UI.FONT_CAPTION)
+	var rw := UI.rich(UI.FONT_BODY)
 	rw.text = "[color=%s]Reward:[/color] [color=#f6d88f]%s[/color]" % [UI.hex(UI.DIM), Town.reward_text(c["reward"], g)]
 	v.add_child(rw)
 	if taken:

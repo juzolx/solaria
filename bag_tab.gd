@@ -8,6 +8,8 @@ const SORTS := ["Newest", "Rarity", "Power", "Slot"]
 var main
 var state: GameState
 var title: Label
+var over_chip: Control     # Fable r1 #8: "4 over" beside the count, the why in its tip
+var extra_label: Label     # backpacks and Return Scrolls carried, quiet
 var sort_pick: OptionButton
 var filter_pick: OptionButton
 var grid: GridContainer
@@ -39,20 +41,34 @@ func setup(m) -> void:
 	name = "Bag"
 	add_theme_constant_override("separation", 6)
 
+	# Fable r1 #8: row 1 = "Bag 14 / 10" and a red "4 over" chip; row 2 = Sort | Slot | Select
+	var top := UI.hbox(8)
+	add_child(top)
+	title = UI.label("", UI.FONT_TITLE, UI.TEXT)
+	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(title)
+	over_chip = UI.chip("", UI.RED, UI.FONT_BODY)
+	over_chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	UI.tip(over_chip, "Your bag holds more than it can carry. Sell or salvage items to use the ones past the limit.")
+	top.add_child(over_chip)
+	extra_label = UI.label("", UI.FONT_BODY, UI.DIM)
+	extra_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	extra_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	extra_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	extra_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	top.add_child(extra_label)
 	var head := UI.hbox(6)
 	add_child(head)
-	title = UI.label("", UI.FONT_CAPTION, UI.TEXT)
-	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # long notes wrap instead of widening the page
-	title.custom_minimum_size = Vector2(60, 0)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	head.add_child(title)
 	sort_pick = OptionButton.new()
 	for sname in SORTS:
 		sort_pick.add_item("Sort: " + sname)
 	sort_pick.item_selected.connect(func(_i): shown = ""; main.refresh())
+	sort_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sort_pick.clip_text = true
 	head.add_child(sort_pick)
 	filter_pick = OptionButton.new()
+	filter_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	filter_pick.clip_text = true
 	filter_pick.add_item("All slots")
 	for s in GameData.SLOT_ORDER:
 		filter_pick.add_item(s)
@@ -71,7 +87,7 @@ func setup(m) -> void:
 	scroll.add_child(sv)
 	grid = ItemGrid.grid()
 	sv.add_child(grid)
-	empty_note = UI.label("", UI.FONT_CAPTION, UI.DIM)
+	empty_note = UI.label("", UI.FONT_BODY, UI.DIM)
 	sv.add_child(empty_note)
 	resized.connect(_on_resized)
 
@@ -84,7 +100,7 @@ func setup(m) -> void:
 	detail_pic.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	detail_pic.visible = false
 	drow.add_child(detail_pic)
-	details = UI.rich(UI.FONT_CAPTION)
+	details = UI.rich(UI.FONT_BODY)
 	details.custom_minimum_size = Vector2(0, 74)
 	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	drow.add_child(details)
@@ -123,7 +139,7 @@ func setup(m) -> void:
 
 	var bulk := UI.hbox(6)
 	add_child(bulk)
-	bulk.add_child(UI.label("Salvage all:", UI.FONT_CAPTION, UI.DIM))
+	bulk.add_child(UI.label("Salvage all:", UI.FONT_BODY, UI.DIM))
 	for r in [0, 1, 2, 3]:
 		var b := UI.button("", _salvage_all.bind(r))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -295,11 +311,17 @@ func _sorted_items() -> Array:
 	return items
 
 func refresh() -> void:
-	title.text = "BAG  %d / %d%s" % [state.bag.size(), state.bag_capacity(), ("  (%d over: sell to use them)" % (state.bag.size() - state.bag_capacity())) if state.bag.size() > state.bag_capacity() else ""]
+	title.text = "Bag %d / %d" % [state.bag.size(), state.bag_capacity()]
+	var over_n := state.bag.size() - state.bag_capacity()
+	over_chip.visible = over_n > 0
+	if over_n > 0:
+		(over_chip.get_child(0) as Label).text = "%d over" % over_n
+	var extras: Array = []
 	if state.packs_carried > 0:
-		title.text += "   +%d backpack%s to bring home" % [state.packs_carried, "" if state.packs_carried == 1 else "s"]
+		extras.append("+%d backpack%s" % [state.packs_carried, "" if state.packs_carried == 1 else "s"])
 	if state.return_scrolls > 0:
-		title.text += "   ·  %d Return Scroll%s" % [state.return_scrolls, "" if state.return_scrolls == 1 else "s"]
+		extras.append("%d Return Scroll%s" % [state.return_scrolls, "" if state.return_scrolls == 1 else "s"])
+	extra_label.text = " · ".join(extras)
 	title.add_theme_color_override("font_color", UI.RED if state.bag_full() else UI.TEXT)
 	auto_salvage_button.text = "Loot filter: %s" % LootRules.summary(state)
 	select_button.text = "Done" if picking else "Select"
