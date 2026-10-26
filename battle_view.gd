@@ -173,7 +173,7 @@ var hero_anim_t := 0.0
 var pet_lunge := 0.0
 var summon_lunge := 0.0   # 0.13+: the skeleton or wolf you called steps in to hit
 var summon_in := 0.0      # fades the summon in and out
-var pet_hits := {}        # 0.13+: menagerie pet name -> seconds of its lunge left
+var pet_hits := {}        # 0.13+: menagerie pet id -> seconds of its lunge left
 var chest_t := -1.0   # chest-opening moment: seconds since it appeared (-1 = none)
 static var _chest_tex: Array = []  # [closed, open]
 const CHEST_ART := [
@@ -376,7 +376,7 @@ func play(events: Array[Dictionary]) -> void:
 				_sfx("buff")
 				_float(str(e["name"]).to_upper() + "!", _hero_center() + Vector2(30, -20), Color("#c4b5fd"), 18)
 			"summon_hit":
-				pet_hits[String(e.get("name", ""))] = 0.3
+				pet_hits[int(e.get("pet", -1))] = 0.3
 				var who := "summon_lunge" if String(e.get("name", "")) == state.summon_name and state.summon_turns > 0 else "pet_lunge"
 				if who == "summon_lunge" or (state.pet_on and World.pet_stage(state) >= 0):
 					var pt := create_tween()
@@ -1929,8 +1929,7 @@ func _draw_pet() -> void:
 		return
 	var pu := _u()
 	var s := float(tex.get_width()) * pu
-	var hc := _hero_canvas()
-	var x := hc.position.x + hc.size.x * 0.62
+	var x: float = team_layout().get(-1, 0.0)
 	# feet on the ground: the 32 px still's bottom row (the idle strip does the breathing)
 	var y := _team_ground() - (Pets.foot(Pets.companion_key(state)) + 1) * pu - pet_lunge * size.y * 0.1
 	draw_texture_rect(tex, Rect2(_snap(Vector2(x, y)), Vector2(s, s)), false, Color(1, 1, 1, hero_alpha))
@@ -2127,15 +2126,19 @@ func _bar_rect(r: Rect2) -> Rect2:
 		if maxf(r.end.y, _team_ground()) + 8.0 > low:
 			# Phone sweep: the 2.1 hero's feet stand on the team line, under this box; a plate that
 			# can't fit under them goes beside the hero (the approved fight mockup), never over the boots:
-			# right if it fits, else left, else narrowed to the roomier side
+			# right if it fits, else left, else narrowed to the roomier side.
+			# Fable pets R2: when a pet stands there, the plate goes over its head, not over the pet
+			var y := low
+			if not team_layout().is_empty():
+				y = minf(y, _team_ground() - 32.0 * _u() - NAME_FS - 30.0)
 			if beside + bw <= size.x - 6.0:
-				return Rect2(beside, low, bw, 14.0)
+				return Rect2(beside, y, bw, 14.0)
 			if left - bw >= 6.0:
-				return Rect2(left - bw, low, bw, 14.0)
+				return Rect2(left - bw, y, bw, 14.0)
 			var room_r := size.x - 6.0 - beside
 			var room_l := left - 6.0
 			var w := maxf(room_r, room_l)
-			return Rect2(beside if room_r >= room_l else 6.0, low, maxf(w, 80.0), 14.0)
+			return Rect2(beside if room_r >= room_l else 6.0, y, maxf(w, 80.0), 14.0)
 		return Rect2(bx, minf(r.end.y + 8.0, low), bw, 14.0)   # room for the name above the message strip
 	if _boss_stage() and r.get_center().y <= size.y * 0.62:
 		return _boss_bar()
@@ -2368,19 +2371,17 @@ func _draw_menagerie() -> void:
 	var pets := Menagerie.out(state)
 	if pets.is_empty():
 		return
-	var hc := _hero_canvas()
 	var pu := _u()
 	var w := 32.0 * pu
+	var lay := team_layout()
 	for i in pets.size():
 		var p: Dictionary = pets[i]
 		var key := String(p.get("species", ""))
 		var tex := Pets.frame(key, bob + i * 0.31)
 		if tex == null:
 			continue
-		var lunge := 1.0 if pet_hits.has(String(p["name"])) else 0.0
-		# the first beside the companion on the right, the rest on the hero's free left side (a phone is narrow)
-		var x := hc.end.x - hc.size.x * 0.05 if i == 0 else hc.position.x + hc.size.x * 0.12 - (i - 1) * w * 0.7
-		var feet := Vector2(x, _team_ground() - (i % 2) * 2.0 * pu - lunge * size.y * 0.05)
+		var lunge := 1.0 if pet_hits.has(int(p["id"])) else 0.0
+		var feet := Vector2(float(lay.get(i, 0.0)) + w / 2.0, _team_ground() - lunge * size.y * 0.05)
 		var r := Rect2(_snap(feet - Vector2(w / 2.0, (Pets.foot(key) + 1) * pu)), Vector2(w, w))
 		draw_set_transform(Vector2(r.get_center().x, feet.y), 0.0, Vector2(1.0, 0.3))
 		draw_circle(Vector2.ZERO, w * 0.3, Color(0, 0, 0, 0.35 * hero_alpha))
@@ -2389,7 +2390,24 @@ func _draw_menagerie() -> void:
 			var gl := 0.25 + 0.15 * sin(bob * 3.0 + i)
 			for off in [Vector2(-pu, 0), Vector2(pu, 0), Vector2(0, -pu)]:
 				draw_texture_rect(Pets.white(key), Rect2(r.position + off, r.size), false, Color(1.0, 0.85, 0.4, gl * hero_alpha))
-		draw_texture_rect(tex, r, false, Color(1, 1, 1, (0.55 if int(p["hurt"]) > 0 else 1.0) * hero_alpha))
+		draw_texture_rect(tex, r, false, Color(1, 1, 1, hero_alpha))  # hurt pets stay home (Menagerie.out)
+
+## Where the team stands (Fable pets R2): the left edge x of each 32 px creature, keyed -1 for
+## the class companion and 0.. for menagerie pets, companion first (Pets.row).
+func team_layout() -> Dictionary:
+	var who: Array = []
+	if state != null and state.pet_on and World.pet_stage(state) >= 0:
+		who.append(-1)
+	if state != null and not state.in_town:
+		for i in Menagerie.out(state).size():
+			who.append(i)
+	var pu := _u()
+	var hc := _hero_canvas()
+	var xs := Pets.row(who.size(), hc.get_center().x, hc.size.x, 32.0 * pu, 2.0 * pu, size.x)
+	var out := {}
+	for k in who.size():
+		out[who[k]] = xs[k]
+	return out
 
 var _strip_pics := {}
 ## With companions: a compact strip at the top-left, a portrait, name and HP bar for

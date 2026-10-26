@@ -37,7 +37,7 @@ static func portrait(g: GameState) -> Texture2D:
 static func art(key: String) -> Texture2D:
 	var k := "a|" + key
 	if not _cache.has(k):
-		_cache[k] = DarkGrade.texture(DIR + key + ".png") if key != "" else null
+		_cache[k] = DarkGrade.texture(DIR + key + ".png", DarkGrade.NATIVE) if key != "" else null  # palette-locked like the hd monsters: rim only
 	return _cache[k]
 
 ## The 2 idle frames for an art key ([] if it has none).
@@ -45,7 +45,7 @@ static func idle(key: String) -> Array:
 	var k := "i|" + key
 	if not _cache.has(k):
 		var frames: Array = []
-		var strip := DarkGrade.texture(DIR + key + "_idle.png") if key != "" else null
+		var strip := DarkGrade.texture(DIR + key + "_idle.png", DarkGrade.NATIVE) if key != "" else null
 		if strip != null:
 			var w := strip.get_width() / 2
 			for i in 2:
@@ -95,3 +95,27 @@ static func white(key: String) -> Texture2D:
 static func egg(zone_id: String) -> Texture2D:
 	var tex := art("egg_" + zone_id) if zone_id != "" else null
 	return tex if tex != null else Sprites.consumable_icon("egg")
+
+## Where a team of n creatures (each w wide) stands around a hero whose picture is canvas_w
+## wide centred on cx, on a stage stage_w wide (Fable pets R2, the fight and the room): the
+## left edge x of each, in order. The first takes the spot right of the hero, then they
+## alternate left / right, one creature and a gap apart; a side that runs out of stage is
+## squeezed so nobody leaves it. Pets may tuck a little behind the hero's legs.
+static func row(n: int, cx: float, canvas_w: float, w: float, gap: float, stage_w: float) -> Array:
+	var half := canvas_w * 0.08
+	var sides := [[], []]   # right, left: indexes into the result
+	for k in n:
+		sides[k % 2].append(k)
+	var out: Array = []
+	out.resize(n)
+	var r0 := cx + half
+	var rn: int = sides[0].size()
+	var rstep := minf(w + gap, (stage_w - 6.0 - w - r0) / maxf(1.0, rn - 1))
+	for j in rn:
+		out[sides[0][j]] = clampf(r0 + j * rstep, 6.0, stage_w - 6.0 - w)
+	var l0 := cx - half - w
+	var ln: int = sides[1].size()
+	var lstep := minf(w + gap, (l0 - 6.0) / maxf(1.0, ln - 1))
+	for j in ln:
+		out[sides[1][j]] = clampf(l0 - j * lstep, 6.0, stage_w - 6.0 - w)
+	return out
