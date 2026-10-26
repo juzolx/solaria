@@ -25,8 +25,10 @@ const USE_LPC := true  # heroes from the LPC parts (lpc.gd); false = the older d
 ## 2 = heroes are snapped to the monsters' 2x art grid (every hero pixel a 2x2 block) and the
 ## battle draws them at the monsters' unit, so one screen has one pixel size.
 const HERO_PIXEL := 1
-const PORTRAIT_CROP := Rect2i(16, 24, 64, 64)  # the part of the canvas menus show: the hero's own frame
-const PORTRAIT := 64  # its size: show portraits at 64, 128 or 192 to keep pixels crisp
+# the part of the canvas menus show: the hero's frame rows 12-83 (the staff crystal and halo above the
+# head, 4 rows under the feet), cols 12-83
+const PORTRAIT_CROP := Rect2i(12, 20, 72, 72)
+const PORTRAIT := 72  # its size: show portraits at 72, 144 or 216 to keep pixels crisp
 const HAIR_STYLES := Lpc.HAIR_ORDER  # 37 styles; the 13 older names are kept so saves look the same
 
 const TYPE_MATERIAL := {
@@ -78,8 +80,22 @@ static var _cache := {}
 static func skins() -> Array:
 	return ArtInfo.DATA["skins"]
 
+static var _hairs: Array = []
+## The hair ramps (light to dark), the darkest two steps lifted to a floor: near-black hair on a hero
+## seen from behind was a black shape on the dark floor (no dark-on-dark, as for the monsters).
 static func hair_colors() -> Array:
-	return ArtInfo.DATA["hairs"]
+	if _hairs.is_empty():
+		var floors := [Color("#2e2433"), Color("#241a28")]
+		for row in ArtInfo.DATA["hairs"]:
+			var out: Array = (row as Array).duplicate()
+			for j in 2:
+				var i := out.size() - 2 + j
+				var c := Color(out[i])
+				var f: Color = floors[j]
+				if c.get_luminance() < f.get_luminance():
+					out[i] = "#" + (Color.from_hsv(c.h, minf(c.s, 0.5), f.v) if c.s > 0.12 else f).to_html(false)
+			_hairs.append(out)
+	return _hairs
 
 static func eye_colors() -> Array:
 	return ArtInfo.DATA["eyes"]
@@ -298,7 +314,7 @@ static func _gear_map(look: Dictionary, char_map: Dictionary) -> Dictionary:
 ## Returns {"body", "body_white", "body_img", "weapon", "weapon_white", "weapon_img",
 ##          "weapon_type", "pivot" (weapon pixels), "hand" (canvas pixels), "glow"}
 static func hero(app: Dictionary, looks: Dictionary) -> Dictionary:
-	var key := str(app) + str(looks)
+	var key := str(app) + _looks_key(looks)
 	if _cache.has(key):
 		return _cache[key]
 	if HeroArt.available():
@@ -379,6 +395,14 @@ static func hero(app: Dictionary, looks: Dictionary) -> Dictionary:
 	_cache[key] = out
 	return out
 
+## The part of the looks a hero picture depends on: with the PixelLab hero only the class and the
+## weapon (armour no longer changes the look, so swapping it reuses the cached picture).
+static func _looks_key(looks: Dictionary) -> String:
+	if not HeroArt.available():
+		return str(looks)
+	var w: Dictionary = looks.get("Weapon", {})
+	return str([looks.get("Class", {}), w.get("type", ""), w.get("trim", "") if w.get("glow", false) else ""])
+
 ## The PixelLab hero (hero_art.gd): class outfit, hair, face and the weapon type, on the fixed frames.
 ## Laid out like the LPC hero (a 96x96 cell on the hero canvas), so battle and menus treat it the same.
 ## back: seen from behind (battle); else the front portrait.
@@ -456,7 +480,7 @@ static func chunky(src: Image, px: int) -> Image:
 
 ## The hero seen from behind (0.13 back-to-front fights): same dictionary as hero().
 static func hero_back(app: Dictionary, looks: Dictionary) -> Dictionary:
-	var key := "back" + str(app) + str(looks)
+	var key := "back" + str(app) + _looks_key(looks)
 	if _cache.has(key):
 		return _cache[key]
 	if HeroArt.available():
@@ -520,9 +544,27 @@ static func item_icon(item: Dictionary) -> ImageTexture:
 	_cache[key] = out
 	return out
 
+## The menu portrait's idle frames: the PixelLab hero has two (it breathes), the others one.
+static func portrait_frames(app: Dictionary, looks := {}) -> Array:
+	var key := "pf" + str(app) + _looks_key(looks)
+	if _cache.has(key):
+		return _cache[key]
+	var out := [portrait(app, looks)]
+	var h := hero(app, looks)
+	if h.get("pl", false):
+		var imgs: Array = h["lpc"]["combat_idle"]["img"]
+		if imgs.size() > 1:
+			var img: Image = imgs[1]
+			var canvas := Image.create(CANVAS, CANVAS, false, Image.FORMAT_RGBA8)
+			var s := img.get_width()
+			canvas.blend_rect(img, Rect2i(0, 0, s, s), BODY_OFFSET - Vector2i((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2))
+			out.append(ImageTexture.create_from_image(canvas.get_region(Rect2i(PORTRAIT_CROP).intersection(Rect2i(Vector2i.ZERO, canvas.get_size())))))
+	_cache[key] = out
+	return out
+
 ## The hero with the weapon held upright, as one picture (for menus).
 static func portrait(app: Dictionary, looks := {}) -> ImageTexture:
-	var key := "p" + str(app) + str(looks)
+	var key := "p" + str(app) + _looks_key(looks)
 	if _cache.has(key):
 		return _cache[key]
 	var h := hero(app, looks)

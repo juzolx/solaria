@@ -1381,7 +1381,9 @@ func _draw_members() -> void:
 				var sz: int = an["size"]
 				var off := Vector2(Sprites.BODY_OFFSET) - Vector2((sz - Lpc.CORE) / 2, (sz - Lpc.CORE) / 2)
 				var r := Rect2(c.position + off * u, Vector2(sz, sz) * u)
-				draw_texture_rect(an["white"][fi], Rect2(r.position + Vector2(0, -u), r.size), false, Color(_rim_color(), 0.42 * a))
+				draw_texture_rect(an["white"][fi], Rect2(r.position + Vector2(0, -u), r.size), false, Color(_rim_color(), 0.6 * a))
+				for d in [Vector2(-u, 0), Vector2(u, 0)]:
+					draw_texture_rect(an["white"][fi], Rect2(r.position + d, r.size), false, Color(_rim_color(), 0.3 * a))
 				draw_texture_rect(an["tex"][fi], r, false, Color(1, 1, 1, a))
 				if float(fx0.get("flash", 0.0)) > 0.0:
 					draw_texture_rect(an["white"][fi], r, false, _flash_col(float(fx0["flash"]), true))
@@ -1945,7 +1947,10 @@ func _draw_lpc_hero(c: Rect2, u: float, a: float, glow: Color) -> void:
 		var pulse := 0.22 + 0.1 * sin(bob * 4.0)
 		for d in [Vector2(-u, 0), Vector2(u, 0), Vector2(0, -u), Vector2(0, u)]:
 			draw_texture_rect(white, Rect2(r.position + d, r.size), false, Color(glow, pulse * a))
-	draw_texture_rect(white, Rect2(r.position + Vector2(0, -u), r.size), false, Color(_rim_color(), 0.42 * a))
+	# rim light: strong from above, fainter on both sides, so a dark hero still reads on a dark floor
+	draw_texture_rect(white, Rect2(r.position + Vector2(0, -u), r.size), false, Color(_rim_color(), 0.6 * a))
+	for d in [Vector2(-u, 0), Vector2(u, 0)]:
+		draw_texture_rect(white, Rect2(r.position + d, r.size), false, Color(_rim_color(), 0.3 * a))
 	draw_texture_rect(tex[fi], r, false, Color(1, 1, 1, a))
 	if hero_flash > 0.0:
 		draw_texture_rect(white, r, false, _flash_col(hero_flash, true))
@@ -2095,11 +2100,20 @@ func _bar_rect(r: Rect2) -> Rect2:
 	# Monsters (at the back) get theirs under their feet; your team (in front) above their heads
 	if r.get_center().y > size.y * 0.62:
 		var beside := r.get_center().x + r.size.x * 0.32 + 8.0   # the drawn body is about 0.6 of this box wide
-		if maxf(r.end.y, _team_ground()) + 8.0 > size.y - 68.0 and beside + bw <= size.x - 6.0:
+		var left := r.get_center().x - r.size.x * 0.32 - 8.0
+		if maxf(r.end.y, _team_ground()) + 8.0 > size.y - 68.0:
 			# Phone sweep: the 2.1 hero's feet stand on the team line, under this box; a plate that
-			# can't fit under them goes beside the hero (the approved fight mockup) instead of over the legs
-			return Rect2(beside, size.y - 68.0, bw, 14.0)
-		return Rect2(bx, minf(r.end.y + 8.0, size.y - 68.0), bw, 14.0)   # room for the name above the message strip
+			# can't fit under them goes beside the hero (the approved fight mockup), never over the boots:
+			# right if it fits, else left, else narrowed to the roomier side
+			if beside + bw <= size.x - 6.0:
+				return Rect2(beside, size.y - 68.0, bw, 14.0)
+			if left - bw >= 6.0:
+				return Rect2(left - bw, size.y - 68.0, bw, 14.0)
+			var room_r := size.x - 6.0 - beside
+			var room_l := left - 6.0
+			var w := maxf(room_r, room_l)
+			return Rect2(beside if room_r >= room_l else 6.0, size.y - 68.0, maxf(w, 80.0), 14.0)
+		return Rect2(bx, r.end.y + 8.0, bw, 14.0)
 	# ...and the monster's plate stays clear of the hero's head (it sat on it on a short stage)
 	return Rect2(bx, minf(_ground() + 9.0, _hero_rect().position.y - 44.0), bw, 14.0)
 
