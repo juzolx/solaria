@@ -174,8 +174,10 @@ func glow(ci: CanvasItem, at: Vector2, w: float, c: Color) -> void:
 func sprite(ci: CanvasItem, tex: Texture2D, x: float, z: float, h: float, tint := Color.WHITE, bob := 0.0) -> Rect2:
 	if tex == null:
 		return Rect2()
-	var feet := (proj(x, FLOOR_Y, z) + Vector2(0, bob)).round()
-	var k := maxi(1, roundi(focal * h / z / tex.get_size().y))
+	# k whole SCREEN pixels per art pixel (not design pixels: those are 0.85 screen px on a phone)
+	var scr := screen_scale(ci)
+	var feet := ((proj(x, FLOOR_Y, z) + Vector2(0, bob)) * scr).round() / scr
+	var k := float(maxi(1, roundi(focal * h / z / tex.get_size().y * scr))) / scr
 	var hpx := tex.get_size().y * k
 	var wpx := tex.get_size().x * k
 	var rect := Rect2(feet - Vector2(wpx / 2.0, hpx), Vector2(wpx, hpx))
@@ -273,7 +275,7 @@ func _draw_3d(ci: CanvasItem, sz: Vector2) -> bool:
 		return false
 	if not r3.is_inside_tree():
 		return false
-	var scr := ci.get_global_transform_with_canvas().get_scale().x
+	var scr := screen_scale(ci)
 	r3.fit(sz, scr if scr > 0.01 else 1.0)
 	if _r3_key != key:
 		# a new room: build it next frame and keep showing the last one meanwhile (no 2D flash)
@@ -281,6 +283,11 @@ func _draw_3d(ci: CanvasItem, sz: Vector2) -> bool:
 		r3.rebuild.call_deferred(zone, _seed, {"light": light, "amb": amb, "accent": mood()["accent"], "kind": mood()["kind"], "dark": dark, "gate": gate})
 	ci.draw_texture_rect(r3.texture(), Rect2(Vector2.ZERO, r3.drawn_size()), false)
 	return true
+
+## Screen pixels per design pixel for ci: the window's stretch (canvas_items mode leaves the
+## canvas transform at 1.0 on phones, so read the viewport's final transform) times any canvas zoom.
+static func screen_scale(ci: CanvasItem) -> float:
+	return maxf(0.01, PixelPic.stretch(ci) * ci.get_global_transform_with_canvas().get_scale().x)
 
 ## The three doors on the far wall. When `st` has doors to pick, they glow and
 ## become tap targets in `hit` ("d0".."d2").
@@ -351,7 +358,8 @@ func draw_scenery(ci: CanvasItem, th: Dictionary) -> bool:
 ## The edges of your view fall into shadow: a thin outline-coloured frame and one band of
 ## checker dither inside it (hard pixels, no soft gradient over the art).
 func vignette(ci: CanvasItem, sz: Vector2) -> void:
-	var u := float(ArtStyle.unit(ci.get_global_transform_with_canvas().get_scale().x)) / maxf(0.01, ci.get_global_transform_with_canvas().get_scale().x)
+	var scr := screen_scale(ci)
+	var u := float(ArtStyle.unit(scr)) / scr
 	var edge := Color("#0e0812")
 	ci.draw_rect(Rect2(0, 0, u, sz.y), edge)
 	ci.draw_rect(Rect2(sz.x - u, 0, u, sz.y), edge)

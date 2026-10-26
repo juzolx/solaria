@@ -31,7 +31,7 @@ func _initialize() -> void:
 	g.doors[1] = "fight"
 	check(g.path_info("door_m")["name"] == "Middle door", "doors are blank")
 	g.doors[1] = "elite"
-	check(g.path_info("door_m")["name"] == "Middle door: Claw marks", "an elite door always shows claw marks (R6)")
+	check(g.path_info("door_m")["name"] == "Middle door: Claws", "an elite door always shows claw marks (R6)")
 	g.doors[1] = "fight"
 	g.doors = ["fight", "fight", "fight"]
 	g.choose_path("door_r")

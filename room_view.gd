@@ -13,7 +13,8 @@ var t := 0.0
 var key := ""
 var motes: Array = []
 var hit := {}              # "m<i>" / "d<i>" / "p<i>" -> Rect2 (tap targets)
-const TRAP_Z := 3.0   # a spotted trap's circle always lies here
+const TRAP_Z := 3.6   # a spotted trap's circle always lies here, right of the hero (never under them)
+const TRAP_X := 1.0
 const LABEL_FS := 16       # prop names, the hint line and the floor title (same font as the fights)
 
 func setup(m) -> void:
@@ -188,6 +189,8 @@ func _draw_prop(i: int, font: Font) -> void:
 		lc = Color("#e43b44")
 	var lw := maxf(160.0, font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FS).x + 16.0)
 	var at := Vector2(rect.get_center().x - lw / 2.0, rect.end.y + 16)
+	if absf(rect.get_center().x - size.x / 2.0) < 70.0:
+		at.y = rect.position.y - 6   # in the middle the hero stands below the prop: label it above
 	draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, lw, LABEL_FS, 5, Color(0, 0, 0, 0.9))
 	draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, lw, LABEL_FS, lc)
 
@@ -196,9 +199,9 @@ func _draw_prop(i: int, font: Font) -> void:
 ## (1 px lines would crawl); the colour pulses in two hard steps instead.
 func _draw_trap() -> void:
 	var rtrap: Dictionary = state.room_trap
-	# always the same spot: one size on screen, in front of the doors, never under the hero
+	# always the same spot: one size on screen, beside the hero so the sigil shows
 	var z := TRAP_Z
-	var x := 0.0
+	var x := TRAP_X
 	var fy := HallsScene.FLOOR_Y + 0.01
 	var col := Color(String(Halls.TRAPS[String(rtrap["kind"])].get("color", "#fee761")))
 	var tint := col if int(t * 2.0) % 2 == 0 else col.lightened(0.25)
@@ -234,7 +237,7 @@ func _draw_team() -> void:
 		var g: GameState = state if j == 0 else members[j - 1].hero
 		var art := Sprites.hero_back_of(g)  # rebuilt at most twice a second, not every frame
 		# the fights' one scale (ArtStyle.SCREEN_PX screen pixels per art pixel), companions one step smaller
-		var scr := get_global_transform_with_canvas().get_scale().x
+		var scr := HallsScene.screen_scale(self)
 		scr = scr if scr > 0.01 else 1.0
 		var unit := ArtStyle.unit(scr)
 		if not art.has("anims"):
@@ -366,9 +369,9 @@ func _row(leader_feet: Vector2, leader_sz: float, k: float) -> Array:
 ## a phone can see them (|x| <= 0.78 z).
 func _draw_camp(x: float, z: float) -> Rect2:
 	var s := scene.focal / z
-	var t1 := scene.sprite(self, scene.tx("res://art/props/tent.png"), x - 1.1, z + 1.2, 1.1)
+	var t1 := scene.sprite(self, scene.tx("res://art/props/tent.png"), x - 1.3, z + 1.2, 1.1)
 	var t2 := scene.sprite(self, scene.tx("res://art/props/tent.png"), x - 0.7, z + 0.7, 1.1)
-	var lamp := scene.sprite(self, scene.tx("res://art/props/candles.png"), x - 0.75, z + 0.55, 0.4)
+	var lamp := scene.sprite(self, scene.tx("res://art/props/candles.png"), x - 0.2, z + 1.0, 0.4)
 	scene.glow(self, Vector2(lamp.get_center().x, lamp.end.y), s * 0.5, Color("#feae34", 0.5 + 0.15 * sin(t * 5.0)))
 	var flick := 1.0 + 0.06 * sin(t * 9.0)
 	var fire := scene.sprite(self, scene.tx("res://art/props/cookfire.png"), x, z, 1.0, Color(flick, flick, flick))

@@ -64,7 +64,7 @@ func _initialize() -> void:
 	check(Halls.read_door(r, 0)["color"] == "#e43b44" and Halls.read_door(r, 1)["color"] == "#63c74d" and Halls.read_door(r, 2)["color"] == "#feae34", "red, green, yellow")
 	check(Halls.read_door(r, 1)["label"] == "", "level 1 shows only a glow")
 	r.ctrack["doors_read"] = Halls.READS_FOR_LEVEL_2
-	check(Halls.door_sense(r) == 2 and Halls.read_door(r, 1)["label"] == "Treasure room", "a seasoned reader sees the room")
+	check(Halls.door_sense(r) == 2 and Halls.read_door(r, 1)["label"] == "Treasure", "a seasoned reader sees the room")
 	var before := int(r.ctrack.get("doors_read", 0))
 	r._room_cleared()
 	check(int(r.ctrack.get("doors_read", 0)) > before, "reading doors trains the reader")
