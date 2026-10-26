@@ -420,8 +420,55 @@ def lit_px(r, g, b):
 
 
 def glow_core(r, g, b):
-    """The bright heart of a lit window or lantern."""
-    return r > 200 and g > 130 and b < 120 and r - b > 115
+    """The bright heart of a lit window or lantern (the gatehouse lantern's pale yellow glass too)."""
+    return (r > 200 and g > 130 and b < 120 and r - b > 115) or (r > 235 and g > 200 and b < 190 and r - b > 60)
+
+
+def flame_lit(r, g, b):
+    """A burning flame's bright pixel (yellow tongue or orange core), not wood, cloth or brass."""
+    return (r > 220 and g > 150 and b < 110 and r - b > 110) or (r > 200 and g < 120 and b < 50 and r > g + 100)
+
+
+def day_flames(img, lights):
+    """The day check: lights (canvas x, y) with a burning pixel within 6 px. The forge (its light
+    and the smithy's own box) and the blue portal and beam lights are left out (they burn by day)."""
+    px, bad = img.load(), []
+    sx, sy, sw, sh = BOXES.get("smith", (0, 0, 0, 0))
+    forge = lambda i, j: sx <= i < sx + sw and sy <= j < sy + sh
+    for (x, y), col in lights:
+        if col[2] > col[0] or tuple(col) == FORGE:
+            continue
+        if any(flame_lit(*px[i, j][:3]) for j in range(y - 6, y + 7) for i in range(x - 6, x + 7)
+               if 0 <= i < img.width and 0 <= j < img.height and not forge(i, j)):
+            bad.append((x, y))
+    return bad
+
+
+FORGE = (255, 120, 50)   # the forge light's colour (decor.py): it burns by day
+
+
+def flicker(over, lights):
+    """The lit overlay's second flame frame: near each flame light (not the blue portal and beam),
+    every flame tongue reaches one pixel higher and burns a little brighter. Windows stay."""
+    out = over.copy()
+    src, px = over.load(), out.load()
+    for (x, y), col in lights:
+        if col[2] > col[0]:
+            continue
+        for j in range(max(1, y - 10), min(over.height, y + 6)):
+            for i in range(max(0, x - 6), min(over.width, x + 7)):
+                r, g, b, a = src[i, j]
+                if a and fire(r, g, b):
+                    px[i, j] = (min(255, r + 12), min(255, g + 18), min(255, b + 10), a)
+                    ar, ag, ab, aa = src[i, j - 1]
+                    if not (aa and fire(ar, ag, ab)) and g > 150:   # the tip of a tongue: one pixel taller
+                        px[i, j - 1] = (min(255, r + 12), min(255, g + 18), min(255, b + 10), a)
+    return out
+
+
+def fire(r, g, b):
+    """A flame pixel: the yellow tongue, the orange body or the dark red rim."""
+    return (r > 190 and g > 120 and r > b + 70) or (r > 120 and r > g + 40 and r > b + 60)
 
 
 def daylit(im, flame=False):
@@ -435,7 +482,7 @@ def daylit(im, flame=False):
     src, px = im.load(), out.load()
     w, h = im.size
     if flame:
-        warm = lambda r, g, b: r > 120 and r > g + 40 and r > b + 60   # any part of the fire, its dark red rim too
+        warm = lambda r, g, b: fire(r, g, b)   # any part of the fire: yellow tongue, orange body, dark red rim
         near = lambda x, y: 0 <= x < w and 0 <= y < h and src[x, y][3] and warm(*src[x, y][:3])
         for y in range(h):
             for x in range(w):
@@ -452,7 +499,7 @@ def daylit(im, flame=False):
                 q = (x + dx, y + dy)
                 if 0 <= q[0] < w and 0 <= q[1] < h and q not in pane:
                     r, g, b, a = src[q]
-                    if a and r > 195 and r - b > 110 and g > 50:
+                    if a and ((r > 195 and r - b > 110 and g > 50) or (r > 150 and r > g + 80 and b < 40)):   # the rim, a lantern's flame
                         pane.add(q)
     for x, y in pane:
         a = src[x, y][3]
@@ -516,7 +563,8 @@ def compose():
         return e[0] != "fence" and r[0] <= e[2] < r[2] and r[1] <= e[3] < r[3]
     deco = [e for e in decor() if not any(inside(e, built_only[l]) for l in EMPTY)] + extra
     if NO_OVERLAYS:
-        deco = [e for e in deco if e[0] not in ("folk", "props_up")]
+        import decor as _dd
+        deco = [e for e in deco if e[0] != "folk" and not (e[0] == "props_up" and (e[2], e[3]) not in _dd.BRAZIERS)]
     bed = load("tiles_extra_flowerbed.png")
     for e in [e for e in deco if e[0] == "bed"]:      # flowerbeds are ground: drawn before every sprite
         x, y = at(e[2], e[3])

@@ -10,6 +10,10 @@ P48, P32, TREE = "props48", "props32", "trees"
 
 # lit sources: (i, j, z, colour, radius) - z in px above the ground
 LIGHTS = []
+# the four brazier pillars round the stair foot: town dressing, so they stay in the game's base
+# picture (the other props_up are level props the game draws itself). (22,10), not (21,10): clear
+# of the stair newel, so the flame no longer sits on its top.
+BRAZIERS = ((18, 10), (22, 10), (18, 13), (21, 13))
 LEVEL = 3           # building level shown in the mockup (1-3); props below grow with it
 UP = "props_up"
 # per building: (level-2 item, level-3 items) from the upgrade sheet
@@ -80,8 +84,8 @@ def decor():
           (P32, 12, 17, 7, Z), (P32, 12, 22, 7, Z), (P32, 44, 25, 2, Z), (P32, 23, 14, 2, Z)]
     LIGHTS.extend([(17.5, 7.5, Z + 30, (255, 170, 90), 40), (22.5, 7.5, Z + 30, (255, 170, 90), 40),
                    (19.8, 4.2, Z + 26, (120, 230, 255), 110), (19.5, 8.0, 6, (90, 200, 255), 70)])
-    d += [(P32, 12, 20, 8, 12)]       # a torch bracket on the stair rail, halfway up
-    LIGHTS.append((20.5, 8.5, 12 + 26, (255, 170, 90), 32))
+    # (no torch on the stair rail: from the street it stood on the Tavern chimney's top; the plateau
+    # torches and the braziers light the stair)
     # MARKET = the whole square as one place (Juzo): the well in the middle of the square with
     # the main street flowing round it, a ring of stalls around it, crates/carts between
     d += [(P48, 5, 20, 20),
@@ -91,7 +95,7 @@ def decor():
           (P32, 0, 16, 20), (P32, 1, 16, 21), (P32, 39, 23, 19), (P32, 2, 18, 23), (P32, 0, 21, 16),
           (P32, 3, 21, 22), (P32, 29, 20, 22)]
     LIGHTS.extend([(20.5, 20.5, 20, (255, 190, 110), 50)])
-    for i, j in ((18, 10), (21, 10), (18, 13), (21, 13)):
+    for i, j in BRAZIERS:
         d.append((UP, 4, i, j))
         LIGHTS.append((i + .5, j + .5, 40, (255, 160, 80), 44))
     d += [(P32, 24, 14, 8), (P32, 23, 16, 8), (P32, 24, 24, 8), (P32, 23, 26, 8), (P32, 44, 13, 8)]
@@ -237,7 +241,6 @@ def trees():
 def empty_lot(x0, y0, x1, y1):
     """An unbuilt plot: rope-and-stake fence, a sign, stacked logs and stones waiting."""
     e = fence("wood", x0, y0, x1 + 1, y1 + 1)
-    e += [(UP, 5, x1, y0 + 1), (P32, 19, x1, y1), (P32, 33, x0 + 1, y0 + 1), (P32, 16, x0 + 2, y0 + 1), (P32, 23, x1 - 1, y0 + 2),
+    e += [(P48, 20, x1, y0 + 1), (P48, 21, x0 + 1, y1), (P32, 19, x1, y1), (P32, 33, x0 + 1, y0 + 1), (P32, 16, x0 + 2, y0 + 1), (P32, 23, x1 - 1, y0 + 2),
           (P32, 24, x0 + 1, y1 - 1), (P32, 50, x1 - 1, y1 - 2), (P32, 1, x0 + 2, y1 - 1)]
-    LIGHTS.append((x1 + .5, y0 + 1.5, 34, (255, 190, 110), 26))
-    return e
+    return e   # the yellow "build here" sign and a plank stack (fix_r4_art.py), the old top-down lot's motif

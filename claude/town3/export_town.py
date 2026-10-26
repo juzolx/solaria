@@ -110,6 +110,8 @@ def main(root):
         C.BOXES.clear()
         img = render(church, cabin, lit=False)          # the base picture is the day: glass, torches out
         day_sprites = list(C.LAST_SPRITES)
+        bad = C.day_flames(img, [((round(C.at(i, j, z)[0]), round(C.at(i, j, z)[1])), col) for i, j, z, col, r in D.LIGHTS])
+        assert not bad, f"day picture {church}_{cabin}: flames still burn at {bad}"   # a new prop must go in FLAMES
         C.BOXES.clear()
         lit = render(church, cabin, lit=True)           # dusk: what lights up goes in an overlay
         assert img.width <= 2048 and img.height <= 2048
@@ -117,6 +119,8 @@ def main(root):
         on = ImageChops.difference(img, lit).convert("L").point(lambda v: 255 if v else 0)
         over = Image.composite(lit.convert("RGBA"), Image.new("RGBA", lit.size, (0, 0, 0, 0)), on)   # clear pixels stay empty (a small file)
         over.crop(on.getbbox()).save(os.path.join(art, "iso", f"town_{church}_{cabin}_lit.png"), optimize=True)
+        here = [((round(C.at(i, j, z)[0]), round(C.at(i, j, z)[1])), col) for i, j, z, col, r in D.LIGHTS]
+        C.flicker(over, here).crop(on.getbbox()).save(os.path.join(art, "iso", f"town_{church}_{cabin}_lit2.png"), optimize=True)
         lit_at = list(on.getbbox()[:2])
         boxes.update({k: v for k, v in C.BOXES.items() if isinstance(k, str)})
         if church == "holy" and cabin == "built":
@@ -170,7 +174,7 @@ def main(root):
         if sp["kind"] == "lot":
             x0, y0, x1, y1 = sp["cells"]
             gx, gy = C.at((x0 + x1 + 1) / 2, (y0 + y1 + 1) / 2)
-            sp["lot_plate"] = [round(gx), round(gy - 10)]
+            sp["lot_plate"] = [round(gx), round(gy + 16)]   # the lot's lower half: clear of the Blacksmith's plate
     # level props: [file, x, y, level_from, level_to] per building, drawn by town_view over the base
     os.makedirs(os.path.join(art, "iso", "up"), exist_ok=True)
     levels = {}
@@ -257,7 +261,8 @@ def main(root):
         "occluders": occluders,
         "levels": levels,
         "pen": [C.at(28, 35)[0], C.at(28, 29)[1], C.at(32, 29)[0] - C.at(28, 35)[0], C.at(32, 35)[1] - C.at(28, 29)[1]],
-        "pen_cells": [28, 30, 31, 34],
+        "pen_cells": [[i, j] for i in range(28, 32) for j in range(30, 35)   # the pen's free cells: pets never walk through the kennel or the hay
+                      if not any(e[0] != "fence" and (e[2], e[3]) == (i, j) for e in deco)],
         "graves": [px_cell(i + .5, j + .5) for i in range(2, 12) for j in range(2, 7) if (i, j) != (6, 4)],
         "smoke": [round(boxes["smith"][0] + boxes["smith"][2] * 0.62), round(boxes["smith"][1] + 8)],
         "ground": [[k, x0, y0, x1, y1] for k, x0, y0, x1, y1 in GROUND],

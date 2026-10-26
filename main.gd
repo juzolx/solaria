@@ -1106,6 +1106,10 @@ func _build_town(parent: Control) -> void:
 	town_view = TownView.new()
 	town_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	town_view.building_pressed.connect(_on_building)
+	# the town's small sounds, only for what's on screen
+	town_view.zoomed.connect(func(_z): sfx.play("click", 1.3, -8.0))
+	town_view.chatted.connect(func(p): _town_sound(p, "tap", randf_range(0.6, 0.7), -14.0))   # a soft murmur
+	town_view.door_used.connect(func(_id, p): _town_sound(p, "door", randf_range(0.9, 1.0), -10.0))
 	v.add_child(town_view)
 	var bar := UI.panel(UI.PANEL, UI.BORDER, 0, 8, 0)
 	v.add_child(bar)
@@ -1207,10 +1211,15 @@ func go_to_town(confirmed := false) -> bool:
 
 var _roster_cache: Array = []
 
+## A town sound at map point `p`, heard only while it's on screen.
+func _town_sound(p: Vector2, sound: String, pitch: float, db: float) -> void:
+	if town_view.in_view(p):
+		sfx.play(sound, pitch, db)
+
 ## Every hero in your roster walks around town (the one you play first).
 func _town_heroes() -> void:
 	var looks := state.hero_looks()
-	var key := "%d|%s|%s|%d" % [state.slot, str(state.appearance), str(looks), _roster_cache.size()]
+	var key := "%d|%s|%s|%d" % [state.slot, str(state.appearance), str(looks), hash(_roster_cache)]   # a refilled slot changes it too
 	town_view.set_heroes([[state.appearance, looks, true]] + _roster_cache, key)
 	# Your pets live in the Clinic's pen, at most TownView.MAX_TOWN_PETS of them: your class
 	# companion, then the pets you take on runs, then the rest (never the whole collection)
