@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b634fvrmocx4i"
-path="res://.godot/imported/door_open.png-4d78f9a754d6d13b485fd1dc29c26d1f.ctex"
+uid="uid://bb1u10jqyyfuy"
+path="res://.godot/imported/darts.png-d950ae5926c3cb4c4e2db072e6df0d11.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/halls/door_open.png"
-dest_files=["res://.godot/imported/door_open.png-4d78f9a754d6d13b485fd1dc29c26d1f.ctex"]
+source_file="res://art/traps/darts.png"
+dest_files=["res://.godot/imported/darts.png-d950ae5926c3cb4c4e2db072e6df0d11.ctex"]
 
 [params]
 

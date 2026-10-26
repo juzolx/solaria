@@ -1,3 +1,7 @@
-# Trap circle
+# Trap circles
 
-circle.png is the one magic circle every trap uses (tinted in code by its Halls.TRAPS "color"; the shrine uses it too, glowing blue). Drawn for Solaria by tools/draw_trap_circle.py: clean 1 px lines in light palette greys. 64x64, laid flat on the floor, so no outline ring.
+Drawn for Solaria by tools/draw_trap_circle.py (CC0). 64x64, laid flat on the floor, so no outline ring.
+
+- circle.png: the plain magic circle (two rings, eight runes, ticks), the fallback for any trap without its own.
+- spikes, darts, flames, frost, smoke, alarm .png: the same circle with that trap's sigil in the middle, tinted in code by its Halls.TRAPS "color".
+- shrine.png: the shrine's own glyph (a square in the rings, four eyes), tinted by the zone accent.
