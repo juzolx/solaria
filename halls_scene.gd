@@ -449,6 +449,8 @@ func draw_scenery(ci: CanvasItem, th: Dictionary) -> bool:
 ## checker dither inside it (hard pixels, no soft gradient over the art).
 ## Baked once per size into a 3-cell-wide strip, drawn as two texture rects (the right one mirrored).
 func vignette(ci: CanvasItem, sz: Vector2) -> void:
+	if sz.x < 1.0 or sz.y < 1.0:  # first draw before layout
+		return
 	var scr := screen_scale(ci)
 	var u := float(ArtStyle.unit(scr)) / scr
 	var edge := Color("#0e0812")
