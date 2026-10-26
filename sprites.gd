@@ -186,11 +186,15 @@ static func _stack(dst: Image, src: Image, at: Vector2i) -> void:
 				dst.set_pixel(X, Y, Color(c.r, c.g, c.b, 1.0))
 
 static func _silhouette(src: Image) -> Image:
-	var img := src.duplicate() as Image
-	for y in img.get_height():
-		for x in img.get_width():
-			if img.get_pixel(x, y).a > 0.01:
-				img.set_pixel(x, y, Color.WHITE)
+	# One masked blit instead of a get/set_pixel per pixel (fable r2: 18k calls per Calamity pose)
+	var mask := src.duplicate() as Image
+	if mask.is_compressed():
+		mask.decompress()
+	mask.convert(Image.FORMAT_RGBA8)
+	var white := Image.create(mask.get_width(), mask.get_height(), false, Image.FORMAT_RGBA8)
+	white.fill(Color.WHITE)
+	var img := Image.create(mask.get_width(), mask.get_height(), false, Image.FORMAT_RGBA8)
+	img.blit_rect_mask(white, mask, Rect2i(Vector2i.ZERO, mask.get_size()), Vector2i.ZERO)
 	return img
 
 # =====================================================================
@@ -558,7 +562,7 @@ static func enemy_by_key(key: String) -> Dictionary:
 		# pass (fable r1), only the rim light, so they stay brighter than the hall behind them
 		var native: bool = int(ArtInfo.DATA["enemies"].get(key, {}).get("hd", 2)) == 1
 		var graded := DarkGrade.image(img, DarkGrade.NATIVE, true, DarkGrade.SPRITE) if native else DarkGrade.image(img)
-		out = {"tex": ImageTexture.create_from_image(graded), "white": ImageTexture.create_from_image(_silhouette(img)),
+		out = {"tex": ImageTexture.create_from_image(graded), "img": graded, "white": ImageTexture.create_from_image(_silhouette(img)),
 			"size": Vector2(img.get_size()), "foot": float(used.end.y - 1 if used.size.y > 0 else img.get_height() - 1)}
 	_cache["e_" + key] = out
 	return out
@@ -621,6 +625,7 @@ static func poses_for(key: String, src: Image, facing: int, hand_row := -1) -> D
 	var top := used.position.y
 	var bottom := used.end.y
 	var waist := top + int((bottom - top) * 0.62)
+	var white_src := _silhouette(src)  # once; each pose shifts its rows like the picture's
 	var out := {}
 	for p in POSES:
 		var d: Dictionary = POSES[p]
@@ -630,7 +635,7 @@ static func poses_for(key: String, src: Image, facing: int, hand_row := -1) -> D
 		var hdx := 0
 		if hand_row >= top and hand_row < waist:
 			hdx = int(round(lean * float(waist - hand_row) / maxf(1.0, waist - top))) * facing
-		out[p] = {"tex": ImageTexture.create_from_image(img), "white": ImageTexture.create_from_image(_silhouette(img)),
+		out[p] = {"tex": ImageTexture.create_from_image(img), "white": ImageTexture.create_from_image(pose_image(white_src, waist, top, lean, squash, facing)),
 			"dx": hdx, "dy": squash if hand_row < waist else 0}
 	_cache["pose_" + key] = out
 	return out

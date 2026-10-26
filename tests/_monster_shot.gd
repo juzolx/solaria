@@ -14,6 +14,12 @@ func _initialize() -> void:
 	var main = load("res://main.tscn").instantiate()
 	root.add_child(main)
 	await process_frame
+	# The title screen comes up when slot 1 doesn't load in time: play the test hero instead
+	# (fable r2: 7 of 23 round-1 "fight shots" were the title screen)
+	if _title(main) != null:
+		_title(main).queue_free()
+		main.play_slot(1)
+		await process_frame
 	main.timer.stop()
 	main.codex.stats["guide_skip"] = 1
 	for c in main.get_children():
@@ -59,6 +65,31 @@ func _initialize() -> void:
 		Sprites.clear_monster_cache()
 		main.refresh()
 		await create_timer(3.0 if st.enemy_is_boss or st.enemy_calamity > 0 else 1.5).timeout
+		var why := _not_a_fight(main, key)
+		if why != "":
+			push_error("%s: not a fight on screen (%s), no picture saved" % [shot, why])
+			quit(1)
+			return
 		root.get_texture().get_image().save_png(dir.path_join(shot + ".png"))
 	quit()
 
+static func _title(main: Node) -> Node:
+	for c in main.get_children():
+		if c is TitleScreen:
+			return c
+	return null
+
+## "" when the fight with `key` is what the screen shows, else what is wrong.
+static func _not_a_fight(main: Node, key: String) -> String:
+	if _title(main) != null:
+		return "title screen"
+	var st: GameState = main.state
+	if st == null:
+		return "no hero"
+	if st.in_town:
+		return "in town"
+	if main.nav_page != 0:
+		return "page %d" % main.nav_page
+	if st.enemy_art != key or st.enemy_hp <= 0:
+		return "monster is %s" % st.enemy_art
+	return ""

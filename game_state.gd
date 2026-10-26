@@ -1463,15 +1463,6 @@ func _apply_tier(tier: int) -> void:
 		events.append({"type": "rare_monster", "tier": tier, "name": enemy_name, "mods": enemy_mods.duplicate()})
 		say("[color=%s]%s %s appears![/color] %s" % [Monsters.tier_color(tier), Monsters.tier_name(tier), enemy_name, ", ".join(enemy_mods)])
 
-## The size the monster is drawn at (rarer = bigger).
-func enemy_scale() -> float:
-	var s := float(Monsters.TIERS[clampi(enemy_tier, 0, 5)]["scale"])
-	if has_mod("Giant"):
-		s *= 1.12
-	if enemy_calamity > 0:
-		s *= 1.35
-	return s
-
 func take_turn() -> void:
 	if run_over or in_town:
 		return
@@ -1811,7 +1802,7 @@ func _enemy_defeated() -> void:
 	var species := enemy_species
 	var zone_i := GameData.zone_index(floor_num)
 	events.append({"type": "enemy_dead", "shape": enemy_shape, "color": enemy_color, "boss": was_boss, "name": enemy_name,
-		"art": enemy_art, "tier": tier, "scale": enemy_scale()})
+		"art": enemy_art, "tier": tier})
 	if not was_boss:
 		Combat.on_enemy_death(self)
 	if enemy_boss_kind == "trial":

@@ -10,12 +10,12 @@ extends RefCounted
 # roll more modifiers and pay out much better.
 const TIER_NAMES := ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"]
 const TIERS := [
-	{"color": "#cbd5e1", "weight": 60.0, "hp": 1.0, "atk": 1.0, "scale": 1.0, "mods": 0, "gold": 1.0, "xp": 1.0, "loot": 0, "extra": 0, "dust": [0, 0]},
-	{"color": "#4ade80", "weight": 25.0, "hp": 1.35, "atk": 1.12, "scale": 1.06, "mods": 1, "gold": 1.6, "xp": 1.5, "loot": 4, "extra": 0, "dust": [0, 0]},
-	{"color": "#60a5fa", "weight": 10.0, "hp": 2.0, "atk": 1.2, "scale": 1.12, "mods": 1, "gold": 2.5, "xp": 2.2, "loot": 9, "extra": 1, "dust": [1, 2]},
-	{"color": "#c084fc", "weight": 3.5, "hp": 3.0, "atk": 1.22, "scale": 1.2, "mods": 2, "gold": 4.0, "xp": 3.5, "loot": 15, "extra": 1, "dust": [1, 2]},
-	{"color": "#fb923c", "weight": 1.0, "hp": 4.0, "atk": 1.32, "scale": 1.28, "mods": 2, "gold": 7.0, "xp": 5.0, "loot": 22, "extra": 2, "dust": [1, 2]},
-	{"color": "#ff4d6d", "weight": 0.5, "hp": 5.5, "atk": 1.45, "scale": 1.36, "mods": 3, "gold": 12.0, "xp": 8.0, "loot": 30, "extra": 3, "dust": [2, 2]},
+	{"color": "#cbd5e1", "weight": 60.0, "hp": 1.0, "atk": 1.0, "mods": 0, "gold": 1.0, "xp": 1.0, "loot": 0, "extra": 0, "dust": [0, 0]},
+	{"color": "#4ade80", "weight": 25.0, "hp": 1.35, "atk": 1.12, "mods": 1, "gold": 1.6, "xp": 1.5, "loot": 4, "extra": 0, "dust": [0, 0]},
+	{"color": "#60a5fa", "weight": 10.0, "hp": 2.0, "atk": 1.2, "mods": 1, "gold": 2.5, "xp": 2.2, "loot": 9, "extra": 1, "dust": [1, 2]},
+	{"color": "#c084fc", "weight": 3.5, "hp": 3.0, "atk": 1.22, "mods": 2, "gold": 4.0, "xp": 3.5, "loot": 15, "extra": 1, "dust": [1, 2]},
+	{"color": "#fb923c", "weight": 1.0, "hp": 4.0, "atk": 1.32, "mods": 2, "gold": 7.0, "xp": 5.0, "loot": 22, "extra": 2, "dust": [1, 2]},
+	{"color": "#ff4d6d", "weight": 0.5, "hp": 5.5, "atk": 1.45, "mods": 3, "gold": 12.0, "xp": 8.0, "loot": 30, "extra": 3, "dust": [2, 2]},
 ]
 const RARE := 2
 const EPIC := 3
