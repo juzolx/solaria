@@ -284,7 +284,8 @@ func _initialize() -> void:
 		var wolf := HeroArt.frames(ww, "Warrior", 0, "", true)["img"][0] as Image
 		check(wolf.get_used_rect().size.y > orc.get_used_rect().size.y, "the werewolf's ears and tail stretch the orc silhouette (%s)" % b)
 	# Golem is no longer playable: its art stays in art/heroes/golem_m but no hero wears it
-	check(HeroArt.build_dir({"body": "masc", "race": "Golem"}) == "", "no golem body build is offered")
+	# (an old slot summary that still says Golem draws the Dwarf it became)
+	check(HeroArt.build_dir({"body": "masc", "race": "Golem"}).begins_with("dwarf_"), "no golem body build is offered: a Golem draws as a Dwarf")
 	# Fairies are the Tiny build: shorter than a human and hovering above the feet row
 	# (the body layer alone: the butterfly wings sit behind and their tails hang below the feet)
 	var fdir := HeroArt.build_dir({"body": "masc", "race": "Fairy"})

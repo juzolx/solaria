@@ -302,13 +302,11 @@ static func _gear_map(look: Dictionary, char_map: Dictionary) -> Dictionary:
 ## Returns {"body", "body_white", "body_img", "weapon", "weapon_white", "weapon_img",
 ##          "weapon_type", "pivot" (weapon pixels), "hand" (canvas pixels), "glow"}
 static func hero(app: Dictionary, looks: Dictionary) -> Dictionary:
+	if HeroArt.available():
+		return _hero_pl_cached(app, looks, false)
 	var key := str(app) + str(looks)
 	if _cache.has(key):
 		return _cache[key]
-	if HeroArt.available():
-		var pl := _hero_pl(app, looks, false)
-		_cache[key] = pl
-		return pl
 	if USE_LPC and Lpc.available():
 		var lp := _hero_lpc(app, looks)
 		_cache[key] = lp
@@ -382,6 +380,25 @@ static func hero(app: Dictionary, looks: Dictionary) -> Dictionary:
 				out["glow"] = lk["trim"]
 	_cache[key] = out
 	return out
+
+## PixelLab heroes kept at once (oldest dropped first): every new look, weapon type or class
+## tier makes one, and a phone shouldn't keep every look tried in the creator for the session.
+const MAX_HERO_PICS := 48
+static var _pl_keys: Array[String] = []
+
+## The PixelLab hero, cached by only what it draws: the look, the class outfit and the weapon
+## (armour has no look in 2.1, so changing it doesn't make a new picture).
+static func _hero_pl_cached(app: Dictionary, looks: Dictionary, back: bool) -> Dictionary:
+	var w: Dictionary = looks.get("Weapon", {})
+	var key := "pl%s|%s|%s|%s|%s|%s" % [back, str(app), str(looks.get("Class", {})), w.get("type", ""), w.get("glow", false), w.get("trim", "")]
+	if _cache.has(key):
+		return _cache[key]
+	var pl := _hero_pl(app, looks, back)
+	_cache[key] = pl
+	_pl_keys.append(key)
+	while _pl_keys.size() > MAX_HERO_PICS:
+		_cache.erase(_pl_keys.pop_front())
+	return pl
 
 ## The PixelLab hero (hero_art.gd): class outfit, hair, face and the weapon type, on the fixed frames.
 ## Laid out like the LPC hero (a 96x96 cell on the hero canvas), so battle and menus treat it the same.
@@ -458,15 +475,29 @@ static func chunky(src: Image, px: int) -> Image:
 			out.fill_rect(Rect2i(bx, by, px, px), Color.hex(bk))
 	return out
 
+## A hero's back picture for views that draw every frame (team in the fight and the room):
+## hero_looks() and the cache key are rebuilt at most every LOOK_REFRESH_MS per hero, not 60
+## times a second. Also keeps "back_key" (the look as a string) and "back_looks" on the hero.
+const LOOK_REFRESH_MS := 500
+static func hero_back_of(g: GameState) -> Dictionary:
+	var now := Time.get_ticks_msec()
+	if g.has_meta("back_art") and now - int(g.get_meta("back_art_ms", 0)) < LOOK_REFRESH_MS:
+		return g.get_meta("back_art")
+	var looks := g.hero_looks()
+	var art := hero_back(g.appearance, looks)
+	g.set_meta("back_art", art)
+	g.set_meta("back_art_ms", now)
+	g.set_meta("back_key", str(g.appearance) + str(looks))
+	g.set_meta("back_looks", looks)
+	return art
+
 ## The hero seen from behind (0.13 back-to-front fights): same dictionary as hero().
 static func hero_back(app: Dictionary, looks: Dictionary) -> Dictionary:
+	if HeroArt.available():
+		return _hero_pl_cached(app, looks, true)
 	var key := "back" + str(app) + str(looks)
 	if _cache.has(key):
 		return _cache[key]
-	if HeroArt.available():
-		var pl := _hero_pl(app, looks, true)
-		_cache[key] = pl
-		return pl
 	if not (USE_LPC and Lpc.available()):
 		return hero(app, looks)
 	var sp := Lpc.spec(app, looks)

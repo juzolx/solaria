@@ -26,6 +26,8 @@ const WEAPON_AS := {"orb": "staff", "tome": "staff", "wand": "staff", "fist": ""
 static var _info := {}
 static var _imgs := {}
 static var _built := {}
+## Built heroes kept at once (each is 7-9 frames as images and textures).
+const MAX_BUILT := 48
 
 static func info() -> Dictionary:
 	if _info.is_empty() and FileAccess.file_exists(DIR + "heroes.json"):
@@ -85,7 +87,8 @@ static func _shade(ramp: PackedColorArray, i: int) -> Color:
 ## only_hair: copy just the hair pixels (the hair goes over the face on the portrait).
 ## cells: [first, end) cell range to copy (only what's needed: battle or portrait).
 ## dye: the class colour for a body build's family outfit (index blue channel).
-static func _lay(dst: PackedByteArray, src_path: String, skin: PackedColorArray, hair: PackedColorArray, cells: Vector2i, only_hair := false, x0 := 0, dye := PackedColorArray()) -> void:
+## fallen: the drawn colours go dark and ashen (a Fallen Angel's wings and halo).
+static func _lay(dst: PackedByteArray, src_path: String, skin: PackedColorArray, hair: PackedColorArray, cells: Vector2i, only_hair := false, x0 := 0, dye := PackedColorArray(), fallen := false) -> void:
 	var src := _img(src_path + ".png")
 	if src == null:
 		return
@@ -122,6 +125,8 @@ static func _lay(dst: PackedByteArray, src_path: String, skin: PackedColorArray,
 			elif dy > 0 and not dye.is_empty():
 				var c: PackedByteArray = luts[2]
 				dst[di] = c[dy * 3]; dst[di + 1] = c[dy * 3 + 1]; dst[di + 2] = c[dy * 3 + 2]
+			elif fallen:
+				dst[di] = int(sd[si] * 0.30) + 10; dst[di + 1] = int(sd[si + 1] * 0.28) + 8; dst[di + 2] = int(sd[si + 2] * 0.36) + 14
 			else:
 				dst[di] = sd[si]; dst[di + 1] = sd[si + 1]; dst[di + 2] = sd[si + 2]
 			dst[di + 3] = 255
@@ -180,8 +185,10 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 		_lay_weapon(data, build, weapon, cells)
 		return _finish(key, data, cells)
 	var race := race_key(app, b)
+	# A Fallen Angel has no drawing of its own yet: the angel's wings and halo, burnt dark
+	var fallen := str(app.get("form", "")) == "Fallen Angel"
 	if race != "":
-		_lay(data, race + "_back", skin, hair, cells)  # wings / tail behind the body on the portrait
+		_lay(data, race + "_back", skin, hair, cells, false, 0, PackedColorArray(), fallen)  # wings / tail behind the body on the portrait
 	_lay(data, outfit_key(cls, tier, b), skin, hair, cells)
 	var head := "%s/hair_%s" % [b, style_key(app)]
 	_lay(data, head, skin, hair, cells)
@@ -192,7 +199,7 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 		_lay(data, "%s/face_%s" % [b, face], skin, hair, cells, false, PORTRAIT[0] * CELL)
 		_lay(data, head, skin, hair, cells, true)  # the hair (bangs) stays over the face
 	if race != "":
-		_lay(data, race, skin, hair, cells)  # ears, horns, halo, wings from behind...
+		_lay(data, race, skin, hair, cells, false, 0, PackedColorArray(), fallen)  # ears, horns, halo, wings from behind...
 	_lay_weapon(data, b, weapon, cells)
 	return _finish(key, data, cells)
 
@@ -213,6 +220,8 @@ static func _finish(key: String, data: PackedByteArray, cells: Vector2i) -> Dict
 		out["tex"].append(ImageTexture.create_from_image(im))
 		out["white"].append(ImageTexture.create_from_image(Sprites._silhouette(im)))
 	_built[key] = out
+	while _built.size() > MAX_BUILT:  # oldest first: a session of creator taps never piles up
+		_built.erase(_built.keys()[0])
 	_imgs.clear()  # the decoded layer sheets are only needed while building (the frames are cached)
 	return out
 
@@ -271,7 +280,7 @@ static func art_race(app: Dictionary) -> String:
 	var f := str(app.get("form", ""))
 	if f != "" and (info().get("builds", {}).has(f) or info().get("races", {}).has(f)):
 		return f
-	return str(app.get("race", "Human"))
+	return Races.current(str(app.get("race", "Human")))  # an old slot summary may still say Golem
 
 ## The folder of a race's own body build ("goblin_m"), or "" when the race uses the standard body.
 static func build_dir(app: Dictionary) -> String:

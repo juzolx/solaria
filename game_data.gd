@@ -473,7 +473,7 @@ const BOSS_COOLDOWN := {"mid": 15, "zone": 30}  # seconds before you can travel 
 const LOCAL_MONSTER_WEIGHT := 10.0  # the sub-area's own creature is a bit rarer than the zone's 5 (18 each)
 const BASE_MONSTER_WEIGHT := 18.0
 const ROOT_ZONES := [
-	{"id": "mossy_hollows", "name": "Mossy Hollows", "color": "#4d7c0f", "enemies": [
+	{"id": "mossy_hollows", "name": "Mossy Hollows", "color": "#75a743", "enemies": [
 		{"id": "kobold", "name": "Kobold", "shape": "humanoid", "color": "#b45309"},       # German folklore
 		{"id": "redcap", "name": "Redcap", "shape": "humanoid", "color": "#dc2626"},       # Scottish border folklore
 		{"id": "boggart", "name": "Boggart", "shape": "brute", "color": "#8a7f72"},         # English folklore
@@ -494,7 +494,7 @@ const ROOT_ZONES := [
 		{"id": "hrunting", "name": "Hrunting", "flavor": "Beowulf's borrowed blade. It failed him once. It won't fail you.", "slot": "Weapon", "effect": "lifesteal", "value": 10},
 		{"id": "grendels_hide", "name": "Grendel's Hide", "flavor": "Grendel's skin. No blade could cut it, and now none can cut you.", "slot": "Chest", "effect": "thorns", "value": 20},
 	]}},
-	{"id": "sunken_catacombs", "name": "Sunken Catacombs", "color": "#475569", "enemies": [
+	{"id": "sunken_catacombs", "name": "Sunken Catacombs", "color": "#fee761", "enemies": [
 		{"id": "ghoul", "name": "Ghoul", "shape": "humanoid", "color": "#a3a3a3"},        # Arabian folklore
 		{"id": "draugr", "name": "Draugr", "shape": "brute", "color": "#64748b"},          # Norse undead
 		{"id": "barrow_wight", "name": "Barrow-Wight", "shape": "spirit", "color": "#cbd5e1"},   # Norse / English
@@ -515,7 +515,7 @@ const ROOT_ZONES := [
 		{"id": "mask_of_half_death", "name": "Mask of Half-Death", "flavor": "Half of Hel's face was living, half was dead. So is this mask.", "slot": "Helmet", "effect": "regen", "value": 3},
 		{"id": "draupnir", "name": "Draupnir", "flavor": "Odin's ring, burned with Baldr and sent back up from Hel. Every ninth night it drips eight more.", "slot": "Ring", "effect": "gold_find", "value": 30},  # 2.1 jewelry
 	]}},
-	{"id": "flooded_depths", "name": "Flooded Depths", "color": "#0e7490", "enemies": [
+	{"id": "flooded_depths", "name": "Flooded Depths", "color": "#4fb0c6", "enemies": [
 		{"id": "kappa", "name": "Kappa", "shape": "humanoid", "color": "#16a34a"},        # Japanese folklore
 		{"id": "kelpie", "name": "Kelpie", "shape": "beast", "color": "#0891b2"},          # Scottish water horse
 		{"id": "nuckelavee", "name": "Nuckelavee", "shape": "brute", "color": "#be123c"},      # Orkney folklore
@@ -536,7 +536,7 @@ const ROOT_ZONES := [
 		{"id": "scyllas_fang", "name": "Scylla's Fang", "flavor": "Pulled from the six-headed monster across the strait.", "slot": "Weapon", "effect": "crit", "value": 20},
 		{"id": "drowned_captains_boots", "name": "Drowned Captain's Boots", "flavor": "Every captain Charybdis swallowed left treasure behind. He left his boots.", "slot": "Feet", "effect": "gold_find", "value": 25},
 	]}},
-	{"id": "ember_halls", "name": "Ember Halls", "color": "#c2410c", "enemies": [
+	{"id": "ember_halls", "name": "Ember Halls", "color": "#e43b44", "enemies": [
 		{"id": "salamander", "name": "Salamander", "shape": "serpent", "color": "#ea580c"},    # alchemy / European
 		{"id": "ifrit", "name": "Ifrit", "shape": "spirit", "color": "#f97316"},          # Arabian djinn
 		{"id": "hellhound", "name": "Hellhound", "shape": "beast", "color": "#b91c1c"},       # many mythologies
@@ -558,7 +558,7 @@ const ROOT_ZONES := [
 		{"id": "emberforged_greaves", "name": "Emberforged Greaves", "flavor": "Hammered on the anvil of the fire giants.", "slot": "Legs", "effect": "regen", "value": 2},
 		{"id": "brisingamen", "name": "Brisingamen", "flavor": "Freyja's flaming necklace, forged by four dwarves. It burns with what it has seen.", "slot": "Necklace", "effect": "xp", "value": 20},  # 2.1 jewelry
 	]}},
-	{"id": "the_shadow_deep", "name": "The Shadow Deep", "color": "#6d28d9", "enemies": [
+	{"id": "the_shadow_deep", "name": "The Shadow Deep", "color": "#9a4fc0", "enemies": [
 		{"id": "wendigo", "name": "Wendigo", "shape": "brute", "color": "#d6d3d1"},         # Algonquian folklore
 		{"id": "jorogumo", "name": "Jorogumo", "shape": "humanoid", "color": "#8b5cf6"},     # Japanese spider-woman
 		{"id": "rakshasa", "name": "Rakshasa", "shape": "humanoid", "color": "#f59e0b"},     # Hindu mythology
