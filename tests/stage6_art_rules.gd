@@ -84,6 +84,21 @@ func _phone_width(key: String, w: int) -> void:
 	var share := 0.96 if key.begins_with("calamity_") else (0.92 if key.begins_with("boss_") else 0.56)
 	check(w * 3 <= int(504.0 * share * 0.853), "%s is %d px wide: over %d it draws below 3x on a phone" % [key, w, int(504.0 * share * 0.853) / 3])
 
+## Fable r2: monsters must not sink into their dark halls (38-94 mean luma): the whole picture,
+## outline included, averages at least 68 (commons) or 60 (bosses and Calamities, which glow).
+func _luma_floor(key: String, img: Image) -> void:
+	var total := 0.0
+	var n := 0
+	for y in img.get_height():
+		for x in img.get_width():
+			var c := img.get_pixel(x, y)
+			if c.a8 == 0:
+				continue
+			total += 0.299 * c.r8 + 0.587 * c.g8 + 0.114 * c.b8
+			n += 1
+	var floor_y := 59.5 if key.begins_with("boss_") or key.begins_with("calamity_") else 67.5
+	check(n > 0 and total / n >= floor_y, "%s averages luma %.1f (at least %.0f, monster_import.py lifts it)" % [key, total / maxi(1, n), floor_y + 0.5])
+
 func _initialize() -> void:
 	check(not ArtStyle.in_palette(ArtStyle.OUTLINE), "the outline color is not a palette color")
 	check(ArtStyle.in_palette(Color(ArtStyle.PALETTE[3])), "palette colors are in the palette")
@@ -100,6 +115,7 @@ func _initialize() -> void:
 			if d == "res://art/enemies/" and int(native_info.get(f.get_basename(), {}).get("hd", 2)) == 1:
 				_native_rules(d + f, img)
 				_phone_width(f.get_basename(), img.get_width())
+				_luma_floor(f.get_basename(), img)
 				continue
 			check(img.get_size() == ArtStyle.MONSTER_SIZE or img.get_size() == ArtStyle.TALL_SIZE, "%s%s is %s (68x68 or 68x132)" % [d, f, img.get_size()])
 			var rough := 0
