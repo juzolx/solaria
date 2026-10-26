@@ -1,6 +1,6 @@
 class_name HeroTab
 extends ScrollContainer
-## Character > Hero: who you are, your 8 stats, your special stat, your saved
+## the Hero page: who you are, your 8 stats, your special stat, your saved
 ## builds and the numbers it all adds up to. Laid out as one column of cards
 ## so it reads well on a phone.
 ## Interface pass: the top is a "stage": name plate, the hero big on a stone
@@ -63,7 +63,7 @@ func setup(m) -> void:
 	sv.add_child(plate)
 	var pv0 := UI.vbox(0)
 	plate.add_child(pv0)
-	title_label = UI.label("", 21, UI.GOLD)
+	title_label = UI.label("", UI.FONT_TITLE, UI.GOLD)
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.clip_text = true   # a long name never widens the screen
 	title_label.custom_minimum_size = Vector2(220, 0)
@@ -135,7 +135,7 @@ func setup(m) -> void:
 		main.codex.title = "" if i == 0 else title_pick.get_item_text(i)
 		main.codex.save()
 		main.refresh())
-	UI.tip(title_pick, "Titles come from deeds (Guild Hall) and from filling the Codex (Codex > Rewards). Looks only.")
+	UI.tip(title_pick, "Titles come from deeds (Guild Hall) and from filling the Codex (Codex › Rewards). Looks only.")
 	trow.add_child(title_pick)
 	var share := UI.button("Share", func(): ShareCard.share(main))
 	UI.tip(share, "Makes a picture of your hero to share.")
@@ -432,17 +432,17 @@ func refresh() -> void:
 	var text := ""
 	var t := ClassTree.pick_tier(state)
 	if t >= 0:
-		text = "[color=#e8b14a]You can choose your next class now[/color] in Character > Class."
+		text = "[color=#e8b14a]You can choose your next class now[/color] in Hero › Class."
 	elif state.god_class != "" or state.hidden_class != "" or state.class_path.size() >= 3:
 		text = "Your evolution tree is complete. Your special stat keeps growing."
 	else:
-		text = "At [color=#e8b14a]level %d[/color] your class evolves again (Character > Class)." % int(ClassTree.PICK_LEVELS[state.class_path.size()])
+		text = "At [color=#e8b14a]level %d[/color] your class evolves again (Hero › Class)." % int(ClassTree.PICK_LEVELS[state.class_path.size()])
 	path_label.text = "[color=%s]%s[/color]" % [UI.hex(UI.DIM), text]
 
 	var spent := 0
 	for st in GameData.STAT_ORDER:
 		spent += int(state.stats.get(st, 0))
-	respec_button.text = "Respec all points  (free: Tome of Forgetting)" if state.respec_tomes > 0 else "Respec all points  (%d gold)" % state.respec_cost()
+	respec_button.text = "Respec all points · free (Tome of Forgetting)" if state.respec_tomes > 0 else UI.cost("Respec all points", state.respec_cost())
 	respec_button.disabled = spent == 0 or state.gold < state.respec_cost()
 
 ## One card per special stat (your unique class's and your hidden class's).
@@ -461,7 +461,7 @@ func _build_special_rows(names: Array) -> void:
 		special_box.add_child(c[0])
 		var h := UI.hbox(8)
 		c[1].add_child(h)
-		var lbl := UI.label(n, 16, col)
+		var lbl := UI.label(n, UI.FONT_CAPTION, col)
 		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(lbl)
 		var val := UI.label("0", 20, UI.TEXT)
@@ -486,3 +486,6 @@ func _fill_titles() -> void:
 		title_pick.add_item(t)
 		if t == c.title:
 			title_pick.select(title_pick.item_count - 1)
+	# Fable r3 #13: no "Title: (none)" picker until there is a title to pick (Share stays)
+	title_pick.visible = not list.is_empty()
+	(title_pick.get_parent().get_child(0) as Control).visible = title_pick.visible

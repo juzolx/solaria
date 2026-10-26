@@ -1,6 +1,6 @@
 class_name MailTab
 extends ScrollContainer
-## Town > Mailbox: letters with rewards (bounties, deeds, news and gifts).
+## Town › Mailbox: letters with rewards (bounties, deeds, news and gifts).
 ## Each letter shows its gear as pictures. Collect takes what fits your bag;
 ## anything that doesn't fit waits in the letter. Mail is always safe.
 

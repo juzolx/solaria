@@ -28,12 +28,12 @@ func show_for(main_node, town_n: int) -> void:
 	row.add_theme_constant_override("h_separation", 12)
 	row.add_theme_constant_override("v_separation", 12)
 	content.add_child(row)
-	row.add_child(_card(false, "REGULAR", UI.GREEN,
+	row.add_child(_card(false, "Regular", UI.GREEN,
 		"The normal game. Fall and you lose what you carried in (gold on you, your bag, worn gear, scrolls and all but 2 potions) and wake at the last checkpoint. The Bank and the town's Vault are always safe."))
 	var hc_text := "One life for every hero here. A hero who dies is gone for good, gear and all. Rare monsters show up more often, and how deep you got goes on the leaderboard."
 	if p.hc_best > 0:
 		hc_text += "\n\nYour deepest Hardcore run: [color=#e8b14a]floor %d[/color]" % p.hc_best
-	row.add_child(_card(true, "HARDCORE", UI.RED, hc_text))
+	row.add_child(_card(true, "Hardcore", UI.RED, hc_text))
 
 func _card(hc: bool, title: String, color: Color, text: String) -> PanelContainer:
 	var card := UI.panel(UI.INSET, color, 10, 14, 2)

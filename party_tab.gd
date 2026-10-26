@@ -1,6 +1,6 @@
 class_name PartyTab
 extends ScrollContainer
-## Character > Party: bring your other Regular heroes along. They fight with
+## Hero › Party: bring your other Regular heroes along. They fight with
 ## their own gear and skills, earn XP with you, and share your skill book.
 
 var main

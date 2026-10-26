@@ -1,6 +1,6 @@
 class_name CollectionTab
 extends ScrollContainer
-## Codex > Collection: your trophy shelf. Every Unique and Signature item in
+## Codex › Collection: your trophy shelf. Every Unique and Signature item in
 ## the game; the ones you haven't found yet are shadows.
 
 var main

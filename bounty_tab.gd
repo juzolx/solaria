@@ -1,6 +1,6 @@
 class_name BountyTab
 extends ScrollContainer
-## Town > Bounty Board: monster contracts for the zone you're in. Each posting
+## Town › Bounty Board: monster contracts for the zone you're in. Each posting
 ## shows its reward up front (gold, gear, or a weapon for your class). Take up to
 ## Town.MAX_TAKEN and hunt in the dungeon; the reward is mailed the moment you finish.
 
@@ -29,7 +29,7 @@ func refresh() -> void:
 	var title := UI.heading("Bounty Board  -  %s" % String(GameData.zone_for_floor(maxi(1, g.floor_num))["name"]))
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
-	var reroll := UI.button("Repost · %dg" % Town.reroll_cost(g), func():
+	var reroll := UI.button(UI.cost("Repost", Town.reroll_cost(g)), func():
 		if Town.reroll(g):
 			main.sfx.play("buy")
 		shown = ""

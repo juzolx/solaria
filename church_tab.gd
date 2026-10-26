@@ -1,6 +1,6 @@
 class_name ChurchTab
 extends ScrollContainer
-## Town > Church (2.1 G2): lift curses from Cursed gear (it keeps its hidden power)
+## Town › Church (2.1 G2): lift curses from Cursed gear (it keeps its hidden power)
 ## and bless gear (+3% to its stat while worn). Works on what you wear and carry.
 ## A failed cleanse updates its row in place, so the button stays put for another try.
 
@@ -40,12 +40,12 @@ func refresh() -> void:
 			cursed.append(it)
 		elif Church.can_bless(it):
 			clean.append(it)
-	box.add_child(UI.label("CURSED GEAR", UI.FONT_BODY, Color(Church.COLOR)))
+	box.add_child(UI.label("Cursed gear", UI.FONT_BODY, Color(Church.COLOR)))
 	if cursed.is_empty():
 		box.add_child(UI.wrap("Nothing you wear or carry is cursed.", UI.FONT_BODY, UI.DIM))
 	for it in cursed:
 		_row(g, it, true)
-	box.add_child(UI.label("BLESS YOUR GEAR  (once per item)", UI.FONT_BODY, UI.GOLD))
+	box.add_child(UI.label("Bless your gear (once per item)", UI.FONT_BODY, UI.GOLD))
 	if clean.is_empty():
 		box.add_child(UI.wrap("Nothing here to bless.", UI.FONT_BODY, UI.DIM))
 	var n := 0

@@ -1,12 +1,12 @@
 class_name GearTab
 extends VBoxContainer
-## Items > Gear: what you're wearing. Tap a slot, then tap an item to wear it.
+## Items › Gear: what you're wearing. Tap a slot, then tap an item to wear it.
 
 var main
 var state: GameState
 var slot_labels := {}
 var slot_styles := {}
-var stats_label: RichTextLabel
+var stats_label: Label
 var list_title: Label
 var item_grid: GridContainer
 var empty_note: Label
@@ -122,11 +122,10 @@ func setup(m) -> void:
 		pv.add_child(vl)
 		pills[k] = vl
 
-	stats_label = UI.rich(UI.FONT_BODY)
-	stats_label.custom_minimum_size = Vector2(0, 26)   # one line shows; the whole list is a tap away
-	stats_label.clip_contents = true
-	stats_label.fit_content = false
-	stats_label.scroll_active = false
+	stats_label = UI.label("", UI.FONT_BODY, UI.GOLD)   # one line shows; the whole list is a tap away
+	stats_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	stats_label.clip_text = true
+	stats_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	UI.tip(stats_label, "")
 	add_child(stats_label)
 	list_title = UI.wrap("", UI.FONT_BODY, UI.TEXT)
@@ -252,8 +251,7 @@ func refresh() -> void:
 		if int(counts[set_name]) >= 2:
 			text += ("\n" if text != "" else "") + "[color=%s]%s set: %d pieces active[/color]" % [UI.hex(UI.GOLD_DULL), GameData.set_name_of(set_name), counts[set_name]]
 	stats_label.tooltip_text = RegEx.create_from_string("\\[[^\\]]*\\]").sub(text, "", true)   # the tip: plain text
-	stats_label.text = text.get_slice("
-", 0)
+	stats_label.text = stats_label.tooltip_text.get_slice("\n", 0)
 	stats_label.visible = text != ""
 
 	var key := "%s|%d" % [slot, state.bag_version]

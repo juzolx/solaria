@@ -1,6 +1,6 @@
 class_name BestiaryTab
 extends BoxContainer   # a row on wide screens, stacked on phones (refresh sets vertical)
-## Codex > Bestiary: every creature, zone by zone. Ones you haven't met are
+## Codex › Bestiary: every creature, zone by zone. Ones you haven't met are
 ## "???". Once you've met one you see its lore, your kills, the gear it likes
 ## to drop and the real drop odds. Its Signature item stays a secret until
 ## you find it.
@@ -111,7 +111,7 @@ func refresh() -> void:
 		var z: Dictionary = GameData.ZONES[zi]
 		var h := list.add_item(str(z["name"]))
 		list.set_item_selectable(h, false)
-		list.set_item_custom_fg_color(h, Color(z["color"]).lightened(0.4))
+		list.set_item_custom_fg_color(h, UI.DIM)   # Fable r3 #13: region names are labels, not entries
 		keys.append("")
 		var ids: Array = []  # monster ids (names are only shown)
 		for e in z["enemies"]:
@@ -136,9 +136,9 @@ func refresh() -> void:
 			if n == selected:
 				list.select(i)
 	# fable r4: the ten Calamities get their page too, after the last zone (slain ones lit)
-	var ch := list.add_item("CALAMITIES")
+	var ch := list.add_item("Calamities")
 	list.set_item_selectable(ch, false)
-	list.set_item_custom_fg_color(ch, Color("#ff6b6b"))
+	list.set_item_custom_fg_color(ch, UI.DIM)
 	keys.append("")
 	for ci in Calamity.LIST.size():
 		var ck := String(Calamity.info(ci)[1])
@@ -207,7 +207,7 @@ func _show() -> void:
 	var kills := int(e["kills"])
 	var dim := UI.hex(UI.DIM)
 	var lines: Array = []
-	lines.append("[font_size=18][color=#e8b14a]%s[/color][/font_size]" % Monsters.name_of(selected))
+	lines.append("[font_size=%d][color=#e8b14a]%s[/color][/font_size]" % [UI.FONT_TITLE, Monsters.name_of(selected)])
 	if not home.is_empty():
 		var z: Dictionary = GameData.ZONES[int(home["zone"])]
 		var first := int(home["zone"]) * GameData.ZONE_FLOORS + 1
@@ -301,12 +301,12 @@ func _show_calamity(ci: int) -> void:
 	if rec.is_empty():
 		pic.texture = art.get("white", null)
 		pic.modulate = Color(0.5, 0.48, 0.6)
-		lines.append("[font_size=18][color=#ff6b6b]???[/color][/font_size]")
+		lines.append("[color=#ff6b6b]???[/color]")
 		lines.append("[color=%s]A Calamity: it waits somewhere in region %d. About 1 fight in 20,000 is one.[/color]" % [dim, ci + 1])
 	else:
 		pic.texture = _lit_pic(String(c[1]), art, 9)
 		pic.modulate = Color.WHITE
-		lines.append("[font_size=18][color=#ff6b6b]%s[/color][/font_size]" % c[0])
+		lines.append("[color=#ff6b6b]%s[/color]" % c[0])
 		lines.append("[color=%s]Slain by %s, %s. It never comes back.[/color]" % [dim, rec.get("hero", "?"), rec.get("date", "?")])
 		lines.append("[i]%s[/i]" % c[3])
 		lines.append("")

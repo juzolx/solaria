@@ -2,7 +2,7 @@ class_name GuideBook
 extends Overlay
 ## The guide book: a little book that pops up when a new page unlocks.
 ## "Skip the guide" stops the pop-ups (pages still unlock and stay readable
-## in Codex > Guide and on the title screen).
+## in Codex › Guide and on the title screen).
 
 var m
 var codex: Codex
@@ -57,7 +57,7 @@ func _show(main_node, id: String, as_popup: bool) -> void:
 			codex.guide_queue.clear()
 			codex.save()
 			close())
-		skip.tooltip_text = "Stop showing new pages. You can still read them in Codex > Guide."
+		skip.tooltip_text = "Stop showing new pages. You can still read them in Codex › Guide."
 		row.add_child(skip)
 	row.add_child(UI.spacer())
 	var ok := UI.primary("Got it", close, UI.GOLD)

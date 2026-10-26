@@ -1,6 +1,6 @@
 class_name PetBookTab
 extends ScrollContainer
-## Codex > Pets (next update): every monster that could be your pet, by area.
+## Codex › Pets (next update): every monster that could be your pet, by area.
 ## Owned ones show in color with the best tier you've had, monsters you've met
 ## are shadows with a name, the rest are unknown.
 
@@ -24,21 +24,12 @@ func refresh() -> void:
 		return
 	shown = key
 	OnlineUI.clear(box)
-	var all := Menagerie.all_species()
-	var seen := 0
-	for n in all:
-		if _met(n) or codex.pet_book.has(n):
-			seen += 1
-	var owned := 0
-	for n in all:
-		if codex.pet_book.has(n):
-			owned += 1
-	box.add_child(UI.label("Owned %d / %d · Seen %d / %d" % [owned, all.size(), seen, all.size()], UI.FONT_BODY, UI.GOLD))
 	box.add_child(Collections.cards(codex, ["pets", "pet_epic", "pet_myth"]))  # 2.1 G4: progress and the next reward
 	box.add_child(UI.wrap("Pets are a real find: hatch an egg, or tame a beast as a Beast Tamer. Tiers go from Common to Mythic.", UI.FONT_BODY, UI.DIM))
 	var legend := HFlowContainer.new()   # wraps on a phone
 	legend.add_theme_constant_override("h_separation", 8)
 	box.add_child(legend)
+	legend.add_child(UI.label("Tiers:", UI.FONT_BODY, UI.DIM))
 	for t in Menagerie.TIER_NAMES.size():
 		legend.add_child(UI.label(Menagerie.TIER_NAMES[t], UI.FONT_BODY, Color(Menagerie.TIER_COLORS[t])))
 	_abilities()
@@ -50,7 +41,7 @@ func refresh() -> void:
 		for s in z["subs"]:
 			mons.append(s["monster"]["id"])
 		box.add_child(UI.heading(str(z["name"])))
-		box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text(String(z["id"])), UI.FONT_BODY, Color(Menagerie.TIER_COLORS[PetAbilities.SIGNATURE_RANK])))
+		box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text(String(z["id"])), UI.FONT_BODY, UI.TEXT))
 		var flow := HFlowContainer.new()
 		flow.add_theme_constant_override("h_separation", 6)
 		flow.add_theme_constant_override("v_separation", 6)
@@ -59,7 +50,7 @@ func refresh() -> void:
 			flow.add_child(_cell(str(n)))
 	# Fable pets R2: the ten Calamity pets (the rarest; a slain Calamity leaves its pet)
 	box.add_child(UI.heading("Calamities"))
-	box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text("calamity"), UI.FONT_BODY, Color(Menagerie.TIER_COLORS[PetAbilities.SIGNATURE_RANK])))
+	box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text("calamity"), UI.FONT_BODY, UI.TEXT))
 	var cflow := HFlowContainer.new()
 	cflow.add_theme_constant_override("h_separation", 6)
 	cflow.add_theme_constant_override("v_separation", 6)
@@ -167,7 +158,7 @@ func _ability_text(to: Control) -> void:
 		to.add_child(UI.wrap("%s: %s" % [Menagerie.TIER_NAMES[t], PetAbilities.RANK_TEXT[t]], UI.FONT_BODY, Color(Menagerie.TIER_COLORS[t])))
 	to.add_child(UI.wrap("A pet's family is its kind of monster. Tap a pet in the Codex to see its own.", UI.FONT_BODY, UI.DIM))
 	for f in PetAbilities.FAMILIES:
-		to.add_child(UI.label(String(PetAbilities.FAMILIES[f]["name"]).to_upper(), UI.FONT_BODY, UI.GOLD))
+		to.add_child(UI.label(String(PetAbilities.FAMILIES[f]["name"]), UI.FONT_BODY, UI.GOLD))
 		if f == "calamity":
 			# Calamity pets only ever come at Mythic, so the rank ladder above doesn't apply
 			to.add_child(UI.wrap("Calamity pets come only at Mythic. %s. %s. %s." % [PetAbilities.family_passive_range(f), PetAbilities.family_trick_text(f, PetAbilities.SIGNATURE_RANK), PetAbilities.region_signature_text("calamity")], UI.FONT_BODY, UI.TEXT))

@@ -49,7 +49,7 @@ func show_for(main_node, fresh := false, on_done := Callable(), migrated := fals
 	m = main_node
 	var n: Dictionary = PatchNotes.NOTES[0]
 	open(m, "What's new", 480.0, UI.GOLD)
-	var head := UI.label("%s  ·  v%s" % [String(n["name"]), String(n["version"])], 19, UI.GOLD.lightened(0.15))
+	var head := UI.label("%s  ·  v%s" % [String(n["name"]), String(n["version"])], UI.FONT_TITLE, UI.GOLD.lightened(0.15))
 	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(head)
 	if fresh:
@@ -76,7 +76,7 @@ func show_for(main_node, fresh := false, on_done := Callable(), migrated := fals
 	content.add_child(details)
 	var go := UI.primary("Let's go", close, UI.GOLD)
 	go.custom_minimum_size = Vector2(0, UI.TAP + 8)
-	go.add_theme_font_size_override("font_size", 18)
+	go.add_theme_font_size_override("font_size", UI.FONT_BODY)
 	content.add_child(go)
 	if on_done.is_valid():
 		tree_exiting.connect(on_done, CONNECT_ONE_SHOT)  # "Let's go" or Close

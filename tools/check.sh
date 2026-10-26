@@ -14,6 +14,15 @@ timeout 600 $G --headless --editor --quit --path . >/dev/null 2>&1   # reimport 
 errs=$(for f in *.gd; do $G --headless --path . --check-only --script $f 2>&1 | grep -E "SCRIPT ERROR|Parse Error" -A1 | grep -v "^--"; done | sort -u | head -20)
 if [ -n "$errs" ]; then echo "PARSE ERRORS:"; echo "$errs"; exit 1; fi
 echo "parse: ok"
+# Fable r3 house style: paths use "›" (#1), sizes sit on the type scale 15/20/30/40 (#7), costs say
+# "gold" (#9) and the interface doesn't shout in caps (#17; the fight's floaters and moment titles may)
+style=$( {
+  grep -nE 'Character >' *.gd
+  grep -nE '(UI\.(label|wrap|rich)|[^a-z_]_line)\(.*, (1[0-46-9]|2[1-9]|3[1-9]|[5-9][0-9])(, |\))|font_size", (1[0-46-9]|2[1-9]|3[1-9])\)|font_size=[0-9]+\]' *.gd | grep -vE 'font_size=(15|20|30|40)\]'
+  grep -nE '%[ds]g[" )]' *.gd
+  grep -nE 'UI\.(label|heading|chip|button|primary)\(.*to_upper\(\)\s*[,)]|UI\.(label|heading|chip)\("[A-Z]{3,} [A-Z]{3,}' *.gd
+} )
+if [ -n "$style" ]; then echo "STYLE:"; echo "$style" | head -20; fail=1; else echo "style: ok"; fi
 [ "$1" = "parse" ] && exit 0
 if [ "$1" = "sim" ]; then
   out=$(timeout 900 $G --headless --path . -s tools/balance_sim.gd -- quick 2>&1)

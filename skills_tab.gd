@@ -1,6 +1,6 @@
 class_name SkillsTab
 extends VBoxContainer
-## Character > Skills: the Skill Book. Every skill you've found from ability
+## Hero › Skills: the Skill Book. Every skill you've found from ability
 ## stones. Equip 3 active and 5 passive (slots open as you level), rank them
 ## up with duplicate stones, and craft any skill with dust.
 

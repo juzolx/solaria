@@ -21,6 +21,8 @@ var item_tabs: TabContainer
 var town_tabs: TabContainer
 var town_page: VBoxContainer    # the Town group: a "back to the map" bar over town_tabs
 var town_talk: Label            # what the building's keeper says
+var _talk_heard := {}   # town pages whose keeper has spoken this session (Fable r3 #4)
+var _talk_page := -1
 var town_keeper: TextureRect    # and their picture beside it
 var town_back: Control
 var fight_frame: Control
@@ -88,6 +90,7 @@ var room_view: RoomView
 var _room_ready := false
 var _room_waiting := false
 var log_label: RichTextLabel
+var log_phone: Label   # phones: the newest message, ellipsised to the lines that fit; a tap opens the log
 var bg_wall: TextureRect  # next update: the torchlit wall (sized with the screen)
 var _last_nav := -1
 var ui_root: MarginContainer
@@ -537,7 +540,7 @@ func _show_path_choice() -> void:
 	var title := Realms.path_title(state)
 	if title == "":
 		title = "A cursed shrine" if "shrine" in state.path_offer else "A fork in the dungeon"
-	var t := UI.label(title, 18, UI.GOLD if not "shrine" in state.path_offer else UI.PURPLE)
+	var t := UI.label(title, UI.FONT_TITLE, UI.GOLD if not "shrine" in state.path_offer else UI.PURPLE)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(t)
 	var row := UI.hbox(8)
@@ -603,11 +606,9 @@ func _show_recap() -> void:
 	recap_panel = DeathScreen.regular(r, func():
 		if is_instance_valid(recap_panel):
 			recap_panel.queue_free(),
-		func():
-			profile.show_recap = false
-			profile.save()
-			if is_instance_valid(recap_panel):
-				recap_panel.queue_free())
+		func(on: bool):   # the "Show this card after every fall" check (Fable r3 #5)
+			profile.show_recap = on
+			profile.save())
 	battle.add_child(recap_panel)
 	recap_panel.custom_minimum_size.x = minf(520.0, battle.size.x - 24.0)
 	await get_tree().process_frame
@@ -746,7 +747,7 @@ func _build_ui() -> void:
 	tabs.tab_changed.connect(func(_i): sfx.play("click"); refresh(); UI.fade_in(tabs.get_current_tab_control()))
 	body.add_child(tabs)
 	_build_nav(main_v)
-	char_tabs = _group("Character")
+	char_tabs = _group("Hero")   # Fable r3 #1: the same word as the phone nav and every tip
 	item_tabs = _group("Items")
 	town_page = UI.vbox(6)
 	town_page.name = "Town"
@@ -755,31 +756,33 @@ func _build_ui() -> void:
 	# Phone fit: the way back to the map sits beside the keeper, above their line, not on a row of its own.
 	var talk_row := UI.hbox(8)
 	town_page.add_child(talk_row)
-	town_keeper = TextureRect.new()
-	town_keeper.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	town_keeper.custom_minimum_size = Vector2(128, 128)   # 2x the 64 px art: the keeper fills the left column beside the way back and their line
-	town_keeper.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	town_keeper.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	talk_row.add_child(town_keeper)
-	var talk_col := UI.vbox(6)
-	talk_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	talk_col.alignment = BoxContainer.ALIGNMENT_CENTER
-	talk_row.add_child(talk_col)
 	town_back = UI.hbox(8)
-	talk_col.add_child(town_back)
-	var back_btn := UI.button("◀  Town map", func():
+	town_back.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	talk_row.add_child(town_back)
+	var back_btn := UI.button("‹ Map", func():
 		nav_page = 0
 		_apply_nav()
 		refresh())
 	back_btn.custom_minimum_size = Vector2(0, UI.TAP)
+	back_btn.tooltip_text = "Back to the town map"
 	town_back.add_child(back_btn)
+	town_keeper = TextureRect.new()
+	town_keeper.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	town_keeper.custom_minimum_size = Vector2(64, 64)   # Fable r3 #4: the header is one row; tap the keeper to hear them
+	town_keeper.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	town_keeper.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	town_keeper.mouse_filter = Control.MOUSE_FILTER_STOP
+	town_keeper.gui_input.connect(func(ev: InputEvent):
+		if (ev is InputEventScreenTouch and ev.pressed) or (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT):
+			town_talk.visible = not town_talk.visible)
+	talk_row.add_child(town_keeper)
+	building_bar = BuildingBar.new()
+	building_bar.setup(self)
+	talk_row.add_child(building_bar)
 	town_talk = UI.label("", UI.FONT_BODY, Color("#d8c9a8"))
 	town_talk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	town_talk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	talk_col.add_child(town_talk)
-	building_bar = BuildingBar.new()
-	building_bar.setup(self)
-	town_page.add_child(building_bar)
+	town_page.add_child(town_talk)
 	town_tabs = TabContainer.new()
 	town_tabs.name = "TownPages"
 	town_tabs.theme_type_variation = "SubTabs"
@@ -899,7 +902,11 @@ func _fit_layout() -> void:
 		# for the tallest Calamities at 2x (monsters Fable r3)
 		var design_h := float(win.y) * float(want.x) / maxf(1.0, float(win.x))   # the layout is 504 wide and as tall as the screen allows
 		var lines := 2.0 if design_h >= 1000.0 else 1.0
-		log_label.custom_minimum_size.y = ceilf(lines * fh + 4.0) if tall else 80.0
+		log_label.custom_minimum_size.y = 80.0
+		log_label.visible = not tall
+		log_phone.visible = tall
+		log_phone.max_lines_visible = int(lines)
+		log_phone.custom_minimum_size.y = ceilf(lines * fh + 2.0)
 
 func _group(title: String) -> TabContainer:
 	var t := TabContainer.new()
@@ -1001,7 +1008,7 @@ func _build_top_bar(parent: Control) -> void:
 	scrap_label = s[1]
 	dust_label = d[1]
 	potion_label = p2[1]
-	(g[0] as Control).tooltip_text = "Gold: from enemies and selling. Spend it in Town > Shop."
+	(g[0] as Control).tooltip_text = "Gold: from enemies and selling. Spend it in Town › Shop."
 	(s[0] as Control).tooltip_text = "Scrap: from salvaging and chests. Use it to upgrade, reroll and craft."
 	(d[0] as Control).tooltip_text = "Dust: from bosses, rare monsters and maxed skills. Crafts skills and Set items, and pays for the best upgrades."
 	(p2[0] as Control).tooltip_text = "Potions heal 40% HP."
@@ -1040,13 +1047,26 @@ func _build_fight(parent: Control) -> void:
 	var goal_row := UI.vbox(2)
 	col.add_child(goal_row)
 	goal_label = UI.label("", UI.FONT_BODY, UI.GOLD)
-	goal_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	goal_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS   # Fable r3: one line; the whole goal on a tap
+	goal_label.clip_text = true
+	UI.tip(goal_label, "")
 	goal_row.add_child(goal_label)
 	goal_bar = UI.bar(UI.GOLD, 5)
 	goal_row.add_child(goal_bar)
 	log_label = UI.rich(UI.FONT_BODY, false)
 	log_label.custom_minimum_size = Vector2(0, 80)
 	col.add_child(log_label)
+	log_phone = UI.label("", UI.FONT_BODY, UI.TEXT)
+	log_phone.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	log_phone.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	log_phone.clip_text = true
+	log_phone.visible = false
+	log_phone.mouse_filter = Control.MOUSE_FILTER_STOP
+	log_phone.tooltip_text = "Tap for the fight log"
+	log_phone.gui_input.connect(func(ev: InputEvent):
+		if (ev is InputEventScreenTouch and ev.pressed) or (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT):
+			_open_log())
+	col.add_child(log_phone)
 
 	attack_button = UI.primary("Attack", _manual_turn, UI.RED)
 	attack_button.custom_minimum_size = Vector2(0, UI.TAP + 8)
@@ -1208,6 +1228,10 @@ func _leave_town() -> void:
 	timer.start()
 	refresh()
 
+## The top of the nav bar on screen (or the bottom of the safe area): toasts and the coach sit on it.
+func nav_top() -> float:
+	return UI.floor_y(get_viewport().get_visible_rect().size.y)
+
 ## A short message near the top of the screen (works in town too, where the fight view is hidden).
 func toast(text: String) -> void:
 	var vp := get_viewport().get_visible_rect().size
@@ -1223,7 +1247,7 @@ func toast(text: String) -> void:
 	add_child(p)
 	p.reset_size()
 	# Phones: just above the bottom bar, so it never covers the tabs at the top
-	var y := 64.0 if not is_tall else vp.y - p.size.y - 96.0
+	var y := 64.0 if not is_tall else nav_top() - p.size.y - 12.0
 	p.position = Vector2((vp.x - p.size.x) / 2.0, y)
 	var tw := p.create_tween()
 	tw.tween_interval(2.4 + text.length() / 30.0)
@@ -1304,6 +1328,12 @@ func _sync_town() -> void:
 	if not inside:
 		return
 	town_talk.text = Lore.talk(state, town_tabs.current_tab)
+	if not _talk_heard.has(town_tabs.current_tab):   # the keeper speaks once a session; a tap on them says it again
+		_talk_heard[town_tabs.current_tab] = true
+		town_talk.visible = true
+	elif _talk_page != town_tabs.current_tab:
+		town_talk.visible = false
+	_talk_page = town_tabs.current_tab
 	town_keeper.texture = Lore.keeper_art(town_tabs.current_tab)
 	town_keeper.visible = town_keeper.texture != null
 	building_bar.refresh(town_tabs.current_tab)
@@ -1362,8 +1392,8 @@ func confirm(title: String, text: String, yes_text: String, on_yes: Callable) ->
 func _show_calamity(e: Dictionary) -> void:
 	sfx.play("boss_intro")
 	var col := Color(String(e.get("color", "#e43b44")))
-	var o := Overlay.new().open(self, "A CALAMITY APPROACHES", 460.0, Color("#e43b44"), false)
-	var nm := UI.label(String(e["name"]), 24, col.lightened(0.2))
+	var o := Overlay.new().open(self, "A Calamity approaches", 460.0, Color("#e43b44"), false)
+	var nm := UI.label(String(e["name"]), UI.FONT_TITLE, col.lightened(0.2))
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	o.content.add_child(nm)
 	o.content.add_child(UI.wrap(String(e["lore"]), UI.FONT_BODY, UI.DIM))
@@ -1393,7 +1423,7 @@ func _blackout(who: String) -> void:
 	black.mouse_filter = Control.MOUSE_FILTER_STOP
 	black.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	layer.add_child(black)
-	var txt := UI.label("Everything goes black...", 18, Color("#94a3b8"))
+	var txt := UI.label("Everything goes black...", UI.FONT_TITLE, Color("#94a3b8"))
 	txt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	txt.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1451,7 +1481,7 @@ func _give_class_outfit() -> void:
 		state.add_to_wardrobe(item)
 	state.save_game()
 
-## A God class answered (its secret deeds are done): swap now, or later from Character > Class.
+## A God class answered (its secret deeds are done): swap now, or later from Hero › Class.
 func _show_god_offer(id: String) -> void:
 	if _popup_open() or not id in state.god_offers:
 		return
@@ -1467,7 +1497,7 @@ func _show_god_offer(id: String) -> void:
 			_play_moments.call_deferred()
 		o.close()
 		refresh()))
-	o.content.add_child(UI.wrap("It's for good: the God class replaces your class. Not now? It waits in Character > Class.", UI.FONT_BODY, UI.DIM))
+	o.content.add_child(UI.wrap("It's for good: the God class replaces your class. Not now? It waits in Hero › Class.", UI.FONT_BODY, UI.DIM))
 
 ## Levels 15, 35 and 75: choose where your Evolution Tree goes.
 func _show_tree_picker() -> void:
@@ -1727,16 +1757,35 @@ func _pull_messages() -> void:
 	for msg in state.messages:
 		log_lines.append(msg)
 	state.messages.clear()
-	while log_lines.size() > 5:
+	while log_lines.size() > 20:   # the tap-open log keeps 20; the wide panel shows the last 5
 		log_lines.pop_front()
 	var text := ""
-	var first := maxi(0, log_lines.size() - 2) if is_tall else 0  # phones: the newest two lines
+	var first := maxi(0, log_lines.size() - 5)
+	if log_phone:
+		log_phone.text = _plain(log_lines[log_lines.size() - 1])
 	for n in range(first, log_lines.size()):
 		if n < log_lines.size() - 1:
 			text += "[color=%s]%s[/color]\n" % [UI.hex(UI.DIM), log_lines[n]]
 		else:
 			text += log_lines[n]
 	log_label.text = text
+
+## A message without its BBCode (the phone log line is a plain Label so it can end in "...").
+static var _bb_re: RegEx
+func _plain(s: String) -> String:
+	if _bb_re == null:
+		_bb_re = RegEx.create_from_string("\\[[^\\]]*\\]")
+	return _bb_re.sub(s, "", true)
+
+## The last 20 lines of the fight, newest at the bottom.
+func _open_log() -> void:
+	var o := Overlay.new().open(self, "Fight log", 520.0)
+	var t := UI.rich(UI.FONT_BODY)
+	var lines: Array = []
+	for n in log_lines.size():
+		lines.append(("[color=%s]%s[/color]" % [UI.hex(UI.DIM), log_lines[n]]) if n < log_lines.size() - 1 else log_lines[n])
+	t.text = "\n".join(lines) if not lines.is_empty() else "Nothing has happened yet."
+	o.content.add_child(t)
 
 func _refresh_top() -> void:
 	if state.hero_class != "":
@@ -1752,7 +1801,7 @@ func _refresh_top() -> void:
 		xp_bar.max_value = GameData.xp_to_next(state.level)
 		xp_bar.value = state.xp
 		xp_bar.tooltip_text = class_label.tooltip_text
-	zone_label.text = (GameData.rank_prefix(state.floor_num) + str(GameData.zone_for_floor(state.floor_num)["name"]) + "  -  " + GameData.sub_name(state.floor_num)).to_upper()
+	zone_label.text = (GameData.rank_prefix(state.floor_num) + str(GameData.zone_for_floor(state.floor_num)["name"]) + " · " + GameData.sub_name(state.floor_num))
 	floor_label.text = "Floor %d" % state.floor_num
 	var boss := state.enemy_is_boss
 	boss_pill.visible = boss
@@ -1833,6 +1882,7 @@ func _refresh_fight() -> void:
 	attack_button.disabled = not state.path_offer.is_empty() or state.enemy_hp <= 0
 	var goal := World.next_goal(state)
 	goal_label.text = "Next: " + String(goal.get("text", ""))
+	goal_label.tooltip_text = goal_label.text
 	goal_label.add_theme_color_override("font_color", goal.get("color", UI.GOLD))
 	var gp := float(goal.get("pct", -1.0))
 	goal_bar.visible = gp >= 0.0
@@ -1858,6 +1908,7 @@ func _build_nav(parent: Control) -> void:
 	nav_bar = PanelContainer.new()
 	nav_bar.add_theme_stylebox_override("panel", UiSkin.frame(UI.PANEL, UiSkin.IRON, 4))
 	parent.add_child(nav_bar)
+	UI.nav_ref = nav_bar
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
 	nav_bar.add_child(row)
@@ -1871,6 +1922,8 @@ func _build_nav(parent: Control) -> void:
 		b.custom_minimum_size = Vector2(0, 64)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.add_theme_font_size_override("font_size", UI.MIN_FONT)
+		b.set_meta("badge", 0)
+		b.draw.connect(_draw_badge.bind(b))
 		for st in ["normal", "hover", "pressed", "focus"]:
 			var sb := UI.style(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 8, 2, 0)
 			if st == "focus":
@@ -1893,6 +1946,17 @@ func _build_nav(parent: Control) -> void:
 			refresh())
 		row.add_child(b)
 		nav_buttons.append(b)
+
+## The nav stud: a 10 px red dot (2x grid, dark rim, one light pixel) on the icon's top-right.
+func _draw_badge(b: Button) -> void:
+	if int(b.get_meta("badge", 0)) <= 0:
+		return
+	var iw := float(b.icon.get_width()) if b.icon else 32.0
+	var o := Vector2(roundf(b.size.x / 2.0 + iw / 2.0 - 6.0), 0.0)
+	b.draw_rect(Rect2(o + Vector2(2, 0), Vector2(8, 12)), UiSkin.SOOT)
+	b.draw_rect(Rect2(o + Vector2(0, 2), Vector2(12, 8)), UiSkin.SOOT)
+	b.draw_rect(Rect2(o + Vector2(2, 2), Vector2(8, 8)), UI.RED)
+	b.draw_rect(Rect2(o + Vector2(4, 4), Vector2(2, 2)), UI.RED.lightened(0.5))
 
 func _apply_nav() -> void:
 	if nav_bar == null:
@@ -1981,7 +2045,7 @@ func _refresh_tabs() -> void:
 	for s in GameData.SLOT_ORDER:
 		if state.has_upgrade(s):
 			ups += 1
-	tabs.set_tab_title(0, "Character (%d)" % (pts + sk) if pts + sk > 0 else "Character")
+	tabs.set_tab_title(0, "Hero (%d)" % (pts + sk) if pts + sk > 0 else "Hero")
 	tabs.set_tab_title(1, "Items (%d)" % ups if ups > 0 else "Items")
 	char_tabs.set_tab_title(0, "Hero (%d)" % pts if pts > 0 else "Hero")
 	char_tabs.set_tab_title(3, "Skills (%d)" % sk if sk > 0 else "Skills")
@@ -1998,7 +2062,10 @@ func _refresh_tabs() -> void:
 	if nav_buttons.size() == NAV.size():
 		var counts := [0, pts + sk, ups, ready, 0, 0]
 		for i in NAV.size():
-			nav_buttons[i].text = NAV[i][0] + (" %d" % counts[i] if counts[i] > 0 else "")
+			if int(nav_buttons[i].get_meta("badge", 0)) != counts[i]:
+				nav_buttons[i].set_meta("badge", counts[i])
+				nav_buttons[i].tooltip_text = ("%d waiting" % counts[i]) if counts[i] > 0 else ""
+				nav_buttons[i].queue_redraw()
 		nav_buttons[3].visible = not tabs.is_tab_hidden(2)
 		nav_buttons[5].visible = not tabs.is_tab_hidden(4)
 
