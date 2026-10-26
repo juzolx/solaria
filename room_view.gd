@@ -13,6 +13,7 @@ var t := 0.0
 var key := ""
 var motes: Array = []
 var hit := {}              # "m<i>" / "d<i>" / "p<i>" -> Rect2 (tap targets)
+const TRAP_Z := 3.0   # a spotted trap's circle always lies here
 const LABEL_FS := 16       # prop names, the hint line and the floor title (same font as the fights)
 
 func setup(m) -> void:
@@ -49,16 +50,26 @@ func _gui_input(event: InputEvent) -> void:
 		p = event.position
 	else:
 		return
-	for k in hit:
+	var k := pick(p)
+	if k == "":
+		return
+	accept_event()
+	if k.begins_with("d"):
+		main.pick_door(int(k.substr(1)))
+	elif k.begins_with("p"):
+		main.interact_prop(int(k.substr(1)))
+	else:
+		main.engage_monster()
+
+## The tap target under p ("" = none). Props first: a prop standing in front of a door gets
+## the tap, not the door behind it.
+func pick(p: Vector2) -> String:
+	var keys: Array = hit.keys()
+	keys.sort_custom(func(a, b): return String(a).begins_with("p") and not String(b).begins_with("p"))
+	for k in keys:
 		if (hit[k] as Rect2).has_point(p):
-			accept_event()
-			if String(k).begins_with("d"):
-				main.pick_door(int(String(k).substr(1)))
-			elif String(k).begins_with("p"):
-				main.interact_prop(int(String(k).substr(1)))
-			else:
-				main.engage_monster()
-			return
+			return String(k)
+	return ""
 
 # =====================================================================
 # Drawing
@@ -79,7 +90,7 @@ func _draw() -> void:
 	var doors_open := state.door_pending()
 	var rtrap: Dictionary = state.room_trap
 	if not rtrap.is_empty() and rtrap.get("spotted", false) and not rtrap.get("done", false) and not doors_open:
-		things.append({"z": _prop_z(float(rtrap["y"])), "kind": "trap"})
+		things.append({"z": TRAP_Z, "kind": "trap"})
 	things.sort_custom(func(a, b): return float(a["z"]) > float(b["z"]))
 	for th in things:
 		if scene.draw_scenery(self, th):
@@ -106,7 +117,7 @@ func _draw() -> void:
 	elif doors_open and not state.room_props.is_empty() and String(state.room_props[0]["kind"]) == "merchant":
 		msg = "Tap Snik to trade, or pick a door"
 	draw_string_outline(font, Vector2(0, size.y - 14), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, LABEL_FS, 5, Color(0, 0, 0, 0.9))
-	draw_string(font, Vector2(0, size.y - 14), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, LABEL_FS, Color("#f6d88f"))
+	draw_string(font, Vector2(0, size.y - 14), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, LABEL_FS, Color("#fee761"))
 	var title := "%s  -  Floor %d" % [GameData.zone_for_floor(state.floor_num)["name"], state.floor_num]
 	draw_string_outline(font, Vector2(10, 24), title, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FS, 5, Color(0, 0, 0, 0.9))
 	draw_string(font, Vector2(10, 24), title, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FS, Color(1, 1, 1, 0.8))
@@ -144,6 +155,10 @@ func _draw_prop(i: int, font: Font) -> void:
 		if who.has("tex"):
 			rect = scene.sprite(self, who["tex"], x, z, 1.3, Color(0.6, 0.55, 0.55))
 	elif kind == "merchant":
+		if state.door_pending():
+			# while you pick a door Snik steps aside, below and left of them, so he never covers one
+			z = 2.6
+			x = _prop_x(0.25, z)
 		var sn := Sprites.enemy_by_key("treasure_goblin")
 		if sn.has("tex"):
 			rect = scene.sprite(self, SpriteLight.lit(sn["tex"], scene.zone), x, z, 1.4, Color.WHITE, bob)
@@ -155,7 +170,7 @@ func _draw_prop(i: int, font: Font) -> void:
 		if not used:
 			rect = _draw_gate()
 	elif kind == "camp":
-		rect = _draw_camp(-0.9, 2.1)   # by the left wall, below and beside the doors
+		rect = _draw_camp(-0.6, 2.1)   # by the left wall, below and beside the doors
 	elif tile != "":
 		var big := 1.5 if tile == "altar" else 1.3
 		rect = scene.sprite(self, scene.tx("res://art/props/%s.png" % tile), x, z, big, Color(0.6, 0.6, 0.6) if used else Color.WHITE)
@@ -167,21 +182,23 @@ func _draw_prop(i: int, font: Font) -> void:
 	var lab := String(Halls.PROP_NAMES.get(kind, kind))
 	if kind == "traveler":
 		lab = String(Travelers.info(String(p.get("who", "")))["name"])
-	var lc := Color("#f6d88f")
+	var lc := Color("#fee761")
 	if tile == "mimic":
 		lab = "Mimic!"
-		lc = Color("#f87171")
-	var at := Vector2(rect.get_center().x - 80, rect.end.y + 16)
-	draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, 160, LABEL_FS, 5, Color(0, 0, 0, 0.9))
-	draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, 160, LABEL_FS, lc)
+		lc = Color("#e43b44")
+	var lw := maxf(160.0, font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FS).x + 16.0)
+	var at := Vector2(rect.get_center().x - lw / 2.0, rect.end.y + 16)
+	draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, lw, LABEL_FS, 5, Color(0, 0, 0, 0.9))
+	draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, lw, LABEL_FS, lc)
 
 ## A trap you've spotted (hidden ones stay hidden): its rune circle on the floor (art/traps/<kind>.png,
 ## its own sigil in the middle), in the colour of what it does (Halls.TRAPS "color"). It doesn't turn
 ## (1 px lines would crawl); the colour pulses in two hard steps instead.
 func _draw_trap() -> void:
 	var rtrap: Dictionary = state.room_trap
-	var z := _prop_z(float(rtrap["y"]))
-	var x := _prop_x(float(rtrap["x"]), z)
+	# always the same spot: one size on screen, in front of the doors, never under the hero
+	var z := TRAP_Z
+	var x := 0.0
 	var fy := HallsScene.FLOOR_Y + 0.01
 	var col := Color(String(Halls.TRAPS[String(rtrap["kind"])].get("color", "#fee761")))
 	var tint := col if int(t * 2.0) % 2 == 0 else col.lightened(0.25)
@@ -341,12 +358,10 @@ func _draw_menagerie_room(leader_feet: Vector2, leader_sz: float, k: float) -> v
 ## a phone can see them (|x| <= 0.78 z).
 func _draw_camp(x: float, z: float) -> Rect2:
 	var s := scene.focal / z
-	var t1 := scene.sprite(self, scene.tx("res://art/props/tent.png"), x - 1.6, z + 1.2, 1.1)
-	var t2 := scene.sprite(self, scene.tx("res://art/props/tent.png"), x - 1.0, z + 0.7, 1.1)
-	var lamp := scene.proj(x - 1.0, HallsScene.FLOOR_Y + 1.0, z + 0.6)
-	var lw := roundf(s * 0.06)
-	draw_rect(Rect2(lamp - Vector2(lw, lw), Vector2(lw, lw) * 2.0), Color("#fee761"))
-	scene.glow(self, lamp, s * 0.5, Color("#feae34", 0.5 + 0.15 * sin(t * 5.0)))
+	var t1 := scene.sprite(self, scene.tx("res://art/props/tent.png"), x - 1.1, z + 1.2, 1.1)
+	var t2 := scene.sprite(self, scene.tx("res://art/props/tent.png"), x - 0.7, z + 0.7, 1.1)
+	var lamp := scene.sprite(self, scene.tx("res://art/props/candles.png"), x - 0.75, z + 0.55, 0.4)
+	scene.glow(self, Vector2(lamp.get_center().x, lamp.end.y), s * 0.5, Color("#feae34", 0.5 + 0.15 * sin(t * 5.0)))
 	var flick := 1.0 + 0.06 * sin(t * 9.0)
 	var fire := scene.sprite(self, scene.tx("res://art/props/cookfire.png"), x, z, 1.0, Color(flick, flick, flick))
 	scene.sprite(self, scene.tx("res://art/props/backpack.png"), x - 0.4, z - 0.2, 0.5)
