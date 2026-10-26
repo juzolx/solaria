@@ -7,6 +7,8 @@ extends RefCounted
 
 static var enabled := true
 static var _cache := {}
+static var _order: Array = []   # cache keys, oldest first
+const MAX_CACHED := 150         # ~150 rimmed monster textures; the oldest goes first (no all-at-once clear)
 
 ## The rimmed version of `tex` for region `zone` (0-9). Returns `tex` itself if it can't be read.
 static func lit(tex: Texture2D, zone: int) -> Texture2D:
@@ -15,11 +17,9 @@ static func lit(tex: Texture2D, zone: int) -> Texture2D:
 	var key := "%d|%d" % [tex.get_rid().get_id(), zone]
 	if _cache.has(key):
 		return _cache[key]
-	if _cache.size() > 800:
-		_cache.clear()
 	var src := tex.get_image()
 	if src == null:
-		_cache[key] = tex
+		_remember(key, tex)
 		return tex
 	var img := src.duplicate() as Image  # work on a copy of the monster's image
 	if img.is_compressed():
@@ -27,7 +27,7 @@ static func lit(tex: Texture2D, zone: int) -> Texture2D:
 	img.convert(Image.FORMAT_RGBA8)
 	var mood: Dictionary = HallsScene.MOODS[clampi(zone, 0, HallsScene.MOODS.size() - 1)]
 	var out := ImageTexture.create_from_image(shade(img, mood["accent"]))
-	_cache[key] = out
+	_remember(key, out)
 	return out
 
 ## The rimmed copy of an Image for region `zone` (no texture, no readback): fights shade the
@@ -41,6 +41,12 @@ static func lit_image(src: Image, zone: int) -> Image:
 	img.convert(Image.FORMAT_RGBA8)
 	var mood: Dictionary = HallsScene.MOODS[clampi(zone, 0, HallsScene.MOODS.size() - 1)]
 	return shade(img, mood["accent"])
+
+static func _remember(key: String, tex: Texture2D) -> void:
+	_cache[key] = tex
+	_order.append(key)
+	while _order.size() > MAX_CACHED:
+		_cache.erase(_order.pop_front())
 
 ## A new RGBA8 image with a 1 px rim of `rim` on every solid, non-outline pixel whose
 ## neighbour up or to the right is the outline or see-through (light from the upper right).

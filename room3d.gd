@@ -25,11 +25,11 @@ const NAMES := {
 	8: ["Gilded hall", "Fallen treasury", "Sun shrine"],
 	9: ["Spiked hall", "Burning pit", "Hellfire shrine"],
 }
-const PIX := 3.0           # screen pixels per rendered pixel: backdrop pixels match the 3x sprites
 const PX := 1.0 / 32.0     # world units per art pixel for every prop, torch and sign (one pixel size)
 const DOOR_PX := HallsScene.DOOR_W / 32.0   # doors fill their arch: 32 px = DOOR_W
 const TEXELS := 16.0       # wall, floor and ceiling texels per world unit (a 32 px tile per 2 units)
 const SEEN := 0.78         # a phone (430x932) sees |x| < 0.806 z; props keep inside 0.78 z
+const GAP_Z := -4.3        # the Collapsed chamber's hole in the ceiling (deep enough to be on screen)
 const MAX_PARTICLES := 24
 const ROOM_H := HallsScene.CEIL_Y - HallsScene.FLOOR_Y   # 4.0
 const HW := HallsScene.W / 2.0
@@ -41,6 +41,9 @@ var world: Node3D        # rebuilt for every room
 var root3: Node3D        # floor at local y = 0 (sits at FLOOR_Y)
 var flicker: Array[OmniLight3D] = []
 var portal: Sprite3D = null   # the champion's gate, two frames swapped
+var far_lit := false   # this room already has torches on the far wall
+var pool_mat: StandardMaterial3D   # the Flooded Vaults pool, two frames swapped like the portal
+static var _half := {}             # texture path -> half its drawn (opaque) width in art px
 var clock := 0.0
 var rng := RandomNumberGenerator.new()
 var kind := ""           # the room's name in this zone (shots, notes)
@@ -51,7 +54,9 @@ var amb_col := Color("#566a56")
 var accent := Color("#75a743")
 var fx_kind := "fireflies"
 var gate := false        # a champion's gate: the middle door is a glowing portal
-var _size := Vector2.ZERO
+var _size := Vector2.ZERO   # the view's design size (HallsScene.proj works in it)
+var _scr := 1.0             # design px -> screen px
+var _u := 3                 # screen px per viewport pixel (ArtStyle.unit), the sprites' one pixel size
 var _frame := 0
 static var _texcache := {}
 static var offscreen: Array = []   # props placed where a phone can't see them (tests read this)
@@ -88,32 +93,45 @@ func _process(delta: float) -> void:
 		o.light_energy = base * (1.0 + 0.11 * sin(clock * 9.0 + i * 2.1) + 0.07 * sin(clock * 23.0 + i))
 	if portal:
 		portal.texture = _tex("res://art/halls/portal_1.png" if int(clock * 4.0) % 2 else "res://art/halls/portal.png")
+	if pool_mat:
+		pool_mat.albedo_texture = _tex("res://art/halls/z2_pool_%d.png" % (int(clock * 2.0) % 2))
 
 func texture() -> Texture2D:
 	return vp.get_texture()
 
-## Matches the view's size: render at 1/PIX and set the camera to HallsScene's projection.
-func fit(sz: Vector2) -> void:
-	if sz == _size or sz.x < 8.0 or sz.y < 8.0:
+## Matches the view: one viewport pixel = ArtStyle.unit(scr) SCREEN pixels (3 on a phone),
+## the same as every sprite, and the camera keeps HallsScene's projection. sz is the view's
+## design size, scr its canvas scale (design px -> screen px).
+func fit(sz: Vector2, scr := 1.0) -> void:
+	if (sz == _size and is_equal_approx(scr, _scr)) or sz.x < 8.0 or sz.y < 8.0:
 		return
 	_size = sz
-	vp.size = Vector2i(maxi(8, int(sz.x / PIX)), maxi(8, int(sz.y / PIX)))
+	_scr = maxf(scr, 0.01)
+	_u = ArtStyle.unit(_scr)
+	vp.size = Vector2i(maxi(8, ceili(sz.x * _scr / _u)), maxi(8, ceili(sz.y * _scr / _u)))
 	if cam:
 		_aim()
 
+## The texture's size in design px: whole viewport pixels, so it may overhang the view
+## by less than one pixel (the view clips it).
+func drawn_size() -> Vector2:
+	return Vector2(vp.size) * float(_u) / _scr
+
 ## HallsScene: screen = (w/2, 0.40 h) + focal * (x / z, -y / z), focal = 0.62 w.
 ## A frustum camera with the same focal length and its center shifted below the horizon.
+## The texture is a little bigger than the view (whole pixels), so its centre is offset.
 func _aim() -> void:
 	var w := _size.x
 	var h := _size.y
+	var ds := drawn_size()
 	var f := 0.62 * w
 	var n := 0.05
 	cam.projection = Camera3D.PROJECTION_FRUSTUM
 	cam.keep_aspect = Camera3D.KEEP_HEIGHT
 	cam.near = n
 	cam.far = 40.0
-	cam.size = n * h / f
-	cam.frustum_offset = Vector2(0.0, n * (0.40 * h - 0.5 * h) / f)
+	cam.size = n * ds.y / f
+	cam.frustum_offset = Vector2(n * (0.5 * ds.x - 0.5 * w) / f, n * (0.40 * h - 0.5 * ds.y) / f)
 
 ## Builds the room for this floor and region. Same seed, same room.
 func rebuild(zone_i: int, seed_value: int, mood: Dictionary) -> void:
@@ -130,6 +148,8 @@ func rebuild(zone_i: int, seed_value: int, mood: Dictionary) -> void:
 	kind = base_kind if not NAMES.has(zone) else String(NAMES[zone][ki])
 	flicker.clear()
 	portal = null
+	pool_mat = null
+	far_lit = false
 	if world:
 		world.queue_free()
 	world = Node3D.new()
@@ -286,9 +306,10 @@ func _box(size: Vector3, pos: Vector3, mat: Material, rot := Vector3.ZERO) -> Me
 	root3.add_child(mi)
 	return mi
 
-## Records (and asserts) a placement the phone can't see: |x| must stay within SEEN * depth.
-func _check_seen(pos: Vector3, what: String) -> void:
-	var ok := absf(pos.x) <= SEEN * -pos.z + 0.001
+## Records (and asserts) a placement the phone can't see: |x| plus half the sprite's width
+## must stay within SEEN * depth.
+func _check_seen(pos: Vector3, what: String, half := 0.0) -> void:
+	var ok := absf(pos.x) + half <= SEEN * -pos.z + 0.001
 	if not ok:
 		offscreen.append("z%d %s %s at %s" % [zone, kind, what, pos])
 	assert(ok, "Room3D: %s at %s is outside a phone's view" % [what, pos])
@@ -306,8 +327,20 @@ func _sprite(tex: Texture2D, pos: Vector3, shaded := true, billboard := true, px
 	s.position = pos
 	root3.add_child(s)
 	if billboard:
-		_check_seen(pos, tex.resource_path.get_file() if tex else "sprite")
+		_check_seen(pos, tex.resource_path.get_file() if tex else "sprite", _half_w(tex) * px)
 	return s
+
+## Half the opaque width of a texture, in art px (props sit on padded canvases). Cached.
+static func _half_w(tex: Texture2D) -> float:
+	if tex == null:
+		return 0.0
+	var k := tex.resource_path if tex.resource_path != "" else str(tex.get_rid().get_id())
+	if not _half.has(k):
+		var img := tex.get_image()
+		var r := img.get_used_rect() if img else Rect2i(0, 0, tex.get_width(), 0)
+		var c := tex.get_width() / 2.0
+		_half[k] = maxf(absf(r.position.x - c), absf(r.end.x - c))
+	return _half[k]
 
 func _flat(tex: Texture2D, pos: Vector3, size: Vector2, rot: Vector3, glow := false, tint := Color.WHITE) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
@@ -319,6 +352,9 @@ func _flat(tex: Texture2D, pos: Vector3, size: Vector2, rot: Vector3, glow := fa
 	m.albedo_color = tint
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	if tex:
+		# one art pixel = PX world units: a quad bigger than its art repeats it
+		m.uv1_scale = Vector3(size.x / (tex.get_width() * PX), size.y / (tex.get_height() * PX), 1.0)
 	if glow:
 		# lit by itself, in hard alpha steps (no additive haze)
 		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -355,15 +391,15 @@ func _torch(pos: Vector3) -> void:
 	if zone == 5:
 		var wisp := _sprite(_tex("res://art/halls/z5_wisp.png"), pos - Vector3(0, 0.25, 0), false, true)
 		wisp.position.x = clampf(wisp.position.x, -SEEN * -pos.z, SEEN * -pos.z)
-		_light(pos + Vector3(-signf(pos.x) * 0.3, 0.1, 0.0), accent, 1.6, 4.0)
+		_light(pos + Vector3(-signf(pos.x) * 0.3, 0.1, 0.0), accent, 2.4, 4.5)
 		return
 	_sprite(_zart("torch", "res://art/dungeon/torch.png"), pos - Vector3(0, 0.45, 0), false)
 	var push := Vector3(-signf(pos.x) * 0.3, 0.1, 0.0) if absf(pos.x) > 1.5 else Vector3(0, 0.1, 0.3)
 	_light(pos + push, light_col, 2.2, 4.5)
 
 ## A pool of light on the floor (under a hole in the ceiling): the glow sprite in hard steps.
-func _light_pool(x: float, z: float, r: float) -> void:
-	_flat(_tex("res://art/fx/glow.png"), Vector3(x, 0.015, z), Vector2(r * 2.0, r), Vector3(-90, 0, 0), true, Color(light_col, 0.55))
+func _light_pool(x: float, z: float) -> void:
+	_flat(_tex("res://art/fx/glow.png"), Vector3(x, 0.015, z), Vector2(32, 16) * PX, Vector3(-90, 0, 0), true, Color(light_col, 0.55))
 	_light(Vector3(x, ROOM_H - 0.4, z), light_col, 1.2, ROOM_H + 1.0, false)
 
 func _particles(count: int, color: Color, size: float, falling: bool, rising := false) -> void:
@@ -401,7 +437,7 @@ func _environment(dark: float) -> void:
 	e.background_color = Color("#0e0812")
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	e.ambient_light_color = amb_col.darkened(0.5)
-	e.ambient_light_energy = clampf(1.15 - dark, 0.4, 0.95)
+	e.ambient_light_energy = clampf(1.15 - dark, 0.5, 0.95)   # deep floors never flatten to black
 	e.fog_enabled = false
 	e.glow_enabled = false
 	e.tonemap_mode = Environment.TONE_MAPPER_LINEAR
@@ -416,15 +452,20 @@ func _environment(dark: float) -> void:
 func _shell() -> void:
 	var wall := _wall_mat()
 	var floor_m := _mat(_zpath("floor", "res://art/halls/z1_floor.png"))
-	var ceil_m := _mat(_zpath("ceil", "res://art/halls/z1_ceil.png"), Color(0.75, 0.75, 0.75))
-	_box(Vector3(HallsScene.W, 0.2, RD + 1.0), Vector3(0, -0.1, -RD / 2.0 + 0.5), floor_m)
+	var ceil_m := _mat(_zpath("ceil", "res://art/halls/z1_ceil.png"))
+	# the floor runs on under the far wall (no seam of background between them)
+	_box(Vector3(HallsScene.W, 0.2, RD + 1.6), Vector3(0, -0.1, -RD / 2.0 + 0.2), floor_m)
 	if base_kind != "Collapsed chamber":
 		_box(Vector3(HallsScene.W, 0.2, RD + 1.0), Vector3(0, ROOM_H + 0.1, -RD / 2.0 + 0.5), ceil_m)
 	else:
-		var gap_z := -RD * 0.42
-		_box(Vector3(HallsScene.W, 0.2, RD * 0.42 + 0.6), Vector3(0, ROOM_H + 0.1, gap_z / 2.0 + 0.15), ceil_m)
-		_box(Vector3(HallsScene.W, 0.2, RD * 0.42), Vector3(0, ROOM_H + 0.1, -RD + RD * 0.21), ceil_m)
-		_box(Vector3(HallsScene.W * 0.35, 0.2, 1.4), Vector3(-HallsScene.W * 0.33, ROOM_H + 0.1, gap_z - 0.6), ceil_m)
+		# a hole in the ceiling deep enough (GAP_Z) that the phone sees it, not just its light
+		var near_len := 1.0 - (GAP_Z + 0.6)
+		_box(Vector3(HallsScene.W, 0.2, near_len), Vector3(0, ROOM_H + 0.1, 1.0 - near_len / 2.0), ceil_m)
+		var far_len := (GAP_Z - 0.6) + RD
+		_box(Vector3(HallsScene.W, 0.2, far_len), Vector3(0, ROOM_H + 0.1, -RD + far_len / 2.0), ceil_m)
+		_box(Vector3(HallsScene.W * 0.35, 0.2, 1.2), Vector3(-HallsScene.W * 0.33, ROOM_H + 0.1, GAP_Z), ceil_m)
+	# one steady fill under the ceiling: the near room is lit, the far wall falls off
+	_light(Vector3(0, ROOM_H - 0.3, -1.6), amb_col, 0.6, 5.5, false)
 	_box(Vector3(0.4, ROOM_H, RD + 1.0), Vector3(-HW - 0.2, ROOM_H / 2.0, -RD / 2.0 + 0.5), wall)
 	_box(Vector3(0.4, ROOM_H, RD + 1.0), Vector3(HW + 0.2, ROOM_H / 2.0, -RD / 2.0 + 0.5), wall)
 	# far wall with three arched doorways (CSG), at HallsScene's door spots
@@ -460,7 +501,9 @@ func _shell() -> void:
 			portal = _sprite(_tex("res://art/halls/portal.png"), Vector3(x, 0.0, -RD - 0.25), false, false, DOOR_PX)
 			_light(Vector3(x, dh * 0.5, -RD + 0.4), accent, 1.6, 3.5)
 		else:
-			_sprite(_zart("door", "res://art/halls/door.png"), Vector3(x, 0.0, -RD - 0.25), true, false, DOOR_PX)
+			# unshaded: the door art carries its own light, so it never sinks into a dark far wall
+			var door := _sprite(_zart("door", "res://art/halls/door.png"), Vector3(x, 0.0, -RD - 0.25), false, false, DOOR_PX)
+			door.modulate = amb_col.lightened(0.15)
 
 func _pillars(rows: Array, mat: Material, with_beams: bool) -> void:
 	for zz in rows:
@@ -474,19 +517,19 @@ func _vines_on_walls(count: int) -> void:
 	for i in count:
 		var side := -1.0 if i % 2 == 0 else 1.0
 		var z := rng.randf_range(-RD + 0.6, -1.4)
-		var length := rng.randf_range(1.0, 2.2)
-		_flat(vine_tex(rng.randi_range(1, 6)), Vector3(side * (HW - 0.03), ROOM_H - length / 2.0, z), Vector2(length / 3.0, length), Vector3(0, -90.0 * side, 0))
+		var sz := Vector2(16, 48) * PX
+		_flat(vine_tex(rng.randi_range(1, 6)), Vector3(side * (HW - 0.03), ROOM_H - sz.y / 2.0, z), sz, Vector3(0, -90.0 * side, 0))
 
 func _vines_hanging(count: int) -> void:
 	for i in count:
-		var length := rng.randf_range(0.8, 1.6)
+		var sz := Vector2(16, 48) * PX
 		var x := rng.randf_range(-HW + 0.5, HW - 0.5)
 		var z := rng.randf_range(-RD + 0.8, -1.8)
-		_flat(vine_tex(rng.randi_range(1, 6)), Vector3(x, ROOM_H - length / 2.0, z), Vector2(length / 3.0, length), Vector3.ZERO)
+		_flat(vine_tex(rng.randi_range(1, 6)), Vector3(x, ROOM_H - sz.y / 2.0, z), sz, Vector3.ZERO)
 
 func _moss_patches(count: int) -> void:
 	for i in count:
-		var s := rng.randf_range(0.6, 1.0)
+		var s := 32.0 * PX
 		var x := rng.randf_range(-HW + 0.6, HW - 0.6)
 		_flat(moss_tex(), Vector3(x, 0.01, rng.randf_range(-RD + 0.8, -2.6)), Vector2(s, s), Vector3(-90, rng.randf_range(0, 360), 0))
 
@@ -517,25 +560,19 @@ func _rubble(at: Vector3) -> void:
 	_sprite(prop("boulder"), at)
 	_sprite(prop("pillar_broken"), at + Vector3(signf(at.x) * 0.4, 0, -0.7))
 
-## The zone's own props (chest, altar) at the room's sides; zones without their own use the shared ones.
+## Everyday things along the walls. Never a chest, altar, nest or mimic: those are the room's
+## one thing (the views draw it), and a second one you can't tap breaks "one thing, tap it".
+const EVENT_ART := ["chest", "chest_open", "altar", "nest", "mimic"]
 func _zone_props() -> void:
 	var side := -1.0 if rng.randf() < 0.5 else 1.0
-	var chest := _zart("chest", "res://art/props/chest.png")
-	var altar := _zart("altar", "res://art/props/altar.png")
 	match base_kind:
 		"Overgrown hall":
-			_sprite(chest, Vector3(-side * (HW - 0.65), 0, -RD + 1.1))
+			_sprite(prop("sarcophagus" if zone == 1 else "crate"), Vector3(-side * (HW - 0.9), 0, -RD + 1.1))
+			_sprite(prop("urn"), Vector3(side * (HW - 0.8), 0, -3.6))
+			_sprite(prop("barrel"), Vector3(-side * (HW - 0.8), 0, -3.8))
 		"Collapsed chamber":
-			_sprite(chest, Vector3(-HW + 0.8, 0, -RD + 0.7))
-		"Forgotten shrine":
-			_sprite(altar, Vector3(side * (HW - 0.55), 0, -3.4))
-	# every zone: a few everyday things along the walls
-	match base_kind:
-		"Overgrown hall":
-			_sprite(prop("urn"), Vector3(side * (HW - 0.6), 0, -3.4))
-			_sprite(prop("barrel" if rng.randf() < 0.5 else "crate"), Vector3(-side * (HW - 0.6), 0, -3.6))
-		"Collapsed chamber":
-			_sprite(prop("skeleton"), Vector3(HW - 0.7, 0, -3.2))
+			_sprite(prop("barrel"), Vector3(-HW + 1.0, 0, -RD + 0.7))
+			_sprite(prop("skeleton"), Vector3(HW - 0.9, 0, -3.6))
 		"Root-choked passage", "Mushroom grotto":
 			_sprite(prop("boulder"), Vector3(side * (HW - 0.6), 0, -RD + 1.4))
 
@@ -546,33 +583,37 @@ func _signature() -> void:
 			for side in [-1.0, 1.0]:
 				_sprite(prop("bones"), Vector3(side * 2.4, 0, -rng.randf_range(4.0, 5.0)))
 				_sprite(prop("skull"), Vector3(side * 2.2, 0, -rng.randf_range(3.6, 4.4)))
-		2:   # a pool of dark water on the floor, a cold light in it
+		2:   # a pool of dark water on the floor, its rim rippling, a cold light in it
 			var pz := -rng.randf_range(2.8, 3.6)
-			_flat(_tex(_zpath("floor", "res://art/halls/z1_floor.png")), Vector3(rng.randf_range(-0.6, 0.6), 0.012, pz), Vector2(1.8, 1.1), Vector3(-90, 0, 0), false, Color("#253a5e"))
+			var pool := _flat(_tex("res://art/halls/z2_pool_0.png"), Vector3(rng.randf_range(-0.6, 0.6), 0.012, pz), Vector2(64, 32) * PX, Vector3(-90, 0, 0))
+			pool_mat = pool.material_override
 			_light(Vector3(0, 0.3, pz), accent, 0.9, 2.6, false)
 		3:   # glowing seams in the floor
 			for i in 4:
 				var z := -rng.randf_range(2.6, RD - 0.4)
 				var x := rng.randf_range(-SEEN * -z + 0.6, SEEN * -z - 0.6)
-				_flat(_tex("res://art/halls/z3_crack.png"), Vector3(x, 0.013, z), Vector2(32, 8) * PX * 2.0, Vector3(-90, rng.randf_range(-30, 30), 0), true)
+				_flat(_tex("res://art/halls/z3_crack.png"), Vector3(x, 0.013, z), Vector2(32, 8) * PX, Vector3(-90, rng.randf_range(-30, 30), 0), true)
 			_light(Vector3(0, 0.2, -3.6), accent, 0.8, 3.0)
 		4:   # a carved eye above the middle door
-			_flat(_tex("res://art/halls/z4_eye.png"), Vector3(0, HallsScene.DOOR_H + 0.55, -RD + 0.02), Vector2(32, 16) * PX * 1.5, Vector3.ZERO, true)
+			_flat(_tex("res://art/halls/z4_eye.png"), Vector3(0, HallsScene.DOOR_H + 0.55, -RD + 0.02), Vector2(32, 16) * PX, Vector3.ZERO, true)
 			_light(Vector3(0, HallsScene.DOOR_H + 0.5, -RD + 0.6), accent, 0.7, 2.0, false)
+		5:   # two more wisps on the far wall: the Hushwood has no fire
+			if not far_lit:
+				for side in [-1.0, 1.0]:
+					_torch(Vector3(side * 1.0, 2.6, -RD + 0.05))
 		6:   # crystal shards at the wall feet
 			for i in 4:
 				var side := -1.0 if i % 2 == 0 else 1.0
 				_sprite(_tex("res://art/halls/z6_crystal.png"), Vector3(side * 2.4, 0, -rng.randf_range(3.4, 5.0)), false)
 			_light(Vector3(0, 0.4, -4.2), accent, 0.8, 3.5, false)
-		7:   # a brass pipe run along one wall, turning up at the far end
+		7:   # a brass pipe run along one wall, turning up the far wall (art/halls/z7_pipe.png repeats)
 			var side7 := -1.0 if rng.randf() < 0.5 else 1.0
-			var brass := _wall_mat(Color("#c8a060"))
-			_box(Vector3(0.18, 0.18, RD), Vector3(side7 * (HW - 0.15), 3.0, -RD / 2.0), brass)
-			_box(Vector3(0.18, 3.0, 0.18), Vector3(side7 * (HW - 0.15), 1.5, -RD + 0.2), brass)
-		8:   # gold pillars at the far corners
-			var gold := _wall_mat(Color("#c8a060"))
+			var pipe := _tex("res://art/halls/z7_pipe.png")
+			_flat(pipe, Vector3(side7 * (HW - 0.03), 3.0, -RD / 2.0), Vector2(RD, 16.0 * PX), Vector3(0, -90.0 * side7, 0))
+			_flat(pipe, Vector3(side7 * (HW - 0.4), 1.5, -RD + 0.02), Vector2(3.0, 16.0 * PX), Vector3(0, 0, 90))
+		8:   # gilded pillars at the far corners (art/halls/z8_pillar.png repeats upward)
 			for side in [-1.0, 1.0]:
-				_box(Vector3(0.45, ROOM_H, 0.45), Vector3(side * (HW - 0.35), ROOM_H / 2.0, -RD + 0.4), gold)
+				_flat(_tex("res://art/halls/z8_pillar.png"), Vector3(side * (HW - 0.3), ROOM_H / 2.0, -RD + 0.02), Vector2(16.0 * PX, ROOM_H), Vector3.ZERO)
 		9:   # rows of spikes at the wall feet
 			for side in [-1.0, 1.0]:
 				for k in 2:
@@ -605,9 +646,10 @@ func _overgrown_hall() -> void:
 		rows.append(z)
 		z -= rng.randf_range(1.8, 2.2)
 	_pillars(rows, dark, true)
-	_torch(Vector3(-HW + 0.08, 2.0, -4.1))
-	_torch(Vector3(HW - 0.08, 2.0, -4.1))
+	_torch(Vector3(-HW + 0.08, 2.0, -4.6))
+	_torch(Vector3(HW - 0.08, 2.0, -4.6))
 	if rng.randf() < 0.5:
+		far_lit = true
 		_torch(Vector3(-1.0, 2.6, -RD + 0.05))
 		_torch(Vector3(1.0, 2.6, -RD + 0.05))
 	if zone == 0:
@@ -617,26 +659,25 @@ func _overgrown_hall() -> void:
 
 func _collapsed_chamber() -> void:
 	var dark := _wall_mat(Color(0.62, 0.62, 0.62))
-	var gap_z := -RD * 0.42 - 0.3
-	_light_pool(0.4, gap_z, 0.9)
-	_rubble(Vector3(-1.7, 0, -3.0))
+	_light_pool(0.4, GAP_Z)
+	_rubble(Vector3(-1.6, 0, GAP_Z + 0.2))
 	_sprite(prop("boulder"), Vector3(2.0, 0, -4.6))
 	_box(Vector3(0.5, ROOM_H, 0.5), Vector3(HW - 0.25, ROOM_H / 2.0, -1.5), dark)
 	_box(Vector3(0.5, 1.1, 0.5), Vector3(-HW + 0.25, 0.55, -1.5), dark)
 	_box(Vector3(0.5, 2.4, 0.5), Vector3(-HW + 0.6, 0.25, -3.3), dark, Vector3(88, 12, 0))
 	_box(Vector3(HallsScene.W * 0.8, 0.3, 0.35), Vector3(0.3, 3.2, -RD + 1.4), dark, Vector3(0, 8, -14))
-	_torch(Vector3(HW - 0.08, 2.0, -4.0))
+	_torch(Vector3(HW - 0.08, 2.0, -4.6))
 	_sprite(prop("bones"), Vector3(1.9, 0, -3.0))
 	_sprite(prop("skull"), Vector3(1.5, 0, -2.7))
 	if zone == 0:
 		_vines_on_walls(3)
 
 func _mushroom_grotto() -> void:
-	var spots := [Vector3(-1.8, 0, -3.0), Vector3(1.8, 0, -3.2), Vector3(-2.1, 0, -4.3), Vector3(2.1, 0, -4.5)]
+	var spots := [Vector3(-1.5, 0, -3.4), Vector3(1.5, 0, -3.6), Vector3(-2.0, 0, -4.5), Vector3(2.0, 0, -4.7)]
 	for sp in spots:
 		var c: Vector3 = sp
 		for i in rng.randi_range(2, 3):
-			_sprite(prop("mushrooms"), c + Vector3(rng.randf_range(-0.3, 0.3), 0, rng.randf_range(-0.3, 0.3)), false)
+			_sprite(prop("mushrooms"), c + Vector3(rng.randf_range(-0.2, 0.2), 0, rng.randf_range(-0.3, 0.3)), false)
 		_light(c + Vector3(0, 0.5, 0), Color("#4fb0c6"), 1.5, 3.0, false)
 	_hanging_roots(4, true)
 	_vines_on_walls(4)
@@ -644,13 +685,13 @@ func _mushroom_grotto() -> void:
 
 func _forgotten_shrine() -> void:
 	# the shrine's own glyph on the floor (not a trap's circle), in the zone's accent
-	var rune := _flat(_tex("res://art/traps/shrine.png"), Vector3(0.0, 0.02, -3.0), Vector2(2.2, 2.2), Vector3(-90, 0, 0))
+	var rune := _flat(_tex("res://art/traps/shrine.png"), Vector3(0.0, 0.02, -3.0), Vector2(64, 64) * PX, Vector3(-90, 0, 0))
 	var rm := rune.material_override as StandardMaterial3D
 	rm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	rm.albedo_color = accent
 	_light(Vector3(0.0, 0.3, -3.0), accent, 0.9, 2.6, false)
 	for side in [-1.0, 1.0]:
-		var base := Vector3(side * 1.5, 0, -2.4)
+		var base := Vector3(side * 1.3, 0, -2.8)
 		_sprite(prop("brazier"), base, false)
 		_light(base + Vector3(0, 1.2, 0.1), light_col, 1.8, 4.0)
 	# one statue, and only in some shrines, so they don't stand in every room
@@ -669,4 +710,4 @@ func _root_choked() -> void:
 	_hanging_roots(4, true)
 	_vines_on_walls(6)
 	_vines_hanging(5)
-	_torch(Vector3(-HW + 0.08, 1.9, -4.2))
+	_torch(Vector3(-HW + 0.08, 1.9, -4.6))

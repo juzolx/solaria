@@ -59,7 +59,7 @@ func _initialize() -> void:
 		main.refresh()
 		await create_timer(1.0).timeout
 		for c in main.get_children():
-			if c is Overlay:
+			if c is Overlay or c is Moments:   # Moments: the realm's title card
 				c.queue_free()
 		await create_timer(0.3).timeout
 		await RenderingServer.frame_post_draw
