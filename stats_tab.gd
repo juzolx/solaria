@@ -33,7 +33,7 @@ func refresh() -> void:
 	var row := func(label: String, v: int) -> String: return "%s  [color=%s]%s[/color]" % [label, g, _n(v)]
 	lines.append("#Combat")
 	for e in [["Monsters defeated", c.stat("kills")], ["Bosses defeated", c.stat("boss_kills")], ["Deaths", c.stat("deaths")],
-			["Turns fought", c.stat("turns")], ["Damage dealt", c.stat("damage")], ["Biggest hit", c.stat("best_hit")], ["Taps", c.stat("taps")],
+			["Turns fought", c.stat("turns")], ["Damage dealt", c.stat("damage")], ["Biggest hit", c.stat("best_hit")], ["Monsters tapped", c.stat("taps")],
 			["Potions drunk", c.stat("potions_used")]]:
 		lines.append(row.call(e[0], e[1]))
 	var tiers: Array = []

@@ -122,7 +122,10 @@ func setup(m) -> void:
 		pv.add_child(vl)
 		pills[k] = vl
 
-	stats_label = UI.label("", UI.FONT_CAPTION, UI.GOLD)   # one caption line (the SE has 3 px to spare); the whole list is a tap away
+	# Fable r4 #11: the effects at body size, two lines where there's room (one on the SE), "..." on
+	# the last; the whole list is a tap away
+	stats_label = UI.label("", UI.FONT_BODY, UI.GOLD)
+	stats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	stats_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	stats_label.clip_text = true
 	stats_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -245,13 +248,14 @@ func refresh() -> void:
 		if t2 > 0:
 			effects.append(GameData.effect_text(effect, t2))
 	if not effects.is_empty():
-		text += "[color=%s]%s[/color]" % [UI.hex(UI.GOLD), ", ".join(effects)]
+		text += "[color=%s]%s[/color]" % [UI.hex(UI.GOLD), " · ".join(effects)]
 	var counts := state.set_counts()
 	for set_name in counts:
 		if int(counts[set_name]) >= 2:
 			text += ("\n" if text != "" else "") + "[color=%s]%s set: %d pieces active[/color]" % [UI.hex(UI.GOLD_DULL), GameData.set_name_of(set_name), counts[set_name]]
 	stats_label.tooltip_text = RegEx.create_from_string("\\[[^\\]]*\\]").sub(text, "", true)   # the tip: plain text
 	stats_label.text = stats_label.tooltip_text.get_slice("\n", 0)
+	stats_label.max_lines_visible = 2 if get_viewport_rect().size.y >= 1000.0 else 1   # the SE has no line to spare
 	stats_label.visible = text != ""
 
 	var key := "%s|%d" % [slot, state.bag_version]

@@ -23,6 +23,7 @@ var potion_label: Label
 var rumor: Label
 var recruit_label: Label
 var recruit_button: Button
+var recruit_wait: Button   # Fable r4 #4: no free slot: a plain button that says why (never a disabled primary)
 
 func setup(m) -> void:
 	main = m
@@ -70,6 +71,10 @@ func setup(m) -> void:
 	recruit_button = UI.primary("Recruit a new hero", _recruit, UI.GOLD)
 	recruit_button.custom_minimum_size = Vector2(0, UI.TAP)
 	rv.add_child(recruit_button)
+	recruit_wait = UI.button("", func(): main.toast(main.profile.recruit_note()))
+	recruit_wait.custom_minimum_size = Vector2(0, UI.TAP)
+	recruit_wait.add_theme_color_override("font_color", UI.DIM)
+	rv.add_child(recruit_wait)
 	box.add_child(UI.heading("Overheard at the bar"))
 	rumor = UI.label("", UI.FONT_BODY, Color("#d6c7a1"))
 	rumor.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -117,5 +122,10 @@ func _recruit() -> void:
 func _recruit_refresh() -> void:
 	var p: Profile = main.profile
 	var note := p.recruit_note()
-	recruit_label.text = "Heroes of %s: %d of %d slots used (a town holds up to %d).%s" % [p.town_name(p.town), GameState.town_heroes(p.town), p.slots_open(), GameData.MAX_HEROES, ("\n" + note) if note != "" else ""]
-	recruit_button.disabled = note != ""
+	recruit_label.text = p.roster_line()
+	recruit_button.visible = note == ""
+	recruit_wait.visible = note != ""
+	if note != "":
+		var nxt := p.slots_open() + 1
+		recruit_wait.text = ("Recruit · slot %d at floor %d" % [nxt, int(GameData.SLOT_UNLOCKS[nxt - 1])]) if nxt <= GameData.SLOT_UNLOCKS.size() and p.slots_open() < GameData.MAX_HEROES else "Recruit · the town is full"
+		recruit_wait.tooltip_text = note

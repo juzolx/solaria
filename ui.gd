@@ -58,6 +58,7 @@ const SP_L := 16
 
 static var sfx: Sfx  # set by main, used for button clicks
 static var tip_layer: CanvasLayer  # set by main: where tap-tips appear
+static var force_touch := false   # tests: a mouse click acts as a finger tap (ui_tour --touch)
 static var _tip: Control
 # Fable r1 #2: the phone layout is 504 design px on a 375-430 pt screen, so 44 pt = 52-59 design px.
 # Fable r2: 44 pt on a 375 pt phone (iPhone SE) is 44 / 0.744 = 59 design px, so TAP is 60.
@@ -429,7 +430,7 @@ static func tip(c: Control, text: String) -> void:
 	if c is BaseButton:
 		return  # buttons do their job on tap; the hover text is enough
 	c.gui_input.connect(func(ev: InputEvent):
-		if (ev is InputEventScreenTouch and ev.pressed) or (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT and DisplayServer.is_touchscreen_available()):
+		if (ev is InputEventScreenTouch and ev.pressed) or (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT and (force_touch or DisplayServer.is_touchscreen_available())):
 			show_tip(c, c.tooltip_text))
 
 ## Pops a small explanation next to a control; it fades by itself.
@@ -439,9 +440,11 @@ static func show_tip(near: Control, text: String) -> void:
 	if is_instance_valid(_tip):
 		_tip.queue_free()
 	var p := panel(INSET, GOLD, 8, 10, 1)
+	p.theme = theme()   # a CanvasLayer carries no theme (Fable r4 #2)
+	p.name = "Tip"
 	var r := rich(FONT_BODY)
 	r.text = text
-	r.custom_minimum_size = Vector2(300, 0)
+	r.custom_minimum_size = Vector2(minf(300.0, near.get_viewport_rect().size.x - 40.0), 0)
 	p.add_child(r)
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tip_layer.add_child(p)
@@ -455,6 +458,7 @@ static func show_tip(near: Control, text: String) -> void:
 	var pos := Vector2(at.position.x, at.end.y + 6)
 	if pos.y + p.size.y > floor_y(vp.y) - 8:
 		pos.y = at.position.y - p.size.y - 6
+	pos.y = clampf(pos.y, safe_top + 8.0, vp.y - safe_bottom - p.size.y - 8.0)
 	pos.x = clampf(pos.x, 8, vp.x - p.size.x - 8)
 	p.position = pos
 	var tw := p.create_tween()
@@ -509,6 +513,18 @@ static func game_font() -> Font:
 
 ## The one shared theme (Fable r1 #3): built on first use, reused by every popup.
 static var _theme: Theme
+## Fable r4 #2: Controls that are children of main (a Node2D) or of a CanvasLayer inherit no
+## theme and fell back to Godot's own (smooth white sans). Folding ours into the default theme
+## once makes every Control in the game Pixelify, bone and iron, wherever it is added.
+static func adopt_default_theme() -> void:
+	var dt := ThemeDB.get_default_theme()
+	if dt == null or dt.has_meta("solaria"):
+		return
+	dt.merge_with(theme())
+	dt.default_font = game_font()
+	dt.default_font_size = FONT_BODY
+	dt.set_meta("solaria", true)
+
 static func theme() -> Theme:
 	if _theme == null:
 		_theme = make_theme()

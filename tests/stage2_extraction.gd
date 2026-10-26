@@ -63,11 +63,11 @@ func _initialize() -> void:
 	n.choose_class("Warrior")
 	n.stat_points = 0
 	var g1: String = World.next_goal(n).get("text", "")
-	check(g1.begins_with("First dive: clear 3 more floors"), "a new hero is told to clear 3 floors (%s)" % g1)
+	check(g1.begins_with("Clear 3 more floors"), "a new hero is told to clear 3 floors (%s)" % g1)
 	n.floor_num = 4
 	n.best_floor = 4
 	var g2: String = World.next_goal(n).get("text", "")
-	check(g2.begins_with("Head home"), "after 3 floors: head home (%s)" % g2)
+	check(g2.begins_with("Town: go home"), "after 3 floors: head home (%s)" % g2)
 	n.path_offer.clear()
 	check(Town.enter(n, true) and n.codex.stat("home_trips") == 0, "a dive with no snapshot isn't counted")
 	Town.leave(n)

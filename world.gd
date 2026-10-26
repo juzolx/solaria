@@ -478,21 +478,21 @@ static func first_dive_goal(g: GameState) -> Dictionary:
 	var cleared := maxi(0, g.floor_num - start)
 	if cleared < FIRST_DIVE_FLOORS:
 		var left := FIRST_DIVE_FLOORS - cleared
-		return {"text": "First dive: clear %d more floor%s, then head home with your loot" % [left, "" if left == 1 else "s"],
+		return {"text": "Clear %d more floor%s, then go home" % [left, "" if left == 1 else "s"],
 			"pct": float(cleared) / FIRST_DIVE_FLOORS, "color": UI.GOLD}
-	return {"text": "Head home to keep what you found: tap Town (gold you carry is lost if you fall)", "pct": 1.0, "color": UI.GREEN}
+	return {"text": "Town: go home to keep your loot", "pct": 1.0, "color": UI.GREEN}
 
 static func next_goal(g: GameState) -> Dictionary:
 	if g.hero_class == "":
 		return {"text": "Choose your class", "pct": -1.0, "color": UI.GOLD}
 	if ClassTree.pick_tier(g) >= 0:
-		return {"text": "Your class can evolve! Choose in Hero › Class", "pct": 1.0, "color": UI.GOLD}
+		return {"text": "Hero › Class: your class can evolve", "pct": 1.0, "color": UI.GOLD}
 	if not g.god_offers.is_empty():
-		return {"text": "A God class answers you... see Hero › Class", "pct": 1.0, "color": Color(ClassTree.RANK_COLORS["God"])}
+		return {"text": "Hero › Class: a God class answers", "pct": 1.0, "color": Color(ClassTree.RANK_COLORS["God"])}
 	if g.stat_points >= GameData.STAT_POINTS_PER_LEVEL and not g.auto_stats:
-		return {"text": "%d stat points to spend (the Hero page)" % g.stat_points, "pct": -1.0, "color": UI.GOLD}
+		return {"text": "Hero: %d stat points to spend" % g.stat_points, "pct": -1.0, "color": UI.GOLD}
 	if g.upgrade_count() > 0:
-		return {"text": "Upgrades in your bag: Items › Gear › Equip Best", "pct": -1.0, "color": UI.GREEN}
+		return {"text": "Items › Gear: wear your upgrades", "pct": -1.0, "color": UI.GREEN}
 	# The first dive teaches the whole game: go down, then get home to keep what you found
 	var fd := first_dive_goal(g)
 	if not fd.is_empty():

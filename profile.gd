@@ -325,6 +325,27 @@ func free_slot() -> int:
 			return n
 	return 0
 
+## Fable r4 #4: the roster in one line, the same on every screen:
+## "Heroes 1 / 8 · next slot at floor 100", "· 1 slot free", "· all 8 here".
+func roster_line() -> String:
+	var have := 0
+	var free := 0
+	for n in range(1, GameData.MAX_HEROES + 1):
+		if GameState.has_slot(n):
+			have += 1
+		elif n <= slots_open():
+			free += 1
+	var tail := ""
+	if free > 0:
+		tail = "%d slot%s free" % [free, "" if free == 1 else "s"]
+	elif have >= GameData.MAX_HEROES:
+		tail = "all %d here" % GameData.MAX_HEROES
+	elif slots_open() < GameData.SLOT_UNLOCKS.size():
+		tail = "next slot at floor %d" % int(GameData.SLOT_UNLOCKS[slots_open()])
+	else:
+		tail = "more slots later"
+	return "Heroes %d / %d · %s" % [have, GameData.MAX_HEROES, tail]
+
 ## Why you can't recruit right now ("" = you can).
 func recruit_note() -> String:
 	if free_slot() > 0:

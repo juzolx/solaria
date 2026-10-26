@@ -24,6 +24,10 @@ style=$( {
   grep -nE '(UI\.(label|wrap|rich)|[^a-z_]_line)\(.*, (1[0-46-9]|2[1-9]|3[1-9]|[5-9][0-9])(, |\))|font_size", (1[0-46-9]|2[1-9]|3[1-9])\)|font_size=[0-9]+\]' *.gd | grep -vE 'font_size=(15|20|30|40)\]'
   grep -nE '%[ds]g[" )]' *.gd
   grep -nE 'UI\.(label|heading|chip|button|primary)\(.*to_upper\(\)\s*[,)]|UI\.(label|heading|chip)\("[A-Z]{3,} [A-Z]{3,}' *.gd
+  # Fable r4 #15: the fight's scene words sit on the scale too
+  grep -nE 'SCENE_FS := (1[0-46-9]|2[1-9])' *.gd
+  # Fable r4 #19: a phone game says Tap, not Press / hover / drag (story lines like "they press on" are fine)
+  awk '{l=$0; sub(/^[ \t]*#.*/,"",l); sub(/[ \t]#[^"]*$/,"",l); if (l ~ /"[^"]*(Press|press|Hover|hover|Drag|drag) [^"]*"/ && l !~ /Oxen could not drag|press (on|their|%[ds]|.*into your hands)/) print FILENAME":"FNR": "$0}' *.gd
 } )
 if [ -n "$style" ]; then echo "STYLE:"; echo "$style" | head -20; fail=1; else echo "style: ok"; fi
 [ "$1" = "parse" ] && exit 0
