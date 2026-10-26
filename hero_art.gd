@@ -239,6 +239,33 @@ static func anims(fr: Dictionary, back: bool) -> Dictionary:
 	return {"combat_idle": pick.call(IDLE, 2.0), "slash": swing, "thrust": swing, "spellcast": swing, "shoot": swing,
 		"hurt": pick.call(HIT, 3.0)}
 
+## Two walk steps made from a finished frame (the town walkers): the leg band (bottom 22% of the body)
+## is split at its middle and one side lifted, left then right. No drawn walk cycle needed.
+static func steps(im: Image) -> Array:
+	var bb := im.get_used_rect()
+	if bb.size.y < 8:
+		return [im, im]
+	var top := bb.end.y - int(bb.size.y * 0.22)
+	var sx := 0
+	var n := 0
+	for y in range(top, bb.end.y):
+		for x in range(bb.position.x, bb.end.x):
+			if im.get_pixel(x, y).a > 0.0:
+				sx += x; n += 1
+	var cx := sx / maxi(n, 1)
+	var lift := maxi(2, roundi(bb.size.y * 0.06))
+	var out := []
+	for side in [0, 1]:
+		var st := im.duplicate() as Image
+		var xa := bb.position.x if side == 0 else cx
+		var xb := cx if side == 0 else bb.end.x
+		for y in range(top, bb.end.y):
+			for x in range(xa, xb):
+				var sy := y + lift
+				st.set_pixel(x, y, im.get_pixel(x, sy) if sy < bb.end.y else Color(0, 0, 0, 0))
+		out.append(st)
+	return out
+
 ## A dark-to-light ramp of one class colour, kept in its own hue (the hue-shifted creator ramps turn
 ## light reds khaki) and pulled down into the game's dark palette.
 static func _dye_ramp(c: Color) -> PackedColorArray:

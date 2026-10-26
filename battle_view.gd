@@ -1458,32 +1458,42 @@ func _dying_rect() -> Rect2:
 func _enemy_rect(boss: bool) -> Rect2:
 	return _rect_for(_enemy_art(boss), boss, state.enemy_scale())
 
-## Rarer monsters are drawn bigger (by whole art pixels so they stay crisp).
-func _rect_for(art: Dictionary, boss: bool, scale_mult: float) -> Rect2:
+## Every monster shows at the hero's pixel scale (fable r1: rank is shown by the aura,
+## pips and name colour, never by a second pixel size).
+func _rect_for(art: Dictionary, boss: bool, _scale_mult: float) -> Rect2:
 	var sc := _scr()
 	var ui := float(_unit())
-	if scale_mult > 1.0:
-		# Whole screen pixels only, so the sprite stays crisp; Legendary and up are always a size bigger
-		ui = maxf(ui + (1.0 if scale_mult >= 1.28 else 0.0), roundf(ui * scale_mult))
 	var u := ui / sc
 	var x := size.x * 0.5
 	var gy := _ground() + enemy_lunge * size.y * 0.16 - enemy_recoil * u * 3.0 * Sprites.HD
 	if art.is_empty():
 		var s := _sprite_size(boss)
 		return Rect2(x - s / 2.0, gy - s + sin(bob * 2.4 + 1.0) * 2.0, s, s)
-	# One scale: the two older 2x-grid pictures (every art pixel a 2x2 block) draw at half the unit per file pixel
-	if int(art.get("grid", 1)) == 2:
-		ui = maxf(1.0, roundf(ui / 2.0))
-	# Big bosses never take more than ~45% of the width
-	# (LPC frames are padded for big weapon swings, so measure the ~48-pixel body instead)
-	var span: float = Lpc.CORE * 0.75 if art.has("lpc") else (art["size"] as Vector2).x
-	ui = maxf(1.0, minf(ui, floorf(size.x * 0.56 * sc / maxf(1.0, span))))
+	ui = maxf(1.0, minf(ui, _width_cap(art, boss, sc)))
 	# ...and never taller than the space above the team
 	ui = maxf(1.0, minf(ui, floorf(_ground() * 0.92 * sc / maxf(1.0, float(art["foot"]) + 1.0))))
 	u = ui / sc
 	var sz: Vector2 = art["size"] * u
 	var foot: float = art["foot"]
 	return Rect2(_snap(Vector2(x - sz.x / 2.0, gy - (foot + 1.0) * u)), sz)
+
+## Most screen pixels per art pixel the stage width allows: commons keep to ~56% of
+## the width, bosses may reach the edges (92%) and Calamities fill the stage (96%), so
+## all of them stay at the hero's 3x on a phone.
+## (LPC frames are padded for big weapon swings, so measure the ~48-pixel body instead)
+func _width_cap(art: Dictionary, boss: bool, sc: float) -> float:
+	var span: float = Lpc.CORE * 0.75 if art.has("lpc") else (art["size"] as Vector2).x
+	var share := 0.96 if state.enemy_calamity > 0 else (0.92 if boss else 0.56)
+	return floorf(size.x * share * sc / maxf(1.0, span))
+
+## A waiting pack-mate: one whole screen pixel per art pixel smaller than the monster
+## in front (3x -> 2x on a phone), so it never draws in-between pixel sizes.
+func _pack_rect(pr: Rect2, art: Dictionary, side: float) -> Rect2:
+	var sc := _scr()
+	var ui := maxf(1.0, roundf(pr.size.x * sc / maxf(1.0, (art["size"] as Vector2).x)))
+	var sz := pr.size * (maxf(1.0, ui - 1.0) / ui)
+	var pos := pr.position + Vector2(side * pr.size.x * 0.62 + (pr.size.x - sz.x) * 0.5, pr.size.y * 0.68 - sz.y)
+	return Rect2(_snap(pos), sz)
 
 func _hero_center() -> Vector2:
 	var r := _hero_rect()
@@ -1547,8 +1557,7 @@ func _draw() -> void:
 		if part.has("tex"):
 			for k in mini(2, state.horde_left - 1):
 				var side := -1.0 if k == 0 else 1.0
-				var rr := Rect2(pr.position + Vector2(side * pr.size.x * 0.62, -pr.size.y * 0.1), pr.size * 0.78)
-				rr.position.x += pr.size.x * 0.11
+				var rr := _pack_rect(pr, part, side)
 				draw_ellipse_shadow(rr)
 				draw_texture_rect(SpriteLight.lit(part["tex"], clampi(GameData.zone_index(state.floor_num), 0, 9)), rr, false, Color(0.62, 0.6, 0.66, 0.9 * enemy_alpha))
 	# Current enemy
@@ -1926,7 +1935,8 @@ func _draw_pet() -> void:
 	var s := float(tex.get_width()) * pu
 	var hc := _hero_canvas()
 	var x := hc.position.x + hc.size.x * 0.62
-	var y := _team_ground() - 70.0 * pu + roundf(sin(bob * 3.4 + 1.3)) * pu - pet_lunge * size.y * 0.1
+	# feet on the ground: the 32 px still's bottom row (the idle strip does the breathing)
+	var y := _team_ground() - (Pets.foot(Pets.companion_key(state)) + 1) * pu - pet_lunge * size.y * 0.1
 	draw_texture_rect(tex, Rect2(_snap(Vector2(x, y)), Vector2(s, s)), false, Color(1, 1, 1, hero_alpha))
 
 ## An LPC hero: the current animation frame, with rim light, weapon glow and hit flash.
@@ -2004,7 +2014,7 @@ func _draw_shield(r: Rect2) -> void:
 func _draw_mods(r: Rect2) -> void:
 	var font := UI.game_font()   # interface pass: the game font everywhere
 	var x := r.get_center().x
-	var y := _ground() - 6.0
+	var y := _bar_rect(r).position.y - 15.0   # just above the monster's bar, wherever the bar sits
 	var total := 0.0
 	var widths: Array = []
 	for m in state.enemy_mods:
@@ -2096,8 +2106,14 @@ func _bar_rect(r: Rect2) -> Rect2:
 	var bx := clampf(r.get_center().x - bw / 2.0, 6.0, size.x - bw - 6.0)
 	# Monsters (at the back) get theirs under their feet; your team (in front) above their heads
 	if r.get_center().y > size.y * 0.62:
+		var beside := r.get_center().x + r.size.x * 0.32 + 8.0   # the drawn body is about 0.6 of this box wide
+		if maxf(r.end.y, _team_ground()) + 8.0 > size.y - 68.0 and beside + bw <= size.x - 6.0:
+			# Phone sweep: the 2.1 hero's feet stand on the team line, under this box; a plate that
+			# can't fit under them goes beside the hero (the approved fight mockup) instead of over the legs
+			return Rect2(beside, size.y - 68.0, bw, 14.0)
 		return Rect2(bx, minf(r.end.y + 8.0, size.y - 68.0), bw, 14.0)   # room for the name above the message strip
-	return Rect2(bx, _ground() + 9.0, bw, 14.0)
+	# ...and the monster's plate stays clear of the hero's head (it sat on it on a short stage)
+	return Rect2(bx, minf(_ground() + 9.0, _hero_rect().position.y - 44.0), bw, 14.0)
 
 ## In-scene text sizes (design px; x0.85 on a 430 pt phone): names and numbers 18 (~15 pt).
 const NAME_FS := 18
@@ -2262,7 +2278,6 @@ func _chip_row(chips: Array, x: float, y: float, font: Font, fs := SCENE_FS) -> 
 ## The monster's statuses and its boss clock. (Juzo, Oct 24: weaknesses and
 ## resistances live in the Codex only, not over the monster in the fight.)
 func _draw_enemy_info(r: Rect2, font: Font) -> void:
-	var chips: Array = []
 	var st: Array = []
 	if state.burn_turns > 0:
 		st.append(["Burning", Color("#fb923c")])
@@ -2298,7 +2313,6 @@ func _draw_enemy_info(r: Rect2, font: Font) -> void:
 		st.append(["Minions x%d" % state.boss_minions, Color("#d4d4d4")])
 	var top := maxf(34.0, r.position.y - 6.0)
 	_chip_row(st, r.get_center().x, top - 30.0, font)
-	_chip_row(chips, r.get_center().x, top, font)
 
 ## Your statuses (poison, burns, chill) over your head.
 func _draw_hero_status(r: Rect2, font: Font) -> void:
@@ -2314,8 +2328,8 @@ func _draw_hero_status(r: Rect2, font: Font) -> void:
 	for i in chips.size():
 		_chip_row([chips[i]], 0.0, r.position.y + 12.0 + i * (SCENE_FS + 10.0), font)
 
-## Your menagerie pets on the run (caught or hatched), at the hero's right. They grow
-## with their level: a baby is small, a level 30 pet stands tall. Cherished ones glow.
+## Your menagerie pets on the run (caught or hatched), at the hero's right: their own
+## baby art (art/pets/32) at true size, breathing, feet on the team's ground. Cherished ones glow.
 func _draw_menagerie() -> void:
 	if state == null or state.in_town:
 		return
@@ -2323,29 +2337,27 @@ func _draw_menagerie() -> void:
 	if pets.is_empty():
 		return
 	var hc := _hero_canvas()
-	var zi := clampi(GameData.zone_index(state.floor_num), 0, 9)
+	var pu := _u()
+	var w := 32.0 * pu
 	for i in pets.size():
 		var p: Dictionary = pets[i]
-		var art := Sprites.enemy_by_key(String(p["art"]))
-		if not art.has("tex"):
+		var key := String(p.get("species", ""))
+		var tex := Pets.frame(key, bob + i * 0.31)
+		if tex == null:
 			continue
-		var grow := clampf((int(p["level"]) - 1) / 29.0, 0.0, 1.0)
-		var h := hc.size.y * lerpf(0.26, 0.46, grow)
-		var asz: Vector2 = art["size"]
-		var w := h * asz.x / asz.y
 		var lunge := 1.0 if pet_hits.has(String(p["name"])) else 0.0
-		var x := hc.end.x - hc.size.x * 0.05 + i * w * 0.55
-		var feet := Vector2(x, _team_ground() - 4.0 - i * 6.0 - lunge * size.y * 0.05)
-		var bobv := roundf(sin(bob * 3.6 + i * 1.7) * 1.5)
-		var r := Rect2(_snap(feet - Vector2(w / 2.0, h - bobv)), Vector2(w, h))
+		# the first beside the companion on the right, the rest on the hero's free left side (a phone is narrow)
+		var x := hc.end.x - hc.size.x * 0.05 if i == 0 else hc.position.x + hc.size.x * 0.12 - (i - 1) * w * 0.7
+		var feet := Vector2(x, _team_ground() - (i % 2) * 2.0 * pu - lunge * size.y * 0.05)
+		var r := Rect2(_snap(feet - Vector2(w / 2.0, (Pets.foot(key) + 1) * pu)), Vector2(w, w))
 		draw_set_transform(Vector2(r.get_center().x, feet.y), 0.0, Vector2(1.0, 0.3))
-		draw_circle(Vector2.ZERO, w * 0.35, Color(0, 0, 0, 0.35 * hero_alpha))
+		draw_circle(Vector2.ZERO, w * 0.3, Color(0, 0, 0, 0.35 * hero_alpha))
 		draw_set_transform(Vector2.ZERO)
 		if p.get("cherished", false):
 			var gl := 0.25 + 0.15 * sin(bob * 3.0 + i)
-			for off in [Vector2(-1.5, 0), Vector2(1.5, 0), Vector2(0, -1.5)]:
-				draw_texture_rect(art["white"], Rect2(r.position + off, r.size), false, Color(1.0, 0.85, 0.4, gl * hero_alpha))
-		draw_texture_rect(SpriteLight.lit(art["tex"], zi), r, false, Color(1, 1, 1, (0.55 if int(p["hurt"]) > 0 else 1.0) * hero_alpha))
+			for off in [Vector2(-pu, 0), Vector2(pu, 0), Vector2(0, -pu)]:
+				draw_texture_rect(Pets.white(key), Rect2(r.position + off, r.size), false, Color(1.0, 0.85, 0.4, gl * hero_alpha))
+		draw_texture_rect(tex, r, false, Color(1, 1, 1, (0.55 if int(p["hurt"]) > 0 else 1.0) * hero_alpha))
 
 var _strip_pics := {}
 ## With companions: a compact strip at the top-left, a portrait, name and HP bar for

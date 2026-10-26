@@ -89,3 +89,4 @@ Every rating Juzo gives goes here, so all sessions learn what he thinks is reall
 - Oct 24: Race sample (Goblin + Dwarf, M/F, Warrior + Mage, claude/art_test/races/RACE_SAMPLE_goblin_dwarf.png): Juzo "Goblins and dwarfs are solid" (approved, no number given).
 | 2026-10-25 | interface | Pets page: "a higher-ranked pet would know" hints moved behind each pet's More (fewer words) | ok | "I'm cool with it" | keep cards short; detail one tap away |
 - Oct 24: Juzo: Beastkin "look good". Fairy butterfly wings v1 (13_fairy_butterfly.png) "look bad, why circles" -> wants luna moth or monarch wing shapes. Grey werewolf, orc fixes shown.
+- Oct 25: Fairy wings: Juzo rejected luna/monarch (16_fairy_wings_pick.png); wants the ORIGINAL 2.0 fairy wings look (slim pink-lilac petal wings; ref claude/art_test/races/fairy_wing_refs/old_race_wings_fairy.png).

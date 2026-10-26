@@ -182,6 +182,10 @@ func _build() -> void:
 	ver.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	col.add_child(ver)
 
+## Bug sweep: a phone tap target is 44 pt; the phone layout is 504 design px on a 375-430 pt
+## screen, so 56 design px (UI.TAP's 44 is only ~33 pt there).
+const TAP_PHONE := 56
+
 func _fill_menu() -> void:
 	OnlineUI.clear(menu_box)
 	var p: Profile = m.profile
@@ -192,13 +196,13 @@ func _fill_menu() -> void:
 				p.active_slot = n
 				meta = GameState.slot_meta(n)
 				break
-	var town_l := UI.label("%s  ·  %s  ·  %d / %d heroes" % [p.town_name(p.town).to_upper(), "HARDCORE" if p.town_hardcore(p.town) else "REGULAR", GameState.town_heroes(p.town), p.slots_open()], 12, UI.GOLD)
+	var town_l := UI.label("%s  ·  %s  ·  %d / %d heroes" % [p.town_name(p.town).to_upper(), "HARDCORE" if p.town_hardcore(p.town) else "REGULAR", GameState.town_heroes(p.town), p.slots_open()], UI.FONT_CAPTION, UI.GOLD)
 	town_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	town_l.tooltip_text = "The town you're in. Switch or found another from Towns."
 	menu_box.add_child(town_l)
 	if not meta.is_empty():
 		var cont := UI.primary("Continue", func(): close_and(func(): m.play_slot(p.active_slot)), UI.GOLD)
-		cont.custom_minimum_size = Vector2(0, 52)
+		cont.custom_minimum_size = Vector2(0, TAP_PHONE)
 		cont.add_theme_font_size_override("font_size", 20)
 		menu_box.add_child(cont)
 		menu_box.add_child(_hero_line(meta))
@@ -206,7 +210,7 @@ func _fill_menu() -> void:
 	# heroes are recruited at the Inn when a slot opens.
 	if meta.is_empty():
 		var found := UI.primary("Found your town", func(): FoundTown.new().show_for(m, p.town), UI.GREEN)
-		found.custom_minimum_size = Vector2(0, 48)
+		found.custom_minimum_size = Vector2(0, TAP_PHONE)
 		menu_box.add_child(found)
 	var row := UI.hbox(8)
 	menu_box.add_child(row)
@@ -214,10 +218,11 @@ func _fill_menu() -> void:
 			["Guide", func(): GuideBook.open_book(m, "")]]:
 		var b := UI.button(entry[0], entry[1])
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(0, 36)
+		b.custom_minimum_size = Vector2(0, TAP_PHONE)   # bug sweep: 36 design px was ~31 pt on a phone
 		row.add_child(b)
 	if OS.get_name() in ["Windows", "macOS", "Linux"]:
 		var q := UI.button("Quit", func(): m.get_tree().quit())
+		q.custom_minimum_size = Vector2(0, TAP_PHONE)
 		menu_box.add_child(q)
 
 func _hero_line(meta: Dictionary) -> Control:

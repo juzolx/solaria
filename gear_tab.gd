@@ -27,11 +27,11 @@ func setup(m) -> void:
 	main = m
 	state = m.state
 	name = "Gear"
-	add_theme_constant_override("separation", 8)
+	add_theme_constant_override("separation", 6)   # phone sweep: fits a 375x667 phone (896 design px)
 
 	var head := UI.hbox(8)
 	add_child(head)
-	var hint := UI.wrap("Tap a slot, then an item to wear it, or drag an item onto a slot.", UI.FONT_CAPTION, UI.DIM)
+	var hint := UI.wrap("Tap a slot, then an item to wear it.", UI.FONT_CAPTION, UI.DIM)
 	hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(hint)
 	equip_best_button = UI.primary("Equip Best", func():
@@ -46,13 +46,13 @@ func setup(m) -> void:
 	# big in the middle on a plinth, and the picked slot's item on one line underneath.
 	var doll := UI.hbox(6)
 	add_child(doll)
-	var left := UI.vbox(4)
+	var left := UI.vbox(3)
 	doll.add_child(left)
 	var center := Control.new()
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	center.custom_minimum_size = Vector2(0, 4 * (SLOT_PX + 22) - 4)
 	doll.add_child(center)
-	var right := UI.vbox(4)
+	var right := UI.vbox(3)
 	doll.add_child(right)
 	var pl := TextureRect.new()
 	pl.texture = UiIcons.plinth(64)
@@ -72,7 +72,7 @@ func setup(m) -> void:
 		pl.position = Vector2(roundf((cw - pl.texture.get_width()) / 2.0), center.size.y - pl.texture.get_height() - 2))
 	for s in GameData.SLOT_ORDER:
 		var grid: VBoxContainer = left if s in ["Weapon", "Helmet", "Chest", "Ring"] else right  # 2.1: four a side, jewelry at the bottom
-		var col := UI.vbox(2)
+		var col := UI.vbox(1)
 		grid.add_child(col)
 		var card := PanelContainer.new()
 		card.custom_minimum_size = Vector2(SLOT_PX, SLOT_PX)

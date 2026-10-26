@@ -142,6 +142,11 @@ static func class_card(m, n: Dictionary, with_button: bool, on_pick: Callable) -
 	p.add_theme_stylebox_override("panel", UiSkin.frame(UI.INSET, Color(ClassTree.RANK_COLORS[r]) if r != "" and why == "" else UiSkin.IRON, 10))
 	var v := UI.vbox(4)
 	p.add_child(v)
+	# the class's outfit on your own hero (race, build, hair, face): what you'd look like
+	var st := outfit_stage(g, String(n.get("cls", g.hero_class)), int(ClassTree.PICK_LEVELS[clampi(int(n.get("tier", 1)) - 1, 0, 2)]), 2)
+	if why != "":
+		st.modulate = Color(1, 1, 1, 0.55)   # locked: the outfit, dimmed
+	v.add_child(st)
 	var head := UI.hbox(6)
 	v.add_child(head)
 	var nl := UI.label(String(n["name"]), 16, UI.GOLD if why == "" else UI.DIM)
@@ -164,6 +169,73 @@ static func class_card(m, n: Dictionary, with_button: bool, on_pick: Callable) -
 		var b := UI.primary("Swap" if is_god else "Choose", on_pick)   # the gold main action
 		v.add_child(b)
 	return p
+
+## Interface pass: your hero (own race, build, hair and face) in a class's outfit, front portrait at a
+## whole-pixel scale on the plinth. Sprites caches every look, so a card never rebuilds it.
+static func outfit_stage(g: GameState, cls: String, tier: int, scale := 2, silhouette := false, gear := {}) -> Control:
+	var looks: Dictionary = (gear if not gear.is_empty() else g.hero_looks()).duplicate()
+	looks["Class"] = {"cls": cls if Classes.CLASSES.has(cls) else (g.hero_class if g.hero_class != "" else "Warrior"), "tier": tier}
+	var side := Sprites.PORTRAIT * scale
+	var plinth_w := 24 * scale
+	var c := Control.new()
+	c.custom_minimum_size = Vector2(side, side + 6)
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var pl := TextureRect.new()
+	pl.texture = UiIcons.plinth(plinth_w)
+	pl.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	c.add_child(pl)
+	var pic := TextureRect.new()
+	pic.texture = Sprites.portrait(g.appearance, looks)
+	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	pic.custom_minimum_size = Vector2(side, side)
+	pic.size = pic.custom_minimum_size
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	if silhouette:
+		pic.modulate = Color(UiSkin.SOOT, 0.85)   # a step not reached yet: only its shape
+	c.add_child(pic)
+	c.resized.connect(func():   # centred, whole pixels, the plinth under the feet
+		pic.position = Vector2(roundf((c.size.x - side) / 2.0), 0)
+		pl.position = Vector2(roundf((c.size.x - pl.texture.get_width()) / 2.0), c.size.y - pl.texture.get_height()))
+	return c
+
+## Interface pass: one class in the first "Choose your class" picker: your hero in its outfit and
+## starting gear, its name, role and tags, the blurb and first skill, and the gold main action.
+static func pick_card(m, cname: String, on_pick: Callable) -> PanelContainer:
+	var info: Dictionary = Classes.CLASSES[cname]
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", UiSkin.frame(UI.INSET, UiSkin.IRON, 10))
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var cv := UI.vbox(6)
+	card.add_child(cv)
+	var head := UI.hbox(10)
+	cv.add_child(head)
+	var gear := {}
+	for slot in info["look"]:
+		gear[slot] = Sprites.gear_look({"slot": slot, "type": info["look"][slot], "rarity": 1})
+	head.add_child(outfit_stage(m.state, cname, 0, 2, false, gear))
+	var hv := UI.vbox(2)
+	hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(hv)
+	hv.add_child(UI.label(cname.to_upper(), 18, UI.GOLD))   # one accent: the class colour lives in its outfit
+	var tags: Array = []
+	for t in info["tags"]:
+		tags.append("[color=%s]%s[/color]" % [Classes.tag_color(t), t])
+	var tl := UI.rich(UI.FONT_CAPTION)
+	tl.text = "%s
+%s" % [info["role"], " ".join(tags)]
+	hv.add_child(tl)
+	var blurb := UI.rich(UI.FONT_CAPTION)
+	blurb.text = "[color=%s]%s[/color]" % [UI.hex(UI.DIM), info["blurb"]]
+	hv.add_child(blurb)
+	var start: Array = info["start"]
+	var text := UI.rich(UI.FONT_CAPTION)
+	text.text = "[color=%s]First skill, %s:[/color] %s" % [UI.hex(UI.GOLD_DULL), SkillData.skill_name(start[0]), SkillData.info(start[0])["text"]]
+	cv.add_child(text)
+	var b := UI.primary("Play as %s" % cname, on_pick)
+	b.custom_minimum_size = Vector2(0, UI.TAP)
+	cv.add_child(b)
+	return card
 
 # =====================================================================
 # The tree picture
@@ -199,6 +271,7 @@ func _tree() -> void:
 		var v := UI.vbox(1)
 		p.add_child(v)
 		v.add_child(UI.label("Start" if i == 0 else "Level %d" % int(st["level"]), UI.FONT_CAPTION, UI.DIM))
+		v.add_child(outfit_stage(state, state.hero_class, 0 if i == 0 else int(st["level"]), 1, not reached))
 		var name_text: String = String(n["name"]) if reached else ("Choose now!" if ready else "???")
 		var nl := UI.label(name_text, UI.FONT_CAPTION, UI.GOLD if reached else (UI.GREEN if ready else UI.DIM))
 		nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

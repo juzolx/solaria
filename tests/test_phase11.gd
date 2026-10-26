@@ -10,6 +10,14 @@ func check(cond: bool, msg: String) -> void:
 		fails += 1
 		printerr("FAIL: " + msg)
 
+## A plain monster: a spawn can roll a horde, goblin or Calamity, which you can't run from or spare.
+func _plain(g: GameState) -> void:
+	g.horde_left = 0
+	g.horde_pack = false
+	g.enemy_goblin = false
+	g.enemy_calamity = 0
+	g.enemy_is_boss = false
+
 func hero(race := "Human", cls := "Warrior") -> GameState:
 	var g := GameState.new()
 	g.autosave = false
@@ -52,7 +60,7 @@ func _initialize() -> void:
 	a.stat_points = 10
 	var before := Lineage.power(a)
 	Lineage.spend_power(a, 5)
-	check(absf(Lineage.power(a) - before - 0.5) < 0.001 and a.stat_points == 5, "stat points into power are 0.1 each")
+	check(absf(Lineage.power(a) - before - 5 * Races.POWER_POINT) < 0.001 and a.stat_points == 5, "stat points into power are Races.POWER_POINT each")
 	check(Lineage.awaken_block(a).begins_with("Reach level"), "awakening needs a level")
 	a.level = 40
 	a.race_power = 100.0
@@ -77,7 +85,7 @@ func _initialize() -> void:
 
 	# ---------- Transformations ----------
 	var v := hero("Human")
-	v.enemy_species = "Strigoi"
+	v.enemy_species = "strigoi"   # monster ids, not shown names
 	var bitten := false
 	for _i in 40000:
 		Lineage.on_hit(v)
@@ -94,7 +102,7 @@ func _initialize() -> void:
 	v._enemy_defeated()
 	check(v.form == "", "the Elder Vampire's death cures you")
 	var w := hero("Beastkin")
-	w.enemy_species = "Barghest"
+	w.enemy_species = "barghest"
 	for _i in 40000:
 		Lineage.on_hit(w)
 		if w.lycan_pending:
@@ -137,6 +145,7 @@ func _initialize() -> void:
 	var e := hero("Elf")
 	e.floor_num = 20
 	e.spawn_enemy()
+	_plain(e)
 	var c := Lineage.escape_chance(e)
 	check(c >= Races.ESCAPE_MIN and c <= Races.ESCAPE_MAX, "escape chance in range")
 	e.stats["AGI"] = 200
@@ -153,6 +162,7 @@ func _initialize() -> void:
 	check(Lineage.escape_block(e) != "" and not Lineage.try_escape(e), "no running from bosses")
 	e.floor_num = 21
 	e.spawn_enemy()
+	_plain(e)
 	check(not Lineage.can_spare(e), "can't spare a healthy monster")
 	e.enemy_hp = int(e.enemy_max_hp * 0.2)
 	var sp := e.enemy_species
