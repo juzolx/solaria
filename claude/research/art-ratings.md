@@ -90,3 +90,13 @@ Every rating Juzo gives goes here, so all sessions learn what he thinks is reall
 | 2026-10-25 | interface | Pets page: "a higher-ranked pet would know" hints moved behind each pet's More (fewer words) | ok | "I'm cool with it" | keep cards short; detail one tap away |
 - Oct 24: Juzo: Beastkin "look good". Fairy butterfly wings v1 (13_fairy_butterfly.png) "look bad, why circles" -> wants luna moth or monarch wing shapes. Grey werewolf, orc fixes shown.
 - Oct 25: Fairy wings: Juzo rejected luna/monarch (16_fairy_wings_pick.png); wants the ORIGINAL 2.0 fairy wings look (slim pink-lilac petal wings; ref claude/art_test/races/fairy_wing_refs/old_race_wings_fairy.png).
+
+- Oct 25: build hair (orc/goblin/dwarf/fairy) from the free human hair layers: "Free hair is okay for now". No PixelLab redraw for now.
+
+- Oct 25: monster redraws R2: chimera 9/10, hellhound 9/10 ("easy 9s"). Keep both.
+
+- Oct 25: town after Fable round 4: Juzo rates it 8/10 ("excited to see your work"). Requested: Blacksmith moved to the west farm corner by the gate; that field removed.
+
+- Oct 25: smithy move "looks really good". Biggest mistake Juzo sees, town-wide and in the dungeon: props covered by buildings or looking like they float (base hidden or unsupported). Always check prop grounding in art reviews.
+
+- Oct 25: monster zone-light tint on the 13 grey monsters: Juzo "likes the color changes".

@@ -78,14 +78,33 @@ func _native_rules(path: String, img: Image) -> void:
 	check(bare == 0, "%s: %d edge pixels without the dark outline" % [path, bare])
 
 ## Fable r1: on a 430 pt phone (504 design wide, 0.853 stretch) every monster must show at the
-## hero's 3x inside its share of the stage (battle_view._width_cap): commons 56%, bosses 92%,
+## hero's 3x inside its share of the stage (battle_view._width_cap): commons 60% (ArtStyle.COMMON_SHARE), bosses 92%,
 ## Calamities 96%. A wider picture would drop to 2x and look smaller than a common.
 func _phone_width(key: String, w: int) -> void:
-	var share := 0.96 if key.begins_with("calamity_") else (0.92 if key.begins_with("boss_") else 0.56)
+	var share := 0.96 if key.begins_with("calamity_") else (0.92 if key.begins_with("boss_") else ArtStyle.COMMON_SHARE)
 	check(w * 3 <= int(504.0 * share * 0.853), "%s is %d px wide: over %d it draws below 3x on a phone" % [key, w, int(504.0 * share * 0.853) / 3])
 
 ## Fable r2: monsters must not sink into their dark halls (38-94 mean luma): the whole picture,
 ## outline included, averages at least 68 (commons) or 60 (bosses and Calamities, which glow).
+## Fable r4: the grey monsters it named were pulled toward their zone's colour at import
+## (tools/monster_import.py TINT); none may slide back to grey on a re-import.
+const TINTED := ["barghest", "pooka", "spriggan", "leshy", "boss_black_annis", "draugr", "ankou", "revenant",
+	"vetala", "boss_dullahan", "boss_hel", "bunyip", "afanc"]
+func _tinted(key: String, img: Image) -> void:
+	if not key in TINTED:
+		return
+	var total := 0.0
+	var n := 0
+	for y in img.get_height():
+		for x in img.get_width():
+			var c := img.get_pixel(x, y)
+			if c.a8 == 0 or ArtStyle.is_outline(c):
+				continue
+			total += maxf(c.r, maxf(c.g, c.b)) - minf(c.r, minf(c.g, c.b))
+			n += 1
+	var ch := total / maxf(1.0, n)
+	check(ch >= 0.07, "%s: mean chroma %.3f, grey again (tools/monster_import.py TINT)" % [key, ch])
+
 func _luma_floor(key: String, img: Image) -> void:
 	var total := 0.0
 	var n := 0
@@ -155,6 +174,7 @@ func _initialize() -> void:
 				_native_rules(d + f, img)
 				_phone_width(f.get_basename(), img.get_width())
 				_luma_floor(f.get_basename(), img)
+				_tinted(f.get_basename(), img)
 				continue
 			check(img.get_size() == ArtStyle.MONSTER_SIZE or img.get_size() == ArtStyle.TALL_SIZE, "%s%s is %s (68x68 or 68x132)" % [d, f, img.get_size()])
 			var rough := 0

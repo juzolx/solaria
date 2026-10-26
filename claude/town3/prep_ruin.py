@@ -119,13 +119,17 @@ for k in range(8):
     d.rectangle([bx, by, bx + bw - 1, by + bh - 1], fill=LIGHT)
     d.line([bx, by + bh - 1, bx + bw - 1, by + bh - 1], fill=SHADE)
     d.line([bx + bw - 1, by, bx + bw - 1, by + bh - 1], fill=SHADE)
-# two crows against the sky on the broken tower top: 3x2 black, a pale eye, legs on the stone
-for cxw in (58, 92):
+# two crows on the broken tower top: a 5x3 black body with a raised head and tail, a pale eye,
+# legs on the stone, and a 1 px moonlit back so they read against the night sky
+for cxw, face in ((58, 1), (92, -1)):
     ty = next(y for y in range(h) if px[cxw, y][3])
-    for dx, dy in ((0, -3), (1, -3), (2, -3), (0, -2), (1, -2), (2, -2), (-1, -3), (0, -1), (2, -1)):
+    body = [(dx, dy) for dx in range(-2, 3) for dy in (-4, -3, -2)] + [(-1, -1), (1, -1)]
+    body += [(3 * face, -5), (3 * face, -4), (-3 * face, -3)]        # head up front, tail behind
+    for dx, dy in body:
         px[cxw + dx, ty + dy] = (0, 0, 0, 255)
-    px[cxw + 2, ty - 4] = (0, 0, 0, 255)
-    px[cxw + 2, ty - 3] = (210, 206, 190, 255)
+    for dx in range(-2, 2):
+        px[cxw + dx * face, ty - 5] = (96, 100, 124, 255)            # the moonlit back
+    px[cxw + 3 * face, ty - 5] = (220, 214, 196, 255)                 # the eye
 # the fallen cross in the forecourt: light stone lying on 2 px of dark earth
 cross = [(20 + k, 248 + k // 2) for k in range(18)] + [(26 - k // 2, 245 + k) for k in range(8)]
 for x, y in cross:

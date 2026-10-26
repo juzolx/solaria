@@ -1,8 +1,10 @@
 extends SceneTree
 ## Redrawn monsters in the real fight at phone size, for Juzo: one picture per art key.
-##   godot --path . --resolution 430x932 -s tests/_monster_shot.gd -- <tag> <key>[@floor][#tier][+pack] ...
+##   godot --path . --resolution 430x932 -s tests/_monster_shot.gd -- <tag> <key>[@floor][#tier][+pack][+mods][+status][+pet][+dead] ...
 ## -> shots/monsters/<tag>/<key>.png (floor picks the zone's hall behind it, tier 0-5 its rank,
-## +pack two pack-mates waiting behind it; calamity_N keys appear as that Calamity)
+## +pack two pack-mates waiting behind it; +mods two mods; +status burning, poisoned and winding
+## up; +pet a menagerie pet out; +dead the frame 0.3 s after it dies; calamity_N keys appear as
+## that Calamity; +banner a rank banner over it)
 const TestHero := preload("res://tests/test_hero.gd")
 func _initialize() -> void:
 	if not TestHero.safe():
@@ -31,8 +33,12 @@ func _initialize() -> void:
 	main._apply_nav()
 	var dir := TestHero.shots_dir("monsters/" + args[0])
 	for arg in args.slice(1):
-		var pack := arg.ends_with("+pack")
-		arg = arg.trim_suffix("+pack")
+		var flags: Array = []
+		for f in ["+dead", "+pet", "+status", "+mods", "+pack", "+banner"]:
+			if arg.contains(f):
+				flags.append(f)
+				arg = arg.replace(f, "")
+		var pack := "+pack" in flags
 		var tier := int(arg.get_slice("#", 1)) if arg.contains("#") else 0
 		arg = arg.get_slice("#", 0)
 		var key: String = arg.get_slice("@", 0)
@@ -61,7 +67,22 @@ func _initialize() -> void:
 			st.horde_left = 3
 			st.horde_total = 3
 			st.horde_pack = true
-		var shot := key + ("_t%d" % tier if tier > 0 else "") + ("_pack" if pack else "")
+		if "+mods" in flags:
+			st.enemy_mods = ["Swift", "Armored"]
+		st.burn_turns = 3 if "+status" in flags else 0
+		st.enemy_poison_turns = 2 if "+status" in flags else 0
+		if "+status" in flags:
+			st.cfight["windup"] = 1
+		else:
+			st.cfight.erase("windup")
+		if "+pet" in flags and Menagerie.out(st).is_empty():
+			Menagerie.make_pet(st, "afanc", "afanc", 0, "shot")
+			st.events = st.events.filter(func(e): return e.get("type", "") != "first_find")   # no popup over the fight
+		elif not "+pet" in flags:
+			st.pets_out.clear()
+		var shot := key + ("_t%d" % tier if tier > 0 else "")
+		for f in flags:
+			shot += "_" + String(f).trim_prefix("+")
 		Sprites.clear_monster_cache()
 		main.refresh()
 		await create_timer(3.0 if st.enemy_is_boss or st.enemy_calamity > 0 else 1.5).timeout
@@ -70,6 +91,20 @@ func _initialize() -> void:
 			push_error("%s: not a fight on screen (%s), no picture saved" % [shot, why])
 			quit(1)
 			return
+		if "+banner" in flags:
+			main.battle.banner_text = "RARE MONSTER!"
+			main.battle.banner_sub = "%s  -  Swift, Armored" % st.enemy_name
+			main.battle.banner_color = Color("#60a5fa")
+			main.battle.banner_alpha = 1.5
+			await create_timer(0.1).timeout
+		if "+dead" in flags:
+			# the kill as the game sends it (a Calamity's flag is cleared first: Calamity.on_slain)
+			var cal := st.enemy_calamity > 0
+			st.enemy_calamity = 0
+			var ev: Array[Dictionary] = [{"type": "enemy_dead", "shape": st.enemy_shape, "color": st.enemy_color, "boss": st.enemy_is_boss,
+				"name": st.enemy_name, "art": st.enemy_art, "tier": tier, "calamity": cal}]
+			main.battle.play(ev)
+			await create_timer(0.3).timeout
 		root.get_texture().get_image().save_png(dir.path_join(shot + ".png"))
 	quit()
 
