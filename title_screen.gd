@@ -203,7 +203,7 @@ func _draw_scene(vs: Vector2) -> void:
 			var u := 3.0
 			var hs := Vector2(hero_tex.get_size()) * u
 			var floor_y := minf(halls.proj(0.0, HallsScene.FLOOR_Y, 2.1).y, sz.y - 6.0)
-			var feet := float(Sprites.HERO_FOOT - Sprites.PORTRAIT_CROP.position.y) * u
+			var feet := float(Sprites.PORTRAIT_FOOT + 1) * u   # the boots' bottom edge on the shadow's centre line
 			var bob := roundf(sin(t * 2.2) * 0.6) * u
 			var pos := Vector2(roundf(vs.x * 0.5 - hs.x / 2.0 - 40.0), roundf(floor_y - feet + bob))
 			draw_set_transform(Vector2(pos.x + hs.x / 2.0, floor_y), 0.0, Vector2(1.0, 0.25))

@@ -108,10 +108,7 @@ func setup(m) -> void:
 			portrait.texture = _breath[1] if portrait.texture == _breath[0] else _breath[0])
 	center.add_child(breathe)
 	center.resized.connect(func():   # centre the hero and its plinth in whatever width the phone gives
-		var cw := center.size.x
-		var ph := portrait.custom_minimum_size
-		portrait.position = Vector2(roundf((cw - ph.x) / 2.0), center.size.y - ph.y - 14)
-		pl.position = Vector2(roundf((cw - pl.texture.get_width()) / 2.0), center.size.y - pl.texture.get_height() - 2))
+		UI.seat_hero(portrait, pl, 3, center.size.x / 2.0, UI.seat_ground(center.size.y, pl)))   # boots in the shadow
 	chips = UI.hbox(6)
 	chips.alignment = BoxContainer.ALIGNMENT_CENTER
 	sv.add_child(chips)

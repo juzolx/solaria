@@ -228,8 +228,7 @@ static func outfit_stage(g: GameState, cls: String, tier: int, scale := 2, silho
 		pic.modulate = UI.EMPTY
 	c.add_child(pic)
 	c.resized.connect(func():   # centred, whole pixels, the plinth under the feet
-		pic.position = Vector2(roundf((c.size.x - side) / 2.0), 0)
-		pl.position = Vector2(roundf((c.size.x - pl.texture.get_width()) / 2.0), c.size.y - pl.texture.get_height()))
+		UI.seat_hero(pic, pl, scale, c.size.x / 2.0, (Sprites.PORTRAIT_FOOT + 1) * scale))   # boots in the shadow
 	return c
 
 ## Interface pass: one class in the first "Choose your class" picker: your hero in its outfit and

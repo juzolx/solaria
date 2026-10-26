@@ -24,6 +24,8 @@ func check_floors(label: String, node: Node) -> void:
 			continue
 		if ch is Control:
 			var c := ch as Control
+			if c is TextureRect and c.has_meta("hero_pic") and c.is_visible_in_tree():
+				_check_seat(label, c as TextureRect)
 			# Fable r5 #4: a grey button whose reason only shows on hover says nothing on a phone (use UI.why)
 			if c is Button and c.is_visible_in_tree() and (c as Button).disabled and c.tooltip_text != "":
 				fail("MUTE BUTTON: %s \"%s\" hides \"%s\" in a hover tooltip [%s]" % [label, String(c.get("text")).left(24).replace("\n", " "), c.tooltip_text.left(30), _path(c)])
@@ -74,6 +76,57 @@ func check_floors(label: String, node: Node) -> void:
 				if not _pixel(c.get_theme_font("normal_font")):
 					fail("WRONG FONT: %s rich text [%s]" % [label, _path(c)])
 		check_floors(label, ch)
+
+## Juzo (r5 follow-up): a hero on a plinth stands in its shadow. The boots' bottom edge (the last
+## opaque row of the portrait in its middle columns, measured, not assumed) must sit on the shadow's
+## centre line within 1 screen px, and the whole shadow must show: on screen, inside every clipping
+## parent, and under no text.
+func _check_seat(label: String, pl: TextureRect) -> void:
+	var pic := pl.get_meta("hero_pic") as TextureRect
+	if pic == null or not is_instance_valid(pic) or pic.texture == null:
+		return
+	var img := pic.texture.get_image()
+	var low := -1
+	for y in img.get_height():
+		for x in range(img.get_width() / 2 - 12, img.get_width() / 2 + 12):
+			if img.get_pixel(x, y).a > 0.5:
+				low = y
+	var k := pic.get_global_rect().size.y / float(img.get_height())
+	var boots := pic.get_global_rect().position.y + (low + 1) * k
+	var shadow := pl.get_global_rect()
+	var mid := shadow.position.y + shadow.size.y / 2.0
+	var px := 1.0 / maxf(0.01, root.get_final_transform().get_scale().y)   # one screen px in design px
+	if absf(boots - mid) > px + 0.01:
+		fail("FLOATING HERO: %s boots end at %.0f, the shadow's centre is %.0f [%s]" % [label, boots, mid, _path(pic)])
+	# (a list scrolled past the hero is fine; the bug is a hero in view whose shadow is cut)
+	var seen := _shown_rect(pic)
+	if seen.size.y < pic.get_global_rect().size.y - 0.5:
+		return
+	if _shown_rect(pl).size.y < shadow.size.y - 0.5 or _shown_rect(pl).size.x < shadow.size.x - 0.5:
+		fail("CUT SHADOW: %s the hero shows but their shadow is cut [%s]" % [label, _path(pl)])
+		return
+	for t in root.find_children("*", "Control", true, false):
+		var tc := t as Control
+		if tc == pic or tc == pl or not tc.is_visible_in_tree() or not (tc is Label or tc is RichTextLabel or tc is Button):
+			continue
+		if String(tc.get("text")).strip_edges() == "":
+			continue
+		var tr := _shown_rect(tc)   # text scrolled out of sight under a pinned stage doesn't count
+		if tc.is_ancestor_of(pl) or tr.size.x <= 0.0 or tr.size.y <= 0.0:
+			continue
+		if tr.intersects(shadow.grow(-1.0)) and tc.get_parent() != pl.get_parent():
+			fail("CUT SHADOW: %s \"%s\" sits on the hero's shadow [%s]" % [label, String(tc.get("text")).left(24).replace("\n", " "), _path(tc)])
+			return
+
+## The part of c on screen: its rect cut by the screen and every clipping parent.
+func _shown_rect(c: Control) -> Rect2:
+	var r := c.get_global_rect().intersection(root.get_visible_rect())
+	var p := c.get_parent()
+	while p is Control:
+		if (p as Control).clip_contents:
+			r = r.intersection((p as Control).get_global_rect())
+		p = p.get_parent()
+	return r
 
 func _pixel(f: Font) -> bool:
 	if f == null:
