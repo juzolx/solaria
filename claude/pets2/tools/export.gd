@@ -12,7 +12,10 @@ func _init() -> void:
 		kind[c[1]] = c[2]
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
 	var n := 0
-	for l in FileAccess.get_file_as_string(ROOT + "picks.txt").strip_edges().split("\n"):
+	# an optional arg names another picks file (picks_r1.txt: only the Fable R1 redraws);
+	# a full re-export undoes outline.gd, so run that again after one
+	var args := OS.get_cmdline_user_args()
+	for l in FileAccess.get_file_as_string(ROOT + (args[0] if args.size() > 0 else "picks.txt")).strip_edges().split("\n"):
 		var p := l.strip_edges().split(" ")
 		var src := ""
 		if p[0] == "s":
