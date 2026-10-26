@@ -322,30 +322,8 @@ func _draw_gate() -> Rect2:
 	var br := scene.proj(HallsScene.DOOR_W / 2.0, HallsScene.FLOOR_Y, HallsScene.D)
 	return Rect2(tl, br - tl)
 
-<<<<<<< HEAD
-## Swirling violet light with motes spiraling in, centred on c.
-func _draw_portal(c: Vector2, rw: float, rh: float) -> void:
-	for i in 6:
-		var k := 1.0 - i / 6.0
-		var wob := 1.0 + 0.05 * sin(t * 3.0 + i)
-		draw_set_transform(c, sin(t * 0.7 + i) * 0.08, Vector2(rw * k * wob / rh, 1.0))
-		var col := Color("#3b0764").lerp(Color("#c4b5fd"), 1.0 - k)
-		draw_circle(Vector2.ZERO, rh * k, Color(col, 0.35 + 0.1 * (1.0 - k)))
-	draw_set_transform(Vector2.ZERO)
-	# motes spiraling in
-	for i in 10:
-		var a := t * 1.6 + i * TAU / 10.0
-		var d := fmod(t * 0.5 + i * 0.1, 1.0)
-		var p := c + Vector2(cos(a) * rw * (1.2 - d), sin(a) * rh * (1.2 - d))
-		draw_rect(Rect2(p, Vector2(2, 2)), Color(0.85, 0.8, 1.0, d))
-	draw_circle(c, rw * 0.18, Color(1, 1, 1, 0.6 + 0.3 * sin(t * 4.0)))
-
 ## Menagerie pets on the run follow at the leader's left: their own baby art, true size, breathing.
 func _draw_menagerie_room(leader_feet: Vector2, leader_sz: float, k: float) -> void:
-=======
-## Menagerie pets on the run follow at the leader's left, sized by their level.
-func _draw_menagerie_room(leader_feet: Vector2, leader_sz: float) -> void:
->>>>>>> wt/dungeon_r1
 	var pets := Menagerie.out(state)
 	var s := 32.0 * k
 	for i in pets.size():
