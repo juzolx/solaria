@@ -197,8 +197,10 @@ static func total(track: String) -> int:
 			for zi in GameData.ZONES.size():
 				n += GameData.zone_uniques(zi).size()
 			return n
-		"signatures", "pets":
+		"signatures":
 			return Monsters.all_monsters().size()
+		"pets":
+			return Menagerie.all_species().size()   # Calamity pets too (the Codex header counts the same list)
 		"slots":
 			return GameData.SLOT_ORDER.size()
 		"sets":
@@ -237,7 +239,7 @@ static func count(codex: Codex, track: String) -> int:
 			return n
 		"pets":
 			var n := 0
-			for m in Monsters.all_monsters():
+			for m in Menagerie.all_species():
 				if codex.pet_book.has(m):
 					n += 1
 			return n

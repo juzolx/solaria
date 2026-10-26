@@ -55,16 +55,16 @@ func _initialize() -> void:
 	w.door_traps = [false, false, false]
 	check(Halls.read_door(w, 0)["label"] == "?", "unread doors are blank")
 	w.doors = ["elite", "fight", "fight"]
-	check(Halls.read_door(w, 0)["label"] == "Claw marks", "an elite door shows claw marks even to a blind team")
+	check(Halls.read_door(w, 0)["label"] == "Claws", "an elite door shows claw marks even to a blind team")
 	var r := hero("Ranger")
 	check(Halls.door_sense(r) == 1, "a ranger senses doors")
 	r._room_cleared()
 	r.doors = ["elite", "treasure", "fight"]
 	r.door_traps = [false, false, false]
-	check(Halls.read_door(r, 0)["color"] == "#f87171" and Halls.read_door(r, 1)["color"] == "#4ade80" and Halls.read_door(r, 2)["color"] == "#fbbf24", "red, green, yellow")
+	check(Halls.read_door(r, 0)["color"] == "#e43b44" and Halls.read_door(r, 1)["color"] == "#63c74d" and Halls.read_door(r, 2)["color"] == "#feae34", "red, green, yellow")
 	check(Halls.read_door(r, 1)["label"] == "", "level 1 shows only a glow")
 	r.ctrack["doors_read"] = Halls.READS_FOR_LEVEL_2
-	check(Halls.door_sense(r) == 2 and Halls.read_door(r, 1)["label"] == "Treasure room", "a seasoned reader sees the room")
+	check(Halls.door_sense(r) == 2 and Halls.read_door(r, 1)["label"] == "Treasure", "a seasoned reader sees the room")
 	var before := int(r.ctrack.get("doors_read", 0))
 	r._room_cleared()
 	check(int(r.ctrack.get("doors_read", 0)) > before, "reading doors trains the reader")

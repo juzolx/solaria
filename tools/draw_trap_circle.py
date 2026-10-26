@@ -3,7 +3,7 @@ import os
 import sys
 from PIL import Image
 # tools/draw_trap_circle.py <repo> : Solaria's own rune circles, in light palette greys (tinted in code).
-# art/traps/circle.png is the base (2 px outer ring, eight runes in the band, 1 px inner ring);
+# art/traps/circle.png is the base (2 px rings, eight 2x runes in the band, 2 px ticks);
 # art/traps/<trap kind>.png adds that trap's sigil in the middle; art/traps/shrine.png is the
 # shrine's own glyph (a different layout). 64x64, laid flat, no outline ring, no rotation in game.
 W = 64
@@ -61,6 +61,11 @@ def rows(px, cx, cy, art, c):
                 put(px, cx - w // 2 + xx, cy - h // 2 + yy, c)
 
 
+def big(art):
+    # every sigil pixel drawn as 2x2, so the strokes read as 2 px lines like the rings
+    return [r for row in art for r in ("".join(ch * 2 for ch in row),) * 2]
+
+
 RUNES = [
     [".#.", "#.#", "#.#"],
     ["#.#", ".#.", ".#."],
@@ -70,26 +75,29 @@ RUNES = [
 
 
 def base(px):
+    # every stroke is 2 px: on a phone the floor's perspective halves the circle's height,
+    # and 1 px lines broke into stair steps there (Fable round 2)
     band(px, 29.0, 31.0, WHITE)       # the 2 px outer ring
-    band(px, 18.5, 19.5, LIGHT)       # 1 px inner ring
+    band(px, 18.0, 20.0, LIGHT)       # the 2 px inner ring
     for i in range(8):
         a = math.radians(-90 + i * 45)
-        rows(px, round(C + 24.0 * math.cos(a)), round(C + 24.0 * math.sin(a)), RUNES[i % 4], WHITE)
+        rows(px, round(C + 24.5 * math.cos(a)), round(C + 24.5 * math.sin(a)), big(RUNES[i % 4]), WHITE)
         a2 = math.radians(-90 + i * 45 + 22.5)
-        for k in (20.5, 27.5):        # ticks on the rings between the runes
-            put(px, round(C + k * math.cos(a2)), round(C + k * math.sin(a2)), MID)
+        for k in (21.0, 27.0):        # 2x2 ticks on the rings between the runes
+            x, y = round(C + k * math.cos(a2)), round(C + k * math.sin(a2))
+            for dx in (0, 1):
+                for dy in (0, 1):
+                    put(px, x + dx, y + dy, MID)
 
 
 SIGILS = {
     "spikes": [  # three blades
-        "....#.......#.......#....",
-        "....#.......#.......#....",
-        "...###.....###.....###...",
-        "...###.....###.....###...",
-        "..#####...#####...#####..",
-        "..#####...#####...#####..",
-        ".#######.#######.#######.",
-        "#########################",
+        ".#...#...#.",
+        ".#...#...#.",
+        "###.###.###",
+        "###.###.###",
+        "###.###.###",
+        "###########",
     ],
     "darts": [  # a venom drop
         ".....#.....",
@@ -163,11 +171,6 @@ SIGILS = {
 }
 
 
-def big(art):
-    # every sigil pixel drawn as 2x2, so the strokes read as 2 px lines like the rings
-    return [r for row in art for r in ("".join(ch * 2 for ch in row),) * 2]
-
-
 os.makedirs(OUT, exist_ok=True)
 img = new()
 base(img.load())
@@ -176,19 +179,19 @@ for kind, art in SIGILS.items():
     img = new()
     px = img.load()
     base(px)
-    rows(px, 32, 32, art if kind == "spikes" else big(art), WHITE)
+    rows(px, 32, 32, big(art), WHITE)      # about 24 px tall
     img.save(os.path.join(OUT, kind + ".png"))
 # the shrine's glyph: a square set in two rings, four eyes on its sides, a small ring inside
 img = new()
 px = img.load()
 band(px, 29.0, 31.0, WHITE)
-band(px, 26.0, 27.0, MID)
+band(px, 25.5, 27.5, MID)
 for k in range(4):
     a = math.radians(45 + k * 90)
     b = math.radians(45 + (k + 1) * 90)
     line(px, C + 24 * math.cos(a), C + 24 * math.sin(a), C + 24 * math.cos(b), C + 24 * math.sin(b), LIGHT, 2)
     e = math.radians(k * 90)
-    rows(px, round(C + 11 * math.cos(e)), round(C + 11 * math.sin(e)), [".##.", "#..#", ".##."], WHITE)
+    rows(px, round(C + 11 * math.cos(e)), round(C + 11 * math.sin(e)), big([".##.", "#..#", ".##."]), WHITE)
 band(px, 4.0, 6.0, WHITE)
 img.save(os.path.join(OUT, "shrine.png"))
 print("trap circles drawn")

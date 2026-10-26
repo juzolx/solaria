@@ -9,6 +9,7 @@ var state: GameState
 var box: VBoxContainer
 var shown := ""
 var renaming := -1
+const BTN := 52   # Fable pets R3: 44 pt+ on a phone (UI.TAP is 44 design px; flagged to the UI dev)
 
 func setup(m) -> void:
 	main = m
@@ -84,9 +85,9 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 	var tc := Color(GameData.color_of(mini(tier, 5)))
 	v.add_child(UI.label("%s %s  ·  Lv %d" % [Menagerie.TIER_NAMES[tier], Monsters.name_of(str(p["species"])), int(p["level"])], 12, tc))
 	v.add_child(UI.label(("Hurt: rests %d more floor%s" % [int(p["hurt"]), "" if int(p["hurt"]) == 1 else "s"]) if hurt else
-		"Hits for %d%% of your Attack" % int(Menagerie.power(p) * 100), 11, UI.RED if hurt else UI.DIM))
+		"Hits for %d%% of your Attack" % _hits(p), 11, UI.RED if hurt else UI.DIM))
 	_ability_lines(v, p, renaming == id)   # names only on the card; the sentences and locked ones under "More"
-	var right := UI.vbox(4)
+	var right := UI.vbox(8)
 	right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(right)
 	var full := Menagerie.out(state).size() >= Menagerie.max_out(state)
@@ -98,13 +99,13 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 			main.toast("Hurt pets must rest first." if hurt else "Your team is full (%d)." % Menagerie.max_out(state))
 		shown = ""
 		main.refresh())
-	b.custom_minimum_size = Vector2(96, UI.TAP)
+	b.custom_minimum_size = Vector2(96, BTN)
 	right.add_child(b)
 	var rn := UI.button("Less" if renaming == id else "More", func():
 		renaming = -1 if renaming == id else id
 		shown = ""
 		main.refresh())
-	rn.custom_minimum_size = Vector2(96, UI.TAP)
+	rn.custom_minimum_size = Vector2(96, BTN)
 	right.add_child(rn)
 	if renaming == id:
 		var row := UI.hbox(6)
@@ -113,14 +114,14 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 		le.text = String(p["name"])
 		le.max_length = 18
 		le.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		le.custom_minimum_size = Vector2(0, UI.TAP)
+		le.custom_minimum_size = Vector2(0, BTN)
 		row.add_child(le)
 		var ok := UI.button("Rename", func():
 			Menagerie.rename(state, id, le.text)
 			renaming = -1
 			shown = ""
 			main.refresh())
-		ok.custom_minimum_size = Vector2(0, UI.TAP)
+		ok.custom_minimum_size = Vector2(0, BTN)
 		row.add_child(ok)
 		var rel := UI.button("Release", func():
 			main.confirm("Release %s?" % String(p["name"]), "%s goes back to the wild for good. Pets are hard to find, so be sure. Your Codex remembers you had one." % String(p["name"]), "Release", func():
@@ -129,9 +130,14 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 				shown = ""
 				main.refresh()))
 		rel.add_theme_color_override("font_color", UI.RED)
-		rel.custom_minimum_size = Vector2(0, UI.TAP)
+		rel.custom_minimum_size = Vector2(0, BTN)
 		row.add_child(rel)
 	return c[0]
+
+## What one hit of this pet is, as a share of your Attack: Menagerie.turn's own sum
+## (a Beast Lord's song and the party's strength included).
+func _hits(p: Dictionary) -> int:
+	return int(Menagerie.power(p) * (Menagerie.WHISPER_POWER if Menagerie.whisperer_near(state) else 1.0) * state.party_mult() * 100)
 
 ## 2.1: what the pet knows (by its rank), and what a higher-ranked one of its kind
 ## would know. A pet's rank never changes, so this pet won't learn those itself.
@@ -177,12 +183,12 @@ func _pet_card() -> void:
 	h.add_child(v)
 	v.add_child(UI.label(World.pet_name(state), 17, col.lightened(0.3)))
 	v.add_child(UI.label("%s, stage %d of 4" % [World.pet_species(state), st + 1], 12, UI.DIM))
-	var tog := UI.button("Fighting" if state.pet_on else "Resting", func():
+	var tog := UI.button("Fighting" if state.pet_on else "Send to fight", func():
 		state.pet_on = not state.pet_on
 		state.save_game()
 		shown = ""
 		main.refresh())
-	tog.custom_minimum_size = Vector2(90, UI.TAP)
+	tog.custom_minimum_size = Vector2(90, BTN)
 	h.add_child(tog)
 	c[1].add_child(UI.wrap("%s Hits for %d%% of your Attack every turn." % [info["text"], int(float(World.PET_POWER[st]) * state.party_mult() * 100)], 12, UI.TEXT))
 	var stages: Array = []
@@ -196,14 +202,14 @@ func _pet_card() -> void:
 	le.text = state.pet_name
 	le.max_length = 18
 	le.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	le.custom_minimum_size = Vector2(0, UI.TAP)
+	le.custom_minimum_size = Vector2(0, BTN)
 	nrow.add_child(le)
 	var sv := UI.button("Name it", func():
-		state.pet_name = le.text.strip_edges()
+		state.pet_name = Menagerie.clean_name(le.text)   # it goes into the log's BBCode
 		state.save_game()
 		shown = ""
 		main.refresh())
-	sv.custom_minimum_size = Vector2(0, UI.TAP)
+	sv.custom_minimum_size = Vector2(0, BTN)
 	nrow.add_child(sv)
 
 ## Interface pass (approved mockup 06): a pet card wears the panel frame, its line in the

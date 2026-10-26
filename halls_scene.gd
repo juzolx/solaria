@@ -33,6 +33,7 @@ const MOODS := [
 	{"kind": "motes", "dark": 0.3, "deep": Color("#1f1d24"), "amb": Color("#6a4a28"), "accent": Color("#c8a060"), "light": Color("#c8a060")},
 	{"kind": "embers", "dark": 0.55, "deep": Color("#2a1a1e"), "amb": Color("#733e39"), "accent": Color("#e43b44"), "light": Color("#f77622")},
 ]
+const DOOR_LABEL_W := 120.0   # a door label's box, centred on its door
 const TEXELS := 16.0      # texels per world unit on walls, floors and ceilings (same as Room3D)
 
 var focal := 300.0
@@ -173,8 +174,10 @@ func glow(ci: CanvasItem, at: Vector2, w: float, c: Color) -> void:
 func sprite(ci: CanvasItem, tex: Texture2D, x: float, z: float, h: float, tint := Color.WHITE, bob := 0.0) -> Rect2:
 	if tex == null:
 		return Rect2()
-	var feet := (proj(x, FLOOR_Y, z) + Vector2(0, bob)).round()
-	var k := maxi(1, roundi(focal * h / z / tex.get_size().y))
+	# k whole SCREEN pixels per art pixel (not design pixels: those are 0.85 screen px on a phone)
+	var scr := screen_scale(ci)
+	var feet := ((proj(x, FLOOR_Y, z) + Vector2(0, bob)) * scr).round() / scr
+	var k := float(maxi(1, roundi(focal * h / z / tex.get_size().y * scr))) / scr
 	var hpx := tex.get_size().y * k
 	var wpx := tex.get_size().x * k
 	var rect := Rect2(feet - Vector2(wpx / 2.0, hpx), Vector2(wpx, hpx))
@@ -257,8 +260,8 @@ func draw_shell(ci: CanvasItem, sz: Vector2) -> void:
 func is_3d() -> bool:
 	return r3 != null and _r3_key == key and key != "" and not low and allow_3d
 
-## Draws the 3D room as the backdrop. The first frame of a new room (or with Low
-## graphics on) falls back to the 2D drawer while the 3D one is set up.
+## Draws the 3D room as the backdrop, one viewport pixel per ArtStyle.unit screen pixels.
+## Only the very first frame (or Low graphics, or headless) uses the 2D drawer.
 func _draw_3d(ci: CanvasItem, sz: Vector2) -> bool:
 	if low or not allow_3d or DisplayServer.get_name() == "headless":
 		if r3 != null:
@@ -272,14 +275,19 @@ func _draw_3d(ci: CanvasItem, sz: Vector2) -> bool:
 		return false
 	if not r3.is_inside_tree():
 		return false
+	var scr := screen_scale(ci)
+	r3.fit(sz, scr if scr > 0.01 else 1.0)
 	if _r3_key != key:
+		# a new room: build it next frame and keep showing the last one meanwhile (no 2D flash)
 		_r3_key = key
-		r3.fit(sz)
 		r3.rebuild.call_deferred(zone, _seed, {"light": light, "amb": amb, "accent": mood()["accent"], "kind": mood()["kind"], "dark": dark, "gate": gate})
-		return false
-	r3.fit(sz)
-	ci.draw_texture_rect(r3.texture(), Rect2(Vector2.ZERO, sz), false)
+	ci.draw_texture_rect(r3.texture(), Rect2(Vector2.ZERO, r3.drawn_size()), false)
 	return true
+
+## Screen pixels per design pixel for ci: the window's stretch (canvas_items mode leaves the
+## canvas transform at 1.0 on phones, so read the viewport's final transform) times any canvas zoom.
+static func screen_scale(ci: CanvasItem) -> float:
+	return maxf(0.01, PixelPic.stretch(ci) * ci.get_global_transform_with_canvas().get_scale().x)
 
 ## The three doors on the far wall. When `st` has doors to pick, they glow and
 ## become tap targets in `hit` ("d0".."d2").
@@ -301,18 +309,21 @@ func draw_doors(ci: CanvasItem, st: GameState, hit: Dictionary, font: Font) -> v
 			continue
 		# a door reader on the team senses what's behind: a glow, later the room itself
 		var rd := Halls.read_door(st, i)
-		var col := Color(String(rd["color"])) if String(rd["color"]) != "" else Color(1.0, 0.85, 0.45)
-		var pulse := 0.45 + 0.35 * sin(t * 3.0 + i)
-		if String(rd["color"]) != "":
-			glow(ci, Vector2(rect.get_center().x, rect.end.y), rect.size.x * 1.8, Color(col, 0.6 + 0.2 * sin(t * 2.0 + i)))
-		ci.draw_rect(rect.grow(2), Color(col, pulse), false, 2.0)
+		var sensed := String(rd["color"]) != ""
+		# every door you can pick glows at its foot (in the zone's accent until a reader senses more),
+		# so the main tap target never sinks into a dark far wall
+		var col := ArtStyle.nearest(Color(String(rd["color"]))) if sensed else Color(mood()["accent"])
+		var pulse := 0.6 + 0.3 * sin(t * 3.0 + i)
+		glow(ci, Vector2(rect.get_center().x, rect.end.y), rect.size.x * 1.8, Color(col, 0.6 + 0.2 * sin(t * 2.0 + i) if sensed else 0.45))
+		ci.draw_rect(rect.grow(3), Color(col, pulse), false, 3.0)
 		hit["d%d" % i] = rect.grow(12)
 		var lab := String(rd["label"])
 		if lab != "":
 			var fs := 18 if lab == "?" else 16
-			var at := Vector2(rect.position.x - 30, rect.position.y - 6)
-			ci.draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x + 60, fs, 4, Color(0, 0, 0, 0.9))
-			ci.draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x + 60, fs, col.lightened(0.3))
+			# the middle label sits one line higher, so neighbours never touch
+			var at := Vector2(rect.get_center().x - DOOR_LABEL_W / 2.0, rect.position.y - 6 - (fs if i == 1 else 0))
+			ci.draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, DOOR_LABEL_W, fs, 4, Color(0, 0, 0, 0.9))
+			ci.draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, DOOR_LABEL_W, fs, col.lightened(0.3))
 
 ## Scenery and torches as depth-sorted entries ({"z", "kind": "decor"/"torch"}).
 func scenery() -> Array:
@@ -344,11 +355,22 @@ func draw_scenery(ci: CanvasItem, th: Dictionary) -> bool:
 			return true
 	return false
 
-## The edges of your view fall into shadow.
+## The edges of your view fall into shadow: a thin outline-coloured frame and one band of
+## checker dither inside it (hard pixels, no soft gradient over the art).
 func vignette(ci: CanvasItem, sz: Vector2) -> void:
-	for i in 8:
-		var f := float(i) / 8.0
-		var a := (0.1 + dark * 0.12) * (1.0 - f)
-		ci.draw_rect(Rect2(0, 0, sz.x * 0.1 * (1.0 - f), sz.y), Color(0, 0, 0, a))
-		ci.draw_rect(Rect2(sz.x - sz.x * 0.1 * (1.0 - f), 0, sz.x * 0.1 * (1.0 - f), sz.y), Color(0, 0, 0, a))
-		ci.draw_rect(Rect2(0, 0, sz.x, sz.y * 0.1 * (1.0 - f)), Color(0, 0, 0, a))
+	var scr := screen_scale(ci)
+	var u := float(ArtStyle.unit(scr)) / scr
+	var edge := Color("#0e0812")
+	ci.draw_rect(Rect2(0, 0, u, sz.y), edge)
+	ci.draw_rect(Rect2(sz.x - u, 0, u, sz.y), edge)
+	ci.draw_rect(Rect2(0, 0, sz.x, u), edge)
+	var band := 2
+	for row in band:
+		var y := 0.0
+		var k := 0
+		while y < sz.y:
+			if (k + row) % 2 == 0:
+				ci.draw_rect(Rect2(u * (1 + row), y, u, u), edge)
+				ci.draw_rect(Rect2(sz.x - u * (2 + row), y, u, u), edge)
+			y += u
+			k += 1
