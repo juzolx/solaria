@@ -237,9 +237,10 @@ func _update() -> void:
 		var show: bool = (field == "fur") == furry if field in ["skin", "hair", "hair_color", "fur"] else true
 		if field == "eyes" and HeroArt.available():
 			show = false
-		# races with their own body build (goblin, dwarf...) have a drawn head: no style or face choice yet
+		# races with their own body build (goblin, dwarf...) have a drawn face: no face choice; the hair
+		# style only where the bake fitted the styles to that build's head (heroes.json "hair")
 		if field in ["hair", "face"] and HeroArt.available() and HeroArt.build_dir(app) != "":
-			show = false
+			show = field == "hair" and bool(HeroArt.info()["builds"].get(HeroArt.art_race(app), {}).get("hair", false))
 		# a build that keeps its drawn skin (goblin and orc green, the werewolf's grey) has nothing to pick
 		if field == "skin" and HeroArt.available() and HeroArt.build_dir(app) != "":
 			var bd: Dictionary = HeroArt.info()["builds"].get(HeroArt.art_race(app), {})
