@@ -234,9 +234,10 @@ def wall_shadow(img):
     img.alpha_composite(sh)
 
 
-OUTSIDE_PROPS = [("props32", 25, -2, 11), ("props32", 16, -2, 12), ("props32", 16, -3, 12),   # a woodcutter's stump and logs (NW)
-                 ("props48", 7, 12, -2),                                                     # a standing stone (NE)
-                 ("props48", 19, 17, N + 3)]                                                 # a gibbet cage by the gate road
+OUTSIDE_SPRITES = []   # (sprite, entry) of the OUTSIDE_PROPS, for the floating check
+# (the woodcutter's stump and logs and the standing stone stood behind the walls: only a stone's
+# top showed over the battlements, floating, Fable round 5 P11)
+OUTSIDE_PROPS = [("props48", 19, 17, N + 3)]                                                 # a gibbet cage by the gate road
 
 
 def outside_trees(sprites):
@@ -271,6 +272,7 @@ def outside_trees(sprites):
         bb = im.getbbox()
         x, y = at(i + .5, j + .5)
         put(sprites, im, (x, y + 3), ((bb[0] + bb[2]) // 2, bb[3] - 1))
+        OUTSIDE_SPRITES.append((sprites[-1], (name, n, i, j)))
 
 
 def ripples(img, g):
@@ -308,6 +310,88 @@ def put(sprites, im, foot_xy, anchor, key=None):
     sprites.append((key if key is not None else foot_xy[1], x, y, im, TAG[0]))
 
 
+def _bottoms(im):
+    """Each column's lowest solid pixel (None where the column is empty)."""
+    a = im.getchannel("A").load()
+    out = []
+    for x in range(im.width):
+        ys = [y for y in range(im.height) if a[x, y] > 128]
+        out.append(ys[-1] if ys else None)
+    return out
+
+
+def _foot(im, skip=()):
+    """Ground a sprite where it meets the ground (Juzo: the dungeon entrance looked floating): a soft
+    contact shadow under its lowest pixels and grass tufts and rubble on its foot line, none on
+    the columns in `skip` (a stair's foot). The shadow stays under alpha 128, so base_corner and
+    the anchors don't move."""
+    import random
+    rnd = random.Random(7)
+    im = im.copy()
+    px = im.load()
+    bot = _bottoms(im)
+    for x, b in enumerate(bot):
+        if b is None:
+            continue
+        for k, al in ((1, 110), (2, 70), (3, 35)):
+            if b + k < im.height and px[x, b + k][3] == 0:
+                px[x, b + k] = (22, 20, 28, al)
+    x = 2
+    while x < im.width - 3:
+        b = bot[x]
+        if b is None or any(lo <= x <= hi for lo, hi in skip) or any(bot[x + d] is None or abs(bot[x + d] - b) > 1 for d in (-1, 1, 2)):
+            x += 1
+            continue
+        if rnd.random() < 0.55:     # a grass tuft: two or three blades up the foot
+            for dx, h in ((0, 2), (1, 3), (2, 1)):
+                for k in range(h):
+                    px[x + dx, bot[x + dx] - k] = (78, 118, 52, 255) if k else (54, 84, 40, 255)
+        else:                       # a fallen stone: lit top, dark rim
+            for dx in (0, 1, 2):
+                px[x + dx, bot[x + dx]] = (44, 42, 48, 255)
+                px[x + dx, bot[x + dx] - 1] = (128, 124, 120, 255) if dx < 2 else (92, 90, 96, 255)
+            px[x + 1, bot[x + 1] - 2] = (150, 146, 140, 255)
+        x += rnd.randint(5, 10)
+    return im
+
+
+def stone_base(im, stair_cols=(0, -1)):
+    """The Dungeon sprite stood on a cut-soil slab, a brown band under its grass like a floating
+    island's underside. The band becomes a stacked-stone retaining face like the plateau's walls,
+    and under the stair (its columns) the steps carry on down to the plateau's path."""
+    im = im.copy()
+    px = im.load()
+    bot = _bottoms(im)
+    cx = base_corner(im)[0]
+    soil = lambda c: c[3] > 128 and c[0] >= c[1] >= c[2] - 4 and c[0] - c[2] >= 14 and c[0] + c[1] + c[2] < 330
+    for x, b in enumerate(bot):
+        if b is None:
+            continue
+        band = [y for y in range(max(0, b - 13), b + 1) if soil(px[x, y])]
+        if not band:
+            continue
+        top = band[0]
+        stair = stair_cols[0] <= x <= stair_cols[1]
+        shade = 0.74 if x > cx else 0.88     # as dark as the plateau walls; the south-east face in shadow
+        for y in range(top, b + 1):
+            d = b - y
+            if d == 0:
+                c = (36, 34, 40)
+            elif stair:                       # treads and risers, two rows each
+                c = (146, 142, 136) if (d // 2) % 2 else (84, 82, 88)
+            else:
+                course = d // 4
+                joint = (x + (course % 2) * 5) % 10 == 0
+                if d % 4 == 0 or joint:
+                    c = (50, 48, 56)
+                else:
+                    c = ((98, 96, 102), (112, 110, 114), (124, 120, 122))[(x // 10 + course * 7) % 3]
+                    if d % 4 == 3:            # each stone's lit top edge
+                        c = tuple(min(255, v + 18) for v in c)
+            px[x, y] = tuple(int(v * shade) for v in c) + (255,)
+    return im
+
+
 def place_lot(sprites, lid, x0, y0, x1, y1, z=0):
     """A sprite with "origin" (img2img from a block-out) puts that pixel on vertex (x0, y0);
     otherwise its bottom corner goes on the lot's front corner (x1+1, y1+1)."""
@@ -321,6 +405,14 @@ def place_lot(sprites, lid, x0, y0, x1, y1, z=0):
         im = daylit(im)
     if spec.get("flip"):
         im = im.transpose(Image.FLIP_LEFT_RIGHT)
+    if lid == "church" and spec["file"] == "church.png":
+        im = no_statue(im)
+    if lid == "clinic":
+        im = wall_cross(im)
+    if lid == "gate":                  # the dungeon entrance on stone, with its foot on the plateau
+        im = _foot(stone_base(im, (20, 98)), skip=((18, 102),))
+    if lid == "plateau":               # the plateau's walls meet the street (its stair's foot left clear)
+        im = _foot(im, skip=((44, 146),))
     import decor as _d
     if _d.LEVEL == 1 and lid in _d.LEVEL_ITEMS:
         im = level1_look(im)
@@ -339,6 +431,56 @@ def place_lot(sprites, lid, x0, y0, x1, y1, z=0):
     sprites[-1] = sprites[-1][:4] + (lid,)
     b = im.getbbox()
     BOXES[lid] = (x + b[0], y + b[1], b[2] - b[0], b[3] - b[1])
+
+
+def staked(im):
+    """(Fable round 5, P3) A training dummy's single stake hovered on the flat dirt: a 9x2 ground
+    shadow and a 5x2 mound of earth at its foot."""
+    im = im.copy()
+    px = im.load()
+    bb = im.getbbox()
+    cx, b = (bb[0] + bb[2]) // 2, min(bb[3], im.height - 1)
+    for x in range(cx - 4, cx + 5):          # the shadow, under everything
+        for y in (b - 1, b):
+            if 0 <= x < im.width and px[x, y][3] == 0 and not (y == b and abs(x - cx) == 4):
+                px[x, y] = (24, 18, 22, 110)
+    for x in range(cx - 2, cx + 3):          # the mound over the stake's foot
+        px[x, b - 1] = (118, 90, 60, 255) if abs(x - cx) < 2 else (92, 70, 48, 255)
+        px[x, b - 2] = px[x, b - 2] if abs(x - cx) > 1 else (104, 80, 54, 255)
+    return im
+
+
+def no_statue(im):
+    """(Fable round 5, P1) The Church's corner statue stood behind the Shop's roof, so it read as
+    standing on that roof: it goes, and the facade's wall one stone course back fills its place."""
+    im = im.copy()
+    src, px = im.copy().load(), im.load()
+    pale = {(x, y) for y in range(214, 264) for x in range(100, 124)
+            if src[x, y][3] and min(src[x, y][:3]) > 120 and max(src[x, y][:3]) - min(src[x, y][:3]) < 45}
+    for x, y in {(x + a, y + b) for x, y in pale for a in (-1, 0, 1) for b in (-1, 0, 1)}:   # with its outline
+        px[x, y] = src[x - 12, y - 6]
+    return im
+
+
+def wall_cross(im):
+    """(Fable round 5, P4) The Clinic's green cross stood on a post behind the ridge, floating over
+    the roof: it hangs on the front gable's apex instead, a wall sign."""
+    im = im.copy()
+    src, px = im.copy().load(), im.load()
+    green = {(x, y) for y in range(10, 35) for x in range(44, 68)
+             if src[x, y][3] and src[x, y][1] > 90 and src[x, y][1] > src[x, y][0] + 25}
+    cross, todo = set(green), list(green)                 # the cross and all that hangs on it, not the ridge
+    while todo:
+        x, y = todo.pop()
+        for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if n not in cross and 40 <= n[0] < 72 and 4 <= n[1] <= 33 and src[n][3]:
+                cross.add(n)
+                todo.append(n)
+    for x, y in cross:
+        px[x, y] = (0, 0, 0, 0)
+    for x, y in cross:
+        px[x - 6, y + 26] = src[x, y]
+    return im
 
 
 def level1_look(im):
@@ -448,6 +590,61 @@ def day_flames(img, lights):
 VIS = {}   # entry -> the share of its pixels still showing, for props the floating check flags
 
 
+def _cover_setup():
+    """For the last compose: sprite -> draw order, the sprites that hide what they cover (everything
+    but the props, the bridge and the outside wood: buildings, towers, the wall runs), and a cached
+    alpha mask getter."""
+    import numpy as np
+    order = {id(s): k for k, s in enumerate(LAST_SPRITES)}
+    alpha = {}
+    def a_of(im):
+        if id(im) not in alpha:
+            alpha[id(im)] = np.asarray(im.split()[3]) > 0
+        return alpha[id(im)]
+    mine = {id(s) for s, _ in PROPS + OUTSIDE_SPRITES}
+    solid = [(k, s) for k, s in enumerate(LAST_SPRITES) if id(s) not in mine and s[4] not in ("bridge", "outside")]
+    return order, solid, a_of
+
+
+def _feet_cover(s, order, solid, a_of):
+    """The share of a sprite's feet (the bottom 3 rows of its opaque pixels) drawn over by a later
+    solid sprite, and the first one's tag."""
+    import numpy as np
+    _, x, y, im, _ = s
+    a = a_of(im)
+    rows = np.nonzero(a.any(axis=1))[0]
+    if not len(rows):
+        return 0.0, None
+    feet = np.zeros_like(a)
+    feet[rows[-1] - 2:rows[-1] + 1] = a[rows[-1] - 2:rows[-1] + 1]
+    fy, fx = np.nonzero(feet)
+    cover = np.zeros(len(fx), bool)
+    by = None
+    for k, s2 in solid:
+        if k <= order[id(s)]:
+            continue
+        _, x2, y2, im2, tag = s2
+        ox, oy = fx + x - x2, fy + y - y2
+        ok = (ox >= 0) & (oy >= 0) & (ox < im2.width) & (oy < im2.height)
+        if not ok.any():
+            continue
+        hit = np.zeros(len(fx), bool)
+        hit[ok] = a_of(im2)[oy[ok], ox[ok]]
+        if hit.any() and by is None:
+            by = tag
+        cover |= hit
+    return float(cover.mean()), by
+
+
+def cull_fences():
+    """A fence is a long thing: the pieces whose foot runs behind a building or the wall are simply
+    left out (a fence that meets a wall stops there), so no rail floats over a roof."""
+    order, solid, a_of = _cover_setup()
+    gone = {id(s) for s, e in PROPS if e[0] == "fence" and _feet_cover(s, order, solid, a_of)[0] >= 0.5}
+    LAST_SPRITES[:] = [s for s in LAST_SPRITES if id(s) not in gone]
+    PROPS[:] = [(s, e) for s, e in PROPS if id(s) not in gone]
+
+
 def _visible(s, order, solid, a_of):
     import numpy as np
     _, x, y, im, _ = s
@@ -471,14 +668,8 @@ def floating():
     mostly drawn over by a later building, wall or tower, or that stands off the ground (on a lot,
     in the water, on the wall ring or a plateau edge). A tree may stand behind a roof as long as
     most of its crown shows; the footbridge's rails stand over the water. Returns [(entry, why)]."""
-    import numpy as np
-    order = {id(s): k for k, s in enumerate(LAST_SPRITES)}
-    alpha = {}
-    def a_of(im):
-        if id(im) not in alpha:
-            alpha[id(im)] = np.asarray(im.split()[3]) > 0
-        return alpha[id(im)]
-    solid = [(k, s) for k, s in enumerate(LAST_SPRITES) if s[4] and s[4] not in ("bridge", "outside")]
+    order, solid, a_of = _cover_setup()
+    props = PROPS + OUTSIDE_SPRITES
     g = {}
     for kind, x0, y0, x1, y1 in GROUND:
         for i in range(x0, x1 + 1):
@@ -488,39 +679,17 @@ def floating():
     towers = [(ti, tj, ti + 2, tj + 2) for ti, tj in TOWERS] + [GATEHOUSE]
     inside = lambda c, r: r[0] <= c[0] <= r[2] and r[1] <= c[1] <= r[3]
     bad = []
-    for s, e in PROPS:
+    for s, e in props:
         if e[0] == "folk":               # the mockup's figures: the game has its own walkers
             continue
-        _, x, y, im, _ = s
-        a = a_of(im)
-        rows = np.nonzero(a.any(axis=1))[0]
-        if not len(rows):
-            continue
-        feet = np.zeros_like(a)
-        feet[rows[-1] - 2:rows[-1] + 1] = a[rows[-1] - 2:rows[-1] + 1]
-        fy, fx = np.nonzero(feet)
-        cover = np.zeros(len(fx), bool)
-        by = None
-        for k, s2 in solid:
-            if k <= order[id(s)]:
-                continue
-            _, x2, y2, im2, tag = s2
-            ox, oy = fx + x - x2, fy + y - y2
-            ok = (ox >= 0) & (oy >= 0) & (ox < im2.width) & (oy < im2.height)
-            if not ok.any():
-                continue
-            a2 = a_of(im2)
-            hit = np.zeros(len(fx), bool)
-            hit[ok] = a2[oy[ok], ox[ok]]
-            if hit.any() and by is None:
-                by = tag
-            cover |= hit
-        if cover.mean() >= 0.5:
+        cover, by = _feet_cover(s, order, solid, a_of)
+        if cover >= 0.5:
             VIS[tuple(e[:4])] = v = _visible(s, order, solid, a_of)
             if e[0] != "trees" or v < 0.4:
-                bad.append((e, f"feet under {by}"))
-        if e[0] in ("fence", "trees") and not inside((e[2], e[3]), (1, 1, N - 2, N - 2)):
-            continue                     # the forest outside the walls
+                bad.append((e, f"feet under {by or 'the wall'}"))
+        outside = not inside((e[2], e[3]), (0, 0, N - 1, N - 1))
+        if outside or e[0] in ("fence", "trees") and not inside((e[2], e[3]), (1, 1, N - 2, N - 2)):
+            continue                     # the forest and the things outside the walls stand on their own ground
         c = (e[2], e[3])
         z = e[4] if e[0] != "fence" and len(e) > 4 else 0
         on_plateau = inside(c, (PLATEAU[0], PLATEAU[1], PLATEAU[2], PLATEAU[3]))
@@ -621,6 +790,7 @@ def compose():
     GROUND_IMG[:] = [img.copy()]
     sprites = []
     TAG[0] = "outside"
+    OUTSIDE_SPRITES.clear()
     outside_trees(sprites)
     TAG[0] = ""
     place_walls(sprites)
@@ -642,6 +812,8 @@ def compose():
             im = load("reeds.png" if name == "reeds" else f"folk/{n}.png" if name == "folk" else f"{name}/{'t' if name == 'trees' else 'p'}{n}.png")
             if name == "props32" and n in SMALL:   # clutter at half size: a barrel is half a walker
                 im = im.resize((16, 16), Image.NEAREST)
+            if (name, n) == ("props32", 40):       # the dummy / scarecrow stake gets a foot
+                im = staked(im)
             cache[(name, n)] = im
         return cache[(name, n)]
     def bottom(im):
@@ -690,6 +862,8 @@ def compose():
         PROPS.append((sprites[-1], ("trees", n, i, j)))
     sprites.sort(key=lambda s: s[0])
     LAST_SPRITES[:] = sprites
+    cull_fences()
+    sprites = LAST_SPRITES
     for _, x, y, im, tag in sprites:
         img.alpha_composite(im, (x, y))
         if tag == "plateau" and GROUND_IMG:   # the plateau's paving and stairs take ground light like the streets
