@@ -1021,12 +1021,10 @@ func _initialize() -> void:
 	check(eg2.pets.size() == 1 and eg2.pets_out.size() == 1, "pets are saved")
 	GameState.delete_slot(7)
 	check(Hidden.info("beast_tamer")["need"].any(func(n): return n[1] == "sure_escapes"), "Beast Tamer: 100 sure escapes")
-	# ---------- 0.13 LPC back and front views ----------
-	var dsp := Lpc.spec({"body": "masc", "skin": 1, "hair": "Long", "hair_color": 0, "eyes": 4, "race": "Human"}, {})
-	dsp["dir"] = "up"
-	var back := Lpc.build(dsp)
+	# ---------- 0.13 back and front views (the PixelLab hero) ----------
+	var back := Sprites.hero_back({"body": "masc", "skin": 1, "hair": "Long", "hair_color": 0, "race": "Human"}, {})
 	check((back["anims"] as Dictionary).has("combat_idle") and (back["anims"] as Dictionary).has("slash"), "heroes have a back view")
-	# town walkers are the PixelLab heroes, halved onto the town's pixel grid (no LPC)
+	# town walkers are the PixelLab heroes, halved onto the town's pixel grid
 	var tw := TownFolk.townsfolk(0)
 	check((tw["s"] as Array).size() == 2 and (tw["s"][0] as Texture2D).get_width() == TownFolk.CELL, "townsfolk walk as PixelLab heroes at half size")
 	check((tw["walk"] as Array).size() == 4 and tw["walk"][1] != tw["walk"][3], "townsfolk walk with a left and a right step")

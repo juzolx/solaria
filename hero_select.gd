@@ -72,7 +72,7 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 	var pic := TextureRect.new()
 	pic.texture = Sprites.portrait(meta.get("appearance", {}), HeroArt.meta_looks(meta))
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT)
+	pic.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT) * 2   # never 1x: 2x in the slot list
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	pic.size_flags_vertical = Control.SIZE_SHRINK_BEGIN

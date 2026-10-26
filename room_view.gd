@@ -220,9 +220,9 @@ func _draw_team() -> void:
 		var scr := get_global_transform_with_canvas().get_scale().x
 		scr = scr if scr > 0.01 else 1.0
 		var unit := ArtStyle.unit(scr)
-		if not art.has("lpc"):
+		if not art.has("anims"):
 			continue
-		var an: Dictionary = (art["lpc"] as Dictionary).get("combat_idle", {})
+		var an: Dictionary = (art["anims"] as Dictionary).get("combat_idle", {})
 		if an.is_empty():
 			continue
 		var n: int = (an["tex"] as Array).size()
@@ -231,8 +231,8 @@ func _draw_team() -> void:
 		var feet := Vector2(size.x * float(xs[j]), size.y - (26.0 if j == 0 else 44.0))
 		scene.shadow(self, feet, sz * 0.18)
 		var a := 0.4 if (j == 0 and state.leader_down) or (j > 0 and members[j - 1].knocked_out) else 1.0
-		# 2.1 heroes stand on row 80 of their 96 cell (LPC frames on ~0.9 of theirs)
-		var foot := 80.0 / 96.0 if art.get("pl", false) else 0.9
+		# 2.1 heroes stand on their frame's foot row (older art on ~0.9 of theirs)
+		var foot := float(an["foot"]) / float(an["size"]) if an.has("foot") else 0.9
 		draw_texture_rect(an["tex"][fi], Rect2(feet - Vector2(sz / 2.0, sz * foot), Vector2(sz, sz)), false, Color(0.85, 0.82, 0.8, a))
 		if j == 0:
 			# pets use the leader's own pixel size (one art px = sz / cell)
@@ -248,7 +248,7 @@ func _draw_pet(leader_feet: Vector2, leader_sz: float, k: float) -> void:
 	if tex == null:
 		return
 	var s := float(tex.get_width()) * k
-	var at := leader_feet + Vector2(leader_sz * 0.62, -4.0)
+	var at := Vector2(float(_row(leader_feet, leader_sz, k)[0]) + s / 2.0, leader_feet.y - 4.0).round()
 	scene.shadow(self, at, s * 0.22)
 	var fy := (Pets.foot(Pets.companion_key(state)) + 1) * k
 	draw_texture_rect(tex, Rect2(at - Vector2(s / 2.0, fy), Vector2(s, s)), false, Color(0.88, 0.85, 0.82))
@@ -326,15 +326,23 @@ func _draw_gate() -> Rect2:
 func _draw_menagerie_room(leader_feet: Vector2, leader_sz: float, k: float) -> void:
 	var pets := Menagerie.out(state)
 	var s := 32.0 * k
+	# the fight's row (Pets.row): companion first, pets after it
+	var xs := _row(leader_feet, leader_sz, k)
+	var first := 1 if state.pet_on and World.pet_stage(state) >= 0 else 0
 	for i in pets.size():
 		var p: Dictionary = pets[i]
 		var key := String(p.get("species", ""))
 		var tex := Pets.frame(key, t + i * 0.31)
 		if tex == null:
 			continue
-		var at := leader_feet + Vector2(-leader_sz * (0.5 + 0.3 * i), -4.0 - i * 4.0)
+		var at := Vector2(float(xs[first + i]) + s / 2.0, leader_feet.y - 4.0).round()
 		scene.shadow(self, at, s * 0.2)
 		draw_texture_rect(tex, Rect2(at - Vector2(s / 2.0, (Pets.foot(key) + 1) * k), Vector2(s, s)), false, Color(0.9, 0.88, 0.85))
+
+## Left edges of the companion (if out) and the pets on the run around the leader.
+func _row(leader_feet: Vector2, leader_sz: float, k: float) -> Array:
+	var n := Menagerie.out(state).size() + (1 if state.pet_on and World.pet_stage(state) >= 0 else 0)
+	return Pets.row(n, leader_feet.x, leader_sz, 32.0 * k, 2.0 * k, size.x)
 
 ## A Descenders' Camp by the left wall: two tents stepping back along it, the fire in front
 ## of them (below the doors), Snik's lantern between the tents. Drawn far to near, all where

@@ -19,15 +19,15 @@ func setup(m) -> void:
 	add_child(box)
 
 func refresh() -> void:
-	var key := "%d|%d|%d|%s" % [codex.pet_book.size(), codex.bestiary.size(), codex.coll_earned.size(), str(codex.pet_book.values())]
+	var key := "%d|%d|%d|%d|%s" % [codex.pet_book.size(), codex.bestiary.size(), codex.coll_earned.size(), codex.extra_titles.size(), str(codex.pet_book.values())]
 	if key == shown:
 		return
 	shown = key
 	OnlineUI.clear(box)
-	var all := Monsters.all_monsters()
+	var all := Monsters.all_monsters() + _calamity_pets()
 	var seen := 0
 	for n in all:
-		if codex.seen(n) or codex.pet_book.has(n):
+		if _met(n) or codex.pet_book.has(n):
 			seen += 1
 	var owned := 0
 	for n in all:
@@ -57,28 +57,52 @@ func refresh() -> void:
 		box.add_child(flow)
 		for n in mons:
 			flow.add_child(_cell(str(n)))
+	# Fable pets R2: the ten Calamity pets (the rarest; a slain Calamity leaves its pet)
+	box.add_child(UI.heading("Calamities"))
+	box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text("calamity"), UI.FONT_BODY, Color(Menagerie.TIER_COLORS[PetAbilities.SIGNATURE_RANK])))
+	var cflow := HFlowContainer.new()
+	cflow.add_theme_constant_override("h_separation", 6)
+	cflow.add_theme_constant_override("v_separation", 6)
+	box.add_child(cflow)
+	for n in _calamity_pets():
+		cflow.add_child(_cell(n))
+
+## The Calamity pets' species ids (calamity_N_pet), in Calamity order.
+func _calamity_pets() -> Array:
+	var out: Array = []
+	for c in Calamity.LIST:
+		out.append(Calamity.pet_id(c))
+	return out
+
+## Met: seen in the dungeon, or for a Calamity pet, that Calamity slain (its title earned).
+func _met(n: String) -> bool:
+	for c in Calamity.LIST:
+		if Calamity.pet_id(c) == n:
+			return codex.extra_titles.has(String(c[4]))
+	return codex.seen(n)
+
+func _name(n: String) -> String:
+	for c in Calamity.LIST:
+		if Calamity.pet_id(c) == n:
+			return String(c[5])
+	return Monsters.name_of(n)
 
 func _cell(n: String) -> Control:
 	var have := codex.pet_book.has(n)
-	var met := have or codex.seen(n)
+	var met := have or _met(n)
 	var tier := int(codex.pet_book.get(n, 0))
 	var c := UI.panel(UI.INSET, Color(Menagerie.TIER_COLORS[tier]) if have else UI.BORDER, 4, 4, 2 if have else 1)
 	c.custom_minimum_size = Vector2(76, 0)
 	var v := UI.vbox(2)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	c.add_child(v)
-	# the pet's own baby art (art/pets/32) at a clean 2x; met-not-owned is its silhouette
-	var pic := TextureRect.new()
-	pic.texture = Menagerie.species_texture(n, String(Monsters.by_id(n).get("art", n))) if have else Pets.white(n)
-	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(64, 64)
-	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	# the pet's own baby art (art/pets/32) at about 2x in whole screen pixels (PixelPic); met-not-owned is its silhouette
+	var pic := PixelPic.make(Menagerie.species_texture(n, String(Monsters.by_id(n).get("art", n))) if have else Pets.white(n))
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if not have:
 		pic.modulate = Color(0.32, 0.3, 0.4, 0.9) if met else Color(0.12, 0.12, 0.16, 0.6)
 	v.add_child(pic)
-	var l := UI.label(Monsters.name_of(n) if met else "???", UI.FONT_BODY, Color(Menagerie.TIER_COLORS[tier]) if have else UI.DIM)
+	var l := UI.label(_name(n) if met else "???", UI.FONT_BODY, Color(Menagerie.TIER_COLORS[tier]) if have else UI.DIM)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.custom_minimum_size = Vector2(68, 0)
@@ -108,13 +132,8 @@ func _lines(n: String, have: bool, tier: int) -> Array:
 
 func _show(n: String, have: bool, tier: int) -> void:
 	var col := Color(Menagerie.TIER_COLORS[tier]) if have else UI.BORDER
-	var o := Overlay.new().open(main, Monsters.name_of(n), 400.0, col)
-	var pic := TextureRect.new()
-	pic.texture = Menagerie.species_texture(n, String(Monsters.by_id(n).get("art", n))) if have else Pets.white(n)
-	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(96, 96)  # 3x, like in a fight
-	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	var o := Overlay.new().open(main, _name(n), 400.0, col)
+	var pic := PixelPic.make(Menagerie.species_texture(n, String(Monsters.by_id(n).get("art", n))) if have else Pets.white(n), 0, ArtStyle.SCREEN_PX)  # like in a fight
 	if not have:
 		pic.modulate = Color(0.32, 0.3, 0.4, 0.9)
 	o.content.add_child(pic)
@@ -132,5 +151,9 @@ func _abilities() -> void:
 	box.add_child(UI.wrap("A pet's family is its kind of monster. Tap a pet below to see its own.", UI.FONT_BODY, UI.DIM))
 	for f in PetAbilities.FAMILIES:
 		box.add_child(UI.label(String(PetAbilities.FAMILIES[f]["name"]).to_upper(), UI.FONT_BODY, UI.GOLD))
+		if f == "calamity":
+			# Calamity pets only ever come at Mythic, so the rank ladder above doesn't apply
+			box.add_child(UI.wrap("Calamity pets come only at Mythic. %s. %s. %s." % [PetAbilities.family_passive_range(f), PetAbilities.family_trick_text(f, PetAbilities.SIGNATURE_RANK), PetAbilities.region_signature_text("calamity")], UI.FONT_BODY, UI.TEXT))
+			continue
 		box.add_child(UI.wrap("Passive, %s" % PetAbilities.family_passive_range(f), UI.FONT_BODY, UI.TEXT))
 		box.add_child(UI.wrap("Epic trick, %s" % PetAbilities.family_trick_text(f, PetAbilities.TRICK_RANK), UI.FONT_BODY, UI.TEXT))

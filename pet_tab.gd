@@ -46,13 +46,8 @@ func _owned() -> void:
 		box.add_child(c[0])
 		var h := UI.hbox(10)
 		c[1].add_child(h)
-		var pic := TextureRect.new()
 		var ez := Menagerie.egg_zone(e)
-		pic.texture = Pets.egg(String(GameData.ZONES[ez]["id"]) if ez >= 0 else "")  # Pets 2: each region its own egg
-		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		pic.custom_minimum_size = Vector2(64, 64)  # 32 px art at a clean 2x
-		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		var pic := PixelPic.make(Pets.egg(String(GameData.ZONES[ez]["id"]) if ez >= 0 else ""))  # Pets 2: each region its own egg, whole screen pixels
 		h.add_child(_slot(pic))
 		var ev := UI.vbox(2)
 		ev.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -77,12 +72,7 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 	var c := _frame(UI.GOLD_DULL if going else (Color("#a22633") if hurt else UiSkin.IRON))   # gold = coming along, red = hurt
 	var h := UI.hbox(10)
 	c[1].add_child(h)
-	var pic := TextureRect.new()
-	pic.texture = Menagerie.texture(p)
-	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(64, 64)  # 32 px art at a clean 2x
-	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	var pic := PixelPic.make(Menagerie.texture(p))  # about 2x, in whole screen pixels
 	if hurt:
 		pic.modulate = Color(1, 0.6, 0.6, 0.7)
 	h.add_child(_slot(pic))
@@ -95,7 +85,7 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 	v.add_child(UI.label("%s %s  ·  Lv %d" % [Menagerie.TIER_NAMES[tier], Monsters.name_of(str(p["species"])), int(p["level"])], 12, tc))
 	v.add_child(UI.label(("Hurt: rests %d more floor%s" % [int(p["hurt"]), "" if int(p["hurt"]) == 1 else "s"]) if hurt else
 		"Hits for %d%% of your Attack" % int(Menagerie.power(p) * 100), 11, UI.RED if hurt else UI.DIM))
-	_ability_lines(v, p, renaming == id)   # locked abilities only under "More" (fewer words on the card)
+	_ability_lines(v, p, renaming == id)   # names only on the card; the sentences and locked ones under "More"
 	var right := UI.vbox(4)
 	right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(right)
@@ -147,9 +137,17 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 ## would know. A pet's rank never changes, so this pet won't learn those itself.
 func _ability_lines(v: VBoxContainer, p: Dictionary, show_locked := true) -> void:
 	var fam := String((PetAbilities.FAMILIES.get(PetAbilities.family(String(p.get("species", ""))), {}) as Dictionary).get("name", "pet"))
+	if not show_locked:
+		# Fable pets R2: the card names what it knows in one line ("More" opens the sentences)
+		var names: Array = []
+		for a in PetAbilities.lines(p):
+			if a["on"]:
+				names.append(String(a["text"]).get_slice(":", 0))
+		v.add_child(UI.wrap("  ·  ".join(names), UI.FONT_BODY, Color(GameData.color_of(mini(PetAbilities._rank(p), 5)))))
 	for a in PetAbilities.lines(p):
 		if a["on"]:
-			v.add_child(UI.wrap("+ " + String(a["text"]), UI.FONT_BODY, UI.TEXT))
+			if show_locked:
+				v.add_child(UI.wrap("+ " + String(a["text"]), UI.FONT_BODY, UI.TEXT))
 		elif show_locked:
 			v.add_child(UI.wrap("A higher-ranked %s pet (%s and up) would know: %s" % [fam, Menagerie.TIER_NAMES[int(a["rank"])], a["text"]], 11, UI.DIM))
 	# all Spirits together heal at most REGEN_CAP a turn: say so when it cuts this one
@@ -172,12 +170,7 @@ func _pet_card() -> void:
 		return
 	var h := UI.hbox(8)
 	c[1].add_child(h)
-	var pic := TextureRect.new()
-	pic.texture = Pets.portrait(state)
-	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(64, 64)
-	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	var pic := PixelPic.make(Pets.portrait(state))
 	h.add_child(_slot(pic))
 	var v := UI.vbox(2)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -223,7 +216,7 @@ func _frame(edge: Color) -> Array:
 	return [p, v]
 
 ## A pet or egg picture in a dark slot (ink fill, slate edge), the art at a clean 2x.
-func _slot(pic: TextureRect) -> PanelContainer:
+func _slot(pic: Control) -> PanelContainer:
 	var sl := PanelContainer.new()
 	sl.add_theme_stylebox_override("panel", UiSkin.bevel(Color("#120e1c"), UI.EMPTY, 2))
 	sl.size_flags_vertical = Control.SIZE_SHRINK_BEGIN

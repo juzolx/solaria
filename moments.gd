@@ -60,12 +60,16 @@ func _build(kind: String, title: String, sub: String, color: Color, extra: Strin
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
 	center.add_child(v)
 	if portrait:
-		var pic := TextureRect.new()
-		pic.texture = portrait
-		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		pic.custom_minimum_size = Vector2(Sprites.PORTRAIT * 3, Sprites.PORTRAIT * 3)
-		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		var pic: TextureRect
+		if kind in ["hatch", "first"]:
+			pic = PixelPic.make(portrait, 0, 5.0)  # a 32 px pet: whole screen pixels (Fable pets R2)
+		else:
+			pic = TextureRect.new()
+			pic.texture = portrait
+			pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			pic.custom_minimum_size = Vector2(Sprites.PORTRAIT * 3, Sprites.PORTRAIT * 3)
+			pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		pic.modulate.a = 0.0
 		v.add_child(pic)
 		var pt := create_tween()

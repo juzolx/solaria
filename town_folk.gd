@@ -6,9 +6,8 @@ extends RefCounted
 ## a clean 2x/3x on screen like the buildings). Built once per look and cached.
 ## Walking: idle, left step, idle, right step (HeroArt.steps lifts one leg of the idle frame).
 
-const CELL := 48          # HeroArt.CELL / 2
-const FOOT := 40          # heroes.json "foot" (80) / 2: the feet row inside a 48 px cell
-                          # (padded frames - wider than 96 - keep the body centred: walker()["foot"])
+const CELL := HeroArt.FRAME / 2             # a halved hero frame (128 -> 64)
+const FOOT := (HeroArt.FOOT + HeroArt.PAD) / 2  # the feet row inside a halved frame (96 -> 48)
 
 ## The townsfolk: [appearance, class, tier] - races, builds and outfits mixed so the street looks lived in.
 ## town_view shows the first TownView.MAX_FOLK of them, so the first six mix races and sexes on their own.
@@ -29,18 +28,20 @@ const PEOPLE := [
 
 static var _cache := {}
 
-## {"s": [2 front idle textures], "walk": [idle, step, idle, step], "foot": feet row} for one look (cached).
+## {"s": [2 front idle textures], "walk": [idle, step, idle, step], "foot": feet row, "head": top row}
+## for one look (cached).
 static func walker(app: Dictionary, cls: String, tier: int, weapon: String) -> Dictionary:
 	var key := "%s|%s|%d|%s" % [str(app), cls, tier, weapon]
 	if _cache.has(key):
 		return _cache[key]
-	var out := {"s": [], "walk": [], "foot": FOOT}
+	var out := {"s": [], "walk": [], "foot": FOOT, "head": 0}
 	if HeroArt.available():
 		var front := HeroArt.frames(app, cls, tier, weapon, false)
 		for i in HeroArt.PORTRAIT:
 			out["s"].append(ImageTexture.create_from_image(half(front["img"][i])))
 		var st: Array = HeroArt.steps(front["img"][HeroArt.PORTRAIT[0]])
 		out["foot"] = FOOT + (out["s"][0].get_width() - CELL) / 2   # a frame padded round the body cell
+		out["head"] = (out["s"][0] as ImageTexture).get_image().get_used_rect().position.y   # the sprite's own top row
 		out["walk"] = [out["s"][0], ImageTexture.create_from_image(half(st[0])), out["s"][0], ImageTexture.create_from_image(half(st[1]))]
 	_cache[key] = out
 	return out

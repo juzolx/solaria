@@ -202,6 +202,10 @@ static func class_card(m, n: Dictionary, with_button: bool, on_pick: Callable) -
 static func outfit_stage(g: GameState, cls: String, tier: int, scale := 2, silhouette := false, gear := {}) -> Control:
 	var looks: Dictionary = (gear if not gear.is_empty() else g.hero_looks()).duplicate()
 	looks["Class"] = {"cls": cls if Classes.CLASSES.has(cls) else (g.hero_class if g.hero_class != "" else "Warrior"), "tier": tier}
+	# a class shows its own weapon (a mage card holds a staff, not your sword)
+	var sig := str(Classes.CLASSES.get(looks["Class"]["cls"], {}).get("look", {}).get("Weapon", ""))
+	if sig != "" and str((looks.get("Weapon", {}) as Dictionary).get("type", "")) != sig:
+		looks["Weapon"] = Sprites.gear_look({"slot": "Weapon", "type": sig, "rarity": 1})
 	var side := Sprites.PORTRAIT * scale
 	var plinth_w := 24 * scale
 	var c := Control.new()
@@ -232,7 +236,8 @@ static func outfit_stage(g: GameState, cls: String, tier: int, scale := 2, silho
 static func pick_card(m, cname: String, on_pick: Callable) -> PanelContainer:
 	var info: Dictionary = Classes.CLASSES[cname]
 	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", UiSkin.frame(UI.INSET, UiSkin.IRON, 10))
+	# the frame takes the class colour, so 13 cards read as 13 classes at a glance
+	card.add_theme_stylebox_override("panel", UiSkin.frame(UI.INSET, Color(info.get("color", "#8b9bb4")).darkened(0.2), 10))
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var cv := UI.vbox(6)
 	card.add_child(cv)
@@ -241,7 +246,7 @@ static func pick_card(m, cname: String, on_pick: Callable) -> PanelContainer:
 	var gear := {}
 	for slot in info["look"]:
 		gear[slot] = Sprites.gear_look({"slot": slot, "type": info["look"][slot], "rarity": 1})
-	head.add_child(outfit_stage(m.state, cname, 0, 2, false, gear))
+	head.add_child(outfit_stage(m.state, cname, 0, 3, false, gear))   # the bible's one scale: 3x
 	var hv := UI.vbox(2)
 	hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(hv)

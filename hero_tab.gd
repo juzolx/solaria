@@ -12,6 +12,7 @@ var state: GameState
 
 var card_style: StyleBoxFlat
 var portrait: TextureRect
+var _breath: Array = []  # the portrait's idle frames: the centrepiece breathes (2 fps)
 var title_label: Label
 var role_label: Label
 var level_label: Label
@@ -99,6 +100,13 @@ func setup(m) -> void:
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	center.add_child(portrait)
+	var breathe := Timer.new()
+	breathe.wait_time = 0.5
+	breathe.autostart = true
+	breathe.timeout.connect(func():
+		if _breath.size() > 1:
+			portrait.texture = _breath[1] if portrait.texture == _breath[0] else _breath[0])
+	center.add_child(breathe)
 	center.resized.connect(func():   # centre the hero and its plinth in whatever width the phone gives
 		var cw := center.size.x
 		var ph := portrait.custom_minimum_size
@@ -328,12 +336,11 @@ func refresh() -> void:
 		return
 	var color := Color(state.class_info()["color"])
 	card_style.border_color = UI.CARD_EDGE
-	# The whole look, not just which slots are filled: the 2.1 portrait draws the weapon type and the class tier
-	var looks := state.hero_looks()
-	var key := str(state.appearance) + str(looks) + state.title()
+	var key := str(state.appearance) + Sprites._looks_key(state.hero_looks()) + state.title()
 	if key != _look_key:
 		_look_key = key
-		portrait.texture = Sprites.portrait(state.appearance, looks)
+		_breath = Sprites.portrait_frames(state.appearance, state.hero_looks())
+		portrait.texture = _breath[0]
 	title_label.text = state.hero_name if state.hero_name != "" else state.title()
 	title_label.add_theme_color_override("font_color", UI.GOLD)
 	var cur := ClassTree.current(state)

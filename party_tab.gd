@@ -107,11 +107,11 @@ func _bench_rows() -> void:
 	var n_items: int = haul.get("items", []).size()
 	box.add_child(UI.wrap("Found so far this dive: %d gold, %d scrap, %d item%s. Paid out when you get home." % [int(haul.get("gold", 0)), int(haul.get("scrap", 0)), n_items, "" if n_items == 1 else "s"], 12, UI.GOLD))
 
-func _pic(app: Dictionary, looks := {}) -> TextureRect:
+func _pic(app: Dictionary, looks := {}, scale := 2) -> TextureRect:
 	var pic := TextureRect.new()
 	pic.texture = Sprites.portrait(app, looks)
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(64, 64)
+	pic.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT) * scale   # never 1x: 2x in a list, 3x for the leader
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	return pic
@@ -120,7 +120,7 @@ func _card_for_leader() -> PanelContainer:
 	var p := _frame(UI.GOLD_DULL)   # the leader: gold-edged
 	var h := UI.hbox(8)
 	p.add_child(h)
-	h.add_child(_slot(_pic(state.appearance, state.hero_looks())))
+	h.add_child(_slot(_pic(state.appearance, state.hero_looks(), 3)))
 	var r := UI.rich(UI.FONT_BODY)
 	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	r.text = "[b]%s[/b]  [color=#e8b14a](you, the leader)[/color]\nLv %d %s  -  %s\nHP %d / %d" % [
