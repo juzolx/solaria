@@ -91,6 +91,141 @@ func _r2_tests() -> void:
 			check(is_equal_approx(px, roundf(px)) and px >= 1.0, "PixelPic: %.1fx at stretch %.3f is whole screen pixels (%.2f)" % [want, sc, px])
 	check(PixelPic.screen_px(2.0, 0.744) == 2 and PixelPic.screen_px(2.0, 0.853) == 2 and PixelPic.screen_px(3.0, 0.853) == 3, "a 2x slot is 2 screen px on both phones, a 3x card 3 at 430")
 
+func _stage(g: GameState, h: float) -> BattleView:
+	var bv := BattleView.new()
+	bv.visible = false
+	root.add_child(bv)
+	bv.size = Vector2(488, h)
+	bv.state = g
+	return bv
+
+func _r3_tests() -> void:
+	# 1: a party of two out: pets stand in front of the members (drawn after them), clear of each
+	# other, and none hides mostly behind a member (488 design units can't fit four creatures and
+	# three heroes side by side, so some cover is the trade)
+	var src := FileAccess.get_file_as_string("res://battle_view.gd")
+	check(src.find("_draw_members()") < src.find("_draw_menagerie()
+"), "party members draw before the pets")
+	for phone in [[430, 647.0], [375, 451.0]]:
+		var g := hero()
+		g.hidden_class = "beast_tamer"
+		g.hero_class = "Knight"
+		g.level = maxi(g.level, World.PET_LEVEL)
+		g.pet_on = true
+		for i in 3:
+			Menagerie.make_pet(g, of_shape("spirit"), "", 2, "egg")
+		var pt := Party.new()
+		for n in 2:
+			var mem := Party.Member.new()
+			mem.slot = 20 + n
+			mem.hp = 50
+			pt.members.append(mem)
+		g.party = pt
+		var bv := _stage(g, float(phone[1]))
+		var w := 32.0 * bv._u()
+		var lay := bv.team_layout()
+		check(lay.size() == 4, "with a party, everyone still gets a spot (%d)" % lay.size())
+		var xs: Array = lay.values()
+		for i in 2:
+			var mc := bv._member_canvas(i).get_center().x
+			for x in xs:
+				var over := minf(float(x) + w, mc + 16.0 * bv._u()) - maxf(float(x), mc - 16.0 * bv._u())
+				check(over <= w * 0.8 + 0.01, "no pet is hidden by party member %d at %d (%.0f of %.0f)" % [i, phone[0], over, w])
+		for i in xs.size():
+			for j in range(i + 1, xs.size()):
+				check(w - absf(float(xs[i]) - float(xs[j])) <= w * 0.25 + 0.01, "with a party, pets overlap each other by at most a quarter at %d" % phone[0])
+		check(bv.team_layout() == lay, "the layout is built once a frame")
+		bv.queue_free()
+	# 14: a wide pet in the first spot keeps clear of the hero's legs
+	var wide := ""
+	for sp in Menagerie.all_species():
+		if Pets.width(String(sp)) > 24:
+			wide = String(sp)
+			break
+	check(wide != "", "some pet is wide (%s)" % wide)
+	for phone in [[430, 647.0], [375, 451.0]]:
+		var g := hero()
+		g.hero_class = "Warrior"   # no companion: the pet takes slot 0
+		Menagerie.make_pet(g, wide, "", 5, "egg")
+		var bv := _stage(g, float(phone[1]))
+		var w := float(Pets.width(wide)) * bv._u()
+		var hc := bv._hero_canvas()
+		var x0 := float(bv.team_layout().get(0, 0.0)) + (32.0 - Pets.width(wide)) / 2.0 * bv._u()   # its body, roughly centred
+		var over := minf(x0 + w, hc.get_center().x + hc.size.x / 6.0) - maxf(x0, hc.get_center().x - hc.size.x / 6.0)
+		check(over <= w * 0.25 + 0.01, "a wide pet in slot 0 is at most a quarter behind the hero at %d (%.0f of %.0f)" % [phone[0], over, w])
+		bv.queue_free()
+	# 4: "Hits for" is Menagerie.turn's own sum (a Beast Lord's song, the party's strength)
+	var bl := hero()
+	bl.hidden_class = "beast_tamer"
+	bl.level = maxi(bl.level, int(Hidden.STAGE_LEVELS[1]))
+	var blp := Menagerie.make_pet(bl, of_shape("beast"), "", 3, "egg")
+	check(Menagerie.whisperer_near(bl), "a Beast Lord sings to the pets")
+	var tab := PetTab.new()
+	tab.state = bl
+	var want := int(Menagerie.power(blp) * Menagerie.WHISPER_POWER * bl.party_mult() * 100)
+	check(tab._hits(blp) == want and want > int(Menagerie.power(blp) * 100), "the Pet tab's Hits for counts the song (%d)" % tab._hits(blp))
+	tab.free()
+	# 5: the Codex and Collections count the same pet kinds
+	check(Collections.total("pets") == Menagerie.all_species().size() and Menagerie.all_species().size() == Monsters.all_monsters().size() + Calamity.LIST.size(), "Codex and Collections count the same pets (%d)" % Collections.total("pets"))
+	var cg := hero()
+	cg.codex.pet_book[Calamity.pet_id(Calamity.LIST[0])] = 5
+	check(Collections.count(cg.codex, "pets") >= 1, "an owned Calamity pet counts as a kind owned")
+	# 6: Fairy Gold on a treasure goblin pays the goblin's gold again (2x in all)
+	var fairy := ""
+	for z in GameData.ZONES:
+		if String(z["id"]) == "fairy":
+			fairy = String(z["enemies"][0]["id"])
+	var fg := with_pet(fairy, 5)
+	var gg: GameState = fg[0]
+	var drop := (2 + gg.floor_num) * GameData.GOBLIN_GOLD
+	var b0 := gg.gold
+	gg._add_gold(drop)
+	var one := gg.gold - b0
+	b0 = gg.gold
+	Menagerie.on_kill(gg, drop)
+	check(gg.gold - b0 == one, "Fairy Gold doubles a goblin's drop (%d, the drop %d)" % [gg.gold - b0, one])
+	check(FileAccess.get_file_as_string("res://game_state.gd").contains("Menagerie.on_kill(self, gold_gain)"), "the kill hands the real drop to the pets")
+	# 7: a name can't carry BBCode into the log
+	var rg := hero()
+	var rp := Menagerie.make_pet(rg, of_shape("beast"), "", 1, "egg")
+	Menagerie.rename(rg, int(rp["id"]), "[b]x[/b]")
+	check(not String(rp["name"]).contains("[") and not String(rp["name"]).contains("]") and String(rp["name"]) == "bx/b", "a rename drops BBCode brackets (%s)" % rp["name"])
+	check(Menagerie.clean_name("  [color=red]Rex  ") == "color=redRex", "the companion's name is cleaned the same way")
+	# 8: "Swap in" sends a resting pet home before a fighting one
+	var sg := hero()
+	sg.hidden_class = "beast_tamer"
+	var ps: Array = []
+	for i in 3:
+		ps.append(Menagerie.make_pet(sg, of_shape("beast"), "", 1, "egg"))
+	(ps[0] as Dictionary)["hurt"] = 2
+	var fourth := Menagerie.make_pet(sg, of_shape("beast"), "", 1, "egg")
+	check(int(fourth["id"]) in sg.pets_out, "a new pet takes a resting pet's spot")
+	check(not int(ps[0]["id"]) in sg.pets_out and int(ps[1]["id"]) in sg.pets_out and int(ps[2]["id"]) in sg.pets_out, "the resting one left, the two healthy stay")
+	var sg2 := hero()
+	sg2.hidden_class = "beast_tamer"
+	var qs: Array = []
+	for i in 3:
+		qs.append(Menagerie.make_pet(sg2, of_shape("beast"), "", 1, "egg"))
+	var extra := Menagerie.make_pet(sg2, of_shape("beast"), "", 1, "egg")   # waits at home: the team is full
+	(qs[0] as Dictionary)["hurt"] = 2
+	Menagerie.toggle_out(sg2, int(extra["id"]))
+	check(not int(qs[0]["id"]) in sg2.pets_out and int(qs[1]["id"]) in sg2.pets_out and int(qs[2]["id"]) in sg2.pets_out and int(extra["id"]) in sg2.pets_out, "Swap in drops the hurt pet, not a fighter (%s)" % str(sg2.pets_out))
+	# 12: copy
+	check(PetAbilities.family_trick_text("beast", PetAbilities.TRICK_RANK).contains("pounce again for its hit"), "Pounce at 1x says its hit")
+
+## 13: a live PixelPic in a container shows whole screen pixels per art pixel.
+func _live_pic() -> void:
+	var vb := VBoxContainer.new()
+	vb.size = Vector2(300, 400)
+	root.add_child(vb)
+	var pic := PixelPic.make(Pets.art("barghest"))
+	vb.add_child(pic)
+	await process_frame
+	await process_frame
+	var px: float = pic.size.x * PixelPic.stretch(pic) / pic.art_px
+	check(absf(px - roundf(px)) < 0.02 and px >= 1.0, "a PixelPic in a VBox is whole screen pixels (%.2f)" % px)
+	vb.queue_free()
+
 func _initialize() -> void:
 	# The table is complete: every family has a passive with 6 ranks and a trick; every region a signature
 	for f in PetAbilities.FAMILIES:
@@ -326,5 +461,7 @@ func _initialize() -> void:
 		if FileAccess.file_exists(path):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	_r2_tests()
+	_r3_tests()
+	await _live_pic()
 	print("STAGE6 PET ABILITY TESTS DONE, failures: ", fails)
 	quit()
