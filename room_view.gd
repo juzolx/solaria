@@ -210,7 +210,7 @@ func _draw_team() -> void:
 	# companions first so the leader stands in front
 	for j in range(xs.size() - 1, -1, -1):
 		var g: GameState = state if j == 0 else members[j - 1].hero
-		var art := Sprites.hero_back(g.appearance, g.hero_looks())
+		var art := Sprites.hero_back_of(g)  # rebuilt at most twice a second, not every frame
 		if not art.has("lpc"):
 			continue
 		var an: Dictionary = (art["lpc"] as Dictionary).get("combat_idle", {})

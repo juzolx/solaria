@@ -16,7 +16,8 @@ const NAMES := ["Aldric", "Brenna", "Corvin", "Dagny", "Eira", "Fenn", "Garrick"
 	"Maren", "Nyx", "Orrin", "Perrin", "Quill", "Rowan", "Saga", "Talia", "Ulric", "Vesna", "Wren", "Yara", "Zeph"]
 
 ## done gets the look; when ask_name is true it also has "name" in it.
-func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create your hero", race_locked := false, looks := {}, ask_name := false) -> void:
+## on_cancel: when valid, a Cancel button closes without changing anything (Change look).
+func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create your hero", race_locked := false, looks := {}, ask_name := false, on_cancel := Callable()) -> void:
 	app = start.duplicate()
 	preview_looks = looks
 	on_done = done
@@ -76,6 +77,12 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	var done_button := UI.primary("Done", _finish, UI.GOLD)
 	done_button.custom_minimum_size = Vector2(0, 44)
 	content.add_child(done_button)
+	if on_cancel.is_valid():
+		var cancel := UI.button("Cancel (keep my look)", func():
+			close()
+			on_cancel.call())
+		cancel.custom_minimum_size = Vector2(0, 44)
+		content.add_child(cancel)
 	_update()
 
 func _text_row(parent: Control, label_text: String, field: String, values: Array, names: Array = []) -> void:

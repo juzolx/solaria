@@ -207,7 +207,12 @@ static func load_file(path: String, kind: String) -> Dictionary:
 		d = _parse(p, kind)
 		if d == null:
 			continue
+		var old_format := kind == "hero" and not (d as Dictionary).has("save_kind")
 		res["data"] = migrate(kind, d)
+		if old_format:
+			# A backup from before Solaria 2.1 (SaveMigrate keeps the 2.0 file as the first .bak):
+			# give it the same one-time 2.1 move the main file had, so it loads as a 2.1 hero
+			SaveMigrate.migrate_hero(res["data"])
 		res["from"] = p
 		res["restored"] = p != order[0]
 		# Repair the main file so this only happens once

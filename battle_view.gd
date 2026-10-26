@@ -164,6 +164,7 @@ var hero_white: ImageTexture
 var cape := Color("#2563eb")
 var _off := Vector2.ZERO
 var hero_art := {}       # from Sprites.hero()
+var hero_has_aura := false  # a God class's golden aura (set with hero_art, not looked up every frame)
 var hero_art_key := ""
 var swing := 0.0         # weapon swing: -1 wind-up, +1 strike
 var lpc_anim := "combat_idle"  # LPC heroes: the animation playing (lpc.gd)
@@ -518,6 +519,7 @@ func play(events: Array[Dictionary]) -> void:
 ## Rebuilds the hero picture when the look or gear changes.
 func _update_hero_art() -> void:
 	var looks := state.hero_looks()
+	hero_has_aura = looks.has("Aura")  # read by the per-frame draw
 	var key := str(state.appearance) + str(looks)
 	if key != hero_art_key:
 		hero_art_key = key
@@ -1363,7 +1365,7 @@ func _draw_members() -> void:
 	for i in range(members.size() - 1, -1, -1):
 		var m = members[i]
 		var g: GameState = m.hero
-		var art := Sprites.hero_back(g.appearance, g.hero_looks())
+		var art := Sprites.hero_back_of(g)  # rebuilt at most twice a second, not every frame
 		var c := _member_canvas(i)
 		var u := c.size.x / Sprites.CANVAS
 		var a := 0.35 if m.knocked_out else 1.0
@@ -1387,7 +1389,7 @@ func _draw_members() -> void:
 					draw_texture_rect(an["white"][fi], r, false, _flash_col(float(fx0["flash"]), true))
 			_member_plate(m, g, c, u)
 			continue
-		var poses := Sprites.poses_for("m" + str((str(g.appearance) + str(g.hero_looks())).hash()), art["body_img"], 1, int(art["hand"].y))
+		var poses := Sprites.poses_for("m" + str(String(g.get_meta("back_key", "")).hash()), art["body_img"], 1, int(art["hand"].y))
 		var fx: Dictionary = party_fx.get(i, {})
 		var pose_name := "kneel2" if m.knocked_out else ("strike" if float(fx.get("lunge", 0.0)) > 0.3 else ("idle1" if fmod(bob + i * 0.2, 0.9) > 0.45 else "idle0"))
 		var pose: Dictionary = poses[pose_name]
@@ -1844,7 +1846,7 @@ func _draw_hero() -> void:
 	if not uc.is_empty():
 		var ri := ClassTree.RANK_ORDER.find(ClassTree.rank_of(uc))
 		_draw_road_aura(_hero_rect(), Color(ClassTree.RANK_COLORS[ClassTree.rank_of(uc)]), 0.6 + ri * 0.55)
-		if state.hero_looks().has("Aura"):
+		if hero_has_aura:
 			_draw_god_aura(_hero_rect(), Color(ClassTree.RANK_COLORS["God"]), a)
 	elif state.hero_class == "Wanderer" and not state.class_path.is_empty():
 		var demon := state.class_path[0] == "demonic_disciple"

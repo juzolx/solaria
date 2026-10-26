@@ -337,6 +337,8 @@ func _notification(what: int) -> void:
 	match what:
 		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST, \
 				NOTIFICATION_WM_GO_BACK_REQUEST:
+			if started and state.run_over and state.hardcore and state.hero_hp <= 0:
+				_record_hardcore_death()  # a fallen Hardcore hero is never left on disk
 			save_everything()
 			DebugLog.flush()
 		NOTIFICATION_EXIT_TREE:
@@ -605,7 +607,13 @@ func _show_recap() -> void:
 	recap_panel.custom_minimum_size.x = minf(520.0, battle.size.x - 24.0)
 	await get_tree().process_frame
 	if is_instance_valid(recap_panel):
-		recap_panel.position = Vector2((battle.size.x - recap_panel.size.x) / 2.0, 40.0)
+		# Phones: the fight view is shorter than the whole card, so its story scrolls and OK stays on screen
+		var top := minf(40.0, maxf(4.0, battle.size.y * 0.06))
+		DeathScreen.fit_regular(recap_panel, battle.size.y - top - 8.0)
+		await get_tree().process_frame
+	if is_instance_valid(recap_panel):
+		var top := minf(40.0, maxf(4.0, battle.size.y * 0.06))
+		recap_panel.position = Vector2((battle.size.x - recap_panel.size.x) / 2.0, top)
 		var p := recap_panel
 		get_tree().create_timer(14.0).timeout.connect(func():
 			if is_instance_valid(p):
@@ -618,17 +626,31 @@ func show_look_editor() -> void:
 		state.appearance = app
 		state.save_game()
 		timer.start()
-		refresh(), "Change your look", true, state.hero_looks())
+		refresh(), "Change your look", true, state.hero_looks(), false, func():
+			timer.start()
+			refresh())
 
-## A Hardcore hero died: record it, delete it, and offer a new run.
-func _on_hardcore_death() -> void:
-	fallen_shown = true
-	timer.stop()
-	var new_best := profile.record_hc_run(state)
+var hc_new_best := false
+var hc_recorded := false
+
+## A Hardcore hero died: record the run and delete the hero at once (the save is
+## already gone, GameState._hero_died). The farewell itself shows a moment later.
+func _record_hardcore_death() -> void:
+	if hc_recorded:
+		return
+	hc_recorded = true
+	hc_new_best = profile.record_hc_run(state)
 	state.delete_own_saves()
 	codex.save()
 	if online:
 		online.submit_run(state)
+
+## The farewell: the hero is gone, offer a new run.
+func _on_hardcore_death() -> void:
+	fallen_shown = true
+	timer.stop()
+	_record_hardcore_death()
+	var new_best := hc_new_best
 	var o := Overlay.new().open(self, "Your hero has fallen", 520.0, UI.RED, false)
 	var slot_n := state.slot
 	DeathScreen.hardcore(o.content, state.hero_name if state.hero_name != "" else "Hero", state.level, state.race(), state.title(), state.floor_num,
@@ -1538,6 +1560,7 @@ func refresh() -> void:
 		var auto_pick: String = state.path_info(state.auto_path())["name"]
 		path_count_label.text = ("Waiting for you to pick" if state.path_hold else "Picks %s by itself in %d..." % [auto_pick, maxi(0, GameData.PATH_WAIT_TURNS - state.path_wait)])
 	if state.run_over and not fallen_shown:
+		_record_hardcore_death()  # now: the app may be closed before the farewell shows
 		get_tree().create_timer(1.6).timeout.connect(_on_hardcore_death)
 		fallen_shown = true
 	_play_moments()

@@ -1,5 +1,6 @@
 extends SceneTree
-## A sheet of every LPC monster (still frame) -> /root/shots/lpc_monsters.png
+const TestHero := preload("res://tests/test_hero.gd")
+## A sheet of every LPC monster (still frame) -> shots/lpc/lpc_monsters.png (TestHero.shots_dir)
 func _initialize() -> void:
 	var keys := Lpc.MONSTERS.keys()
 	var cols := 8
@@ -11,6 +12,6 @@ func _initialize() -> void:
 		var img: Image = (art["tex"] as Texture2D).get_image()
 		sheet.blend_rect(img, Rect2i(0, 0, 64, 64), Vector2i((i % cols) * cell + 4, (i / cols) * cell + 4))
 	sheet.resize(sheet.get_width() * 3, sheet.get_height() * 3, Image.INTERPOLATE_NEAREST)
-	sheet.save_png("/root/shots/lpc_monsters.png")
+	sheet.save_png(TestHero.shots_dir("lpc").path_join("lpc_monsters.png"))
 	print("monsters ok ", keys.size())
 	quit()
