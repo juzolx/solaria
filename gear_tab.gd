@@ -78,10 +78,7 @@ func setup(m) -> void:
 	doll_pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	center.add_child(doll_pic)
 	center.resized.connect(func():
-		var cw := center.size.x
-		var ph := doll_pic.custom_minimum_size
-		doll_pic.position = Vector2(roundf((cw - ph.x) / 2.0), center.size.y - ph.y - 14)
-		pl.position = Vector2(roundf((cw - pl.texture.get_width()) / 2.0), center.size.y - pl.texture.get_height() - 2))
+		UI.seat_hero(doll_pic, pl, 3, center.size.x / 2.0, UI.seat_ground(center.size.y, pl)))   # boots in the shadow
 	for s in GameData.SLOT_ORDER:
 		var grid: VBoxContainer = left if s in ["Weapon", "Helmet", "Chest", "Ring"] else right  # 2.1: four a side, jewelry at the bottom
 		var col := UI.vbox(1)

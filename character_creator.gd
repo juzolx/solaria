@@ -51,7 +51,6 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	var pl := TextureRect.new()
 	pl.texture = UiIcons.plinth(64)
 	pl.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pl.position = Vector2(roundf((side - pl.texture.get_width()) / 2.0), side + 8 - pl.texture.get_height())
 	ph.add_child(pl)
 	preview = TextureRect.new()
 	preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -60,6 +59,7 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	ph.add_child(preview)
+	UI.seat_hero(preview, pl, side / Sprites.PORTRAIT, side / 2.0, (Sprites.PORTRAIT_FOOT + 1) * (side / Sprites.PORTRAIT))   # boots in the shadow
 	var sv := UI.vbox(8)
 	sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sv.alignment = BoxContainer.ALIGNMENT_CENTER

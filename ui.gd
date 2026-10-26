@@ -488,6 +488,20 @@ static func when(unix: int) -> String:
 	var d := Time.get_date_dict_from_unix_time(unix)
 	return "%d %s" % [d["day"], ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][int(d["month"]) - 1]]
 
+## Juzo (r5 follow-up): the hero stands IN their shadow, never above it. pic shows a portrait at
+## k x; the bottom of its last boot row (Sprites.PORTRAIT_FOOT, the same row in every body) goes
+## on the plinth's centre line at ground_y, cx is the centre across. The tour's FLOATING HERO /
+## CUT SHADOW gate finds the pair by the meta set here.
+static func seat_hero(pic: Control, pl: TextureRect, k: int, cx: float, ground_y: float) -> void:
+	pic.position = Vector2(roundf(cx - pic.size.x / 2.0), roundf(ground_y) - (Sprites.PORTRAIT_FOOT + 1) * k)
+	pl.position = Vector2(roundf(cx - pl.texture.get_width() / 2.0), roundf(ground_y) - roundf(pl.texture.get_height() / 2.0))
+	pl.set_meta("hero_pic", pic)
+	pl.set_meta("hero_k", k)
+
+## Where the shadow's centre line goes so the whole plinth fits in a box h tall (2 px spare).
+static func seat_ground(h: float, pl: TextureRect) -> float:
+	return h - roundf(pl.texture.get_height() / 2.0) - 2.0
+
 ## A short phone (the SE: 896 design px tall): pages drop their roomy extras.
 static func short_screen() -> bool:
 	return (Engine.get_main_loop() as SceneTree).root.get_visible_rect().size.y < 1000.0
