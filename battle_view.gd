@@ -1456,32 +1456,42 @@ func _dying_rect() -> Rect2:
 func _enemy_rect(boss: bool) -> Rect2:
 	return _rect_for(_enemy_art(boss), boss, state.enemy_scale())
 
-## Rarer monsters are drawn bigger (by whole art pixels so they stay crisp).
-func _rect_for(art: Dictionary, boss: bool, scale_mult: float) -> Rect2:
+## Every monster shows at the hero's pixel scale (fable r1: rank is shown by the aura,
+## pips and name colour, never by a second pixel size).
+func _rect_for(art: Dictionary, boss: bool, _scale_mult: float) -> Rect2:
 	var sc := _scr()
 	var ui := float(_unit())
-	if scale_mult > 1.0:
-		# Whole screen pixels only, so the sprite stays crisp; Legendary and up are always a size bigger
-		ui = maxf(ui + (1.0 if scale_mult >= 1.28 else 0.0), roundf(ui * scale_mult))
 	var u := ui / sc
 	var x := size.x * 0.5
 	var gy := _ground() + enemy_lunge * size.y * 0.16 - enemy_recoil * u * 3.0 * Sprites.HD
 	if art.is_empty():
 		var s := _sprite_size(boss)
 		return Rect2(x - s / 2.0, gy - s + sin(bob * 2.4 + 1.0) * 2.0, s, s)
-	# One scale: the two older 2x-grid pictures (every art pixel a 2x2 block) draw at half the unit per file pixel
-	if int(art.get("grid", 1)) == 2:
-		ui = maxf(1.0, roundf(ui / 2.0))
-	# Big bosses never take more than ~45% of the width
-	# (LPC frames are padded for big weapon swings, so measure the ~48-pixel body instead)
-	var span: float = Lpc.CORE * 0.75 if art.has("lpc") else (art["size"] as Vector2).x
-	ui = maxf(1.0, minf(ui, floorf(size.x * 0.56 * sc / maxf(1.0, span))))
+	ui = maxf(1.0, minf(ui, _width_cap(art, boss, sc)))
 	# ...and never taller than the space above the team
 	ui = maxf(1.0, minf(ui, floorf(_ground() * 0.92 * sc / maxf(1.0, float(art["foot"]) + 1.0))))
 	u = ui / sc
 	var sz: Vector2 = art["size"] * u
 	var foot: float = art["foot"]
 	return Rect2(_snap(Vector2(x - sz.x / 2.0, gy - (foot + 1.0) * u)), sz)
+
+## Most screen pixels per art pixel the stage width allows: commons keep to ~56% of
+## the width, bosses may reach the edges (92%) and Calamities fill the stage (96%), so
+## all of them stay at the hero's 3x on a phone.
+## (LPC frames are padded for big weapon swings, so measure the ~48-pixel body instead)
+func _width_cap(art: Dictionary, boss: bool, sc: float) -> float:
+	var span: float = Lpc.CORE * 0.75 if art.has("lpc") else (art["size"] as Vector2).x
+	var share := 0.96 if state.enemy_calamity > 0 else (0.92 if boss else 0.56)
+	return floorf(size.x * share * sc / maxf(1.0, span))
+
+## A waiting pack-mate: one whole screen pixel per art pixel smaller than the monster
+## in front (3x -> 2x on a phone), so it never draws in-between pixel sizes.
+func _pack_rect(pr: Rect2, art: Dictionary, side: float) -> Rect2:
+	var sc := _scr()
+	var ui := maxf(1.0, roundf(pr.size.x * sc / maxf(1.0, (art["size"] as Vector2).x)))
+	var sz := pr.size * (maxf(1.0, ui - 1.0) / ui)
+	var pos := pr.position + Vector2(side * pr.size.x * 0.62 + (pr.size.x - sz.x) * 0.5, pr.size.y * 0.68 - sz.y)
+	return Rect2(_snap(pos), sz)
 
 func _hero_center() -> Vector2:
 	var r := _hero_rect()
@@ -1516,7 +1526,8 @@ func _draw() -> void:
 		for th in things:
 			halls.draw_scenery(self, th)
 		halls.vignette(self, size)
-		_draw_mood(w, h, _ground())
+		if not halls.is_3d():
+			_draw_mood(w, h, _ground())
 	_outlined(font, Vector2(12, 26), _fit_text(font, "%s  -  %s" % [zone["name"], GameData.sub_name(state.floor_num)], SCENE_FS, size.x - 24.0), HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS, Color(1, 1, 1, 0.7))
 	_draw_status(font)
 
@@ -1545,8 +1556,7 @@ func _draw() -> void:
 		if part.has("tex"):
 			for k in mini(2, state.horde_left - 1):
 				var side := -1.0 if k == 0 else 1.0
-				var rr := Rect2(pr.position + Vector2(side * pr.size.x * 0.62, -pr.size.y * 0.1), pr.size * 0.78)
-				rr.position.x += pr.size.x * 0.11
+				var rr := _pack_rect(pr, part, side)
 				draw_ellipse_shadow(rr)
 				draw_texture_rect(SpriteLight.lit(part["tex"], clampi(GameData.zone_index(state.floor_num), 0, 9)), rr, false, Color(0.62, 0.6, 0.66, 0.9 * enemy_alpha))
 	# Current enemy
@@ -2079,8 +2089,8 @@ func _draw_mood(w: float, h: float, gy: float) -> void:
 			x += fw
 
 func _rim_color() -> Color:
-	var zc := Color(GameData.zone_for_floor(state.floor_num)["color"])
-	return zc.lerp(Color("#fff4d6"), 0.55)
+	# the zone's light from HallsScene.MOODS (palette colours), like the room and SpriteLight
+	return HallsScene.MOODS[clampi(GameData.zone_index(state.floor_num), 0, HallsScene.MOODS.size() - 1)]["light"]
 
 func draw_ellipse_shadow(r: Rect2) -> void:
 	var c := Vector2(r.get_center().x, (_ground() + 2.0) if r.get_center().y < size.y * 0.62 else r.end.y)
@@ -2267,7 +2277,6 @@ func _chip_row(chips: Array, x: float, y: float, font: Font, fs := SCENE_FS) -> 
 ## The monster's statuses and its boss clock. (Juzo, Oct 24: weaknesses and
 ## resistances live in the Codex only, not over the monster in the fight.)
 func _draw_enemy_info(r: Rect2, font: Font) -> void:
-	var chips: Array = []
 	var st: Array = []
 	if state.burn_turns > 0:
 		st.append(["Burning", Color("#fb923c")])
@@ -2303,7 +2312,6 @@ func _draw_enemy_info(r: Rect2, font: Font) -> void:
 		st.append(["Minions x%d" % state.boss_minions, Color("#d4d4d4")])
 	var top := maxf(34.0, r.position.y - 6.0)
 	_chip_row(st, r.get_center().x, top - 30.0, font)
-	_chip_row(chips, r.get_center().x, top, font)
 
 ## Your statuses (poison, burns, chill) over your head.
 func _draw_hero_status(r: Rect2, font: Font) -> void:

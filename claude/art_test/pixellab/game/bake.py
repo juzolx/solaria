@@ -624,14 +624,26 @@ def build_bodies(info):
                         hair -= wp  # violet wing edges in the head band are not hair
                         if not k.startswith("s"):  # from behind the head is hair: take every brown to blond pixel
                             hair |= head_hair(c, wp)
-                    idx = dye_index(c, fam, index_of(c, hair))
+                    idx = index_of(c, hair)
+                    if race in WINGS and k.startswith("s"):  # his front hair is tan and blond, which the masks
+                        import colorsys  # read as skin: saturated brown-blond in the top of the head is hair
+                        hb = bb[1] + (bb[3] - bb[1]) * 0.26  # down to the bangs, above the eyes (the face's pale skin is less saturated, its shadows redder)
+                        hsv = lambda q: colorsys.rgb_to_hsv(*(v / 255 for v in p[q][:3]))
+                        more = {(x, y) for y in range(bb[1], int(hb)) for x in range(C)
+                                if p[x, y][3] and (x, y) not in wp and (dyed(p[x, y], fam)  # dark red strands, not cloth this high
+                                or 0.065 <= hsv((x, y))[0] <= 0.13 and hsv((x, y))[1] >= 0.42 and hsv((x, y))[2] >= 0.5)}
+                        if more:
+                            idx = index_of(c, hair | more)
+                    idx = dye_index(c, fam, idx)
                     if race in OWN_SKIN:
                         own_skin_index(c, idx, fam)
                     if race in HAIR_EVEN:
                         even_hair(idx)
                     if race in WINGS:  # small wings an outfit edit kept go (the big wing layer is behind the body)
-                        for q in wing_pts(c, WINGS[race], 0.55):  # light lilac, not the deep violet robe
+                        er = wing_pts(c, WINGS[race], 0.55 if fam == "robe" else 0.15)  # not the deep violet robe
+                        for q in er:
                             p[q] = (0, 0, 0, 0)
+                        drop_stray_lines(c, er)
                     out.append(c); idxs.append(idx)
                 save(f"{d}/outfit_{fam}", out, idxs)
                 fams.append(fam)
@@ -689,29 +701,94 @@ def wing_pts(c, hues, vmin=0.3):
 
 
 WING_SRC = {"Fairy": ("fairy", "f")}  # big butterfly wings drawn once on her first idle and portrait frames
+# Juzo picked the 2.0 fairy's slim petal wings (fairy_wing_refs/old_race_wings_fairy.png, style only),
+# drawn in code; the PixelLab luna / monarch / yellow drawings stay as options
+WING_STYLE = os.environ.get("WING_STYLE", "petal")
 
 
 def wing_drawing(path, src_cell, hues, place):
     """One wing drawing (a PixelLab edit of a base frame with big butterfly wings) cut to the wings:
-    the wing hue, the eye spots and holes inside it, and the dark outline around it. Returns the
-    drawing and the centre of the base frame's own small wings (where it is anchored)."""
+    every pixel of the edit outside the fairy's body (the base frame minus its own small wings), so
+    any palette works. Returns the drawing and the centre of the base frame's small wings (its anchor)."""
     ed = Image.new("RGBA", (C, C))
     ed.alpha_composite(L(path), place)  # the same canvas as its base frame, placed the same way
-    ep = ed.load()
-    pts = wing_pts(ed, hues, 0.15)
-    out = {(x, y) for y in range(C) for x in range(C) if (x, y) not in pts}
-    for g in comps(out):  # eye spots: small pockets enclosed by the wing
-        if len(g) < 40 and not any(x in (0, C - 1) or y in (0, C - 1) for x, y in g) and all(ep[q][3] for q in g):
-            pts |= g
-    ring = {(x + dx, y + dy) for (x, y) in pts for dx in (-1, 0, 1) for dy in (-1, 0, 1)
-            if 0 <= x + dx < C and 0 <= y + dy < C and (x + dx, y + dy) not in pts
-            and ep[x + dx, y + dy][3] and R.kind(ep[x + dx, y + dy][:3]) == "outline"}
-    w = Image.new("RGBA", (C, C)); wp = w.load()
-    for q in pts | ring:
-        wp[q] = ep[q]
+    ep, bp = ed.load(), src_cell.load()
     small = wing_pts(src_cell, hues)
+    body = {(x, y) for y in range(C) for x in range(C) if bp[x, y][3] and (x, y) not in small}
+    near = {(x + dx, y + dy) for (x, y) in body for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
+    pts = {(x, y) for y in range(C) for x in range(C) if ep[x, y][3] and (x, y) not in near}
+    pts = set().union(*[g for g in comps(pts) if len(g) >= 12]) if pts else set()
+    w = Image.new("RGBA", (C, C)); wp = w.load()
+    for q in pts:
+        wp[q] = ep[q]
     cx = sum(q[0] for q in small) / max(1, len(small)); cy = sum(q[1] for q in small) / max(1, len(small))
     return w, (cx, cy)
+
+
+def drop_stray_lines(c, erased, passes=4):
+    """The dark outline left floating where the small wings were erased: a dark pixel next to an
+    erased one that is only a thin line (at most 2 opaque neighbours; the body's own edge has more)."""
+    p = c.load()
+    near = set(erased)
+    for _ in range(passes):
+        gone = []
+        for (ex, ey) in near:
+            for x, y in ((ex + i, ey + j) for i in (-1, 0, 1) for j in (-1, 0, 1)):
+                if 0 < x < C - 1 and 0 < y < C - 1 and p[x, y][3] and sum(p[x, y][:3]) < 240:
+                    if sum(1 for i in (-1, 0, 1) for j in (-1, 0, 1) if (i or j) and p[x + i, y + j][3]) <= 2:
+                        gone.append((x, y))
+        if not gone:
+            break
+        for q in gone:
+            p[q] = (0, 0, 0, 0)
+        near = set(gone)
+
+
+PETAL = {"line": (96, 52, 112), "deep": (206, 132, 200), "fill": (232, 166, 222), "lite": (245, 204, 240),
+         "rim": (252, 236, 252)}
+
+
+def petal_drawing(src_cell, hues):
+    """The 2.0 fairy's wings (Juzo's pick, style only), drawn here: two slim pointed petals a side,
+    a long one swept up and out and a short one down and out, pink-lilac lit toward the upper rim,
+    a faint light vein from the root, one clean dark outline (no dotted edge)."""
+    import math
+    small = wing_pts(src_cell, hues)
+    ax = sum(q[0] for q in small) / max(1, len(small)); ay = sum(q[1] for q in small) / max(1, len(small))
+    bb = src_cell.getbbox(); H = bb[3] - bb[1]
+    # (angle from straight out, length, widest half-width) as fractions of the body height
+    petals = [(42, 0.5, 0.11), (-48, 0.74, 0.15)]  # the lower one first: the upper overlaps it
+    w = Image.new("RGBA", (C, C)); wp = w.load()
+    for ang, ln, wd in petals:
+        for side in (-1, 1):
+            a = math.radians(ang)
+            ux, uy = side * math.cos(a), math.sin(a)
+            L_, W_ = ln * H, wd * H
+            ox, oy = ax + side * 2, ay
+            inside = {}
+            for y in range(C):
+                for x in range(C):
+                    dx, dy = x + 0.5 - ox, y + 0.5 - oy
+                    t = (dx * ux + dy * uy) / L_
+                    if not 0 <= t <= 1:
+                        continue
+                    d = dy * abs(ux) - dx * uy * side  # across the petal: negative = the side facing up
+                    half = W_ * math.sin(math.pi * t ** 1.4)  # thin at the root, widest two thirds out, pointed
+                    if abs(d) <= half:
+                        inside[(x, y)] = (t, d / max(half, 0.5))
+            for (x, y), (t, u) in inside.items():
+                if any((x + i, y + j) not in inside for i, j in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                    c = PETAL["line"]
+                elif u < -0.55:
+                    c = PETAL["rim"]  # the lit upper rim
+                elif abs(u) < 0.14 and t < 0.6:
+                    c = PETAL["lite"]  # the faint vein glowing from the root
+                elif u > 0.35:
+                    c = PETAL["deep"]
+                else:
+                    c = PETAL["fill"]
+                wp[x, y] = c + (255,)
+    return w, (ax, ay)
 
 
 def wing_layer(cells, hues, race="Fairy"):
@@ -719,9 +796,12 @@ def wing_layer(cells, hues, race="Fairy"):
     too): the one drawing per view, centred where the frame's own small wings were, so every frame
     has the same wings. The second idle frame draws them narrower: a gentle flap."""
     key, sb = WING_SRC[race]
-    feat = os.path.join(FEATURES, f"{key}_wings_%s.png")
+    feat = os.path.join(FEATURES, f"{key}_wings_{WING_STYLE}_%s.png")
     src = {d: bcell_of(key, sb, k) for d, k in (("n", "n_idle0"), ("s", "s_idle0"))}
-    draw = {d: wing_drawing(feat % d, src[d][0], hues, src[d][1]) for d in "ns"}
+    if WING_STYLE == "petal":
+        draw = {d: petal_drawing(src[d][0], hues) for d in "ns"}
+    else:
+        draw = {d: wing_drawing(feat % d, src[d][0], hues, src[d][1]) for d in "ns"}
     front, back = [], []
     for k in K:
         w, (sx, sy) = draw[d_of(k)]
@@ -730,11 +810,11 @@ def wing_layer(cells, hues, race="Fairy"):
             cx = sum(q[0] for q in small) / len(small); cy = sum(q[1] for q in small) / len(small)
         else:
             cx, cy = sx, sy
-        if k.endswith("idle1"):  # flap: 80% as wide around the wing centre
+        if k.endswith("idle1"):  # flap: half closed, 60% as wide around the body's centre line
             bb = w.getbbox(); part = w.crop(bb)
-            nw = max(2, round(part.width * 0.8))
+            nw = max(2, round(part.width * 0.6))
             w2 = Image.new("RGBA", (C, C))
-            w2.alpha_composite(part.resize((nw, part.height), Image.NEAREST), (round(sx - (sx - bb[0]) * 0.8), bb[1]))
+            w2.alpha_composite(part.resize((nw, part.height), Image.NEAREST), (round(sx - (sx - bb[0]) * 0.6), bb[1]))
             w = w2
         layer = Image.new("RGBA", (C, C))
         layer.alpha_composite(w, (0, 0))
