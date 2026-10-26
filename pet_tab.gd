@@ -1,6 +1,6 @@
 class_name PetTab
 extends ScrollContainer
-## Character > Pets (visible to everyone, so players know pets exist): your class
+## Hero › Pets (visible to everyone, so players know pets exist): your class
 ## companion if your class has one, your owned pets (pick who comes along),
 ## your eggs, and empty slots that hint at what's out there.
 
@@ -243,7 +243,7 @@ func _pet_card() -> void:
 	var v := UI.vbox(2)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
-	v.add_child(UI.label(World.pet_name(state), 17, col.lightened(0.3)))
+	v.add_child(UI.label(World.pet_name(state), UI.FONT_BODY, col.lightened(0.3)))
 	v.add_child(UI.label("%s, stage %d of 4" % [World.pet_species(state), st + 1], UI.FONT_BODY, UI.DIM))
 	var tog := UI.button("Fighting" if state.pet_on else "Send to fight", func():
 		state.pet_on = not state.pet_on

@@ -30,6 +30,13 @@ func check_floors(label: String, node: Node) -> void:
 				var fs := c.get_theme_font_size("font_size")
 				if fs < UI.MIN_FONT:
 					fail("SMALL FONT: %s \"%s\" is %d px (floor %d) [%s]" % [label, String(c.get("text")).left(24).replace("\n", " "), fs, UI.MIN_FONT, _path(c)])
+				# Fable r3 #15: a one-line Label cut at its edge with no "..." (clip_text hides it from the overflow check)
+				if c is Label and (c as Label).autowrap_mode == TextServer.AUTOWRAP_OFF and (c as Label).text_overrun_behavior == TextServer.OVERRUN_NO_TRIMMING and c.size.x > 0.0:
+					var font := c.get_theme_font("font")
+					for line in (c as Label).text.split("\n"):
+						if font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > c.size.x + 2.0:
+							fail("CLIPPED TEXT: %s \"%s\" is cut at %.0f px [%s]" % [label, line.left(24), c.size.x, _path(c)])
+							break
 			elif c is RichTextLabel and c.is_visible_in_tree() and (c as RichTextLabel).text != "":
 				var rs := c.get_theme_font_size("normal_font_size")
 				if rs < UI.MIN_FONT:
@@ -89,6 +96,53 @@ func close_popups(main: Node) -> void:
 			c.queue_free()
 	await process_frame
 
+## Fable r3 #6: what a new player sees in the first session, one picture each.
+func _first_session(main) -> void:
+	# the game never draws the fight under the title (it reloads the scene); both drawing at
+	# once pass the shared 3D room back and forth every frame and crash the engine
+	main.ui_root.visible = false
+	var ts := TitleScreen.new()
+	ts.show_for(main)
+	await shot("title")
+	ts.queue_free()
+	await process_frame
+	main.ui_root.visible = true
+	await process_frame
+	Onboarding.show_welcome(main)
+	await shot("welcome")
+	await close_popups(main)
+	var coach := Onboarding.coach(main, "Your hero fights on their own. Tap [color=#e8b14a]Hero[/color] to spend points when you level up.")
+	await shot("coach")
+	if is_instance_valid(coach):
+		coach.queue_free()
+	CharacterCreator.new().show_for(main, main.state.appearance, func(_a): pass)
+	await shot("creator")
+	await close_popups(main)
+	HeroSelect.new().show_for(main, null)
+	await shot("hero_select")
+	await close_popups(main)
+	main.state.last_death = {"floor": main.state.floor_num, "enemy": "A Cave Troll", "woke": 26, "lost": "gold",
+		"taken": {"hit": 60, "fire": 40}, "total": 100, "enemy_left": 0.35, "tips": ["Drink a potion below half health (Auto-potion in Hero › Skills)."]}
+	main._show_recap()
+	await shot("death_card")
+	if is_instance_valid(main.recap_panel):
+		main.recap_panel.queue_free()
+	var o := Overlay.new().open(main, "Your hero has fallen", 520.0, UI.RED, false)
+	DeathScreen.hardcore(o.content, "Thorin", 30, "Human", "Warrior", 30, true, 30, func(): pass, func(): pass)
+	await shot("death_hardcore")
+	await close_popups(main)
+	CreditsScreen.new().show_for(main)
+	await shot("credits")
+	await close_popups(main)
+	GuideBook.open_book(main, "")
+	await shot("guide_book")
+	await close_popups(main)
+	var mo := Moments.play(main, "boss", "Cave Troll", "Floor 25 is clear", UI.GOLD)
+	await shot("moment")
+	mo.close()   # its own fade (freeing it mid-tween leaves a lambda pointing at a freed label)
+	await create_timer(0.5).timeout
+	await close_popups(main)
+
 func _initialize() -> void:
 	if not TestHero.safe():
 		quit(1)
@@ -107,9 +161,9 @@ func _initialize() -> void:
 	for i in 4:
 		main._on_tick()
 		await create_timer(0.2).timeout
-	await shot("first_popup")  # whatever opened during the first turns (guide book, tips)
 	await close_popups(main)
 	await shot("fight")
+	await _first_session(main)
 	var group_names := ["character", "items", "town", "codex", "online"]
 	for g in [0, 1, 3, 4]:
 		var grp: TabContainer = main._groups()[g]

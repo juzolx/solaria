@@ -3,8 +3,8 @@ extends SceneTree
 ##   godot --path . --resolution 430x932 -s tests/_monster_shot.gd -- <tag> <key>[@floor][#tier][+pack][+mods][+status][+pet][+dead] ...
 ## -> shots/monsters/<tag>/<key>.png (floor picks the zone's hall behind it, tier 0-5 its rank,
 ## +pack two pack-mates waiting behind it; +mods two mods; +status burning, poisoned and winding
-## up; +pet a menagerie pet out; +dead the frame 0.3 s after it dies; calamity_N keys appear as
-## that Calamity; +banner a rank banner over it)
+## up; +pet a menagerie pet out; +dead a frame of its burn (alpha under 0.6); calamity_N keys appear as
+## that Calamity; +banner a rank banner over it; +party two companions (+down: the first knocked out); +next with +pack: the first falls, the next steps in)
 const TestHero := preload("res://tests/test_hero.gd")
 func _initialize() -> void:
 	if not TestHero.safe():
@@ -31,10 +31,14 @@ func _initialize() -> void:
 	st.in_town = false  # the fight, never the town (a reused test save may be in town)
 	main.nav_page = 0
 	main._apply_nav()
+	if args[0].contains("@share"):   # mocks: <tag>@share@drop, e.g. opt1@0.40@0.06
+		BattleView.face_share = float(args[0].get_slice("@", 2))
+		BattleView.face_drop = float(args[0].get_slice("@", 3))
+		args[0] = args[0].get_slice("@", 0)
 	var dir := TestHero.shots_dir("monsters/" + args[0])
 	for arg in args.slice(1):
 		var flags: Array = []
-		for f in ["+dead", "+pet", "+status", "+mods", "+pack", "+banner"]:
+		for f in ["+dead", "+next", "+pet", "+status", "+mods", "+pack", "+banner", "+party", "+down"]:
 			if arg.contains(f):
 				flags.append(f)
 				arg = arg.replace(f, "")
@@ -46,6 +50,7 @@ func _initialize() -> void:
 			st.floor_num = int(arg.get_slice("@", 1))
 			main.battle.last_floor = st.floor_num
 		st.spawn_enemy()
+		st.room_props.clear()   # a fight room (the test save may stand in an altar shrine, where no fight happens)
 		# the plain monster: no variant recolour, rarity aura or mods
 		st.enemy_variant = ""
 		st.enemy_tier = tier
@@ -80,6 +85,10 @@ func _initialize() -> void:
 			st.events = st.events.filter(func(e): return e.get("type", "") != "first_find")   # no popup over the fight
 		elif not "+pet" in flags:
 			st.pets_out.clear()
+		# +party: two companions (pets r5's party fight: the strip and their plates)
+		st.party = _party() if "+party" in flags else null
+		if st.party != null and "+down" in flags:
+			st.party.members[0].knocked_out = true   # +down: the first companion knocked out
 		var shot := key + ("_t%d" % tier if tier > 0 else "")
 		for f in flags:
 			shot += "_" + String(f).trim_prefix("+")
@@ -104,7 +113,20 @@ func _initialize() -> void:
 			var ev: Array[Dictionary] = [{"type": "enemy_dead", "shape": st.enemy_shape, "color": st.enemy_color, "boss": st.enemy_is_boss,
 				"name": st.enemy_name, "art": st.enemy_art, "tier": tier, "calamity": cal}]
 			main.battle.play(ev)
-			await create_timer(0.3).timeout
+			# into the burn itself (fable r5: 0.3 s was still the kill burst at full alpha)
+			var waited := 0.0
+			while waited < 2.0 and float(main.battle.dying.get("alpha", 1.0)) > 0.6:
+				await process_frame
+				waited += 1.0 / 60.0
+		if "+next" in flags:
+			# a pack: the first one falls and the next steps in from the doors (the badge counts down)
+			var ev2: Array[Dictionary] = [{"type": "enemy_dead", "shape": st.enemy_shape, "color": st.enemy_color, "boss": false,
+				"name": st.enemy_name, "art": st.enemy_art, "tier": tier, "calamity": false}]
+			main.battle.play(ev2)
+			st.horde_left -= 1
+			var t0 := Time.get_ticks_msec()   # real time: frames come faster than 60 a second here
+			while Time.get_ticks_msec() - t0 < 4000 and not (main.battle.dying.is_empty() and float(main.battle.walk_in) < 0.6 and float(main.battle.walk_in) > 0.0):
+				await process_frame
 		root.get_texture().get_image().save_png(dir.path_join(shot + ".png"))
 	quit()
 
@@ -128,3 +150,19 @@ static func _not_a_fight(main: Node, key: String) -> String:
 	if st.enemy_art != key or st.enemy_hp <= 0:
 		return "monster is %s" % st.enemy_art
 	return ""
+
+## Two companions, a Cleric and a Ranger (as tests/_pets_shot.gd builds them).
+static func _party() -> Party:
+	var pt := Party.new()
+	for n in 2:
+		var mem := Party.Member.new()
+		mem.slot = 20 + n
+		mem.hero = GameState.new()
+		mem.hero.codex.path = ""
+		mem.hero.autosave = false
+		mem.hero.new_game()
+		mem.hero.choose_class(["Cleric", "Ranger"][n])
+		mem.hp = mem.max_hp()
+		mem.name = ["Ina", "Bo"][n]
+		pt.members.append(mem)
+	return pt

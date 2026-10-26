@@ -293,7 +293,7 @@ static func change_rep(g: GameState, race: String, amount: float, linked := true
 		for rv in Races.RIVALS.get(race, []):
 			change_rep(g, rv, -amount * Races.RIVAL_SHARE, false)
 	var after := Races.rep_index(rep(g, race))
-	g.tip("reputation", "Your standing with a race changed! Check Character > Race. Sparing a race's people raises it; killing them lowers it.")
+	g.tip("reputation", "Your standing with a race changed! Check Hero › Race. Sparing a race's people raises it; killing them lowers it.")
 	if after != before:
 		var lv := Races.rep_level(rep(g, race))
 		g.say("[color=%s]The %s now see you as %s.[/color]" % [lv[1], race_plural(race), lv[0]])

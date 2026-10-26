@@ -1,6 +1,6 @@
 class_name RaidTab
 extends ScrollContainer
-## Online > Raid: this week's guild raid boss. Everyone in the guild gets 3
+## Online › Raid: this week's guild raid boss. Everyone in the guild gets 3
 ## attacks a day; the damage adds up. Beat it before the week ends and every
 ## member can claim a reward.
 
@@ -48,7 +48,7 @@ func _load() -> void:
 		loading = false
 		return
 	if g["data"] == null:
-		box.add_child(UI.label("Raids are for guilds", 18, UI.GOLD))
+		box.add_child(UI.label("Raids are for guilds", UI.FONT_TITLE, UI.GOLD))
 		box.add_child(UI.label("Join or start a guild in the Guild tab. Then everyone fights the same weekly boss and the damage adds up.", UI.FONT_BODY, UI.DIM))
 		box.add_child(UI.primary("Go to Guild", func(): main.show_tab(4, 1)))
 		loading = false
@@ -82,7 +82,7 @@ func _show(gid: int, d: Dictionary) -> void:
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(v)
 	v.add_child(UI.heading("This week's raid boss"))
-	v.add_child(UI.label(str(boss["name"]), 22, UI.RED.lightened(0.2) if not d["dead"] else UI.GREEN))
+	v.add_child(UI.label(str(boss["name"]), UI.FONT_TITLE, UI.RED.lightened(0.2) if not d["dead"] else UI.GREEN))
 	var hp := int(d["hp"])
 	var dealt := mini(int(d["dealt"]), hp)
 	var bar := UI.bar(UI.RED, 14)

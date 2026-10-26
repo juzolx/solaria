@@ -1,6 +1,6 @@
 class_name StatsTab
 extends ScrollContainer
-## Codex > Stats: lifetime numbers for all your heroes together.
+## Codex › Stats: lifetime numbers for all your heroes together.
 ## Per-monster numbers are in the Bestiary.
 
 var main

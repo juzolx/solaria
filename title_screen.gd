@@ -82,6 +82,17 @@ func _fit() -> void:
 	if layout:
 		layout.vertical = size.x < size.y * 0.95
 
+## The shared 3D room is lent to whichever view draws; hand it back loose when the title goes,
+## or it is freed with us while the fight view's deferred move still points at it (tour crash).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE and HallsScene.shared != null and is_instance_valid(HallsScene.shared) and HallsScene.shared.get_parent() == self:
+		remove_child(HallsScene.shared)
+		HallsScene.shared.remove_meta("moving")
+
+var _drawn_at := -1.0
+var _things: Array = []   # the room's scenery, far to near (rebuilt when the room changes)
+var _things_key := "-"
+
 func _process(delta: float) -> void:
 	t += delta
 	# Slowly cross-fade to the next zone every 14 seconds
@@ -99,6 +110,10 @@ func _process(delta: float) -> void:
 		mo["y"] -= mo["speed"] * delta
 		if mo["y"] < -10.0:
 			mo.merge(_new_mote(), true)
+	if m != null and (m.profile.battery_saver or m.profile.reduce_motion):
+		if t - _drawn_at < 1.0 / 30.0:
+			return
+	_drawn_at = t
 	queue_redraw()
 
 func _draw() -> void:
@@ -129,7 +144,7 @@ func _draw() -> void:
 	if hero_tex:
 		var hs := Vector2(hero_tex.get_size()) * unit
 		var bob := roundf(sin(t * 2.2) * unit * 0.5)
-		var feet := float(Sprites.HERO_FOOT - Sprites.PORTRAIT_CROP.position.y) * unit
+		var feet := float(Sprites.PORTRAIT_FOOT) * unit
 		draw_texture_rect(hero_tex, Rect2(Vector2(vs.x * 0.30 - hs.x / 2.0, ground_y - feet + bob), hs), false)
 	if not monster.is_empty():
 		var tex: Texture2D = monster["tex"]
@@ -167,9 +182,11 @@ func _draw_scene(vs: Vector2) -> void:
 		halls.build(room_state, sz)
 		halls.draw_shell(self, sz)
 		halls.draw_doors(self, null, {}, UI.game_font())
-		var things: Array = halls.scenery()
-		things.sort_custom(func(a, b): return float(a["z"]) > float(b["z"]))
-		for th in things:
+		if _things_key != halls.key:
+			_things_key = halls.key
+			_things = halls.scenery()
+			_things.sort_custom(func(a, b): return float(a["z"]) > float(b["z"]))
+		for th in _things:
 			halls.draw_scenery(self, th)
 		# a monster of the zone waits by the far wall, a whole-pixel 2x
 		if not monster.is_empty():
@@ -224,7 +241,7 @@ func _build() -> void:
 	mark.custom_minimum_size = Vector2(0, 76)
 	mark.draw.connect(func(): _draw_sun(mark))
 	col.add_child(mark)
-	var title := UI.label("SOLARIA", 64, UI.GOLD)
+	var title := UI.label("SOLARIA", UI.FONT_DISPLAY * 2, UI.GOLD)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_color_override("font_outline_color", UiSkin.SOOT)   # an ink outline, like the sprites
 	title.add_theme_constant_override("outline_size", 10)
@@ -262,10 +279,6 @@ func _build() -> void:
 	ver.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	col.add_child(ver)
 
-## Bug sweep: a phone tap target is 44 pt; the phone layout is 504 design px on a 375-430 pt
-## screen, so 56 design px (UI.TAP's 44 is only ~33 pt there).
-const TAP_PHONE := 56
-
 func _fill_menu() -> void:
 	OnlineUI.clear(menu_box)
 	var p: Profile = m.profile
@@ -276,21 +289,20 @@ func _fill_menu() -> void:
 				p.active_slot = n
 				meta = GameState.slot_meta(n)
 				break
-	var town_l := UI.label("%s  ·  %s  ·  %d / %d heroes" % [p.town_name(p.town).to_upper(), "HARDCORE" if p.town_hardcore(p.town) else "REGULAR", GameState.town_heroes(p.town), p.slots_open()], UI.FONT_BODY, UI.GOLD)
+	var town_l := UI.label("%s  ·  %s  ·  %d / %d heroes" % [p.town_name(p.town), "Hardcore" if p.town_hardcore(p.town) else "Regular", GameState.town_heroes(p.town), p.slots_open()], UI.FONT_BODY, UI.GOLD)
 	town_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	town_l.tooltip_text = "The town you're in. Switch or found another from Towns."
 	menu_box.add_child(town_l)
 	if not meta.is_empty():
 		var cont := UI.primary("Continue", func(): close_and(func(): m.play_slot(p.active_slot)), UI.GOLD)
-		cont.custom_minimum_size = Vector2(0, TAP_PHONE)
-		cont.add_theme_font_size_override("font_size", 20)
+		cont.custom_minimum_size = Vector2(0, UI.TAP)
 		menu_box.add_child(cont)
 		menu_box.add_child(_hero_line(meta))
 	# Juzo: no "New hero" here. A town's first hero comes with founding it; later
 	# heroes are recruited at the Inn when a slot opens.
 	if meta.is_empty():
 		var found := UI.primary("Found your town", func(): FoundTown.new().show_for(m, p.town), UI.GREEN)
-		found.custom_minimum_size = Vector2(0, TAP_PHONE)
+		found.custom_minimum_size = Vector2(0, UI.TAP)
 		menu_box.add_child(found)
 	var row := UI.hbox(8)
 	menu_box.add_child(row)
@@ -298,11 +310,11 @@ func _fill_menu() -> void:
 			["Guide", func(): GuideBook.open_book(m, "")]]:
 		var b := UI.button(entry[0], entry[1])
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(0, TAP_PHONE)   # bug sweep: 36 design px was ~31 pt on a phone
+		b.custom_minimum_size = Vector2(0, UI.TAP)
 		row.add_child(b)
 	if OS.get_name() in ["Windows", "macOS", "Linux"]:
 		var q := UI.button("Quit", func(): m.get_tree().quit())
-		q.custom_minimum_size = Vector2(0, TAP_PHONE)
+		q.custom_minimum_size = Vector2(0, UI.TAP)
 		menu_box.add_child(q)
 
 func _hero_line(meta: Dictionary) -> Control:
@@ -310,7 +322,7 @@ func _hero_line(meta: Dictionary) -> Control:
 	var pic := TextureRect.new()
 	pic.texture = Sprites.portrait(meta.get("appearance", {}), HeroArt.meta_looks(meta))
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT)  # 1:1, whole pixels
+	pic.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT) * 2   # 2x, whole pixels (the grid)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	row.add_child(pic)
@@ -324,35 +336,35 @@ func _fill_side() -> void:
 	OnlineUI.clear(side_box)
 	# The new update's banner
 	if m.profile.notes_seen != PatchNotes.VERSION:
-		var up := UI.panel(Color("#2a1a2e"), Color("#e8b14a"), 8, 10, 2)
+		var up := UI.panel(UI.PANEL, UI.GOLD, 8, 10, 2)
 		side_box.add_child(up)
 		var ut := UI.rich(UI.FONT_BODY)
-		ut.text = "[color=#e8b14a][b]%s[/b][/color]  [color=%s]v%s[/color]\nNew class rules with God classes, pets from region nests, three currencies, the Legendary Wheel and safer saves." % [String(PatchNotes.NOTES[0]["name"]).to_upper(), UI.hex(UI.DIM), PatchNotes.VERSION]
+		ut.text = "[color=#e8b14a][b]%s[/b][/color]  [color=%s]v%s[/color]\nNew class rules with God classes, pets from region nests, three currencies, the Legendary Wheel and safer saves." % [String(PatchNotes.NOTES[0]["name"]), UI.hex(UI.DIM), PatchNotes.VERSION]
 		up.add_child(ut)
 		var pulse := up.create_tween().set_loops()
 		pulse.tween_property(up, "modulate", Color(1.15, 1.1, 0.95), 0.9)
 		pulse.tween_property(up, "modulate", Color(1, 1, 1), 0.9)
 	var wn := UI.button("What's new in v%s" % PatchNotes.VERSION, func(): WhatsNew.new().show_for(m))  # 2.1 G9
-	wn.custom_minimum_size = Vector2(0, TAP_PHONE)
+	wn.custom_minimum_size = Vector2(0, UI.TAP)
 	side_box.add_child(wn)
 	var week := Realms.realm_of_week()
 	var wk := UI.rich(UI.FONT_BODY)
-	wk.text = "[color=%s]REALM OF THE WEEK[/color]\n[color=%s][b]%s[/b][/color]: double reputation and better loot." % [UI.hex(UI.DIM), Realms.info(week)["color"], Realms.realm_name(week)]
+	wk.text = "[color=%s]Realm of the week[/color]\n[color=%s][b]%s[/b][/color]: double reputation and better loot." % [UI.hex(UI.GOLD), Realms.info(week)["color"], Realms.realm_name(week)]
 	side_box.add_child(wk)
 	var ev := GameData.active_events()
 	if not ev.is_empty():
 		var names := []
 		for id in ev:
-			names.append("[color=#f472b6][b]%s[/b][/color]: %s" % [GameData.EVENTS[id]["name"], GameData.EVENTS[id]["text"]])
+			names.append("[b]%s[/b]: %s" % [GameData.EVENTS[id]["name"], GameData.EVENTS[id]["text"]])
 		var banner := UI.rich(UI.FONT_BODY)
-		banner.text = "[color=#f472b6]EVENT NOW[/color]\n" + "\n".join(names)
+		banner.text = "[color=%s]Event now[/color]\n" % UI.hex(UI.GOLD) + "\n".join(names)
 		side_box.add_child(banner)
 	m.profile.notes_seen = PatchNotes.VERSION
 	if size.x < size.y * 0.95:
 		m.profile.save()
 		return   # phone: the scene needs the height; tips are on the loading screen, notes behind the button
 	var tip := UI.rich(UI.FONT_BODY)
-	tip.text = "[color=%s]TIP OF THE DAY[/color]\n%s" % [UI.hex(UI.DIM), PatchNotes.tip_of_the_day()]
+	tip.text = "[color=%s]Tip of the day[/color]\n%s" % [UI.hex(UI.GOLD), PatchNotes.tip_of_the_day()]
 	side_box.add_child(tip)
 	side_box.add_child(UI.heading("What's new"))
 	var scroll := ScrollContainer.new()

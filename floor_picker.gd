@@ -32,7 +32,9 @@ func show_from_town(main_node) -> void:
 func show_for(main_node) -> void:
 	m = main_node
 	state = m.state
-	open(m, "Into the dungeon: choose your floor" if from_town else "Choose a floor", 780.0)
+	open(m, "Into the dungeon" if from_town else "Choose a floor", 780.0)
+	if from_town:
+		content.add_child(UI.label("Choose your floor", UI.FONT_BODY, UI.DIM))
 	if from_town:
 		var start_head := UI.heading("Start from")
 		UI.tip(start_head, "Dives start at a checkpoint: floor 1, or the floor after any boss you've beaten (26, 51, 76...). Bright floors are checkpoints you can start from.")
@@ -117,7 +119,6 @@ func show_for(main_node) -> void:
 	if World.curses_unlocked(state):
 		var cb := UI.button("Curses (%d on): harder climb, better loot" % state.curses.size(), func(): curses_popup(m))
 		cb.custom_minimum_size = Vector2(0, UI.TAP)
-		cb.add_theme_color_override("font_color", UI.PURPLE)
 		content.add_child(cb)
 	zone_bar = HFlowContainer.new()
 	zone_bar.add_theme_constant_override("h_separation", 6)
@@ -148,8 +149,8 @@ func _build() -> void:
 		var first := zb * GameData.ZONE_FLOORS + 1
 		var zone := GameData.zone_for_floor(first)
 		var b := UI.button(GameData.rank_prefix(first) + str(zone["name"]), _show_zone.bind(zb))
-		if zb == zone_shown:
-			b.add_theme_stylebox_override("normal", UI.style(Color(zone["color"]).darkened(0.5), Color(zone["color"]).lightened(0.3), 6, 4, 2))
+		b.custom_minimum_size = Vector2(0, UI.BUTTON_H)
+		UI.chip_look(b, zb == zone_shown)
 		zone_bar.add_child(b)
 	OnlineUI.clear(rows)
 	boss_buttons.clear()
@@ -335,7 +336,6 @@ func _fill_presets() -> void:
 	var edit := UI.button("Presets...", func(): PresetsScreen.new().show_for(m, _after_presets))
 	edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	edit.custom_minimum_size = Vector2(0, UI.TAP)
-	edit.add_theme_color_override("font_color", UI.TEAL)
 	preset_box.add_child(edit)
 
 func _use_preset(i: int) -> void:
@@ -380,7 +380,7 @@ func _fill_team() -> void:
 			state.set_row(String(r[0]), "back" if row == "front" else "front")
 			m.sfx.play("click")
 			_fill_team())
-		rb.add_theme_color_override("font_color", UI.GOLD if row == "front" else UI.BLUE)
+		rb.add_theme_color_override("font_color", UI.GOLD if row == "front" else UI.TEXT)
 		rb.tooltip_text = "Tap to move between the front and back row"
 		h.add_child(rb)
 		if int(r[3]) > 0:

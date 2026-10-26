@@ -18,7 +18,7 @@ extends RefCounted
 const COLOR := "#c4b5fd"   # every portal card, banner and line uses this violet
 const LEAVE := "portal:leave"
 
-## The rules, one row per kind (shown in Codex > Guide > Portals and claude/portals.md).
+## The rules, one row per kind (shown in Codex › Guide › Portals and claude/portals.md).
 const KINDS := {
 	"rift": {"name": "Rift", "found": "Behind about 1 door in 70, from floor 10 (never before a boss)",
 		"cost": "Free", "run": false, "home": "Return Scroll only (the rift closes, no vault)",

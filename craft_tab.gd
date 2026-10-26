@@ -1,6 +1,6 @@
 class_name CraftTab
 extends ScrollContainer
-## Town > Craft. Laid out so it's always clear what you have and what you need:
+## Town › Craft. Laid out so it's always clear what you have and what you need:
 ## 1) your scrap and dust, 2) basics (potion, bag), 3) set recipes, 4) mystery gear.
 
 var main
@@ -182,7 +182,7 @@ func _fill_wares(force := false) -> void:
 		t.text = ItemText.describe(state, item)
 		h.add_child(t)
 		var need := int(e["price"]) - state.gold
-		var label := "Sold" if e["sold"] else ("Bag full" if state.bag_full() else ("Need %d more" % need if need > 0 else "%d gold" % int(e["price"])))
+		var label := "Sold" if e["sold"] else ("Bag full" if state.bag_full() else ("Need %d more" % need if need > 0 else UI.cost("Buy", int(e["price"]))))
 		var b := UI.primary(label, func():
 			if Smith.buy(state, i):
 				main.sfx.play("buy")

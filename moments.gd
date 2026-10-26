@@ -79,14 +79,14 @@ func _build(kind: String, title: String, sub: String, color: Color, extra: Strin
 		pt.tween_property(pic, "modulate:a", 1.0, 0.6)
 	var kicker: String = {"realm": "YOU ENTER", "boss": "", "awaken": "AWAKENING", "transform": "SOMETHING CHANGES", "hidden": "HIDDEN CLASS", "god": "A GOD CLASS ANSWERS", "class": "YOUR CLASS GROWS", "milestone": "A MILESTONE", "hatch": "IT HATCHED!", "egg": "A NEST!", "forge": "FRESH FROM THE FORGE", "first": "FIRST FIND!"}.get(kind, "")
 	if kicker != "":
-		lines.append(_line(v, kicker, 14, color.lightened(0.3)))
-	lines.append(_line(v, title.to_upper(), 34 if kind != "boss" else 30, color.lightened(0.4)))
+		lines.append(_line(v, kicker, UI.FONT_CAPTION, color.lightened(0.3)))
+	lines.append(_line(v, title.to_upper(), UI.FONT_DISPLAY if kind != "boss" else UI.FONT_TITLE, color.lightened(0.4)))
 	if sub != "":
-		lines.append(_line(v, sub, 15, UI.TEXT))
+		lines.append(_line(v, sub, UI.FONT_BODY, UI.TEXT))
 	var rare := extra == "rare" and kind in ["hatch", "egg"]   # a Legendary or Mythic pet (Fable pets R4)
 	if extra != "" and not rare:
-		lines.append(_line(v, extra, 12, UI.DIM))
-	lines.append(_line(v, "(tap to continue)", 10, UI.DIM))
+		lines.append(_line(v, extra, UI.FONT_CAPTION, UI.DIM))
+	lines.append(_line(v, "(tap to continue)", UI.FONT_CAPTION, UI.DIM))
 	# Fade in, burn the title in letter by letter, hold, fade out
 	var t := create_tween()
 	t.tween_property(bg, "color:a", 0.92 if kind in ["hidden", "god", "transform", "class"] else 0.85, 0.4)
@@ -199,15 +199,15 @@ func _build_evolve(d: Dictionary) -> void:
 	after.texture = d.get("after")
 	before.modulate.a = 0.0
 	after.modulate.a = 0.0
-	var kicker := _line(v, "YOUR CLASS EVOLVES" if int(d.get("tier", 1)) < 3 else "UNIQUE CLASS", 14, color.lightened(0.3))
-	var title := _line(v, String(d.get("name", "")).to_upper(), 36, color.lightened(0.45))
+	var kicker := _line(v, "YOUR CLASS EVOLVES" if int(d.get("tier", 1)) < 3 else "UNIQUE CLASS", UI.FONT_CAPTION, color.lightened(0.3))
+	var title := _line(v, String(d.get("name", "")).to_upper(), UI.FONT_DISPLAY, color.lightened(0.45))
 	var rank_txt := String(d.get("sub", ""))
-	var sub := _line(v, rank_txt, 15, color.lightened(0.2)) if rank_txt != "" else null
-	var role := _line(v, String(d.get("role", "")), 14, UI.TEXT)
+	var sub := _line(v, rank_txt, UI.FONT_BODY, color.lightened(0.2)) if rank_txt != "" else null
+	var role := _line(v, String(d.get("role", "")), UI.FONT_BODY, UI.TEXT)
 	var sk := String(d.get("skill", ""))
-	var skill := _line(v, "New signature skill: %s" % sk, 15, Color(Signatures.COLOR)) if sk != "" else null
-	var skill_t := _line(v, String(d.get("skill_text", "")), 12, UI.DIM) if sk != "" else null
-	var tap := _line(v, "(tap to continue)", 10, UI.DIM)
+	var skill := _line(v, "New signature skill: %s" % sk, UI.FONT_BODY, Color(Signatures.COLOR)) if sk != "" else null
+	var skill_t := _line(v, String(d.get("skill_text", "")), UI.FONT_CAPTION, UI.DIM) if sk != "" else null
+	var tap := _line(v, "(tap to continue)", UI.FONT_CAPTION, UI.DIM)
 	var texts: Array = [kicker, title, sub, role, skill, skill_t, tap].filter(func(x): return x != null)
 	for l in texts:
 		(l as Label).modulate.a = 0.0

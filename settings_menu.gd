@@ -13,6 +13,7 @@ var dark_toggle: Button
 var battery_toggle: Button
 var graphics_toggle: Button
 var path_toggle: Button
+var recap_toggle: Button
 var tips_toggle: Button
 var a11y_buttons := {}
 var cloud_label: Label
@@ -73,6 +74,12 @@ func show_for(m) -> void:
 	for b in [path_toggle, fullscreen_toggle]:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grow.add_child(b)
+	recap_toggle = UI.button("", func():
+		profile.show_recap = not profile.show_recap
+		profile.save()
+		_update())
+	recap_toggle.tooltip_text = "After a Regular fall: where you fell, what you keep and what hurt you most."
+	content.add_child(recap_toggle)
 	fullscreen_toggle.visible = not OS.has_feature("mobile")   # a phone is always full screen
 	dark_toggle = UI.button("", func():
 		profile.dark_art = not profile.dark_art
@@ -200,7 +207,7 @@ func show_for(m) -> void:
 		["Hidden classes", [["Unlock all hidden classes", "hidden_all"], ["Next stage (current)", "hidden_stage"], ["+50 special stat", "hidden_stat"]]],
 	]
 	for sec in sections:
-		dev_box.add_child(UI.label(str(sec[0]).to_upper(), UI.FONT_BODY, UI.PINK))
+		dev_box.add_child(UI.label(str(sec[0]), UI.FONT_BODY, UI.PINK))
 		var grid := GridContainer.new()
 		grid.columns = 3
 		grid.add_theme_constant_override("h_separation", 6)
@@ -363,6 +370,7 @@ func _update() -> void:
 	battery_toggle.text = "Battery saver: %s" % ("ON" if profile.battery_saver else "OFF")
 	graphics_toggle.text = "Graphics: %s" % ("Low" if profile.low_graphics else "Normal")
 	path_toggle.text = "Choose-your-path rooms: %s" % ("ON" if profile.path_choice == "ask" else "OFF")
+	recap_toggle.text = "Card after every fall: %s" % ("ON" if profile.show_recap else "OFF")
 	tips_toggle.text = "Beginner tips: %s" % ("ON" if Onboarding.active(profile) else "OFF")
 	dev_toggle.text = "Dev Mode: %s" % ("ON" if profile.dev_mode else "OFF")
 	_style_toggles()
@@ -381,7 +389,7 @@ func _update() -> void:
 ## Fable r1 #4: on/off settings are UI.toggle_look (a check box, never the disabled look);
 ## settings with several values are steppers: "Graphics  ‹ Normal ›".
 func _style_toggles() -> void:
-	var all: Array = a11y_buttons.values() + [sound_toggle, fullscreen_toggle, dark_toggle, battery_toggle, path_toggle, tips_toggle, dev_toggle, graphics_toggle]
+	var all: Array = a11y_buttons.values() + [sound_toggle, fullscreen_toggle, dark_toggle, battery_toggle, path_toggle, recap_toggle, tips_toggle, dev_toggle, graphics_toggle]
 	for b in all:
 		var btn := b as Button
 		if btn == null:
