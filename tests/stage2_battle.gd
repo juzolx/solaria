@@ -27,6 +27,6 @@ func _initialize() -> void:
 	g._finish_horde()
 	check(g.gold > gold0 and not g.horde_pack, "a beaten pack pays a little gold")
 	var back := Sprites.hero_back(g.appearance, g.hero_looks())
-	check(back.has("lpc") and (back["lpc"] as Dictionary).has("combat_idle"), "the hero has a back view for fights")
+	check(back.has("anims") and (back["anims"] as Dictionary).has("combat_idle"), "the hero has a back view for fights")
 	print("STAGE2 BATTLE TESTS DONE, failures: ", fails)
 	quit()

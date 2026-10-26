@@ -9,7 +9,7 @@ func _initialize() -> void:
 		quit(1)
 		return
 	var args := OS.get_cmdline_user_args()
-	var out := ProjectSettings.globalize_path("res://" + (args[0] if args.size() > 0 else "claude/art_test/pets/fable_r1"))
+	var out := ProjectSettings.globalize_path("res://" + (args[0] if args.size() > 0 else "claude/art_test/pets/fable_r2"))
 	DirAccess.make_dir_recursive_absolute(out)
 	TestHero.make(12, "Knight")
 	TitleScreen.pending = {"play": 1}
@@ -36,6 +36,8 @@ func _initialize() -> void:
 	main.refresh()
 	await create_timer(1.5).timeout
 	await _shot(out, "fight")
+	var bv = main.battle
+	print("LAYOUT (design units) size ", bv.size, " scale ", PixelPic.stretch(bv), " u ", bv._u(), " lay ", bv.team_layout(), " bar ", bv._bar_rect(bv._hero_rect()), " hero ", bv._hero_rect(), " ground ", bv._team_ground())
 	st.exploring = true
 	main._room_ready = true
 	main.refresh()
@@ -53,6 +55,7 @@ func _initialize() -> void:
 			main.refresh()
 			await create_timer(0.4).timeout
 			await _shot(out, "tab_%d_%s" % [gi, title.to_lower()])
+			_check_pixels(grp.get_child(s))
 			var page = grp.get_child(s)
 			if page is PetBookTab:
 				var flow := _find_flow(page)
@@ -66,6 +69,14 @@ func _initialize() -> void:
 				await _close(main)
 	print("PETS SHOTS DONE ", Menagerie.out(st).size())
 	quit()
+
+## Every pet picture on a tab shows whole screen pixels per art pixel (Fable pets R2).
+func _check_pixels(n: Node) -> void:
+	for c in n.get_children():
+		if c is PixelPic and c.is_visible_in_tree():
+			var px: float = c.size.x * PixelPic.stretch(c) / c.art_px
+			print(("PIXELS OK " if absf(px - roundf(px)) < 0.02 else "PIXELS FAIL ") + "%.2f screen px per art px" % px)
+		_check_pixels(c)
 
 func _find_flow(n: Node) -> HFlowContainer:
 	for c in n.get_children():

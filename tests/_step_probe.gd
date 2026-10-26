@@ -8,7 +8,7 @@ func _initialize() -> void:
 	for ri in races.size():
 		var app := {"body": "masc" if ri % 2 == 0 else "fem", "race": races[ri], "skin": Races.skins(races[ri])[0], "hair_color": 1}
 		var looks := {"Class": {"cls": "Warrior", "tier": 0}, "Weapon": {"type": "sword", "glow": false}}
-		var im: Image = Sprites.hero(app, looks)["lpc"]["combat_idle"]["img"][0]
+		var im: Image = Sprites.hero(app, looks)["anims"]["combat_idle"]["img"][0]
 		var row := [im] + HeroArt.steps(im)
 		for i in 3:
 			var x := (ri * 3 + i) * 96

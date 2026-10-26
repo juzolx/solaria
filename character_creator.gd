@@ -90,7 +90,7 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	_swatch_row(right, "Skin", "skin", Sprites.swatches("skin"))
 	_stepper_row(right, "Hair style", "hair")
 	_swatch_row(right, "Hair color", "hair_color", Sprites.swatches("hair"))
-	_swatch_row(right, "Fur color", "fur", Lpc.FUR.map(func(f): return Color(f[1][1])))
+	_swatch_row(right, "Fur color", "fur", Races.FUR.map(func(f): return Color(f[1][1])))
 	_swatch_row(right, "Eyes", "eyes", Sprites.swatches("eyes"))
 	if HeroArt.available():
 		_stepper_row(right, "Face", "face")
@@ -231,7 +231,7 @@ func _randomize() -> void:
 		app["face"] = HeroArt.FACES.pick_random()
 	app["hair_color"] = randi() % Sprites.hair_colors().size()
 	app["eyes"] = randi() % Sprites.eye_colors().size()
-	app["fur"] = randi() % Lpc.FUR.size()
+	app["fur"] = randi() % Races.FUR.size()
 	_update()
 
 func _update() -> void:
@@ -252,6 +252,11 @@ func _update() -> void:
 		# races with their own body build (goblin, dwarf...) have a drawn head: no style or face choice yet
 		if field in ["hair", "face"] and HeroArt.available() and HeroArt.build_dir(app) != "":
 			show = false
+		# a build that keeps its drawn skin (goblin and orc green, the werewolf's grey) has nothing to pick
+		if field == "skin" and HeroArt.available() and HeroArt.build_dir(app) != "":
+			var bd: Dictionary = HeroArt.info()["builds"].get(HeroArt.art_race(app), {})
+			if not bool(bd.get("skin", true)) or bd.has("skin_ramp"):
+				show = false
 		for c in row_parts[field]:
 			(c as Control).visible = show
 	for field in rows:
@@ -317,4 +322,4 @@ func _finish() -> void:
 
 ## The hair styles a race can pick (2.1 heroes: the 37 drawn styles for everyone).
 static func _hair_list(race: String) -> Array:
-	return Sprites.HAIR_STYLES.duplicate() if HeroArt.available() else Lpc.hair_styles(race)
+	return Sprites.HAIR_STYLES.duplicate() if HeroArt.available() else Races.hair_styles(race)

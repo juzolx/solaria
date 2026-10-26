@@ -174,19 +174,46 @@ func _initialize() -> void:
 		# name plates at 2x never cover each other (a plate takes the tap first)
 		var th := ThemeDB.get_project_theme()
 		var font: Font = th.default_font if th and th.default_font else ThemeDB.fallback_font   # the font the game draws plates with
-		var plates: Array = []
-		for sp in d["spots"]:
-			if sp.has("plate") and sp["plate"] == null:
-				continue
-			var w := font.get_string_size(String(sp["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 18.0
-			var c: Vector2 = TownView.plate_anchor(sp) * 2.0
-			plates.append([sp["id"], Rect2(c.x - w / 2.0, c.y - 15.0, w, 30.0)])
-		var piled: Array = []
-		for a in plates.size():
-			for b in range(a + 1, plates.size()):
-				if (plates[a][1] as Rect2).intersects(plates[b][1]):
-					piled.append([plates[a][0], plates[b][0]])
-		check(piled.is_empty(), "no two name plates overlap at 2x (%s)" % [piled])
+		var o0: Array = d["origin"]
+		var cell_px := func(c: Vector2i) -> Vector2:
+			return Vector2(float(o0[0]) + (c.x - c.y) * 16.0, float(o0[1]) + (c.x + c.y + 1) * 8.0)
+		for fs in [20, 22]:   # 2x draws plates at 20, 3x at 22
+			var k := 2.0 if fs == 20 else 3.0
+			var plates: Array = []
+			for sp in d["spots"]:
+				if sp.has("plate") and sp["plate"] == null:
+					continue
+				var w := font.get_string_size(String(sp["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 18.0
+				var c: Vector2 = TownView.plate_anchor(sp) * k
+				plates.append([sp["id"], Rect2(c.x - w / 2.0, c.y - (fs + 10) / 2.0, w, fs + 10.0)])
+			var piled: Array = []
+			for a in plates.size():
+				for b in range(a + 1, plates.size()):
+					if (plates[a][1] as Rect2).intersects(plates[b][1]):
+						piled.append([plates[a][0], plates[b][0]])
+			check(piled.is_empty(), "no two name plates overlap at %dx (%s)" % [k, piled])
+			# nobody standing at a stop has a plate across them
+			var covered: Array = []
+			for st in d["stops"]:
+				var p: Vector2 = cell_px.call(Vector2i(int(st[0]), int(st[1])))
+				var head := Rect2((p + Vector2(-6, -32)) * k, Vector2(12, 32) * k)
+				for pl in plates:
+					if (pl[1] as Rect2).intersects(head):
+						covered.append([pl[0], st])
+			check(covered.is_empty(), "no plate covers a walker at a stop at %dx (%s)" % [k, covered])
+		# every stop faces something: a cell people can't walk on lies within 24 px of face_x beside it
+		var blank: Array = []
+		for st in d["stops"]:
+			var sc := Vector2i(int(st[0]), int(st[1]))
+			var faces := false
+			for dx in [-1, 0, 1]:
+				for dy in [-1, 0, 1]:
+					var nc := sc + Vector2i(dx, dy)
+					if not walk.has(nc) and absf((cell_px.call(nc) as Vector2).x - float(st[2])) <= 24.0:
+						faces = true
+			if not faces:
+				blank.append(st)
+		check(blank.is_empty(), "every stop faces a stall, the well or a board, not open street (%s)" % [blank])
 		# the hope path: walkers climb the stairs to the portal (the Dungeon door is up there)
 		var gate: Array = d["spots"].filter(func(sp): return sp["id"] == "gate")[0]["door"]
 		var up: Array = d["raised"].filter(func(c): return int(c[0]) == int(gate[0]) and int(c[1]) == int(gate[1]))
@@ -226,6 +253,17 @@ func _initialize() -> void:
 				if absf(dev.x - roundf(dev.x)) > 0.01 or absf(dev.y - roundf(dev.y)) > 0.01:
 					snapped = false
 	check(snapped, "the town map's origin is a whole device pixel for any UI offset")
+	# a pinch keeps the map point under the fingers where it is, at the scale really drawn
+	var still := true
+	for cs in [1.488, 2.56]:
+		for z in [2.0, 3.0]:
+			var at := Vector2(215, 400)
+			var m := Vector2(740, 560)
+			var pan := TownView.zoom_pan(at, m, z, cs)
+			var sf: float = maxf(1.0, roundf(z * cs)) / cs
+			if not ((at - pan) / sf).is_equal_approx(m):
+				still = false
+	check(still, "a pinch zoom keeps the point under the fingers still")
 	GameState.delete_saves()
 	print("TOWN TESTS DONE, failures: ", fails)
 	quit()
