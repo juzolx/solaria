@@ -20,6 +20,7 @@ const IDLE := [0, 1]
 const ATTACK := [2, 3, 4, 5]
 const HIT := [6]
 const PORTRAIT := [7, 8]
+const WEAPON_BEHIND := [4]  # the mid-swing crosses the hero's back: drawn under the head (Fable hero R2 item 1)
 const ATTACK_FPS := 9.0
 const BUILT_MAX := 24  # looks kept built (the class cards build 13 at once)
 const SHEETS_MAX := 24  # decoded layer sheets kept between builds (~10 MB at most)
@@ -33,6 +34,8 @@ const WEAPON_AS := {"orb": "staff", "tome": "staff", "wand": "staff", "fist": ""
 
 static var _info := {}
 static var _imgs := {}
+static var _sheet_order: Array[String] = []  # decoded layers, oldest first
+static var _misses := {}  # layers that are missing or empty
 static var _built := {}
 static var _order: Array = []  # built looks, oldest first
 
@@ -57,23 +60,34 @@ static func _img(path: String) -> Image:
 	img.convert(Image.FORMAT_RGBA8)
 	return img
 
-## A decoded layer sheet, kept between builds: its bytes, width, cell size and each cell's used rect
-## (only those pixels are walked). {} if missing.
-static func _sheet(path: String, rects := true) -> Dictionary:
-	if not _imgs.has(path):
-		if _imgs.size() >= SHEETS_MAX:
-			_imgs.clear()
-		var out := {}
-		var img := _img(path)
-		if img != null:
-			var n := img.get_height()
-			var used := []
-			if rects:
-				for c in img.get_width() / n:
-					used.append(img.get_region(Rect2i(c * n, 0, n, n)).get_used_rect())
-			out = {"data": img.get_data(), "w": img.get_width(), "n": n, "rects": used}
-		_imgs[path] = out
-	return _imgs[path]
+## A decoded layer (its sheet and index sheet as one entry), kept between builds: the bytes, width, cell
+## size and each cell's used rect (only those pixels are walked). {} if missing or every cell is empty
+## (remembered as a miss). The oldest entry goes first when full.
+static func _sheet(path: String) -> Dictionary:
+	if _imgs.has(path):
+		return _imgs[path]
+	var out := {}
+	var img := _img(path + ".png")
+	if img != null:
+		var n := img.get_height()
+		var used := []
+		var any := false
+		for c in img.get_width() / n:
+			var r := img.get_region(Rect2i(c * n, 0, n, n)).get_used_rect()
+			used.append(r)
+			any = any or r.has_area()
+		if any:
+			var ix := _img(path + "_idx.png")
+			out = {"data": img.get_data(), "idx": ix.get_data() if ix != null else PackedByteArray(),
+				"w": img.get_width(), "n": n, "rects": used}
+	if out.is_empty():
+		_misses[path] = true
+		return out
+	_imgs[path] = out
+	_sheet_order.append(path)
+	if _sheet_order.size() > SHEETS_MAX:
+		_imgs.erase(_sheet_order.pop_front())
+	return out
 
 ## "m" or "f" from the creator's build.
 static func body_key(app: Dictionary) -> String:
@@ -114,13 +128,15 @@ static func _shade(ramp: PackedColorArray, i: int) -> Color:
 ## cells: [first, end) frames to fill (only what's needed: battle or portrait).
 ## first: the frame the sheet's first cell is (the face sheets hold only the portrait frames).
 ## dye: the class colour for a body build's family outfit (index blue channel).
-static func _lay(dst: PackedByteArray, src_path: String, skin: PackedColorArray, hair: PackedColorArray, cells: Vector2i, only_hair := false, first := 0, dye := PackedColorArray()) -> void:
-	var src := _sheet(src_path + ".png")
+## lift: rows to draw the layer higher (negative: lower).
+static func _lay(dst: PackedByteArray, src_path: String, skin: PackedColorArray, hair: PackedColorArray, cells: Vector2i, only_hair := false, first := 0, dye := PackedColorArray(), lift := 0) -> void:
+	if _misses.has(src_path):
+		return
+	var src := _sheet(src_path)
 	if src.is_empty():
 		return
-	var idx := _sheet(src_path + "_idx.png", false)
 	var sd: PackedByteArray = src["data"]
-	var id: PackedByteArray = idx.get("data", PackedByteArray())
+	var id: PackedByteArray = src["idx"]
 	var sw: int = src["w"]
 	var n: int = src["n"]
 	var rects: Array = src["rects"]
@@ -132,9 +148,9 @@ static func _lay(dst: PackedByteArray, src_path: String, skin: PackedColorArray,
 		if ci >= rects.size():
 			break
 		var r: Rect2i = rects[ci]
-		for y in range(r.position.y, r.end.y):
+		for y in range(maxi(r.position.y, lift - off), mini(r.end.y, FRAME - off + lift)):
 			var row := y * sw + ci * n
-			var drow := (y + off) * dw + f * FRAME + off
+			var drow := (y + off - lift) * dw + f * FRAME + off
 			for x in range(r.position.x, r.end.x):
 				var si := (row + x) * 4
 				if sd[si + 3] == 0:
@@ -181,7 +197,7 @@ static func _lut(ramp: PackedColorArray) -> PackedByteArray:
 ## FRAME x FRAME (null for the frames not asked for). back: the battle frames 0-6, else the portrait 7-8.
 static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back := true) -> Dictionary:
 	var b := body_key(app)
-	var key := "%s|%s|%d|%s|%s" % [str(app), cls, tier, weapon, back]
+	var key := "%s|%s|%d|%s|%s" % [str(look_key(app, back)), cls, tier, weapon, back]
 	var cells := Vector2i(0, 7) if back else Vector2i(7, 9)
 	if _built.has(key):
 		return _built[key]
@@ -192,6 +208,7 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 	var data := PackedByteArray()
 	data.resize(FRAME * 9 * FRAME * 4)
 	var build := build_dir(app)
+	_lay_weapon(data, build if build != "" else b, weapon, cells, true)
 	if build != "":
 		# another body build (goblin, dwarf...): its own drawn head, the class's outfit family dyed in the class colour
 		var fams: Array = info()["builds"][art_race(app)]["bodies"][b]
@@ -217,13 +234,14 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 			feat = _looked("%s/%s" % [build, feat], app).get_file()  # the fairy's bigger wings once awakened
 			_lay(data, "%s/%s_back" % [build, feat], PackedColorArray(), PackedColorArray(), cells)
 		_lay(data, "%s/outfit_%s" % [build, fam], bskin, hair, cells, false, 0, dye)
+		if feat != "":  # over the body's back in battle (the fairy's wings grow from it)
+			_lay(data, "%s/%s" % [build, feat], PackedColorArray(), PackedColorArray(), cells)
 		if bool(bd.get("hair", false)):  # the creator's hair style, fitted to the build's head (bake.py)
 			_lay(data, "%s/hair_%s" % [build, style_key(app)], bskin, hair, cells)
-		if feat != "":
-			_lay(data, "%s/%s" % [build, feat], PackedColorArray(), PackedColorArray(), cells)
 		_lay_look(data, build, app, cells)
-		_lay_weapon(data, build, weapon, cells)
-		return _finish(key, data, cells, _glow(app), back and b == "f")
+		_lay_weapon(data, build, weapon, cells, false)
+		var breath: bool = not back or b == "f" or build in info().get("breath", [])  # one drawn idle or portrait pose
+		return _finish(key, data, cells, _glow(app), breath)
 	var race := race_key(app, b)
 	if race != "":
 		race = _looked(race, app)  # an awakening's variant of the race layer (a second pair of wings...)
@@ -240,8 +258,19 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 	if race != "":
 		_lay(data, race, skin, hair, cells)  # ears, horns, halo, wings from behind...
 	_lay_look(data, b, app, cells)
-	_lay_weapon(data, b, weapon, cells)
+	_lay_weapon(data, b, weapon, cells, false)
 	return _finish(key, data, cells, _glow(app), back and b == "f")
+
+## The creator fields a hero picture shows (the back view has no face), so stepping through faces or any
+## other field never rebuilds the battle frames.
+const LOOK_FIELDS := ["body", "race", "form", "look", "skin", "hair", "hair_color"]
+static func look_key(app: Dictionary, back: bool) -> Dictionary:
+	var k := {}
+	for f in LOOK_FIELDS:
+		k[f] = app.get(f)
+	if not back:
+		k["face"] = app.get("face")
+	return k
 
 ## A race layer as an awakening wears it: "m/race_angel" -> "m/race_angel__wings2" when that variant is baked.
 static func _looked(layer: String, app: Dictionary) -> String:
@@ -254,7 +283,12 @@ static func _looked(layer: String, app: Dictionary) -> String:
 static func _lay_look(data: PackedByteArray, dir: String, app: Dictionary, cells: Vector2i) -> void:
 	var look := str(app.get("look", ""))
 	if look != "" and ResourceLoader.exists(DIR + "%s/look_%s.png" % [dir, look]):
-		_lay(data, "%s/look_%s" % [dir, look], PackedColorArray(), PackedColorArray(), cells)
+		var lift := 0
+		if look == "crown":  # it sits on short hair: taller or flatter styles move it (bake.py crown_lifts)
+			var bd: Dictionary = info().get("builds", {}).get(art_race(app), {})
+			if dir in ["m", "f"] or bool(bd.get("hair", false)):
+				lift = int(info().get("crown_lift", {}).get(dir, {}).get(style_key(app), 0))
+		_lay(data, "%s/look_%s" % [dir, look], PackedColorArray(), PackedColorArray(), cells, false, 0, PackedColorArray(), lift)
 
 ## The "glow" awakening: a soft outline in the race colour (clear when the hero has none).
 static func _glow(app: Dictionary) -> Color:
@@ -262,10 +296,24 @@ static func _glow(app: Dictionary) -> Color:
 		return Color(0, 0, 0, 0)
 	return Color(Races.info(str(app.get("race", "Human"))).get("color", "#e8b14a"), 0.75)
 
-static func _lay_weapon(data: PackedByteArray, dir: String, weapon: String, cells: Vector2i) -> void:
+## behind: the frames whose weapon passes in front of the hero seen from behind (WEAPON_BEHIND), laid first so
+## the head and body cover it; else every other frame, laid last.
+static func _lay_weapon(data: PackedByteArray, dir: String, weapon: String, cells: Vector2i, behind: bool) -> void:
 	var w := WEAPON_AS.get(weapon, weapon) as String
-	if w != "" and w in info().get("weapons", []):
-		_lay(data, "%s/weapon_%s" % [dir, w], PackedColorArray(), PackedColorArray(), cells)
+	if w == "" or not w in info().get("weapons", []):
+		return
+	var path := "%s/weapon_%s" % [dir, w]
+	var start := cells.x
+	for f in WEAPON_BEHIND:
+		if f < cells.x or f >= cells.y:
+			continue
+		if behind:
+			_lay(data, path, PackedColorArray(), PackedColorArray(), Vector2i(f, f + 1))
+		else:
+			_lay(data, path, PackedColorArray(), PackedColorArray(), Vector2i(start, f))
+			start = f + 1
+	if not behind:
+		_lay(data, path, PackedColorArray(), PackedColorArray(), Vector2i(start, cells.y))
 
 ## Her second battle idle, made from the first: the drawn one stood 2 px taller and 2 px over, so the whole
 ## torso jumped every half second. This one only lets the upper body sink 1 px (a breath).
@@ -288,11 +336,14 @@ static func _finish(key: String, data: PackedByteArray, cells: Vector2i, glow :=
 			out["img"].append(null); out["tex"].append(null); out["white"].append(null)
 			continue
 		var im := sheet.get_region(Rect2i(i * FRAME, 0, FRAME, FRAME))
-		if breath and i == IDLE[1]:
-			im = _breath(out["img"][IDLE[0]])
+		var pair: Array = IDLE if cells.x == 0 else PORTRAIT
+		if breath and i == pair[1]:  # the second pose made from the first: one drawing, no jump cut
+			im = _breath(out["img"][pair[0]])
 		out["img"].append(im)
 		out["tex"].append(ImageTexture.create_from_image(im))
-		out["white"].append(ImageTexture.create_from_image(Sprites._silhouette(im)))
+		var white := Sprites._silhouette(im)
+		white.convert(Image.FORMAT_LA8)  # white + alpha: a quarter of the RGBA texture (drawn with a modulate)
+		out["white"].append(ImageTexture.create_from_image(white))
 	_built[key] = out
 	_order.append(key)
 	if _order.size() > BUILT_MAX:
@@ -316,7 +367,7 @@ static func _outline(data: PackedByteArray, cells: Vector2i, c: Color) -> void:
 ## plays the one swing, "hurt" is the hit frame. "foot": the feet row inside a frame.
 static func anims(fr: Dictionary, back: bool) -> Dictionary:
 	var pick := func(ids: Array, fps: float) -> Dictionary:
-		var a := {"img": [], "tex": [], "white": [], "size": FRAME, "foot": FOOT + PAD, "fps": fps}
+		var a := {"img": [], "tex": [], "white": [], "size": FRAME, "foot": FOOT + PAD, "fps": fps, "ids": ids}
 		for i in ids:
 			a["img"].append(fr["img"][i]); a["tex"].append(fr["tex"][i]); a["white"].append(fr["white"][i])
 		return a
@@ -391,7 +442,7 @@ static func build_dir(app: Dictionary) -> String:
 	var b := body_key(app)
 	if bd.is_empty() or not (bd["bodies"] as Dictionary).has(b):
 		return ""
-	return "%s_%s" % [bd["key"], str(bd.get("share", b))]  # a golem's one body serves both
+	return "%s_%s" % [bd["key"], b]
 
 ## The hand points of a hero's frames (heroes.json "hand", per body or body build).
 static func hands(app: Dictionary) -> Array:
@@ -417,6 +468,8 @@ static func clear_cache() -> void:
 	_built.clear()
 	_order.clear()
 	_imgs.clear()
+	_sheet_order.clear()
+	_misses.clear()
 
 ## The looks of a saved hero's slot summary (GameState.meta()): 2.0 saves have no "Class" yet,
 ## so the class comes from the summary itself (else every old slot would show a Warrior).
