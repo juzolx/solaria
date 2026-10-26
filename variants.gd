@@ -48,7 +48,15 @@ static func tex(t: Texture2D, v: String) -> Texture2D:
 	var src := t.get_image()
 	if src == null:
 		return t
-	var img := src.duplicate() as Image  # never paint on the original monster's image
+	var nt := ImageTexture.create_from_image(image(src, v))
+	_cache[key] = nt
+	return nt
+
+## The variant's recoloured copy of `src` (the original is never painted on); `src` if `v` is none.
+static func image(src: Image, v: String) -> Image:
+	if src == null or v == "" or not LIST.has(v):
+		return src
+	var img := src.duplicate() as Image
 	if img.is_compressed():
 		img.decompress()
 	img.convert(Image.FORMAT_RGBA8)
@@ -63,6 +71,4 @@ static func tex(t: Texture2D, v: String) -> Texture2D:
 			var shaded := Color(tint.r * (0.25 + l * 1.1), tint.g * (0.25 + l * 1.1), tint.b * (0.25 + l * 1.1))
 			var out := shaded.lerp(Color(c.r, c.g, c.b), keep)
 			img.set_pixel(x, y, Color(minf(out.r, 1.0), minf(out.g, 1.0), minf(out.b, 1.0), c.a))
-	var nt := ImageTexture.create_from_image(img)
-	_cache[key] = nt
-	return nt
+	return img

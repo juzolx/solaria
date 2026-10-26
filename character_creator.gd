@@ -76,7 +76,7 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	sv.add_child(rnd)
 	var race_card := PanelContainer.new()
 	race_card.add_theme_stylebox_override("panel", UiSkin.frame(UI.INSET, UiSkin.IRON, 10))
-	race_text = UI.rich(UI.FONT_CAPTION)
+	race_text = UI.rich(UI.FONT_BODY)
 	race_card.add_child(race_text)
 
 	# The choices
@@ -98,34 +98,23 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	# Done sits under the scroll, always on screen
 	done_button = UI.primary("Done", _finish)
 	done_button.custom_minimum_size = Vector2(0, TAP_PT)
-	var frame := UI.vbox(10)
-	box.add_child(frame)
-	scroll.reparent(frame)
 	if lock_race:
 		# "Change your look" (an existing hero): a way out that keeps the old look
-		var bottom := UI.hbox(8)
-		frame.add_child(bottom)
 		var keep := start.duplicate()
 		var cancel := UI.button("Cancel", func():   # hands back the look you had (the caller restarts the fight)
 			close()
 			on_done.call(keep))
 		cancel.custom_minimum_size = Vector2(120, TAP_PT)
-		bottom.add_child(cancel)
+		foot.add_child(cancel)
 		done_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		bottom.add_child(done_button)
 	else:
-		frame.add_child(done_button)
+		done_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	foot.add_child(done_button)   # under the scroll: always on screen
+	foot.visible = true
 	_update()
 
-## The scroll leaves room for the Done button under it.
-func _fit_height() -> void:
-	if not is_inside_tree():
-		return
-	var max_h := get_viewport().get_visible_rect().size.y - 70.0 - TAP_PT - 10.0
-	scroll.custom_minimum_size.y = minf(content.get_combined_minimum_size().y, max_h)
-
-static func _head(t: String) -> Label:
-	return UI.label("◆ " + t.to_upper(), UI.FONT_CAPTION, UI.GOLD_DULL)
+static func _head(t: String) -> Control:
+	return UI.heading(t)
 
 func _text_row(parent: Control, label_text: String, field: String, values: Array, names: Array = [], columns := 3) -> void:
 	var lbl := _head(label_text)
@@ -188,7 +177,7 @@ func _stepper_row(parent: Control, label_text: String, field: String) -> void:
 	nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	nm.clip_text = true
 	mv.add_child(nm)
-	var cnt := UI.label("", UI.FONT_CAPTION, UI.DIM)
+	var cnt := UI.label("", UI.FONT_BODY, UI.DIM)
 	cnt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mv.add_child(cnt)
 	var nxt := UI.button("▶", _step.bind(field, 1))

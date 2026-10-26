@@ -73,6 +73,10 @@ static func toggle_out(g: GameState, id: int) -> bool:
 		return true
 	if int(p["hurt"]) > 0:
 		return false
+	# resting pets give their spot up first (Fable pets R3: they don't fight, out() skips them)
+	for o in g.pets_out.duplicate():
+		if int(find(g, int(o)).get("hurt", 0)) > 0:
+			g.pets_out.erase(o)
 	# 0.13+ (Juzo): pets swap: with every spot taken, the one out longest goes home
 	while g.pets_out.size() >= max_out(g) and not g.pets_out.is_empty():
 		g.pets_out.remove_at(0)
@@ -84,7 +88,10 @@ static func make_pet(g: GameState, monster: String, art: String, tier: int, from
 	var p := {"id": g._new_id(), "name": Monsters.name_of(monster), "species": monster, "art": art, "tier": clampi(tier, 0, 5),
 		"level": 1, "kills": 0, "hurt": 0, "from": from}
 	g.pets.append(p)
-	if g.pets_out.size() < max_out(g):
+	if out(g).size() < max_out(g):
+		for o in g.pets_out.duplicate():   # a resting pet doesn't keep a new one home
+			if int(find(g, int(o)).get("hurt", 0)) > 0:
+				g.pets_out.erase(o)
 		g.pets_out.append(int(p["id"]))
 	g.codex.add("pets")
 	if g.codex.found_pet(str(p["species"]), int(p["tier"])):  # next update: the first of its kind gets a fanfare
@@ -163,8 +170,9 @@ static func turn(g: GameState) -> void:
 		PetAbilities.on_pet_turn(g, p, hit)  # 2.1: its trick and signature, by rank
 
 ## A kill: every pet on the run learns from it.
-static func on_kill(g: GameState) -> void:
-	PetAbilities.on_kill(g)
+## drop: the gold this kill pays (0 = work it out: GameState.kill_gold).
+static func on_kill(g: GameState, drop := 0) -> void:
+	PetAbilities.on_kill(g, drop)
 	for p in out(g):
 		p["kills"] = int(p["kills"]) + 1
 		if int(p["level"]) < MAX_LEVEL and int(p["kills"]) >= int(p["level"]) * KILLS_PER_LEVEL:
@@ -283,10 +291,21 @@ static func heal(g: GameState, id: int) -> bool:
 
 static func rename(g: GameState, id: int, new_name: String) -> void:
 	var p := find(g, id)
-	new_name = new_name.strip_edges().left(18)
+	new_name = clean_name(new_name)
 	if not p.is_empty() and new_name != "":
 		p["name"] = new_name
 		g.save_game()
+
+## A name as typed, safe for the log (no BBCode brackets), trimmed, at most 18 letters.
+static func clean_name(s: String) -> String:
+	return s.replace("[", "").replace("]", "").strip_edges().left(18)
+
+## Every kind of pet there is: the monsters and the Calamity pets (the Codex and Collections count this).
+static func all_species() -> Array:
+	var all: Array = Monsters.all_monsters().duplicate()
+	for c in Calamity.LIST:
+		all.append(Calamity.pet_id(c))
+	return all
 
 ## Anyone with a pet (or an egg) sees the Clinic in town.
 static func has_any(g: GameState) -> bool:

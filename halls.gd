@@ -112,21 +112,23 @@ static func read_door(g: GameState, i: int) -> Dictionary:
 	var lvl := team_sense(g)
 	if lvl == 0 and i < g.doors.size() and String(g.doors[i]) == "elite":
 		# R6: an elite door is never blind: deep claw marks warn anyone (readers still tell the rest)
-		return {"color": "#f87171", "label": "Claw marks", "text": "Deep claw marks. Something strong waits here: at least Epic, with better loot."}
+		return {"color": "#e43b44", "label": "Claws", "text": "Deep claw marks. Something strong waits here: at least Epic, with better loot."}
 	if lvl == 0 or i >= g.doors.size():
 		return {"color": "", "label": "?", "text": "A blank door. Who knows what's behind it."}
 	var kind: String = g.doors[i]
 	var trapped: bool = i < g.door_traps.size() and bool(g.door_traps[i])
 	var danger := kind == "elite" or (trapped and lvl < 3)
 	var safe := kind in ["treasure", "rest", "merchant", "altar", "stranger", "beast", "traveler"]
-	var col := "#f87171" if danger else ("#4ade80" if safe else "#fbbf24")
+	var col := "#e43b44" if danger else ("#63c74d" if safe else "#feae34")   # palette: danger, safe, a fight
 	if lvl == 1:
 		var word := "danger" if danger else ("safe" if safe else "a fight")
 		return {"color": col, "label": "", "text": "Your reader senses %s behind it." % word}
 	var name: String = String(ROOM_NAMES.get(kind, kind))
+	var short: String = String(DOOR_LABELS.get(kind, name))
 	if lvl >= 3 and trapped:
 		name += " (trapped)"
-	return {"color": col, "label": name, "text": "Your reader knows: %s." % name}
+		short = "Trap: " + short
+	return {"color": col, "label": short, "text": "Your reader knows: %s." % name}
 
 ## Reading the doors trains the reader.
 static func on_doors_shown(g: GameState) -> void:
@@ -145,9 +147,12 @@ const EVENT_ROOMS := {"treasure": "chest", "rest": "campfire", "merchant": "merc
 	"nest": "nest", "stranger": "npc", "beast": "beast", "rift": "rift", "trial": "gate", "camp": "camp", "traveler": "traveler"}
 const ROOM_NAMES := {"fight": "Monsters", "elite": "Elite monster", "treasure": "Treasure room", "rest": "Campfire",
 	"merchant": "Goblin trader", "altar": "Shrine", "nest": "Nest", "stranger": "A stranger", "beast": "Dying beast", "rift": "Rift", "trial": "A champion's gate", "camp": "Descenders' Camp", "traveler": "A traveler"}
+## One-word door labels: doors stand 92 design px apart, so a label must fit over its own door.
+const DOOR_LABELS := {"fight": "Monsters", "elite": "Elite", "treasure": "Treasure", "rest": "Rest", "merchant": "Trader",
+	"altar": "Shrine", "nest": "Nest", "stranger": "Stranger", "beast": "Beast", "rift": "Rift", "trial": "Gate", "camp": "Camp", "traveler": "Traveler"}
 const MIMIC_CHANCE := 12.5         # % of chests (about 1 in 8)
 const PROP_NAMES := {"chest": "Chest", "altar": "Shrine", "nest": "Nest", "npc": "Wounded adventurer",
-	"beast": "Dying beast", "merchant": "Snik", "campfire": "Campfire", "rift": "Rift", "gate": "Champion's gate", "camp": "Camp", "traveler": "Traveler"}
+	"beast": "Dying beast", "merchant": "Snik", "campfire": "Campfire", "rift": "Rift", "gate": "Champion", "camp": "Camp", "traveler": "Traveler"}
 const PROP_HINTS := {"chest": "Tap the chest", "camp": "Tap the camp to trade or send gold home", "rift": "Tap the rift to step through", "gate": "Tap the gate to face the champion", "altar": "Tap the shrine to pray", "nest": "Tap the nest",
 	"npc": "Tap to help them", "beast": "Tap to go to it", "merchant": "Tap Snik to trade", "campfire": "You rest by the fire", "traveler": "Tap to talk"}
 

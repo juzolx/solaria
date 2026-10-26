@@ -24,15 +24,16 @@ func show_for(m) -> void:
 	profile = m.profile
 	open(m, "Menu", 560.0)
 
-	content.add_child(UI.heading("Hero"))
+	# Fable r1 #16: the hero actions are big buttons on top; the rest sits in sub-tabs (see _split_pages)
 	var hrow := UI.hbox(8)
 	content.add_child(hrow)
 	var mode_name := "Hardcore" if state.hardcore else "Regular"
-	for entry in [["Title screen / heroes", func(): close(); main.back_to_title()],
+	for entry in [["Heroes", func(): close(); main.back_to_title()],
 			["Change look", func(): close(); main.show_look_editor()],
 			["Wardrobe", func(): close(); Wardrobe.new().show_for(main)]]:
 		var b := UI.button(entry[0], entry[1])
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size.y = UI.TAP
 		hrow.add_child(b)
 	if main.started == false:
 		hrow.visible = false
@@ -146,7 +147,7 @@ func show_for(m) -> void:
 		b.disabled = not main.online.is_configured()
 		crow.add_child(b)
 	var off_text := "Online isn't set up yet (see ONLINE_SETUP.md)." if OS.is_debug_build() else "Cloud backup arrives with online features in a later update."
-	cloud_label = UI.label(off_text if not main.online.is_configured() else "Saves your heroes to your online account, so you can get them back on a new device.", UI.FONT_CAPTION, UI.DIM)
+	cloud_label = UI.label(off_text if not main.online.is_configured() else "Saves your heroes to your online account, so you can get them back on a new device.", UI.FONT_BODY, UI.DIM)
 	cloud_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(cloud_label)
 	# Apple rule: the online account can be deleted from inside the game
@@ -199,7 +200,7 @@ func show_for(m) -> void:
 		["Hidden classes", [["Unlock all hidden classes", "hidden_all"], ["Next stage (current)", "hidden_stage"], ["+50 special stat", "hidden_stat"]]],
 	]
 	for sec in sections:
-		dev_box.add_child(UI.label(str(sec[0]).to_upper(), UI.FONT_CAPTION, UI.PINK))
+		dev_box.add_child(UI.label(str(sec[0]).to_upper(), UI.FONT_BODY, UI.PINK))
 		var grid := GridContainer.new()
 		grid.columns = 3
 		grid.add_theme_constant_override("h_separation", 6)
@@ -225,17 +226,45 @@ func show_for(m) -> void:
 		_update())
 	slots_b.add_theme_color_override("font_color", UI.PINK)
 	dev_box.add_child(slots_b)
-	dev_info = UI.label("", UI.FONT_CAPTION, UI.DIM)
+	dev_info = UI.label("", UI.FONT_BODY, UI.DIM)
 	dev_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	dev_box.add_child(dev_info)
+	_split_pages()
 	_update()
 	main.timer.paused = true
 	tree_exiting.connect(func(): main.timer.paused = false)
 
+## Moves everything under the hero row into sub-tabs, by the heading each part sits under.
+## The page's own name replaces its first heading (a "Sound" tab doesn't need a "Sound" plate).
+const PAGES := {"Game": "Game", "Help": "Game", "Sound": "Sound", "Accessibility": "Access"}
+func _split_pages() -> void:
+	var tabs := TabContainer.new()
+	tabs.theme_type_variation = "SubTabs"
+	var pages := {}
+	for page_name in ["Game", "Sound", "Access", "More"]:
+		var p := UI.vbox(8)
+		p.name = page_name
+		tabs.add_child(p)
+		pages[page_name] = p
+	var page: VBoxContainer = null
+	for c in content.get_children().slice(1):
+		if c.has_meta("heading"):
+			var page_name: String = PAGES.get(String(c.get_meta("heading")), "More")
+			var fresh: bool = pages[page_name].get_child_count() == 0
+			page = pages[page_name]
+			if fresh and String(c.get_meta("heading")) in PAGES:
+				c.queue_free()
+				content.remove_child(c)
+				continue
+		content.remove_child(c)
+		(page if page else pages["More"]).add_child(c)
+	content.add_child(tabs)
+	tabs.tab_changed.connect(func(_i): main.sfx.play("click"); _fit_height.call_deferred())
+
 func _slider(label_text: String, value: float, on_change: Callable) -> HBoxContainer:
 	var row := UI.hbox(8)
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var l := UI.label(label_text, UI.FONT_CAPTION, UI.TEXT)
+	var l := UI.label(label_text, UI.FONT_BODY, UI.TEXT)
 	l.custom_minimum_size = Vector2(60, 0)
 	row.add_child(l)
 	var s := HSlider.new()
@@ -257,8 +286,8 @@ func _show_debug_info() -> void:
 	var text := DebugLog.report()
 	DisplayServer.clipboard_set(text)
 	var o := Overlay.new().open(main, "Debug info (copied)", 420.0, UI.GOLD)
-	o.content.add_child(UI.wrap("Copied. Paste it into your TestFlight feedback or a message to the developer. It never leaves your phone on its own.", UI.FONT_CAPTION, UI.DIM))
-	var box := UI.wrap(text, UI.FONT_CAPTION, UI.TEXT)
+	o.content.add_child(UI.wrap("Copied. Paste it into your TestFlight feedback or a message to the developer. It never leaves your phone on its own.", UI.FONT_BODY, UI.DIM))
+	var box := UI.wrap(text, UI.FONT_BODY, UI.TEXT)
 	o.content.add_child(box)
 	var clr := UI.button("Clear the log", func():
 		DebugLog.clear()
@@ -300,7 +329,7 @@ func _cloud_backup() -> void:
 
 func _restore_popup() -> void:
 	var o := Overlay.new().open(main, "Restore from the cloud", 460.0, UI.RED)
-	var t := UI.label("Enter your backup code. Every town in the backup gets back its heroes and stash, and the Codex is replaced. Towns that aren't in the backup are kept as they are. The game restarts after.", UI.FONT_CAPTION, UI.TEXT)
+	var t := UI.label("Enter your backup code. Every town in the backup gets back its heroes and stash, and the Codex is replaced. Towns that aren't in the backup are kept as they are. The game restarts after.", UI.FONT_BODY, UI.TEXT)
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	o.content.add_child(t)
 	var edit := LineEdit.new()
@@ -349,15 +378,19 @@ func _update() -> void:
 
 ## Interface pass (approved mockup 16): a toggle shows its state at a glance. "...: ON" is a
 ## slate block with a green edge and bright text, "...: OFF" a dim block; choices stay plain.
+## Fable r1 #4: on/off settings are UI.toggle_look (a check box, never the disabled look);
+## settings with several values are steppers: "Graphics  ‹ Normal ›".
 func _style_toggles() -> void:
-	var all: Array = a11y_buttons.values() + [sound_toggle, fullscreen_toggle, dark_toggle, battery_toggle, path_toggle, tips_toggle, dev_toggle]
+	var all: Array = a11y_buttons.values() + [sound_toggle, fullscreen_toggle, dark_toggle, battery_toggle, path_toggle, tips_toggle, dev_toggle, graphics_toggle]
 	for b in all:
 		var btn := b as Button
 		if btn == null:
 			continue
 		var t := btn.text
-		if not (t.ends_with(": ON") or t.ends_with(": OFF")):
-			continue
-		var on := t.ends_with(": ON")
-		btn.add_theme_stylebox_override("normal", UiSkin.bevel(UiSkin.SLATE if on else UI.PANEL, UI.GREEN if on else UI.EMPTY, 6))
-		btn.add_theme_color_override("font_color", Color("#f4e6c4") if on else UI.DIM)
+		if t.ends_with(": ON") or t.ends_with(": OFF"):
+			var on := t.ends_with(": ON")
+			btn.text = t.get_slice(": ", 0)
+			UI.toggle_look(btn, on)
+		elif t.contains(": "):
+			btn.text = "%s   ‹ %s ›" % [t.get_slice(": ", 0), t.get_slice(": ", 1)]
+			btn.alignment = HORIZONTAL_ALIGNMENT_LEFT

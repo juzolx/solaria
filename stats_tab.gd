@@ -12,7 +12,7 @@ func setup(m) -> void:
 	codex = m.codex
 	name = "Stats"
 	horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	text = UI.rich(UI.FONT_CAPTION)
+	text = UI.rich(UI.FONT_BODY)
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_child(text)
 

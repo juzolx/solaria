@@ -58,8 +58,24 @@ static func cell(item: Dictionary, on_press: Callable, selected := false, px := 
 		if not item.is_empty() and not selected:
 			sb.border_width_bottom = 4   # the rarity strip
 		b.add_theme_stylebox_override(st, sb)
-	if badge != "":
-		var l := UI.label(badge, 10 if badge == "CURSED" else 11, Color(Church.COLOR).lightened(0.25) if badge == "CURSED" else UI.GREEN)
+	# Fable r1 #8: a badge is a 3x3 stud in the top-right corner (green better, red over the
+	# bag's limit, gold locked or picked, violet cursed); the numbers live in the detail box.
+	# Only the Wheel's odds stay as text (a caption, the one place 15 px is allowed).
+	var stud := {"OVER": UI.RED, "LOCK": UI.GOLD, "PICK": UI.GOLD, "ON": UI.TEXT, "BEST": UI.GREEN,
+		"CURSED": Color(Church.COLOR).lightened(0.25)}
+	var sc: Variant = stud.get(badge, UI.GREEN if badge.begins_with("+") else null)
+	if sc != null:
+		var dot := Control.new()
+		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		dot.size = Vector2(10, 10)
+		dot.position = Vector2(px - 15, 5)
+		dot.draw.connect(func():
+			dot.draw_rect(Rect2(0, 0, 10, 10), UiSkin.SOOT)
+			dot.draw_rect(Rect2(2, 2, 6, 6), sc))
+		dot.tooltip_text = badge
+		b.add_child(dot)
+	elif badge != "":
+		var l := UI.label(badge, UI.FONT_CAPTION, UI.GREEN)
 		l.add_theme_constant_override("outline_size", 4)
 		l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
 		l.position = Vector2(4, px - 20)

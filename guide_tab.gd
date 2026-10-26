@@ -35,7 +35,7 @@ func setup(m) -> void:
 	scroll.add_child(v)
 	title_label = UI.label("", 18, Color("#f6d88f"))
 	v.add_child(title_label)
-	text = UI.rich(UI.FONT_CAPTION)
+	text = UI.rich(UI.FONT_BODY)
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_child(text)
 
