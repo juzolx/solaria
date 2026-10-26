@@ -620,7 +620,7 @@ func _build_next() -> void:
 	if (w["s"] as Array).is_empty():
 		return
 	var lane: Array = LANES[(int(q["i"]) + (1 if hero else 0)) % LANES.size()]
-	var f := {"frames": w["s"], "walk": w["walk"], "x": randf_range(lane[1], lane[2]), "y": float(lane[0]), "lane": lane, "to": -1.0,
+	var f := {"frames": w["s"], "walk": w["walk"], "foot": float(w.get("foot", TownFolk.FOOT)), "x": randf_range(lane[1], lane[2]), "y": float(lane[0]), "lane": lane, "to": -1.0,
 		"wait": randf_range(0.5, 4.0 if not hero else 3.0), "flip": randf() < 0.5, "t": randf() * 3.0, "walked": 0.0}
 	if hero:
 		f["y"] += randf_range(-6.0, 6.0)
@@ -844,7 +844,7 @@ func _draw_people() -> void:
 		var w := float(tx.get_width())
 		var fx0 := roundf(float(f["x"]))
 		var fy0 := roundf(float(f["y"]))
-		var pos := Vector2(roundf(float(f["x"]) - w / 2.0), fy0 - TownFolk.FOOT)
+		var pos := Vector2(roundf(float(f["x"]) - w / 2.0), fy0 - float(f.get("foot", TownFolk.FOOT)))
 		people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
 		if walking and fi % 2 == 1:
 			people.draw_texture(shadow_step, Vector2(fx0 - 5.0, fy0 - 2.0))
@@ -854,10 +854,11 @@ func _draw_people() -> void:
 			people.draw_set_transform(Vector2((pos.x * 2.0 + w) * scale_f, 0), 0.0, Vector2(-scale_f, scale_f))
 		people.draw_texture(tx, pos, Color(1, 1, 1, 1.0 - float(f.get("fade", 0.0))))
 		people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
-		var over := Rect2(fx0 - 4.0, pos.y + 1.0, 9.0, 7.0)   # over the head: a hero's marker or a chat bubble
+		var head := pos.y + float(f.get("foot", TownFolk.FOOT)) - TownFolk.FOOT   # the 48 px body cell's top (frames may be padded)
+		var over := Rect2(fx0 - 4.0, head + 1.0, 9.0, 7.0)   # over the head: a hero's marker or a chat bubble
 		if float(f.get("chat", 0.0)) > 0.0:
-			people.draw_texture(bubble_tex, Vector2(fx0 - 4.0 + (-3.0 if f["flip"] else 3.0), pos.y))
-			over = over.merge(Rect2(fx0 - 7.0, pos.y, 15.0, 6.0))
+			people.draw_texture(bubble_tex, Vector2(fx0 - 4.0 + (-3.0 if f["flip"] else 3.0), head))
+			over = over.merge(Rect2(fx0 - 7.0, head, 15.0, 6.0))
 		elif f.get("hero", false):
 			# a pixel chevron over your heroes (gold over the one you're playing), under the cover
 			people.draw_texture(marker_tex["you" if f.get("you", false) else "hero"], over.position)
