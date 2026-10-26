@@ -92,7 +92,7 @@ func build(st: GameState, sz: Vector2, scr := 1.0) -> void:
 	small = sm
 	room_key = "%d|%d|%d|%s" % [st.floor_num, st.room_count, int(g), ev]
 	focal = sz.x * 0.62
-	center = Vector2(sz.x / 2.0, sz.y * (0.28 if small else 0.40))   # 0.28: 60+ px of floor over the hero on the SE (stage6)
+	center = Vector2(sz.x / 2.0, sz.y * (0.28 if small else 0.40))   # 0.28: 60+ px of floor over the hero on the SE (stage6); floor_y matches
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash("%d-%d" % [st.floor_num, st.room_count])
 	_seed = rng.seed
@@ -118,6 +118,12 @@ func build(st: GameState, sz: Vector2, scr := 1.0) -> void:
 # =====================================================================
 # Projection and light
 # =====================================================================
+
+## The design y of the floor at depth z in a view of size sz at screen scale scr (screen px per
+## design px; a short screen lifts the horizon), the same row the 3D camera and the 2D drawer use.
+static func floor_y(sz: Vector2, z: float, scr := 1.0) -> float:
+	var horizon := sz.y * (0.28 if sz.y * scr < 400.0 else 0.40)
+	return horizon + sz.x * 0.62 * -FLOOR_Y / z
 
 func proj(x: float, y: float, z: float) -> Vector2:
 	return Vector2(center.x + focal * x / z, center.y - focal * y / z)
@@ -314,12 +320,14 @@ func _draw_3d(ci: CanvasItem, sz: Vector2) -> bool:
 		# a new room: build it next frame; until it's built, the zone's deep colour (never the last room)
 		r3.set_meta("want", room_key)
 		r3.rebuild.call_deferred(zone, _seed, {"light": light, "amb": amb, "accent": mood()["accent"], "kind": mood()["kind"], "dark": dark,
-			"gate": gate, "event": event, "small": small, "key": room_key})
+			"gate": gate, "event": event, "small": small, "key": room_key, "torch_z": Vector2((torches[0] as Vector3).z, (torches[1] as Vector3).z)})
 	_r3_key = room_key
 	if r3.built_key != room_key:
 		ci.draw_rect(Rect2(Vector2.ZERO, sz), deep)
 		_wipe = 4
 		return true
+	if not ci is RoomView:
+		r3.mark_trap(null, Color.WHITE, false, 0.0, 0.0, false)   # a fight shows no trap ring (the room view draws it)
 	ci.draw_texture_rect(r3.texture(), Rect2(Vector2.ZERO, r3.drawn_size()), false)
 	if _wipe > 0:
 		# the new room comes out of the dark in two checker steps (hard pixels, no fade)
@@ -390,12 +398,15 @@ func draw_doors(ci: CanvasItem, st: GameState, hit: Dictionary, font: Font) -> v
 		if not sensed and ArtStyle.oklab(col).distance_to(ArtStyle.oklab(Color(mood()["light"]))) < 0.12:
 			col = UNREAD_FRAME   # an accent like the zone's light would vanish on its lit doors
 		var pulse := 0.6 + 0.3 * sin(t * 3.0 + i)
-		var glow_a := 0.6 + 0.2 * sin(t * 2.0 + i) if sensed else 0.45
+		var glow_a := 0.6 + 0.2 * sin(t * 2.0 + i) if sensed else 0.55
+		var glow_c := col if sensed else col.lightened(0.35)
+		if not sensed and ArtStyle.oklab(col).distance_to(ArtStyle.oklab(Color(mood()["deep"]))) < 0.12:
+			glow_c = UNREAD_FRAME   # red on a red-black floor would not show
 		if in3d:
 			# in the room itself, so props standing in front of a door cover its frame and glow
-			r3.mark_door(i, col, pulse, glow_a)
+			r3.mark_door(i, col, pulse, glow_a, glow_c)
 		else:
-			glow(ci, Vector2(rect.get_center().x, rect.end.y), rect.size.x * 1.8, Color(col, glow_a))
+			glow(ci, Vector2(rect.get_center().x, rect.end.y), rect.size.x * 1.8, Color(glow_c, glow_a))
 			# a 1 px outline-black frame under the coloured one, so a red frame reads on a red door
 			ci.draw_rect(rect.grow(4.5), Color("#0e0812"), false, 1.0)
 			ci.draw_rect(rect.grow(3), Color(col, pulse), false, 3.0)
@@ -403,10 +414,14 @@ func draw_doors(ci: CanvasItem, st: GameState, hit: Dictionary, font: Font) -> v
 		var lab := door_label(st, i)
 		if lab != "":
 			var fs := 18 if lab == "?" else 16
-			# the middle label sits one line higher, so neighbours never touch
-			var at := Vector2(rect.get_center().x - DOOR_LABEL_W / 2.0, rect.position.y - 6 - (fs if i == 1 else 0))
+			var at := door_label_at(rect, i, fs)
 			ci.draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, DOOR_LABEL_W, fs, 4, Color(0, 0, 0, 0.9))
 			ci.draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, DOOR_LABEL_W, fs, col.lightened(0.3))
+
+## Where door i's label goes (baseline left): clear of the frame round the door (15 px up, its
+## descenders over the frame's top ring), the middle one a line higher so neighbours never touch.
+func door_label_at(rect: Rect2, i: int, fs: int) -> Vector2:
+	return Vector2(rect.get_center().x - DOOR_LABEL_W / 2.0, rect.position.y - 15 - (fs if i == 1 else 0))
 
 ## What door i says over it ("" for nothing): the gate's middle door carries the gate's own
 ## name ("Champion", drawn by the room view), so a read there would make two labels.
