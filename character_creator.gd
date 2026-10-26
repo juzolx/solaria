@@ -252,6 +252,11 @@ func _update() -> void:
 		# races with their own body build (goblin, dwarf...) have a drawn head: no style or face choice yet
 		if field in ["hair", "face"] and HeroArt.available() and HeroArt.build_dir(app) != "":
 			show = false
+		# a build that keeps its drawn skin (goblin and orc green, the werewolf's grey) has nothing to pick
+		if field == "skin" and HeroArt.available() and HeroArt.build_dir(app) != "":
+			var bd: Dictionary = HeroArt.info()["builds"].get(HeroArt.art_race(app), {})
+			if not bool(bd.get("skin", true)) or bd.has("skin_ramp"):
+				show = false
 		for c in row_parts[field]:
 			(c as Control).visible = show
 	for field in rows:

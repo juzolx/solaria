@@ -226,7 +226,7 @@ func _initialize() -> void:
 	check(not spec.has("px") or Sprites.HERO_PIXEL <= 1, "_px_spec doesn't change the caller's spec")
 	check((spec2.get("px", 1) == Sprites.HERO_PIXEL) or Sprites.HERO_PIXEL <= 1, "_px_spec adds the pixel size to its copy")
 
-	# 2.1 heroes (art/heroes, baked from the PixelLab hero): every layer on the same 9 frames of 96x96,
+	# 2.1 heroes (art/heroes, baked from the PixelLab hero): every layer on the same 9 frames of 96x96 (weapons 128),
 	# hard alpha, the feet on one row, every class on both bodies, the 37 styles, 10 faces, 7 weapons
 	check(HeroArt.available(), "the 2.1 hero art is baked (art/heroes/heroes.json)")
 	var hi := HeroArt.info()
@@ -243,7 +243,9 @@ func _initialize() -> void:
 	for b in ["m", "f"]:
 		for f in _pngs("res://art/heroes/%s/" % b):
 			var img := _load("res://art/heroes/%s/%s" % [b, f])
-			check(img.get_height() == HeroArt.CELL and img.get_width() % HeroArt.CELL == 0, "art/heroes/%s/%s is whole 96x96 cells" % [b, f])
+			# weapons swing past the body, so their cells are the whole padded frame (128); the rest are 96
+			var n := HeroArt.FRAME if f.begins_with("weapon_") else HeroArt.CELL
+			check(img.get_height() == n and img.get_width() % n == 0, "art/heroes/%s/%s is whole %dx%d cells" % [b, f, n, n])
 			if f.ends_with("_idx.png"):
 				continue
 			var soft := 0

@@ -231,8 +231,8 @@ func _draw_team() -> void:
 		var feet := Vector2(size.x * float(xs[j]), size.y - (26.0 if j == 0 else 44.0))
 		scene.shadow(self, feet, sz * 0.18)
 		var a := 0.4 if (j == 0 and state.leader_down) or (j > 0 and members[j - 1].knocked_out) else 1.0
-		# 2.1 heroes stand on row 80 of their 96 cell (LPC frames on ~0.9 of theirs)
-		var foot := 80.0 / 96.0 if art.get("pl", false) else 0.9
+		# 2.1 heroes stand on their frame's foot row (LPC frames on ~0.9 of theirs)
+		var foot := float(an["foot"]) / float(an["size"]) if an.has("foot") else 0.9
 		draw_texture_rect(an["tex"][fi], Rect2(feet - Vector2(sz / 2.0, sz * foot), Vector2(sz, sz)), false, Color(0.85, 0.82, 0.8, a))
 		if j == 0:
 			# pets use the leader's own pixel size (one art px = sz / cell)

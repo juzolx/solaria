@@ -6,9 +6,8 @@ extends RefCounted
 ## a clean 2x/3x on screen like the buildings). Built once per look and cached.
 ## Walking: idle, left step, idle, right step (HeroArt.steps lifts one leg of the idle frame).
 
-const CELL := 48          # HeroArt.CELL / 2
-const FOOT := 40          # heroes.json "foot" (80) / 2: the feet row inside a 48 px cell
-                          # (padded frames - wider than 96 - keep the body centred: walker()["foot"])
+const CELL := HeroArt.FRAME / 2             # a halved hero frame (128 -> 64)
+const FOOT := (HeroArt.FOOT + HeroArt.PAD) / 2  # the feet row inside a halved frame (96 -> 48)
 
 ## The townsfolk: [appearance, class, tier] - races, builds and outfits mixed so the street looks lived in.
 ## town_view shows the first TownView.MAX_FOLK of them, so the first six mix races and sexes on their own.
