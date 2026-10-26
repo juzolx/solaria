@@ -6,15 +6,14 @@ static func not_setup_card() -> PanelContainer:
 	var card := UI.panel(UI.INSET, UI.BORDER, 10, 14, 1)
 	var v := UI.vbox(8)
 	card.add_child(v)
+	# Fable r2 #1: players (and every picture of the game) see the plain line; the setup steps
+	# for whoever builds the game are one quiet line under it in a debug build only
 	var t := UI.rich(UI.FONT_BODY)
-	if OS.is_debug_build():
-		# For whoever builds the game
-		v.add_child(UI.label("Online isn't turned on yet", 16, UI.GOLD))
-		t.text = "Leaderboards, guilds and raids need a free Supabase project. It takes about 5 minutes: follow [color=#e8b14a]ONLINE_SETUP.md[/color] in the game folder, then paste your project URL and key into [color=#e8b14a]online_config.gd[/color]. Everything else works without it."
-	else:
-		v.add_child(UI.label("Coming soon", 16, UI.GOLD))
-		t.text = "Leaderboards, guilds and weekly guild raids open in a later update: race other players to the deepest floor and fight raid bosses together. Everything else in the game works now."
+	v.add_child(UI.heading("Coming soon"))
+	t.text = "Online play arrives in a later update: leaderboards, guilds and weekly raids. Everything else works now."
 	v.add_child(t)
+	if OS.is_debug_build():
+		v.add_child(UI.wrap("Builders: see ONLINE_SETUP.md.", UI.FONT_BODY, UI.DIM))
 	return card
 
 ## Asks for an online name, then calls on_done.
@@ -22,7 +21,7 @@ static func name_card(main, on_done: Callable) -> PanelContainer:
 	var card := UI.panel(UI.INSET, UI.GOLD, 10, 14, 2)
 	var v := UI.vbox(8)
 	card.add_child(v)
-	v.add_child(UI.label("Pick your online name", 16, UI.GOLD))
+	v.add_child(UI.heading("Your online name"))
 	v.add_child(UI.label("This is how other players see you on leaderboards and in guilds.", UI.FONT_BODY, UI.DIM))
 	var row := UI.hbox(8)
 	v.add_child(row)

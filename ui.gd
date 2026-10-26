@@ -60,8 +60,9 @@ static var sfx: Sfx  # set by main, used for button clicks
 static var tip_layer: CanvasLayer  # set by main: where tap-tips appear
 static var _tip: Control
 # Fable r1 #2: the phone layout is 504 design px on a 375-430 pt screen, so 44 pt = 52-59 design px.
-const TAP := 56  # smallest tap target on a phone (design px): 44 pt even on a 375 pt phone
-const BUTTON_H := 52  # every button is at least this tall (44 pt on a 430 pt phone)
+# Fable r2: 44 pt on a 375 pt phone (iPhone SE) is 44 / 0.744 = 59 design px, so TAP is 60.
+const TAP := 60  # main actions, Close, nav, toggles: 44.6 pt on an SE, 51 pt on a 430 pt phone
+const BUTTON_H := 56  # every other button: 41.7 pt on an SE (the floor where a screen is tight), 47.8 pt at 430
 const EDGE := Color("#5a6988")  # edges of things you can press: 3:1 contrast or better
 const MIN_FONT := FONT_CAPTION  # UX pass: 15 design px (~13 pt on a 430 pt wide phone); was 13
 static var colorblind := false  # set from the settings: adds words and symbols where color carries meaning
@@ -154,6 +155,10 @@ static func heading(text: String, note := "") -> Control:
 		v.add_child(UI.wrap(note, FONT_BODY, DIM))   # UI.: a bare wrap() is Godot's number wrap
 	return v
 
+## The title label inside a heading (for counts that change: "Vault · 3 / 20").
+static func heading_label(h: Control) -> Label:
+	return h.get_child(0).get_child(0) as Label
+
 ## Fable r1 #6: sub-tabs as a wrapping row of slate chips (two rows on a phone) instead of a
 ## clipped TabBar with 12 px scroll arrows, so every page is visible. Returns a holder (the
 ## chips over the container; it takes the container's name) to add where the container went;
@@ -191,7 +196,7 @@ static func sync_tabs(t: TabContainer) -> void:
 		b.text = t.get_tab_title(i)
 		b.visible = not t.is_tab_hidden(i)
 		var on := i == t.current_tab
-		if b.get_meta("on", null) == on:
+		if b.has_meta("on") and bool(b.get_meta("on")) == on:   # (get_meta with a null default logs an engine error)
 			continue
 		b.set_meta("on", on)
 		var face := UiSkin.bevel(UiSkin.SLATE, GOLD_DULL, 6) if on else UiSkin.bevel(PANEL, EMPTY, 6)
@@ -202,6 +207,33 @@ static func sync_tabs(t: TabContainer) -> void:
 			b.add_theme_stylebox_override(st, sb)
 		for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 			b.add_theme_color_override(c, GOLD if on else (TEXT if c == "font_hover_color" else DIM))
+
+## Fable r2 #13: the notch / Dynamic Island (top) and home bar (bottom) in design px, set by
+## main._fit_layout; popups, the title and the creator keep their controls out of them.
+static var safe_top := 0.0
+static var safe_bottom := 0.0
+
+## Fable r2 #5: the OptionButton arrow, a 7x4 bone chevron on the 2 px grid (Godot's is smoothed).
+static var _chevron: Texture2D
+static func chevron_icon() -> Texture2D:
+	if _chevron == null:
+		var img := Image.create(7, 4, false, Image.FORMAT_RGBA8)
+		for y in 4:
+			for x in range(y, 7 - y):
+				img.set_pixel(x, y, TEXT)
+		img.resize(7 * UiSkin.PX, 4 * UiSkin.PX, Image.INTERPOLATE_NEAREST)
+		_chevron = ImageTexture.create_from_image(img)
+	return _chevron
+
+## Fable r2 #11: a name and the line under it. Names in bone, titles in gold; the class or
+## race colour stays on the picture's frame, never on the text (red reads as "bad").
+static func name_plate(name_text: String, sub := "", size := FONT_TITLE) -> VBoxContainer:
+	var v := vbox(2)
+	v.add_child(label(name_text, size, TEXT))
+	if sub != "":
+		var s: Label = UI.wrap(sub, FONT_BODY, GOLD)
+		v.add_child(s)
+	return v
 
 ## Fable r1 #18: the Menu glyph, three bone bars on the 2 px grid (the font has no "≡").
 static var _menu_icon: Texture2D
@@ -426,7 +458,10 @@ static func game_font() -> Font:
 		f.fallbacks = [ThemeDB.fallback_font]   # any character Pixelify lacks
 		var v := FontVariation.new()
 		v.base_font = f
-		v.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): 600}
+		var ts := TextServerManager.get_primary_interface()
+		v.variation_opentype = {ts.name_to_tag("wght"): 600}
+		# no ligatures: Pixelify's fi/fl ligature reads as an "A" on the pixel grid ("choose your Aoor")
+		v.opentype_features = {ts.name_to_tag("liga"): 0, ts.name_to_tag("clig"): 0}
 		_font = v
 	return _font
 
@@ -509,7 +544,19 @@ static func make_theme() -> Theme:
 	le.content_margin_top = 14
 	le.content_margin_bottom = 14
 	t.set_stylebox("normal", "LineEdit", le)
-	t.set_stylebox("panel", "PopupMenu", style(PANEL, BORDER, 6, 6))
+	t.set_icon("arrow", "OptionButton", chevron_icon())
+	t.set_constant("arrow_margin", "OptionButton", 14)
+	# the list an OptionButton opens: body text, rows a full tap tall, the game's bevels
+	t.set_stylebox("panel", "PopupMenu", UiSkin.frame(PANEL, UiSkin.IRON, 8))
+	t.set_font_size("font_size", "PopupMenu", FONT_BODY)
+	t.set_constant("v_separation", "PopupMenu", 30)   # 20 px text + 30 = 50, plus the row's margins
+	t.set_constant("item_start_padding", "PopupMenu", 14)
+	t.set_constant("item_end_padding", "PopupMenu", 14)
+	t.set_color("font_color", "PopupMenu", TEXT)
+	t.set_color("font_hover_color", "PopupMenu", GOLD)
+	t.set_stylebox("hover", "PopupMenu", UiSkin.bevel(UiSkin.SLATE, GOLD_DULL, 6))
+	for ic in ["radio_checked", "radio_unchecked", "checked", "unchecked"]:
+		t.set_icon(ic, "PopupMenu", _check_icon(ic in ["radio_checked", "checked"]))
 	t.set_stylebox("grabber_area", "HSlider", style(GOLD, GOLD, 3, 0, 0))
 	t.set_stylebox("grabber_area_highlight", "HSlider", style(GOLD, GOLD, 3, 0, 0))
 	t.set_stylebox("slider", "HSlider", style(INSET, EDGE, 3, 2, 1))

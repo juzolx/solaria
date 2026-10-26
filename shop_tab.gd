@@ -143,7 +143,7 @@ func setup(m) -> void:
 	bag_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	brow.add_child(bag_text)
 	bag_button = UI.primary("", func(): state.buy_bag_upgrade(); main.sfx.play("buy"); main.refresh())
-	bag_button.custom_minimum_size = Vector2(130, 0)
+	bag_button.custom_minimum_size = Vector2(130, UI.BUTTON_H)
 	bag_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	brow.add_child(bag_button)
 

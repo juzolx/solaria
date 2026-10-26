@@ -77,7 +77,7 @@ static func rows(main_node, parent: Control, on_change: Callable) -> void:
 			if st.buy_merchant(i):
 				main_node.sfx.play("buy")
 			on_change.call(), UI.GOLD)
-		b.custom_minimum_size = Vector2(120, 40)
+		b.custom_minimum_size = Vector2(120, UI.BUTTON_H)   # Fable r2 #8
 		b.tooltip_text = "%d gold" % int(e["price"])
 		b.disabled = e["sold"] or need > 0 or full
 		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER

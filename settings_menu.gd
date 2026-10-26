@@ -50,7 +50,7 @@ func show_for(m) -> void:
 	srow.add_child(UI.button("Test sound", func(): main.sfx.play("level_up")))
 	if OS.is_debug_build():  # a check for whoever builds the game; players never need it
 		var found: int = main.sfx.files_found
-		var info := UI.label("Sound files found: %d / %d" % [found, Sfx.EXPECTED_FILES] + ("" if found >= Sfx.EXPECTED_FILES else " - copy the sounds folder into the game folder"), 12, UI.GREEN if found >= Sfx.EXPECTED_FILES else UI.RED)
+		var info := UI.label("Sound files found: %d / %d" % [found, Sfx.EXPECTED_FILES] + ("" if found >= Sfx.EXPECTED_FILES else " - copy the sounds folder into the game folder"), UI.FONT_BODY, UI.GREEN if found >= Sfx.EXPECTED_FILES else UI.RED)
 		info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL

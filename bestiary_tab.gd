@@ -87,15 +87,17 @@ func refresh() -> void:
 	shown = key
 	shown_kills = int(codex.stat("kills"))
 	# Phones: a narrower list ("Jack-in-Irons (12)" still fits) leaves the plate room for 2x bosses
-	list.custom_minimum_size.x = 150.0 if bool(main.is_tall) else 200.0
+	var narrow := bool(main.is_tall)
+	list.custom_minimum_size.x = 190.0 if narrow else 200.0   # the widest name (Eye of Judgement) is 134 px at 15
 	list.clear()
 	keys.clear()
 	# Icons are a head crop shown 1:1 on screen (fable r1: whole 76 px monsters squeezed to 22 px were blobs)
 	var icon := int(round(ICON / _screen_scale()))
 	list.fixed_icon_size = Vector2i(icon, icon)
+	list.add_theme_constant_override("v_separation", maxi(6, UI.TAP - icon))   # a row is one tap tall: the icon plus the gap
 	for zi in GameData.ZONES.size():
 		var z: Dictionary = GameData.ZONES[zi]
-		var h := list.add_item(str(z["name"]).to_upper())
+		var h := list.add_item(str(z["name"]))
 		list.set_item_selectable(h, false)
 		list.set_item_custom_fg_color(h, Color(z["color"]).lightened(0.4))
 		keys.append("")
@@ -133,6 +135,8 @@ func _label(n: String) -> String:
 	if not codex.seen(n):
 		return "  ???"
 	var boss: bool = Monsters.info(n).get("boss", false)
+	if bool(main.is_tall):   # phones: the whole name only ("Defeated", the boss mark and star are on its page)
+		return Monsters.name_of(n)
 	var label := "  %s%s  (%d)" % ["[Boss] " if boss else "", Monsters.name_of(n), codex.kills(n)]
 	if bool(codex.bestiary[n].get("sig", false)):
 		label += "  *"

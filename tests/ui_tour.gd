@@ -1,10 +1,50 @@
 extends SceneTree
 ## Screenshots every screen at phone size into shots/tour (a fresh test hero, never real saves).
-## godot --path . --resolution 430x932 -s tests/ui_tour.gd
+## godot --path . --resolution 430x932 -s tests/ui_tour.gd   (add "-- se" for the 375x667 run: shots/tour_se)
+## A gate since Fable r2 #18: overflow, a visible button shorter than UI.BUTTON_H, or text under
+## UI.MIN_FONT prints a "TOUR FAIL" line and the tour exits 1 (tools/check.sh shots runs both sizes).
 const TestHero := preload("res://tests/test_hero.gd")
 
 var out := ""
 var n := 0
+var fails := 0
+var seen_fail := {}   # one line per problem, not one per shot
+
+func fail(text: String) -> void:
+	if seen_fail.has(text):
+		return
+	seen_fail[text] = true
+	fails += 1
+	print("TOUR FAIL: " + text)
+
+## Every visible button at least BUTTON_H tall, every label at least MIN_FONT.
+func check_floors(label: String, node: Node) -> void:
+	for ch in node.get_children():
+		if ch is CanvasItem and not (ch as CanvasItem).visible:
+			continue
+		if ch is Control:
+			var c := ch as Control
+			if c is Button and c.is_visible_in_tree() and c.size.y > 0.0 and c.size.y < UI.BUTTON_H - 1.0 and not c.has_meta("tour_small_ok"):
+				fail("SHORT BUTTON: %s \"%s\" is %.0f px (floor %d) [%s]" % [label, String(c.get("text")).left(24).replace("\n", " "), c.size.y, UI.BUTTON_H, _path(c)])
+			if (c is Label or c is Button) and c.is_visible_in_tree() and String(c.get("text")) != "":
+				var fs := c.get_theme_font_size("font_size")
+				if fs < UI.MIN_FONT:
+					fail("SMALL FONT: %s \"%s\" is %d px (floor %d) [%s]" % [label, String(c.get("text")).left(24).replace("\n", " "), fs, UI.MIN_FONT, _path(c)])
+			elif c is RichTextLabel and c.is_visible_in_tree() and (c as RichTextLabel).text != "":
+				var rs := c.get_theme_font_size("normal_font_size")
+				if rs < UI.MIN_FONT:
+					fail("SMALL FONT: %s rich text is %d px (floor %d) [%s]" % [label, rs, UI.MIN_FONT, _path(c)])
+		check_floors(label, ch)
+
+func _path(c: Node) -> String:
+	var bits := []
+	var p := c
+	for i in 3:
+		if p == null:
+			break
+		bits.push_front(String(p.name) if not String(p.name).begins_with("@") else p.get_class())
+		p = p.get_parent()
+	return "/".join(bits)
 
 func shot(label: String) -> void:
 	await create_timer(0.6).timeout
@@ -17,20 +57,25 @@ func shot(label: String) -> void:
 		if c.get("ui_root") is Control:
 			var need: float = (c.get("ui_root") as Control).get_combined_minimum_size().x
 			if need > screen_w + 1.0:
-				print("SCREEN TOO WIDE: %s needs %.0f px of %.0f%s" % [label, need, screen_w, _culprit(c.get("ui_root"), screen_w)])
+				fail("SCREEN TOO WIDE: %s needs %.0f px of %.0f%s" % [label, need, screen_w, _culprit(c.get("ui_root"), screen_w)])
 			var tall: float = (c.get("ui_root") as Control).get_combined_minimum_size().y
 			if tall > root.get_visible_rect().size.y + 1.0:
-				print("SCREEN TOO TALL: %s needs %.0f px of %.0f (the bottom bar is pushed off)" % [label, tall, root.get_visible_rect().size.y])
+				fail("SCREEN TOO TALL: %s needs %.0f px of %.0f (the bottom bar is pushed off)" % [label, tall, root.get_visible_rect().size.y])
 	for c in root.get_children():
 		for o in c.get_children():
 			if o is Overlay and o.box != null and o.box.size.x > screen_w + 1.0:
-				print("TOO WIDE: %s (%.0f px on a %.0f px screen)" % [label, o.box.size.x, screen_w])
+				fail("TOO WIDE: %s (%.0f px on a %.0f px screen)%s" % [label, o.box.size.x, screen_w, _culprit(o.box, screen_w - 40.0)])
+	check_floors(label, root)
 
 ## The deepest visible control that is wider than the screen (what to fix).
-func _culprit(n: Control, w: float) -> String:
+func _culprit(n: Control, w: float, depth := 0) -> String:
+	var widest: Control = null
 	for ch in n.get_children():
-		if ch is Control and (ch as Control).is_visible_in_tree() and (ch as Control).get_combined_minimum_size().x > w - 12.0:
-			return _culprit(ch, w)
+		if ch is Control and (ch as Control).is_visible_in_tree():
+			if widest == null or (ch as Control).get_combined_minimum_size().x > widest.get_combined_minimum_size().x:
+				widest = ch
+	if widest != null and depth < 12 and (widest.get_combined_minimum_size().x > w - 40.0 or widest.get_child_count() > 0) and not (widest is Label or widest is Button):
+		return _culprit(widest, w, depth + 1)
 	var bits := []
 	for ch in n.get_children():
 		if ch is Control:
@@ -48,7 +93,7 @@ func _initialize() -> void:
 	if not TestHero.safe():
 		quit(1)
 		return
-	out = TestHero.shots_dir("tour")
+	out = TestHero.shots_dir("tour_se" if "se" in OS.get_cmdline_user_args() else "tour")
 	for f in DirAccess.get_files_at(out):
 		DirAccess.remove_absolute(out.path_join(f))
 	seed(7)
@@ -117,5 +162,5 @@ func _initialize() -> void:
 			await shot("town_%s" % tg.get_tab_title(s))
 		main._choose_floor()
 		await shot("floor_picker")
-	print("TOUR DONE: %d screens in %s" % [n, out])
-	quit()
+	print("TOUR DONE: %d screens in %s, %d problem%s" % [n, out, fails, "" if fails == 1 else "s"])
+	quit(1 if fails > 0 else 0)

@@ -22,7 +22,7 @@ func _row_button(text: String, on: bool, cb: Callable, tip := "") -> Button:
 		_fill())
 	b.custom_minimum_size = Vector2(0, UI.TAP)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b.add_theme_font_size_override("font_size", 15)
+	b.add_theme_font_size_override("font_size", UI.FONT_BODY)
 	b.add_theme_color_override("font_color", UI.TEAL if on else UI.DIM)
 	if tip != "":
 		b.tooltip_text = tip

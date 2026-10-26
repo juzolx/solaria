@@ -23,7 +23,6 @@ func refresh() -> void:
 		return
 	shown = key
 	OnlineUI.clear(box)
-	box.add_child(UI.label("Uniques  %d / %d     Signatures  %d / %d" % [codex.value("uniques"), Collections.total("uniques"), codex.value("signatures"), Monsters.all_monsters().size()], 15, UI.GOLD))
 	box.add_child(Collections.cards(codex, ["uniques", "signatures", "sets", "slots"]))  # 2.1 G4: progress and the next reward
 	for zi in GameData.ZONES.size():
 		var z: Dictionary = GameData.ZONES[zi]

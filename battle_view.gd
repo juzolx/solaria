@@ -1262,7 +1262,33 @@ func _process(delta: float) -> void:
 	elif not toasts.is_empty():
 		toast_text = toasts.pop_front()
 		toast_life = 6.0
-	queue_redraw()
+	# Fable r2 #17: with Reduce motion on nothing breathes, so a still scene is redrawn 4 times a
+	# second (HP and state changes still show) instead of every frame; anything moving draws every frame
+	if profile == null or not profile.reduce_motion or _anything_moving():
+		_still_t = 0.0
+		queue_redraw()
+	else:
+		_still_t += delta
+		if _still_t >= 0.25:
+			_still_t = 0.0
+			queue_redraw()
+
+var _still_t := 0.0
+
+func _anything_moving() -> bool:
+	if shake > 0.01 or banner_alpha > 0.0 or toast_life > 0.0 or chest_t >= 0.0 or freeze_left > 0.0 or intro_t >= 0.0:
+		return true
+	if not (floaters.is_empty() and particles.is_empty() and rings.is_empty() and projectiles.is_empty()
+			and drops.is_empty() and beams.is_empty() and fx_sprites.is_empty() and pet_hits.is_empty() and toasts.is_empty()):
+		return true
+	if hero_anim != "combat_idle" or not hero_seq.is_empty() or not enemy_seq.is_empty():
+		return true
+	if summon_in > 0.0 and summon_in < 1.0:
+		return true
+	for key in bar_ghost:
+		if absf(float(bar_ghost[key]) - float(bar_target.get(key, 0.0))) > 0.001:
+			return true
+	return false
 
 ## Screen pixels per art pixel (whole numbers keep pixel art crisp).
 ## (The art is HD: 64x64 bodies, so a unit is half what it was at 32x32.)
@@ -1874,12 +1900,14 @@ func _draw() -> void:
 		# A slim strip along the bottom edge: never over the fighters or their plates
 		var ta := clampf(minf(toast_life, 6.0 - toast_life) * 4.0, 0.0, 1.0)
 		var tw := w - 16.0
-		var lines := minf(font.get_multiline_string_size(toast_text, HORIZONTAL_ALIGNMENT_CENTER, tw - 24, 12).y, 32.0)
+		# Fable r2 #3: body size (20, was a raw 12 = 9 pt on an SE), up to two lines, bone on ink
+		var fs := UI.FONT_BODY
+		var lines := minf(font.get_multiline_string_size(toast_text, HORIZONTAL_ALIGNMENT_CENTER, tw - 24, fs).y, 2.0 * font.get_height(fs))
 		var box := Rect2(8, h - lines - 14.0, tw, lines + 10.0)
 		toast_room = lines
 		draw_rect(box, Color(0.04, 0.05, 0.10, 0.92 * ta))
 		draw_rect(Rect2(box.position, Vector2(3, box.size.y)), Color(0.91, 0.69, 0.29, ta))
-		draw_multiline_string(font, Vector2(box.position.x + 12, box.position.y + 5 + 11), toast_text, HORIZONTAL_ALIGNMENT_CENTER, tw - 24, 12, 2, Color(1, 1, 1, ta))
+		draw_multiline_string(font, Vector2(box.position.x + 12, roundf(box.position.y + 5 + font.get_ascent(fs))), toast_text, HORIZONTAL_ALIGNMENT_CENTER, tw - 24, fs, 2, Color(UI.TEXT, ta))
 
 ## Draws the hero picture and the weapon (rotated around the hand for swings).
 func _draw_hero() -> void:

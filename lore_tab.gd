@@ -22,7 +22,7 @@ func refresh() -> void:
 		return
 	shown = codex.lore.size()
 	OnlineUI.clear(box)
-	var head := UI.label("Pages found: %d / %d" % [codex.lore.size(), Lore.PAGES.size()], 15, UI.GOLD)
+	var head := UI.label("Pages found: %d / %d" % [codex.lore.size(), Lore.PAGES.size()], UI.FONT_BODY, UI.GOLD)
 	box.add_child(head)
 	if codex.lore.is_empty():
 		var hint := UI.label("Torn pages turn up in the dungeon: now and then on a fallen monster, more often in chests. Each one tells a little more of Solaria's story.", UI.FONT_BODY, UI.DIM)

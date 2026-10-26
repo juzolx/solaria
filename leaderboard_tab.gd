@@ -18,13 +18,11 @@ func setup(m) -> void:
 
 	var head := UI.hbox(8)
 	box.add_child(head)
-	var t := UI.label("Deepest Hardcore runs", 18, UI.GOLD)
+	var t := UI.heading("Deepest Hardcore runs")
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(t)
 	head.add_child(UI.button("Refresh", func(): loaded_at = -100000; refresh()))
-	var note := UI.label("Only Hardcore counts: one life, no second chances. Your best run is sent when a Hardcore hero falls.", UI.FONT_BODY, UI.DIM)
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(note)
+	UI.tip(t, "Only Hardcore counts: one life, no second chances. Your best run is sent when a Hardcore hero falls.")   # Fable r2: rules on a tap, not before the list
 
 	online_box = UI.vbox(6)
 	box.add_child(online_box)
@@ -88,4 +86,4 @@ func _load() -> void:
 		n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(n)
 		grid.add_child(UI.label(str(int(row["floor"])), UI.FONT_BODY, col))
-		grid.add_child(UI.label("Lv %d %s %s" % [int(row["level"]), row["race"], row["title"]], 12, UI.DIM))
+		grid.add_child(UI.label("Lv %d %s %s" % [int(row["level"]), row["race"], row["title"]], UI.FONT_BODY, UI.DIM))

@@ -27,7 +27,8 @@ func refresh() -> void:
 		return
 	shown = key
 	OnlineUI.clear(box)
-	box.add_child(UI.heading("Your party"))
+	var party_head := UI.heading("Your party", "You plus up to 2 of your Regular heroes.")
+	box.add_child(party_head)
 	var note := UI.label("Take a team of 3: you plus up to 2 of your other Regular heroes. They use their own gear, stats and skills, level up with you, and share one skill book. Monsters get tougher with a bigger team and aim mostly at tanks (Warrior, Knight). A hero who falls loses only their own worn gear (bound items stay) and gets back up on the next floor. The run fails only when all three are down. Leave gear you love at home, or send a team with nothing to lose.", UI.FONT_BODY, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if state.hardcore:
@@ -35,10 +36,8 @@ func refresh() -> void:
 		box.add_child(UI.label("Hardcore heroes fight alone. One life, no backup.", UI.FONT_BODY, UI.RED))
 		return
 	_preset_rows()
-	# interface pass (fewer words): one line here, the full rules on a tap
-	var short := UI.wrap("You plus up to 2 of your Regular heroes. Tap here for how teams work.", UI.FONT_BODY, UI.DIM)
-	UI.tip(short, note.text)
-	box.add_child(short)
+	UI.tip(party_head, note.text)   # Fable r2: the full rules on a tap of the heading
+	note.free()   # (only its text was needed)
 	box.add_child(_card_for_leader())
 	if state.party != null:
 		for mem in state.party.members:
@@ -90,9 +89,11 @@ func _preset_rows() -> void:
 
 ## Next update: heroes at home bring in gold, scrap and now and then an item while you dive.
 func _bench_rows() -> void:
-	box.add_child(UI.heading("At home"))
+	var home_head := UI.heading("At home")
+	UI.tip(home_head, "Heroes you leave at home find gold, scrap and sometimes an item while you dive. What they find depends on their class.")
+	box.add_child(home_head)
 	if state.bench_roster.is_empty():
-		box.add_child(UI.wrap("Heroes you leave at home find gold, scrap and sometimes an item while you dive. What they find depends on their class.", UI.FONT_BODY, UI.DIM))
+		box.add_child(UI.wrap("Nobody at home yet.", UI.FONT_BODY, UI.DIM))
 		return
 	for h in state.bench_roster:
 		var r := Bench.rate(str(h["class"]))
@@ -105,7 +106,7 @@ func _bench_rows() -> void:
 		box.add_child(l)
 	var haul := state.bench_haul
 	var n_items: int = haul.get("items", []).size()
-	box.add_child(UI.wrap("Found so far this dive: %d gold, %d scrap, %d item%s. Paid out when you get home." % [int(haul.get("gold", 0)), int(haul.get("scrap", 0)), n_items, "" if n_items == 1 else "s"], 12, UI.GOLD))
+	box.add_child(UI.wrap("Found so far this dive: %d gold, %d scrap, %d item%s. Paid out when you get home." % [int(haul.get("gold", 0)), int(haul.get("scrap", 0)), n_items, "" if n_items == 1 else "s"], UI.FONT_BODY, UI.GOLD))
 
 func _pic(app: Dictionary, looks := {}, scale := 2) -> TextureRect:
 	var pic := TextureRect.new()
@@ -120,12 +121,19 @@ func _card_for_leader() -> PanelContainer:
 	var p := _frame(UI.GOLD_DULL)   # the leader: gold-edged
 	var h := UI.hbox(8)
 	p.add_child(h)
-	h.add_child(_slot(_pic(state.appearance, state.hero_looks(), 3)))
+	h.add_child(_slot(_pic(state.appearance, state.hero_looks())))
+	var v := UI.vbox(4)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(v)
 	var r := UI.rich(UI.FONT_BODY)
-	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	r.text = "[b]%s[/b]  [color=#e8b14a](you, the leader)[/color]\nLv %d %s  -  %s\nHP %d / %d" % [
-		state.hero_name if state.hero_name != "" else "Hero", state.level, state.title(), state.class_info().get("role", ""), state.hero_hp, state.get_max_hp()]
-	h.add_child(r)
+	r.text = "[b]%s[/b] · [color=#e8b14a]you lead[/color]\nLv %d %s · %s" % [
+		state.hero_name if state.hero_name != "" else "Hero", state.level, state.title(), state.class_info().get("role", "")]
+	v.add_child(r)
+	var bar := UI.bar(UI.GREEN, 8)
+	bar.max_value = state.get_max_hp()
+	bar.value = state.hero_hp
+	bar.tooltip_text = "HP %d / %d" % [state.hero_hp, state.get_max_hp()]
+	v.add_child(bar)
 	return p
 
 func _member_card(mem) -> PanelContainer:
@@ -141,7 +149,7 @@ func _member_card(mem) -> PanelContainer:
 	var skills: Array = []
 	for id in g.equipped_actives():
 		skills.append(SkillData.skill_name(id))
-	r.text = "[b]%s[/b]  %s\nLv %d %s  -  %s%s\n[color=%s]Skills: %s[/color]" % [mem.name, "[color=#f87171](knocked out)[/color]" if mem.knocked_out else "",
+	r.text = "[b]%s[/b]  %s\nLv %d %s · %s%s\n[color=%s]Skills: %s[/color]" % [mem.name, "[color=#f87171](knocked out)[/color]" if mem.knocked_out else "",
 		g.level, g.title(), mem.role(), "  (tank)" if mem.is_tank() else "", UI.hex(UI.DIM), ", ".join(skills) if not skills.is_empty() else "none"]
 	v.add_child(r)
 	var bar := UI.bar(UI.GREEN, 8)
@@ -163,16 +171,20 @@ func _member_card(mem) -> PanelContainer:
 ## Team synergies (synergies.gd): the ones your team has light up, the rest say how to get them.
 func _synergy_rows() -> void:
 	var on := Synergies.active(state) if state.party != null and state.party.size() > 0 else []
-	box.add_child(UI.heading("Team synergies", "%d active" % on.size()))
+	box.add_child(UI.heading("Team synergies"))
+	var chip := UI.button("%d active · tap to see all" % on.size(), func(): _synergy_popup(on))
+	chip.custom_minimum_size = Vector2(0, UI.TAP)
+	chip.add_theme_color_override("font_color", UI.GOLD if not on.is_empty() else UI.TEXT)
+	box.add_child(chip)
+
+func _synergy_popup(on: Array) -> void:
+	var o := Overlay.new().open(main, "Team synergies", 520.0)
 	for id in Synergies.LIST:
 		var s: Dictionary = Synergies.LIST[id]
 		var got: bool = id in on
-		var l := UI.label(("%s%s  -  %s" % ["◆ " if got else "", s["name"], s["text"]]), UI.FONT_BODY, UI.GOLD if got else UI.DIM)   # one accent: gold = active
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		box.add_child(l)
-	var ts := UI.label("Team Strike: with companions standing, your whole team hits together every %d turns of a fight." % Synergies.STRIKE_EVERY, UI.FONT_BODY, UI.DIM)
-	ts.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(ts)
+		var l := UI.wrap("%s%s · %s" % ["• " if got else "", s["name"], s["text"]], UI.FONT_BODY, UI.GOLD if got else UI.DIM)   # one accent: gold = active
+		o.content.add_child(l)
+	o.content.add_child(UI.wrap("Team Strike: with companions standing, your whole team hits together every %d turns of a fight." % Synergies.STRIKE_EVERY, UI.FONT_BODY, UI.DIM))
 
 ## Interface pass (approved mockup 05): a party card wears the panel frame.
 func _frame(edge: Color) -> PanelContainer:
