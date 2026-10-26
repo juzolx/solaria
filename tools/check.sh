@@ -42,7 +42,7 @@ if [ "$1" = "shots" ]; then
     read -r res arg <<< "$sz"
     out=$(eval "timeout 400 $wrap \"$G\" --path . --resolution $res -s tests/ui_tour.gd -- $arg" 2>&1)
     if echo "$out" | grep -q "TOUR DONE"; then echo "$out" | grep "TOUR DONE" | sed "s/^/shots $res: /"; else echo "shots $res: FAILED"; echo "$out" | grep -E "SCRIPT ERROR|Refusing" -A1 | head; fail=1; fi
-    echo "$out" | grep -E "TOUR FAIL" | head -20 && fail=1
+    echo "$out" | grep -E "TOUR FAIL" && fail=1   # (no head: its exit status is 0 even with no lines)
     echo "$out" | grep -E "^(ERROR|SCRIPT ERROR|USER ERROR):" -A1 | grep -v "^--" | sort -u | head -10 | sed "s/^/shots $res: /" | grep . && fail=1
   done
 fi
