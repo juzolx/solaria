@@ -63,7 +63,7 @@ func _build(kind: String, title: String, sub: String, color: Color, extra: Strin
 	center.add_child(v)
 	if portrait:
 		var pic: TextureRect
-		if kind in ["hatch", "first"]:
+		if kind in ["hatch", "first", "egg"]:
 			pic = PixelPic.make(portrait, 0, 5.0)  # a 32 px pet: whole screen pixels (Fable pets R2)
 		else:
 			pic = TextureRect.new()
@@ -77,13 +77,14 @@ func _build(kind: String, title: String, sub: String, color: Color, extra: Strin
 		var pt := create_tween()
 		pt.tween_interval(0.5)
 		pt.tween_property(pic, "modulate:a", 1.0, 0.6)
-	var kicker: String = {"realm": "YOU ENTER", "boss": "", "awaken": "AWAKENING", "transform": "SOMETHING CHANGES", "hidden": "HIDDEN CLASS", "god": "A GOD CLASS ANSWERS", "class": "YOUR CLASS GROWS", "milestone": "A MILESTONE", "hatch": "IT HATCHED!", "forge": "FRESH FROM THE FORGE", "first": "FIRST FIND!"}.get(kind, "")
+	var kicker: String = {"realm": "YOU ENTER", "boss": "", "awaken": "AWAKENING", "transform": "SOMETHING CHANGES", "hidden": "HIDDEN CLASS", "god": "A GOD CLASS ANSWERS", "class": "YOUR CLASS GROWS", "milestone": "A MILESTONE", "hatch": "IT HATCHED!", "egg": "A NEST!", "forge": "FRESH FROM THE FORGE", "first": "FIRST FIND!"}.get(kind, "")
 	if kicker != "":
 		lines.append(_line(v, kicker, 14, color.lightened(0.3)))
 	lines.append(_line(v, title.to_upper(), 34 if kind != "boss" else 30, color.lightened(0.4)))
 	if sub != "":
 		lines.append(_line(v, sub, 15, UI.TEXT))
-	if extra != "":
+	var rare := extra == "rare" and kind in ["hatch", "egg"]   # a Legendary or Mythic pet (Fable pets R4)
+	if extra != "" and not rare:
 		lines.append(_line(v, extra, 12, UI.DIM))
 	lines.append(_line(v, "(tap to continue)", 10, UI.DIM))
 	# Fade in, burn the title in letter by letter, hold, fade out
@@ -102,7 +103,7 @@ func _build(kind: String, title: String, sub: String, color: Color, extra: Strin
 	t.tween_callback(close)
 	# A6: the rarest moments (hidden or God class, awakening) open with a burst of light
 	var calm: bool = main_node != null and main_node.profile != null and main_node.profile.reduce_motion
-	if kind in ["hidden", "god", "awaken", "transform"] and not calm:
+	if (kind in ["hidden", "god", "awaken", "transform"] or rare) and not calm:
 		_ray_color = color
 		_ray_center = Vector2(size.x * 0.5, size.y * 0.42)
 		var ft := create_tween()
@@ -113,7 +114,7 @@ func _build(kind: String, title: String, sub: String, color: Color, extra: Strin
 	if main_node and main_node.timer:
 		main_node.timer.paused = true
 	if main_node and main_node.sfx:
-		main_node.sfx.play({"realm": "portal", "boss": "boss_intro", "awaken": "awaken", "transform": "transform", "hidden": "hidden", "god": "hidden", "class": "spec", "milestone": "milestone", "hatch": "pet", "forge": "craft", "first": "milestone"}.get(kind, "event"))
+		main_node.sfx.play({"realm": "portal", "boss": "boss_intro", "awaken": "awaken", "transform": "transform", "hidden": "hidden", "god": "hidden", "class": "spec", "milestone": "milestone", "hatch": "legendary" if rare else "pet", "egg": "legendary" if rare else "pet", "forge": "craft", "first": "milestone"}.get(kind, "event"))
 
 func _line(parent: Control, text: String, size_px: int, color: Color) -> Label:
 	var l := UI.label(text, size_px, color)

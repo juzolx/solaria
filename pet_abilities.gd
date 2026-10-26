@@ -287,7 +287,7 @@ static func apply(g: GameState, p: Dictionary, what: String, value: float, hit: 
 		"strike":
 			g.last_hit = "hit"
 			var d := g._damage_enemy(maxi(1, int(hit * value)), ["Physical"])
-			g.events.append({"type": "summon_hit", "dmg": d, "name": String(p["name"]), "pet": int(p["id"])})
+			g.events.append({"type": "summon_hit", "dmg": d, "name": String(p["name"]), "pet": int(p["id"]), "tier": int(p["tier"])})   # its name floats from the buff event below
 		"shield":
 			var add := mini(maxi(1, int(maxhp * value / 100.0)), int(maxhp * SHIELD_CAP) - g.shield_hp)
 			if add <= 0:
@@ -326,9 +326,10 @@ static func apply(g: GameState, p: Dictionary, what: String, value: float, hit: 
 			# value % of what this kill pays: the real drop (goblins, milestone bonus), else the formula
 			var gold := maxi(1, int((drop if drop > 0 else g.kill_gold()) * value / 100.0))
 			g._add_gold(gold)
+			g.events.append({"type": "pet_gold", "pet": int(p["id"]), "amount": gold, "label": label})
 			g.say("[color=#fbbf24]%s's %s: +%d gold.[/color]" % [p["name"], label, gold])
 		_:
 			return false
 	if what != "gold":
-		g.events.append({"type": "buff", "name": label})
+		g.events.append({"type": "buff", "name": label, "pet": int(p["id"]), "tier": int(p["tier"])})   # floats over the pet that did it
 	return true
