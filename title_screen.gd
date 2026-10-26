@@ -144,7 +144,7 @@ func _draw() -> void:
 	if hero_tex:
 		var hs := Vector2(hero_tex.get_size()) * unit
 		var bob := roundf(sin(t * 2.2) * unit * 0.5)
-		var feet := float(Sprites.HERO_FOOT - Sprites.PORTRAIT_CROP.position.y) * unit
+		var feet := float(Sprites.PORTRAIT_FOOT) * unit
 		draw_texture_rect(hero_tex, Rect2(Vector2(vs.x * 0.30 - hs.x / 2.0, ground_y - feet + bob), hs), false)
 	if not monster.is_empty():
 		var tex: Texture2D = monster["tex"]

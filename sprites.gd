@@ -27,6 +27,9 @@ const HERO_PIXEL := 1
 # the part of the canvas menus show: the hero's frame rows 12-83 (the staff crystal and halo above the
 # head, 4 rows under the feet), cols 12-83
 const PORTRAIT_CROP := Rect2i(12, 20, 72, 72)
+## The PixelLab hero's last feet row inside the portrait, like a monster's "foot" (the bake ends every body
+## above cell row FOOT: row 79 = canvas row 87 = crop row 67).
+const PORTRAIT_FOOT := HeroArt.FOOT - 1 + 8 - PORTRAIT_CROP.position.y
 const PORTRAIT := 72  # its size: show portraits at 72, 144 or 216 to keep pixels crisp
 const HAIR_STYLES := Races.HAIR_ORDER  # 37 styles; the 13 older names are kept so saves look the same
 
@@ -409,7 +412,7 @@ static var _pl_keys: Array[String] = []
 ## (armour has no look in 2.1, so changing it doesn't make a new picture).
 static func _hero_pl_cached(app: Dictionary, looks: Dictionary, back: bool) -> Dictionary:
 	var w: Dictionary = looks.get("Weapon", {})
-	var key := "pl%s|%s|%s|%s|%s|%s" % [back, str(app), str(looks.get("Class", {})), w.get("type", ""), w.get("glow", false), w.get("trim", "")]
+	var key := "pl%s|%s|%s|%s|%s|%s" % [back, str(HeroArt.look_key(app, back)), str(looks.get("Class", {})), w.get("type", ""), w.get("glow", false), w.get("trim", "")]
 	if _cache.has(key):
 		return _cache[key]
 	var pl := _hero_pl(app, looks, back)
@@ -436,7 +439,11 @@ static func _hero_pl(app: Dictionary, looks: Dictionary, back: bool) -> Dictiona
 	var canvas := Image.create(CANVAS, CANVAS, false, Image.FORMAT_RGBA8)
 	var s := still.get_width()
 	canvas.blend_rect(still, Rect2i(0, 0, s, s), BODY_OFFSET - Vector2i((s - HeroArt.CORE) / 2, (s - HeroArt.CORE) / 2))
-	var hand: Array = HeroArt.hands(app)[0 if back else HeroArt.PORTRAIT[0]]
+	var origin := Vector2(BODY_OFFSET) - Vector2((s - HeroArt.CORE) / 2, (s - HeroArt.CORE) / 2)
+	var all_hands := HeroArt.hands(app)
+	var hand: Array = all_hands[0 if back else HeroArt.PORTRAIT[0]]
+	for an: Dictionary in anims.values():  # every frame's own hand (canvas pixels): sparks leave the blade, not the hip
+		an["hands"] = (an["ids"] as Array).map(func(i: int) -> Vector2: return origin + Vector2(float(all_hands[i][0]), float(all_hands[i][1])))
 	return {"body_img": canvas, "body": ImageTexture.create_from_image(canvas), "body_white": ImageTexture.create_from_image(_silhouette(canvas)),
 		"weapon": null, "weapon_white": null, "weapon_type": wt, "pivot": Vector2.ZERO, "glow": glow,
 		"hand": Vector2(BODY_OFFSET) - Vector2((s - HeroArt.CORE) / 2, (s - HeroArt.CORE) / 2) + Vector2(float(hand[0]), float(hand[1])),
@@ -532,7 +539,7 @@ static func item_icon(item: Dictionary) -> ImageTexture:
 
 ## The menu portrait's idle frames: the PixelLab hero has two (it breathes), the others one.
 static func portrait_frames(app: Dictionary, looks := {}) -> Array:
-	var key := "pf" + str(app) + _looks_key(looks)
+	var key := "pf" + str(HeroArt.look_key(app, false) if HeroArt.available() else app) + _looks_key(looks)
 	if _cache.has(key):
 		return _cache[key]
 	var out := [portrait(app, looks)]
@@ -550,7 +557,7 @@ static func portrait_frames(app: Dictionary, looks := {}) -> Array:
 
 ## The hero with the weapon held upright, as one picture (for menus).
 static func portrait(app: Dictionary, looks := {}) -> ImageTexture:
-	var key := "p" + str(app) + _looks_key(looks)
+	var key := "p" + str(HeroArt.look_key(app, false) if HeroArt.available() else app) + _looks_key(looks)
 	if _cache.has(key):
 		return _cache[key]
 	var h := hero(app, looks)

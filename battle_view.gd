@@ -1512,7 +1512,20 @@ func _hand_screen() -> Vector2:
 	var c := _hero_canvas()
 	var p: Dictionary = _hero_poses().get(hero_pose, {})
 	var off := Vector2(int(p.get("dx", 0)), int(p.get("dy", 0)))
-	return c.position + ((hero_art.get("hand", Vector2(32, 31) * Sprites.HD) as Vector2) + off) * _hu()
+	return c.position + (_anim_hand() + off) * _hu()
+
+## The hand on the hero frame showing now (canvas pixels): each swing frame has its own.
+func _anim_hand() -> Vector2:
+	var hand: Vector2 = hero_art.get("hand", Vector2(32, 31) * Sprites.HD)
+	if not hero_art.has("anims"):
+		return hand
+	var anims: Dictionary = hero_art["anims"]
+	var an: Dictionary = anims.get(hero_anim, anims.get("combat_idle", {}))
+	var hs: Array = an.get("hands", [])
+	if hs.is_empty():
+		return hand
+	var fi := int(hero_anim_t * float(an["fps"]))
+	return hs[fi % hs.size() if hero_anim == "combat_idle" else mini(fi, hs.size() - 1)]
 
 func _hero_poses() -> Dictionary:
 	if hero_art.is_empty() or not hero_art.has("body_img"):
