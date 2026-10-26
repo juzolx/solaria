@@ -396,8 +396,10 @@ func play(events: Array[Dictionary]) -> void:
 				delay += 0.12
 			"pet_gold":
 				_later(delay, func():
-					_sfx("sell")
-					_float("+%d" % int(e["amount"]), _pet_head(int(e["pet"])), UI.GOLD, 15))
+					var gh := _pet_head(int(e["pet"]))
+					if gh != Vector2.INF:   # gone home before this played: the log line names it
+						_sfx("loot")
+						_float("+%d" % int(e["amount"]), gh, UI.GOLD, 15))
 			"confused":
 				_later(delay, func():
 					_float("CONFUSED %d" % e["dmg"], _enemy_center() + Vector2(0, -30), Color("#a8ca58"), 16)
@@ -2643,13 +2645,13 @@ static func who_lunges(e: Dictionary, summon_name: String, summon_turns: int, co
 		return "pet_lunge"
 	return ""
 
-## Over the head of menagerie pet id (or the hero, if it isn't out).
+## Over the head of menagerie pet id (Vector2.INF if it isn't out).
 func _pet_head(id: int) -> Vector2:
 	var pets := _team_out()
 	for i in pets.size():
 		if int(pets[i]["id"]) == id:
 			return Vector2(float(team_layout().get(i, 0.0)) + 16.0 * _u(), _team_ground() - 36.0 * _u())
-	return _hero_center() + Vector2(0, -30)
+	return Vector2.INF   # not out (hurt, swapped): nothing floats over the hero by mistake
 
 ## A pet's trick: its name over its head in its rank colour, and a hop.
 func _pet_trick(e: Dictionary, delay: float) -> void:
@@ -2657,9 +2659,12 @@ func _pet_trick(e: Dictionary, delay: float) -> void:
 	var col := Color(Menagerie.TIER_COLORS[clampi(int(e.get("tier", 0)), 0, 5)])
 	var label := String(e.get("label", e.get("name", "")))
 	_later(delay, func():
+		var head := _pet_head(id)
+		if head == Vector2.INF:
+			return
 		_sfx("buff")
 		pet_hits[id] = 0.3
-		_float(label.to_upper() + "!", _pet_head(id), col, 15))
+		_float(label.to_upper() + "!", head, col, 15))
 
 ## Where the team stands (Fable pets R2): the left edge x of each 32 px creature, keyed -1 for
 ## the class companion and 0.. for menagerie pets, companion first (Pets.row).
@@ -2700,6 +2705,11 @@ func _team_layout() -> Dictionary:
 	for i in _party_members().size():
 		var mc := _member_canvas(i).get_center().x
 		taken.append([mc - 16.0 * pu, mc + 16.0 * pu])
+	# Fable pets R5: a monster whose feet come down near the team row (staging changes) keeps its middle clear
+	if state != null and state.enemy_hp > 0 and not state.in_town:
+		var er := _enemy_rect(state.enemy_is_boss)
+		if absf(er.end.y - _team_ground()) < size.y * 0.1:
+			taken.append([er.position.x + er.size.x * 0.25, er.end.x - er.size.x * 0.25])
 	var first := ""
 	if not who.is_empty():
 		first = Pets.companion_key(state) if int(who[0]) == -1 else String(_team_out()[0].get("species", ""))

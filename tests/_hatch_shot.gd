@@ -28,7 +28,7 @@ func _initialize() -> void:
 		if c is Overlay:
 			c.queue_free()
 	var st: GameState = main.state
-	Menagerie.hatch(st, {"quest": "hunt", "prog": 99})
+	Menagerie.hatch(st, {"quest": "hunt", "prog": 99, "zone": String(GameData.ZONES[0]["id"]), "tier": 1})   # Cherished: rays (Fable pets R5)
 	main.refresh()
 	await create_timer(3.0).timeout
 	_shot(dir, "hatch")
