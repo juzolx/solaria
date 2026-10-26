@@ -96,3 +96,5 @@ Every rating Juzo gives goes here, so all sessions learn what he thinks is reall
 - Oct 25: monster redraws R2: chimera 9/10, hellhound 9/10 ("easy 9s"). Keep both.
 
 - Oct 25: town after Fable round 4: Juzo rates it 8/10 ("excited to see your work"). Requested: Blacksmith moved to the west farm corner by the gate; that field removed.
+
+- Oct 25: smithy move "looks really good". Biggest mistake Juzo sees, town-wide and in the dungeon: props covered by buildings or looking like they float (base hidden or unsupported). Always check prop grounding in art reviews.
