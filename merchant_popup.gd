@@ -23,7 +23,7 @@ func show_for(main_node) -> void:
 	greet.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(greet)
 	if who == "":
-		var mood := UI.label("Snik sees you as: %s  (%d purchases)" % [Snik.friendship_name(state), state.codex.stat("merchant_buys")], 12, Color("#a3e635"))
+		var mood := UI.label("Snik sees you as: %s  (%d purchases)" % [Snik.friendship_name(state), state.codex.stat("merchant_buys")], UI.FONT_CAPTION, Color("#a3e635"))
 		content.add_child(mood)
 	gold_label = UI.label("", UI.FONT_BODY, UI.GOLD)
 	content.add_child(gold_label)
@@ -72,7 +72,7 @@ static func rows(main_node, parent: Control, on_change: Callable) -> void:
 		# Say why you can't buy it instead of a button that does nothing
 		var need := int(e["price"]) - st.gold
 		var full: bool = e["kind"] == "item" and st.bag_full()
-		var label := "Sold" if e["sold"] else ("Bag full" if full else ("Need %d more" % need if need > 0 else "%d gold" % int(e["price"])))
+		var label := "Sold" if e["sold"] else ("Bag full" if full else ("Need %d more" % need if need > 0 else UI.cost("Buy", int(e["price"]))))
 		var b := UI.primary(label, func():
 			if st.buy_merchant(i):
 				main_node.sfx.play("buy")

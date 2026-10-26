@@ -59,14 +59,25 @@ static func find(g: GameState, id: int) -> Dictionary:
 			return p
 	return {}
 
-## Pets coming on this run (healthy and picked).
+## Something about the team changed (a pet added or gone, pets_out, a hurt): caches start over.
+static func changed(g: GameState) -> void:
+	g.pets_rev += 1
+
+## Pets coming on this run (healthy and picked). Cached until changed() (Fable pets R5: this runs
+## on every stat lookup); the list is shared, so callers don't change it.
 static func out(g: GameState) -> Array:
+	var key := [g.pets_rev, g.pets.size(), g.pets_out.size(), max_out(g)]
+	var c: Array = g.get_meta("pets_out_c", [])
+	if not c.is_empty() and c[0] == key:
+		return c[1]
 	var list: Array = []
 	for id in g.pets_out:
 		var p := find(g, int(id))
 		if not p.is_empty() and int(p["hurt"]) <= 0:
 			list.append(p)
-	return list.slice(0, max_out(g))
+	list = list.slice(0, max_out(g))
+	g.set_meta("pets_out_c", [key, list])
+	return list
 
 ## Juzo (Oct 25): one of each kind on a team. The pet on the team that is the same kind as id
 ## ({} = none). Each hero keeps their own team (party members' pets don't come along).
@@ -74,7 +85,7 @@ static func same_kind_out(g: GameState, id: int) -> Dictionary:
 	var p := find(g, id)
 	for o in g.pets_out:
 		var q := find(g, int(o))
-		if int(o) != id and not q.is_empty() and String(q["species"]) == String(p.get("species", "")):
+		if int(o) != id and not q.is_empty() and int(q.get("hurt", 0)) <= 0 and String(q["species"]) == String(p.get("species", "")):   # a resting twin doesn't count (it leaves on a swap)
 			return q
 	return {}
 
@@ -90,8 +101,8 @@ static func out_block(g: GameState, id: int) -> String:
 		return "You already have a %s out (%s). One of each kind per team." % [Monsters.name_of(String(p["species"])), String(twin["name"])]
 	return ""
 
-## Old saves (and anything else) with two of a kind on the team: the highest rank stays, the
-## others go home (nothing is lost). Returns the names sent home.
+## Old saves (and anything else) with two of a kind on the team: a healthy one before a resting
+## one, then the highest rank, stays; the others go home (nothing is lost). Returns their names.
 static func one_of_each(g: GameState) -> Array:
 	var keep := {}   # species -> pet id kept
 	for o in g.pets_out:
@@ -99,7 +110,13 @@ static func one_of_each(g: GameState) -> Array:
 		if q.is_empty():
 			continue
 		var sp := String(q["species"])
-		if not keep.has(sp) or int(q["tier"]) > int(find(g, int(keep[sp]))["tier"]):
+		if not keep.has(sp):
+			keep[sp] = int(o)
+			continue
+		var k := find(g, int(keep[sp]))
+		var qh := int(q["hurt"]) <= 0
+		var kh := int(k["hurt"]) <= 0
+		if (qh and not kh) or (qh == kh and int(q["tier"]) > int(k["tier"])):
 			keep[sp] = int(o)
 	var home: Array = []
 	for o in g.pets_out.duplicate():
@@ -107,6 +124,8 @@ static func one_of_each(g: GameState) -> Array:
 		if not q.is_empty() and int(keep[String(q["species"])]) != int(o):
 			g.pets_out.erase(o)
 			home.append(String(q["name"]))
+	if not home.is_empty():
+		changed(g)
 	return home
 
 static func toggle_out(g: GameState, id: int) -> bool:
@@ -115,9 +134,11 @@ static func toggle_out(g: GameState, id: int) -> bool:
 		return false
 	if id in g.pets_out:
 		g.pets_out.erase(id)
+		changed(g)
 		return true
 	if int(p["hurt"]) > 0:
 		return false
+	changed(g)
 	# resting pets give their spot up first (Fable pets R3: they don't fight, out() skips them)
 	for o in g.pets_out.duplicate():
 		if int(find(g, int(o)).get("hurt", 0)) > 0:
@@ -133,14 +154,16 @@ static func toggle_out(g: GameState, id: int) -> bool:
 ## monster: the species id (Monsters.registry()).
 static func make_pet(g: GameState, monster: String, art: String, tier: int, from: String) -> Dictionary:
 	var p := {"id": g._new_id(), "name": Monsters.name_of(monster), "species": monster, "art": art, "tier": clampi(tier, 0, 5),
-		"level": 1, "kills": 0, "hurt": 0, "from": from}
+		"level": 1, "kills": 0, "hurt": 0, "from": from, "curve": 2}
 	g.pets.append(p)
+	changed(g)
 	if out(g).size() < max_out(g):
 		for o in g.pets_out.duplicate():   # a resting pet doesn't keep a new one home
 			if int(find(g, int(o)).get("hurt", 0)) > 0:
 				g.pets_out.erase(o)
 		if same_kind_out(g, int(p["id"])).is_empty():   # one of each kind: a second copy waits at home
 			g.pets_out.append(int(p["id"]))
+		changed(g)
 	g.codex.add("pets")
 	if g.codex.found_pet(str(p["species"]), int(p["tier"])):  # next update: the first of its kind gets a fanfare
 		g._check_codex()   # Fable pets R4: its Codex reward lands now, with the find, not a kill later
@@ -168,9 +191,16 @@ static func level_for(kills: int) -> int:
 
 ## Old saves (the 40-kills-a-level curve, max 50): the level the kills earn now, never lower than
 ## what the pet already showed.
-static func convert_levels(g: GameState) -> void:
+## Returns true if any pet was on the old curve (the load says so once; the save marks them).
+static func convert_levels(g: GameState) -> bool:
+	var any := false
 	for p in g.pets:
+		if int(p.get("curve", 1)) >= 2:
+			continue
 		p["level"] = maxi(int(p.get("level", 1)), level_for(int(p.get("kills", 0))))
+		p["curve"] = 2
+		any = true
+	return any
 
 # =====================================================================
 # Catching (Beast Tamer only)
@@ -211,7 +241,7 @@ static func try_catch(g: GameState) -> bool:
 			"Your Beast Whisperer hums it calm. " if helper else "", p["name"], "" if int(p["id"]) in g.pets_out else (" (waiting at home: one of its kind is already out)" if not same_kind_out(g, int(p["id"])).is_empty() else " (waiting at home: your team is full)")])
 		g.events.append({"type": "mini_event", "kind": "pet", "title": "CAUGHT!", "sub": "%s joins you" % p["name"]})
 		g.feats["caught"] = int(g.feats.get("caught", 0)) + 1
-		g.tip("caught", "Pets fight beside you and grow with every kill. Pick who comes along in Character > Pets. Pets are never lost: when they go down they come home hurt and rest.")
+		g.tip("caught", "Pets fight beside you and grow with every kill. Pick who comes along in Hero › Pets. Pets are never lost: when they go down they come home hurt and rest.")
 		Lineage._move_on(g)
 		return true
 	g.say("[color=#f87171]The %s slips your grip and lashes out![/color]" % g.enemy_name)
@@ -253,6 +283,7 @@ static func on_wipe(g: GameState) -> String:
 	for p in out(g):
 		p["hurt"] = int(Buildings.pick("clinic", Economy.CLINIC_HEAL_FLOORS))  # 2.1: a bigger Clinic: faster rest
 		hurt.append(String(p["name"]))
+	changed(g)
 	return "" if hurt.is_empty() else "%s came home hurt" % ", ".join(hurt)
 
 ## A cleared floor: hurt pets rest, eggs get closer to hatching.
@@ -261,6 +292,7 @@ static func on_floor(g: GameState) -> void:
 		if int(p["hurt"]) > 0:
 			p["hurt"] = int(p["hurt"]) - 1
 			if int(p["hurt"]) == 0:
+				changed(g)
 				g.say("[color=#4ade80]%s has rested and is ready to fight again.[/color]" % p["name"])
 	for e in g.eggs.duplicate():
 		e["floors"] = int(e["floors"]) - 1
@@ -297,6 +329,20 @@ static func egg_zone(egg: Dictionary) -> int:
 		return -1
 	var zi := int(z) if typeof(z) in [TYPE_INT, TYPE_FLOAT] else -1
 	return zi if zi >= 0 and zi < GameData.ZONES.size() else -1
+
+## The Moments entry for a hatch_moment or egg_moment event: [kind, title, sub, colour, extra,
+## picture]. extra "rare" opens with light and the legendary chime: Legendary and Mythic pets and
+## nests, and every Cherished hatch (its egg quest was done). One rank palette (TIER_COLORS).
+static func moment(e: Dictionary) -> Array:
+	var tier := clampi(int(e.get("tier", 0)), 0, 5)
+	var col := Color(TIER_COLORS[tier])
+	if String(e["type"]) == "egg_moment":
+		return ["egg", String(e["name"]), "Something inside is moving. It hatches after %d floors." % EGG_FLOORS, col,
+			"rare" if tier >= 4 else "", Pets.egg(String(e["zone"]))]
+	var cherished := bool(e.get("cherished", false))
+	var sub := ("%s pet, a kind you've never had: it's in your Codex now." if e.get("first", false) else "%s pet. It already looks at you like you're its whole world.") % String(TIER_NAMES[tier])
+	return ["hatch", ("Cherished " if cherished else "") + "Baby " + String(e["name"]), sub, col,
+		"rare" if tier >= 4 or cherished else "", species_texture(String(e.get("species", "")), String(e.get("art", "")))]
 
 ## "Rare Egg of Mossy Hollows", "Epic Egg of The Hushwood"
 static func egg_name(egg: Dictionary) -> String:
@@ -355,6 +401,7 @@ static func heal(g: GameState, id: int) -> bool:
 		return false
 	g.gold -= cost
 	p["hurt"] = 0
+	changed(g)
 	g.say("[color=#4ade80]The Clinic patches up %s.[/color] (%d gold)" % [p["name"], cost])
 	g.save_game()
 	return true
@@ -415,6 +462,7 @@ static func release(g: GameState, id: int) -> bool:
 		return false
 	g.pets.erase(p)
 	g.pets_out.erase(id)
+	changed(g)
 	g.say("[color=#d9a066]%s looks back once, then runs off into the wild.[/color]" % p["name"])
 	g.save_game()
 	return true

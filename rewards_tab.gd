@@ -1,6 +1,6 @@
 class_name RewardsTab
 extends ScrollContainer
-## 2.1 G4: Codex > Rewards. Every collection milestone (collections.gd), what it
+## 2.1 G4: Codex › Rewards. Every collection milestone (collections.gd), what it
 ## takes and the title or look it gives. Looks only: none of it changes power.
 
 var main

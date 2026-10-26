@@ -1,6 +1,6 @@
 class_name PetBookTab
 extends ScrollContainer
-## Codex > Pets (next update): every monster that could be your pet, by area.
+## Codex › Pets (next update): every monster that could be your pet, by area.
 ## Owned ones show in color with the best tier you've had, monsters you've met
 ## are shadows with a name, the rest are unknown.
 
@@ -24,21 +24,12 @@ func refresh() -> void:
 		return
 	shown = key
 	OnlineUI.clear(box)
-	var all := Menagerie.all_species()
-	var seen := 0
-	for n in all:
-		if _met(n) or codex.pet_book.has(n):
-			seen += 1
-	var owned := 0
-	for n in all:
-		if codex.pet_book.has(n):
-			owned += 1
-	box.add_child(UI.label("Owned %d / %d · Seen %d / %d" % [owned, all.size(), seen, all.size()], UI.FONT_BODY, UI.GOLD))
 	box.add_child(Collections.cards(codex, ["pets", "pet_epic", "pet_myth"]))  # 2.1 G4: progress and the next reward
 	box.add_child(UI.wrap("Pets are a real find: hatch an egg, or tame a beast as a Beast Tamer. Tiers go from Common to Mythic.", UI.FONT_BODY, UI.DIM))
 	var legend := HFlowContainer.new()   # wraps on a phone
 	legend.add_theme_constant_override("h_separation", 8)
 	box.add_child(legend)
+	legend.add_child(UI.label("Tiers:", UI.FONT_BODY, UI.DIM))
 	for t in Menagerie.TIER_NAMES.size():
 		legend.add_child(UI.label(Menagerie.TIER_NAMES[t], UI.FONT_BODY, Color(Menagerie.TIER_COLORS[t])))
 	_abilities()
@@ -50,18 +41,18 @@ func refresh() -> void:
 		for s in z["subs"]:
 			mons.append(s["monster"]["id"])
 		box.add_child(UI.heading(str(z["name"])))
-		box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text(String(z["id"])), UI.FONT_BODY, Color(Menagerie.TIER_COLORS[PetAbilities.SIGNATURE_RANK])))
+		box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text(String(z["id"])), UI.FONT_BODY, UI.TEXT))
 		var flow := HFlowContainer.new()
-		flow.add_theme_constant_override("h_separation", 6)
+		flow.add_theme_constant_override("h_separation", 4)
 		flow.add_theme_constant_override("v_separation", 6)
 		box.add_child(flow)
 		for n in mons:
 			flow.add_child(_cell(str(n)))
 	# Fable pets R2: the ten Calamity pets (the rarest; a slain Calamity leaves its pet)
 	box.add_child(UI.heading("Calamities"))
-	box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text("calamity"), UI.FONT_BODY, Color(Menagerie.TIER_COLORS[PetAbilities.SIGNATURE_RANK])))
+	box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text("calamity"), UI.FONT_BODY, UI.TEXT))
 	var cflow := HFlowContainer.new()
-	cflow.add_theme_constant_override("h_separation", 6)
+	cflow.add_theme_constant_override("h_separation", 4)
 	cflow.add_theme_constant_override("v_separation", 6)
 	box.add_child(cflow)
 	for n in _calamity_pets():
@@ -93,7 +84,7 @@ func _cell(n: String) -> Control:
 	var tier := int(codex.pet_book.get(n, 0))
 	var c := UI.panel(UI.INSET, Color(Menagerie.TIER_COLORS[tier]) if have else UI.BORDER, 4, 4, 2 if have else 1)
 	# wide enough for "Will-o'-Wisp" under a whole-pixel picture (Fable pets R4)
-	var cw := maxf(76.0, PixelPic.side(32, 2.0, PixelPic.stretch(self)) + 8.0)
+	var cw := maxf(112.0, PixelPic.side(32, 2.0, PixelPic.stretch(self)) + 8.0)   # four a row (4 x 112 + 3 x 4 fits the 460 grid): the longest one-word name, Doppelganger, needs 102 at the 15 px floor
 	c.custom_minimum_size = Vector2(cw, 0)
 	var v := UI.vbox(2)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -105,9 +96,16 @@ func _cell(n: String) -> Control:
 		pic.modulate = Color(0.32, 0.3, 0.4, 0.9) if met else Color(0.12, 0.12, 0.16, 0.6)
 	v.add_child(pic)
 	var nm := _name(n) if met else "???"
-	var l := UI.label(nm, UI.FONT_BODY if nm.length() <= 10 else UI.FONT_CAPTION, Color(Menagerie.TIER_COLORS[tier]) if have else UI.DIM)
+	var l := UI.label(nm, UI.FONT_CAPTION, Color(Menagerie.TIER_COLORS[tier]) if have else UI.DIM)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD   # breaks at spaces only, never inside "Will-o'-Wisp"
+	# Fable pets R5: a one-word name stays on one line (word wrap still broke "Will-o'-" / "Wisp" at the hyphen);
+	# a name with spaces wraps at them
+	if nm.contains(" "):
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD
+	else:
+		l.autowrap_mode = TextServer.AUTOWRAP_OFF
+		l.clip_text = true
+		l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	l.custom_minimum_size = Vector2(cw - 8.0, 0)
 	v.add_child(l)
 	if met:
@@ -167,7 +165,7 @@ func _ability_text(to: Control) -> void:
 		to.add_child(UI.wrap("%s: %s" % [Menagerie.TIER_NAMES[t], PetAbilities.RANK_TEXT[t]], UI.FONT_BODY, Color(Menagerie.TIER_COLORS[t])))
 	to.add_child(UI.wrap("A pet's family is its kind of monster. Tap a pet in the Codex to see its own.", UI.FONT_BODY, UI.DIM))
 	for f in PetAbilities.FAMILIES:
-		to.add_child(UI.label(String(PetAbilities.FAMILIES[f]["name"]).to_upper(), UI.FONT_BODY, UI.GOLD))
+		to.add_child(UI.label(String(PetAbilities.FAMILIES[f]["name"]), UI.FONT_BODY, UI.GOLD))
 		if f == "calamity":
 			# Calamity pets only ever come at Mythic, so the rank ladder above doesn't apply
 			to.add_child(UI.wrap("Calamity pets come only at Mythic. %s. %s. %s." % [PetAbilities.family_passive_range(f), PetAbilities.family_trick_text(f, PetAbilities.SIGNATURE_RANK), PetAbilities.region_signature_text("calamity")], UI.FONT_BODY, UI.TEXT))

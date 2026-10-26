@@ -1,6 +1,6 @@
 class_name BagTab
 extends VBoxContainer
-## Items > Bag: everything you're carrying. Sort, filter, lock, sell, salvage,
+## Items › Bag: everything you're carrying. Sort, filter, lock, sell, salvage,
 ## upgrade and reroll. Locked items can't be sold or salvaged.
 
 const SORTS := ["Newest", "Rarity", "Power", "Slot"]
@@ -14,6 +14,9 @@ var sort_pick: OptionButton
 var filter_pick: OptionButton
 var grid: GridContainer
 var empty_note: Label
+var empty_card: PanelContainer   # Fable r3 #13: an empty bag is a card with the Loot filter under it
+var empty_filter: Button
+var filter_row: HBoxContainer
 var ids: Array[int] = []
 var last_pick_ms := 0
 var details: RichTextLabel
@@ -63,11 +66,14 @@ func setup(m) -> void:
 	add_child(head)
 	sort_pick = OptionButton.new()
 	for sname in SORTS:
-		sort_pick.add_item("Sort: " + sname)
-	sort_pick.item_selected.connect(func(_i): shown = ""; main.refresh())
+		sort_pick.add_item(sname)   # "Sort: " only on the closed button, not on every row (Fable r3)
+	sort_pick.text = "Sort: " + SORTS[0]
+	sort_pick.item_selected.connect(func(i):
+		sort_pick.text = "Sort: " + SORTS[i]
+		shown = ""
+		main.refresh())
 	sort_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sort_pick.fit_to_longest_item = false   # sized to what it shows (the chevron made the row 5 px too wide on a phone)
-	sort_pick.clip_text = true
 	sort_pick.clip_text = true
 	head.add_child(sort_pick)
 	filter_pick = OptionButton.new()
@@ -92,8 +98,17 @@ func setup(m) -> void:
 	scroll.add_child(sv)
 	grid = ItemGrid.grid()
 	sv.add_child(grid)
-	empty_note = UI.label("", UI.FONT_BODY, UI.DIM)
-	sv.add_child(empty_note)
+	empty_card = UI.panel(UI.INSET, UI.BORDER, 8, 12, 1)
+	empty_card.visible = false
+	sv.add_child(empty_card)
+	var ev := UI.vbox(10)
+	empty_card.add_child(ev)
+	empty_note = UI.wrap("", UI.FONT_BODY, UI.DIM)
+	ev.add_child(empty_note)
+	empty_filter = UI.button("Loot filter ›", func(): LootFilter.new().show_for(main))
+	empty_filter.custom_minimum_size = Vector2(0, UI.TAP)
+	empty_filter.tooltip_text = "Choose which new drops are salvaged or sold the moment they drop"
+	ev.add_child(empty_filter)
 	resized.connect(_on_resized)
 
 	# Fable r2 #4: what an item does and what you can do with it is its tap popup (like Skills);
@@ -161,6 +176,7 @@ func setup(m) -> void:
 		bulk.add_child(b)
 		salvage_all_buttons[r] = b
 	var frow := UI.hbox(6)
+	filter_row = frow
 	add_child(frow)
 	# 2.1: one loot filter screen for every rule (rarity, slots, smart rules, sell or salvage)
 	auto_salvage_button = UI.button("", func(): LootFilter.new().show_for(main))
@@ -250,7 +266,7 @@ func _popup(id: int) -> void:
 	if found["where"] == "bag":
 		acts.append(["Equip", func(): state.equip(id); main.sfx.play("equip"); main.refresh(), UI.GREEN])
 		if not locked:
-			acts.append(["Sell · %dg" % state.sell_price(item), func(): _act("sell"), UI.GOLD])
+			acts.append([UI.cost("Sell", state.sell_price(item)), func(): _act("sell"), UI.GOLD])
 			acts.append(["Salvage · %d scrap" % GameData.scrap_value(item, state.scrap_mult()), func(): _act("salvage"), UI.BLUE])
 	else:
 		acts.append(["Unequip", func(): _act("equip"), UI.GREEN])
@@ -355,7 +371,7 @@ func refresh() -> void:
 		for it in items:
 			gold_total += state.sell_price(it)
 			scrap_total += GameData.scrap_value(it, state.scrap_mult())
-		pick_sell.text = "Sell %d (%d gold)" % [items.size(), gold_total]
+		pick_sell.text = UI.cost("Sell %d" % items.size(), gold_total)
 		pick_salvage.text = "Salvage %d (%d scrap)" % [items.size(), scrap_total]
 		pick_sell.disabled = items.is_empty()
 		pick_salvage.disabled = items.is_empty()
@@ -390,8 +406,10 @@ func refresh() -> void:
 				Drag.wire(cell, {"kind": "item", "id": id}, Sprites.item_icon(item))  # next update: drag onto Equip, Sell, Salvage or Lock
 			grid.add_child(cell)
 			ids.append(id)
-		empty_note.visible = ids.is_empty()
-		empty_note.text = "Nothing here yet." if state.bag.is_empty() else "No items match this filter."
+		empty_card.visible = ids.is_empty()
+		empty_filter.visible = state.bag.is_empty()
+		filter_row.visible = not state.bag.is_empty()
+		empty_note.text = "Your bag is empty. What you find in fights lands here; the Loot filter can sell or salvage drops for you." if state.bag.is_empty() else "No items match this filter."
 	_refresh_details()
 
 func _refresh_details() -> void:

@@ -1,6 +1,6 @@
 class_name InnTab
 extends ScrollContainer
-## Town > Inn: rest to full health (cheap; free while you're new), buy potions,
+## Town › Inn: rest to full health (cheap; free while you're new), buy potions,
 ## and hear what the regulars are saying.
 
 const RUMORS := [
@@ -95,11 +95,11 @@ func refresh() -> void:
 	hp_label.text = "Health  %d / %d" % [g.hero_hp, mx]
 	var cost := Town.rest_cost(g)
 	var full := g.hero_hp >= mx
-	rest_button.text = "You're fully rested" if full else ("Rest for the night  (free)" if cost == 0 else "Rest for the night  (%d gold)" % cost)
+	rest_button.text = "You're fully rested" if full else ("Rest for the night · free" if cost == 0 else UI.cost("Rest for the night", cost))
 	rest_button.disabled = full or g.gold < cost
 	potion_label.text = "Potions: %d" % g.potions
 	_recruit_refresh()
-	potion_button.text = "Buy one  (%d gold)" % g.potion_cost()
+	potion_button.text = UI.cost("Buy one", g.potion_cost())
 	potion_button.disabled = g.gold < g.potion_cost()
 
 ## A new hero joins the town in the next open slot, and you play them right away.

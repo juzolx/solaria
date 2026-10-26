@@ -33,7 +33,7 @@ func _card(t: int) -> PanelContainer:
 	top.add_child(UI.label(p.town_name(t) if founded else "Town %d" % t, UI.FONT_BODY, UI.GOLD if founded else UI.DIM))
 	if founded:
 		var hc := p.town_hardcore(t)
-		top.add_child(UI.chip("HARDCORE" if hc else "REGULAR", UI.RED if hc else UI.GREEN, UI.FONT_BODY))
+		top.add_child(UI.chip("Hardcore" if hc else "Regular", UI.RED if hc else UI.GREEN, UI.FONT_BODY))
 	if here and founded:
 		top.add_child(UI.chip("YOU'RE HERE", UI.GOLD, UI.FONT_BODY))
 	var info := UI.wrap("", UI.FONT_BODY, UI.DIM)

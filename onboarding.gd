@@ -20,7 +20,7 @@ const STEPS := [
 	{"id": "home", "text": "Tap [b]Town[/b] to walk home after this floor. What you bring home is safe."},
 	{"id": "safe", "text": "Home safe! Your gold went to the Bank. Put on better gear in the Gear tab."},
 	{"id": "death", "text": "You fell. Your bag, the gold on you and the gear you wore stay where you fell. Win there to get it back. The Bank is always safe.", "covers": ["death", "grave"]},
-	{"id": "more", "text": "That's the basics! New things open as you go deeper, one tip at a time. [b]Codex > Guide[/b] explains everything."},
+	{"id": "more", "text": "That's the basics! New things open as you go deeper, one tip at a time. [b]Codex › Guide[/b] explains everything."},
 ]
 
 ## Steps that show over menus (the title screen and the hero maker); the rest show in play.
@@ -138,7 +138,7 @@ static func holds_page(p: Profile, page_id: String) -> bool:
 ## The welcome card: start the flow or skip it. Never blocks: one tap either way.
 static func show_welcome(m, on_done := Callable()) -> Overlay:
 	var o := Overlay.new().open(m, "Welcome to Solaria", 460.0, UI.GOLD, false)
-	o.content.add_child(UI.wrap("Lead heroes down into a deep dungeon, bring the loot home, and grow your town.", 17, UI.TEXT))
+	o.content.add_child(UI.wrap("Lead heroes down into a deep dungeon, bring the loot home, and grow your town.", UI.FONT_BODY, UI.TEXT))
 	o.content.add_child(UI.wrap("Want a few short tips as you go?", UI.FONT_BODY, UI.DIM))
 	var yes := UI.primary("Yes, show me the way", func():
 		set_on(m.profile, true)
@@ -152,7 +152,7 @@ static func show_welcome(m, on_done := Callable()) -> Overlay:
 			on_done.call())
 	for b in [yes, no]:
 		b.custom_minimum_size = Vector2(0, UI.TAP + 8)
-		b.add_theme_font_size_override("font_size", 17)
+		b.add_theme_font_size_override("font_size", UI.FONT_BODY)
 		o.content.add_child(b)
 	return o
 
@@ -170,7 +170,7 @@ static func coach(m, text: String) -> PanelContainer:
 	p.add_to_group("toast")  # a popup opened later clears it (Overlay.open clears toasts)
 	var v := UI.vbox(10)
 	p.add_child(v)
-	var r := UI.rich(17)
+	var r := UI.rich(UI.FONT_BODY)
 	r.text = text
 	r.custom_minimum_size = Vector2(minf(440.0, vp.x - 32.0) - 28.0, 0)
 	v.add_child(r)
@@ -188,7 +188,8 @@ static func coach(m, text: String) -> PanelContainer:
 	row.add_child(ok)
 	m.add_child(p)
 	p.reset_size()
-	p.position = Vector2((vp.x - p.size.x) / 2.0, vp.y - p.size.y - (110.0 if vp.y > vp.x else 24.0))
+	var bottom: float = m.nav_top() if m.has_method("nav_top") else vp.y - UI.safe_bottom
+	p.position = Vector2((vp.x - p.size.x) / 2.0, bottom - p.size.y - 12.0)
 	var tw := p.create_tween()
 	tw.tween_interval(5.0 + text.length() / 25.0)
 	tw.tween_property(p, "modulate:a", 0.0, 0.6)

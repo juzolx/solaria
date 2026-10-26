@@ -509,9 +509,9 @@ static func _tips(g: GameState, r: Dictionary, top: String) -> Array:
 	if g.potions == 0:
 		tips.append("You were out of potions. The Shop sells them, and Auto-potion drinks them for you.")
 	if g.stat_points > 0:
-		tips.append("You have %d stat points waiting in Character > Hero." % g.stat_points)
+		tips.append("You have %d stat points waiting in the Hero page." % g.stat_points)
 	if g.upgrade_count() > 0:
-		tips.append("Your bag has upgrades. Press Equip Best in Items > Gear.")
+		tips.append("Your bag has upgrades. Press Equip Best in Items › Gear.")
 	if tips.is_empty():
 		tips.append("Close one. A few more levels or a gear upgrade should do it.")
 	return tips.slice(0, 3)

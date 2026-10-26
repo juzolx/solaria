@@ -208,7 +208,7 @@ static func build(state: GameState, codex: Codex, profile: Profile) -> SubViewpo
 		who.add_child(_chip(String(f["rank"]), Color(String(f["rank_color"]))))
 	who.add_child(_label("%s  -  Level %d" % [f["race"], int(f["level"])], 11, UI.TEXT))
 	if bool(f["hardcore"]):
-		who.add_child(_chip("HARDCORE", Color("#f87171")))
+		who.add_child(_chip("Hardcore", Color("#f87171")))
 	# The numbers
 	var grid := GridContainer.new()
 	grid.columns = 2

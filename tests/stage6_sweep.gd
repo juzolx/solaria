@@ -77,7 +77,7 @@ func _initialize() -> void:
 		"lost": "Your bag (12 items), your worn gear (7 items) and 1,234 gold (your gear and bag lie here, guarded by your killer)",
 		"taken": {"hits": 500, "burning": 200, "poison": 100},
 		"tips": ["Your Defense is low for this floor: upgrade your armour at the Blacksmith.", "Burning hurt a lot: a Fire resist elixir helps."]}
-	var card := DeathScreen.regular(r, func(): pass, func(): pass)
+	var card := DeathScreen.regular(r, func(): pass, func(_on: bool): pass)
 	holder.add_child(card)
 	card.custom_minimum_size.x = 464
 	await process_frame

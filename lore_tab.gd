@@ -1,6 +1,6 @@
 class_name LoreTab
 extends ScrollContainer
-## Codex > Lore: the pages of Solaria's story you've found (lore.gd), in order.
+## Codex › Lore: the pages of Solaria's story you've found (lore.gd), in order.
 
 var main
 var codex: Codex

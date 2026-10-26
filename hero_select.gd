@@ -46,7 +46,7 @@ func show_for(main_node, from_title = null) -> void:
 ## One line about a hero for menus: name, level, class, mode and depth.
 static func describe(meta: Dictionary) -> String:
 	var hc: bool = meta.get("hardcore", false)
-	var mode := "[color=#f87171]HARDCORE[/color]" if hc else "[color=#4ade80]Regular[/color]"
+	var mode := ("[color=%s]Hardcore[/color]" % UI.hex(UI.RED)) if hc else ("[color=%s]Regular[/color]" % UI.hex(UI.GREEN))
 	var nm: String = str(meta.get("name", ""))
 	if nm == "":
 		nm = "Hero"
@@ -62,12 +62,9 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 	var h := UI.hbox(10)
 	card.add_child(h)
 	if meta.is_empty():
-		var v0 := UI.vbox(6)
-		v0.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		h.add_child(v0)
-		v0.add_child(UI.label("SLOT %d" % n, UI.FONT_BODY, UI.DIM))
-		v0.add_child(UI.label("Empty slot" if open_slot else "Locked", UI.FONT_BODY, UI.TEXT if open_slot else UI.DIM))
-		v0.add_child(UI.wrap("Recruit a new hero at the Inn in town." if open_slot else m.profile.slot_lock_note(n), UI.FONT_BODY, UI.DIM))
+		var one := UI.wrap("Slot %d · %s" % [n, "empty: recruit a hero at the Inn" if open_slot else "locked: " + m.profile.slot_lock_note(n)], UI.FONT_BODY, UI.DIM)
+		one.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(one)
 		return card
 	var pic := TextureRect.new()
 	pic.texture = Sprites.portrait(meta.get("appearance", {}), HeroArt.meta_looks(meta))
@@ -82,9 +79,9 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 	h.add_child(v)
 	var top := UI.hbox(6)
 	v.add_child(top)
-	top.add_child(UI.label("SLOT %d" % n, UI.FONT_BODY, UI.DIM))
+	top.add_child(UI.label("Slot %d" % n, UI.FONT_CAPTION, UI.DIM))
 	if m.started and m.state != null and n in m.state.party_slots:
-		top.add_child(UI.chip("IN TEAM", UI.GREEN, UI.FONT_BODY))
+		top.add_child(UI.chip("In team", UI.GREEN, UI.FONT_CAPTION))
 	var info := UI.rich(UI.FONT_BODY)
 	info.text = describe(meta)
 	v.add_child(info)
@@ -105,7 +102,8 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 			if title_screen and is_instance_valid(title_screen):
 				title_screen.refresh_menu()
 			HeroSelect.new().show_for(m, title_screen)))
-	del.add_theme_color_override("font_color", UI.RED)
+	del.add_theme_color_override("font_color", UI.DIM)
+	del.add_theme_font_size_override("font_size", UI.FONT_CAPTION)
 	del.custom_minimum_size = Vector2(0, UI.TAP)
 	row.add_child(del)
 	return card

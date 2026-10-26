@@ -1,6 +1,6 @@
 class_name GuideTab
 extends HBoxContainer
-## Codex > Guide: every guide page you've unlocked, to read any time.
+## Codex › Guide: every guide page you've unlocked, to read any time.
 
 var main
 var codex: Codex

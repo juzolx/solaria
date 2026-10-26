@@ -141,6 +141,7 @@ var bank := 0             # gold left safe at home while you're in the dungeon
 var return_scrolls := 0    # carried Return Scrolls: escape home any time, even mid-fight
 var pets: Array = []       # owned pets (Menagerie): caught, hatched, or from a Calamity
 var pets_out: Array = []   # ids of the pets coming on runs (3 for a Beast Tamer, else 1)
+var pets_rev := 0          # bumped by Menagerie.changed whenever pets, pets_out or a hurt changes (caches key on it)
 var eggs: Array = []       # unhatched eggs (safe at home; they hatch as you clear floors)
 var go_home_after := false  # tapped Town mid-floor: head home as soon as this floor is cleared
 var carry_pick := 0       # how much gold you last chose to carry down: 0 none, 1 a quarter, 2 half, 3 all
@@ -662,7 +663,7 @@ func gain_stone(id: String, from_text := "") -> void:
 		skill_book[id] = 1
 		say("[color=#c4b5fd]Ability stone%s:[/color] you learned %s!" % [from_text, name_tag])
 		events.append({"type": "stone", "name": s["name"], "rarity": int(s["rarity"]), "new": true})
-		tip("stones", "An ability stone! New skills go in your Skill Book (Character > Skills). Equip up to 3 active and 5 passive skills.")
+		tip("stones", "An ability stone! New skills go in your Skill Book (Hero › Skills). Equip up to 3 active and 5 passive skills.")
 		_page("skills")
 		if equip_skill(id) and SkillData.is_active(id):
 			say("%s is equipped." % s["name"])
@@ -784,7 +785,7 @@ func _check_spec() -> void:
 		class_told = t
 		events.append({"type": "class_pick", "tier": t})
 		say("[color=#e8b14a]Level %d: choose your next class in the Class tab![/color]" % int(ClassTree.PICK_LEVELS[t]))
-		tip("class_pick_%d" % t, "Your class can evolve! Open Character > Class and choose where your Evolution Tree goes.")
+		tip("class_pick_%d" % t, "Your class can evolve! Open Hero › Class and choose where your Evolution Tree goes.")
 
 ## What a stat would be if this item were worn instead of the current one.
 func stat_if_equipped(item: Dictionary) -> int:
@@ -1225,11 +1226,11 @@ func gain_xp(amount: int) -> void:
 		if auto_stats:
 			auto_spend()
 		else:
-			tip("level", "Level up! You got %d stat points. Spend them in Character > Hero, or turn on Auto to follow your class's build." % GameData.STAT_POINTS_PER_LEVEL)
+			tip("level", "Level up! You got %d stat points. Spend them in the Hero page, or turn on Auto to follow your class's build." % GameData.STAT_POINTS_PER_LEVEL)
 		if level in SkillData.ACTIVE_SLOTS_AT or level in SkillData.PASSIVE_SLOTS_AT:
 			var kind := "active" if level in SkillData.ACTIVE_SLOTS_AT else "passive"
 			say("[color=#c4b5fd]A new %s skill slot is open![/color]" % kind)
-			tip("slot_%d" % level, "Level %d: a new %s skill slot! Equip another skill in Character > Skills." % [level, kind])
+			tip("slot_%d" % level, "Level %d: a new %s skill slot! Equip another skill in Hero › Skills." % [level, kind])
 			_fill_empty_slots()
 		if level == 2:
 			_page("stats")
@@ -3545,10 +3546,14 @@ func load_game() -> bool:
 	return_scrolls = int(data.get("return_scrolls", 0))
 	pets = data.get("pets", [])
 	pets_out = data.get("pets_out", [])
-	Menagerie.convert_levels(self)   # the Oct 25 level curve (never lowers a level)
+	Menagerie.changed(self)
+	var pets_migrated := Menagerie.convert_levels(self)   # the Oct 25 level curve (never lowers a level)
+	if pets_migrated:
+		say("[color=#d9a066]Pet levels were rebalanced: every pet keeps its level, and each level now adds 1.25% of its rank's hit.[/color]")
 	var home := Menagerie.one_of_each(self)   # Juzo (Oct 25): one of each kind; older saves could have two
 	if not home.is_empty():
-		say("[color=#d9a066]New rule: one of each kind of pet per team. %s went home to rest (nothing is lost).[/color]" % ", ".join(home))
+		pets_migrated = true
+		say("[color=#d9a066]New rule: one of each kind of pet per team. %s went home (nothing is lost).[/color]" % ", ".join(home))
 	eggs = data.get("eggs", [])
 	checkpoint = int(data.get("checkpoint", 0))
 	curses = data.get("curses", {})
@@ -3644,6 +3649,8 @@ func load_game() -> bool:
 		hero_hp = get_max_hp()
 	spawn_enemy()
 	Portals.resume(self)  # back in a rift's fight, or a portal choice you hadn't made
+	if pets_migrated and autosave:
+		save_game()   # Fable pets R5: the pet notes show once, not on every launch until something saves
 	return true
 
 ## v0.11: 4 stats at 3 points a level became 8 stats at 5 points a level.
@@ -3683,7 +3690,7 @@ func _convert_stats(data: Dictionary) -> void:
 	stat_points = maxi(0, total - used)
 	var back := int(round(old_unique * sc))
 	if f < 1.0 or back > 0 or stat_points > 0:
-		say("[color=#e8b14a]New stats! Agility was split into Agility and Dexterity, and Wisdom, Luck and Charisma are new.[/color] You have %d points to spend in Character > Hero." % stat_points)
+		say("[color=#e8b14a]New stats! Agility was split into Agility and Dexterity, and Wisdom, Luck and Charisma are new.[/color] You have %d points to spend in the Hero page." % stat_points)
 	else:
 		say("[color=#e8b14a]New stats! Agility was split into Agility and Dexterity, and Wisdom, Luck and Charisma are new.[/color]")
 
@@ -4211,7 +4218,7 @@ func use_scroll(id: String) -> String:
 			return _open_box()
 		"tome":
 			respec_tomes += 1
-			return "[color=#c4b5fd]Tome of Forgetting![/color] Your next respec is free (Character > Hero)."
+			return "[color=#c4b5fd]Tome of Forgetting![/color] Your next respec is free (the Hero page)."
 	return ""
 
 func _open_box() -> String:

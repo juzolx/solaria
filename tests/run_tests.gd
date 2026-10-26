@@ -966,6 +966,7 @@ func _initialize() -> void:
 	bt.spawn_enemy()
 	for pp in bt.pets:
 		pp["hurt"] = 0   # a failed catch can knock the tamer out (and send pets home hurt)
+		Menagerie.changed(bt)   # set by hand: caches start over
 	var pet_hp0 := bt.enemy_hp
 	Menagerie.turn(bt)
 	check(bt.enemy_hp < pet_hp0, "pets fight")

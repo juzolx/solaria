@@ -405,7 +405,7 @@ static func check_pet(g: GameState) -> void:
 		if was < 0:
 			g.say("[color=%s]A %s starts following you![/color] It fights beside you and evolves when you do. %s" % [pet_info(g)["color"], pet_species(g), pet_info(g)["text"]])
 			g.events.append({"type": "mini_event", "kind": "pet", "title": "A COMPANION!", "sub": "%s joins you" % pet_species(g)})
-			g.tip("pet", "Your companion fights every turn and evolves at levels 15, 35 and 75 with you. Charisma makes it stronger. See it in Character > Party.")
+			g.tip("pet", "Your companion fights every turn and evolves at levels 15, 35 and 75 with you. Charisma makes it stronger. See it in Hero › Party.")
 		else:
 			g.say("[color=%s]Your companion evolves into a %s![/color]" % [pet_info(g)["color"], pet_species(g)])
 			g.events.append({"type": "mini_event", "kind": "pet", "title": "%s EVOLVES!" % pet_species(g).to_upper(), "sub": String(pet_info(g)["text"])})
@@ -486,13 +486,13 @@ static func next_goal(g: GameState) -> Dictionary:
 	if g.hero_class == "":
 		return {"text": "Choose your class", "pct": -1.0, "color": UI.GOLD}
 	if ClassTree.pick_tier(g) >= 0:
-		return {"text": "Your class can evolve! Choose in Character > Class", "pct": 1.0, "color": UI.GOLD}
+		return {"text": "Your class can evolve! Choose in Hero › Class", "pct": 1.0, "color": UI.GOLD}
 	if not g.god_offers.is_empty():
-		return {"text": "A God class answers you... see Character > Class", "pct": 1.0, "color": Color(ClassTree.RANK_COLORS["God"])}
+		return {"text": "A God class answers you... see Hero › Class", "pct": 1.0, "color": Color(ClassTree.RANK_COLORS["God"])}
 	if g.stat_points >= GameData.STAT_POINTS_PER_LEVEL and not g.auto_stats:
-		return {"text": "%d stat points to spend (Character > Hero)" % g.stat_points, "pct": -1.0, "color": UI.GOLD}
+		return {"text": "%d stat points to spend (the Hero page)" % g.stat_points, "pct": -1.0, "color": UI.GOLD}
 	if g.upgrade_count() > 0:
-		return {"text": "Upgrades in your bag: Items > Gear > Equip Best", "pct": -1.0, "color": UI.GREEN}
+		return {"text": "Upgrades in your bag: Items › Gear › Equip Best", "pct": -1.0, "color": UI.GREEN}
 	# The first dive teaches the whole game: go down, then get home to keep what you found
 	var fd := first_dive_goal(g)
 	if not fd.is_empty():

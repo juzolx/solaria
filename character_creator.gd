@@ -19,7 +19,6 @@ var name_edit: LineEdit  # only when making a new hero
 var done_button: Button
 const NAMES := ["Aldric", "Brenna", "Corvin", "Dagny", "Eira", "Fenn", "Garrick", "Hilde", "Isolde", "Jory", "Kael", "Liora",
 	"Maren", "Nyx", "Orrin", "Perrin", "Quill", "Rowan", "Saga", "Talia", "Ulric", "Vesna", "Wren", "Yara", "Zeph"]
-const TAP_PT := 56  # 44 pt even on a 375 pt phone (the phone layout is 504 design px wide)
 
 ## done gets the look; when ask_name is true it also has "name" in it.
 func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create your hero", race_locked := false, looks := {}, ask_name := false) -> void:
@@ -66,13 +65,13 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 		name_edit.max_length = 16
 		name_edit.text = NAMES.pick_random()
 		name_edit.placeholder_text = "Your hero's name"
-		name_edit.custom_minimum_size = Vector2(0, TAP_PT)
+		name_edit.custom_minimum_size = Vector2(0, UI.TAP)
 		sv.add_child(name_edit)
 		var nb := UI.button("New name", func(): name_edit.text = NAMES.pick_random())
-		nb.custom_minimum_size = Vector2(0, TAP_PT)
+		nb.custom_minimum_size = Vector2(0, UI.TAP)
 		sv.add_child(nb)
 	var rnd := UI.button("Random look", _randomize)
-	rnd.custom_minimum_size = Vector2(0, TAP_PT)
+	rnd.custom_minimum_size = Vector2(0, UI.TAP)
 	sv.add_child(rnd)
 	var race_card := PanelContainer.new()
 	race_card.add_theme_stylebox_override("panel", UiSkin.frame(UI.INSET, UiSkin.IRON, 10))
@@ -97,14 +96,14 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 
 	# Done sits under the scroll, always on screen
 	done_button = UI.primary("Done", _finish)
-	done_button.custom_minimum_size = Vector2(0, TAP_PT)
+	done_button.custom_minimum_size = Vector2(0, UI.TAP)
 	if lock_race:
 		# "Change your look" (an existing hero): a way out that keeps the old look
 		var keep := start.duplicate()
 		var cancel := UI.button("Cancel", func():   # hands back the look you had (the caller restarts the fight)
 			close()
 			on_done.call(keep))
-		cancel.custom_minimum_size = Vector2(120, TAP_PT)
+		cancel.custom_minimum_size = Vector2(120, UI.TAP)
 		foot.add_child(cancel)
 		done_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	else:
@@ -129,7 +128,7 @@ func _text_row(parent: Control, label_text: String, field: String, values: Array
 	for i in values.size():
 		var v = values[i]
 		var b := UI.button(str(names[i]) if i < names.size() else str(v), _pick.bind(field, v))
-		b.custom_minimum_size = Vector2(0, TAP_PT)
+		b.custom_minimum_size = Vector2(0, UI.TAP)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.clip_text = true
 		grid.add_child(b)
@@ -147,7 +146,7 @@ func _swatch_row(parent: Control, label_text: String, field: String, colors: Arr
 	var list := []
 	for i in colors.size():
 		var b := Button.new()
-		b.custom_minimum_size = Vector2(TAP_PT, TAP_PT)
+		b.custom_minimum_size = Vector2(UI.TAP, UI.TAP)
 		b.focus_mode = Control.FOCUS_NONE
 		b.pressed.connect(_pick.bind(field, i))
 		flow.add_child(b)
@@ -163,12 +162,12 @@ func _stepper_row(parent: Control, label_text: String, field: String) -> void:
 	row_parts[field] = [lbl, row]
 	parent.add_child(row)
 	var prev := UI.button("◀", _step.bind(field, -1))
-	prev.custom_minimum_size = Vector2(TAP_PT + 12, TAP_PT)
+	prev.custom_minimum_size = Vector2(UI.TAP + 12, UI.TAP)
 	row.add_child(prev)
 	var mid := PanelContainer.new()
 	mid.add_theme_stylebox_override("panel", UiSkin.bevel(UiSkin.SLATE, UI.GOLD_DULL, 4))
 	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	mid.custom_minimum_size = Vector2(0, TAP_PT)
+	mid.custom_minimum_size = Vector2(0, UI.TAP)
 	row.add_child(mid)
 	var mv := UI.vbox(0)
 	mv.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -181,7 +180,7 @@ func _stepper_row(parent: Control, label_text: String, field: String) -> void:
 	cnt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mv.add_child(cnt)
 	var nxt := UI.button("▶", _step.bind(field, 1))
-	nxt.custom_minimum_size = Vector2(TAP_PT + 12, TAP_PT)
+	nxt.custom_minimum_size = Vector2(UI.TAP + 12, UI.TAP)
 	row.add_child(nxt)
 	steppers[field] = {"name": nm, "count": cnt}
 
@@ -301,7 +300,7 @@ static func race_preview(race: String) -> String:
 		t += "\n[color=%s]Home:[/color] %s (friendly)" % [UI.hex(UI.DIM), ", ".join(friends)]
 	if not foes.is_empty():
 		t += "\n[color=%s]Rivals:[/color] %s (they start hostile)" % [UI.hex(UI.DIM), ", ".join(foes)]
-	return "[font_size=15]%s[/font_size]" % t
+	return "[font_size=%d]%s[/font_size]" % [UI.FONT_CAPTION, t]
 
 func _finish() -> void:
 	if name_edit:

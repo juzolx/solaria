@@ -52,6 +52,8 @@ static func make(floor_num := 30, hero_class := "Warrior") -> void:
 	g.stat_points = 5 * 29
 	g.auto_spend()
 	g.hero_hp = g.get_max_hp()
+	for i in 3:   # Fable r3 #6: a few things in the bag, so Bag, Sell and the item popup are on the pictures
+		g.bag.append(GameData.make_item(["Weapon", "Chest", "Ring"][i], i + 1, floor_num, g._new_id()))
 	g.save_game()
 	# Mark today's daily reward as taken so its popup doesn't cover the screens
 	var cx := Codex.load_codex()

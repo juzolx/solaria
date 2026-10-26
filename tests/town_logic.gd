@@ -285,6 +285,38 @@ func _initialize() -> void:
 							if (r8 > 220 and g8 > 150 and b8 < 110 and r8 - b8 > 110) or (r8 > 200 and g8 < 120 and b8 < 50 and r8 > g8 + 100):
 								burning.append([church, cabin, l[0], l[1]])
 		check(burning.is_empty(), "the day pictures have every flame out (%s)" % [burning.slice(0, 6)])
+		# (round 5) the lamp glow is shared out where lamps cluster: no milky haze over the Inn porch
+		# or the stair foot in the darkest look
+		var glow_ok := true
+		for p in [Vector2(716, 470), Vector2(900, 490)]:
+			if TownView.glow_sum(d["lights"], p, 0.75) > 0.9:
+				glow_ok = false
+		check(glow_ok, "the summed lamp glow stays under 0.9 at the porch and the stair foot (%.2f, %.2f)" % [TownView.glow_sum(d["lights"], Vector2(716, 470), 0.75), TownView.glow_sum(d["lights"], Vector2(900, 490), 0.75)])
+		# the second flame frame really differs (a stale export would ship two identical frames)
+		var f1 := (load(String(d["art_lit"]) % ["holy", "built"]) as Texture2D).get_image()
+		var f2 := (load((String(d["art_lit"]) % ["holy", "built"]).replace("_lit.png", "_lit2.png")) as Texture2D).get_image()
+		for im in [f1, f2]:
+			if im.is_compressed():
+				im.decompress()
+		var differ := 0
+		if f1.get_size() == f2.get_size():
+			for y in range(0, f1.get_height()):
+				for x in range(0, f1.get_width()):
+					if f1.get_pixel(x, y) != f2.get_pixel(x, y):
+						differ += 1
+		check(differ >= 40, "the two flame frames differ (%d pixels)" % differ)
+		# the move guard: the forge's smoke and every forge-coloured light lie on the Blacksmith
+		var on_smith := forge.has_point(Vector2(float(d["smoke"][0]), float(d["smoke"][1])))
+		var forges := 0
+		for l in d["lights"]:
+			if int(l[2][0]) == 255 and int(l[2][1]) == 120 and int(l[2][2]) == 50:
+				forges += 1
+				on_smith = on_smith and forge.has_point(Vector2(float(l[0]), float(l[1])))
+		check(on_smith and forges >= 1, "the forge smoke and forge light stand on the Blacksmith")
+		# the Hardcore stop faces the ruin: set_mode turns people to the church rect's middle
+		var cr: Array = d["spots"].filter(func(sp): return sp["id"] == "church")[0]["rect"]
+		var face := float(cr[0]) + float(cr[2]) / 2.0
+		check(face > float(cr[0]) and face < float(cr[0]) + float(cr[2]), "the Hardcore stop faces inside the church rect")
 		# lot plates too: an unbuilt Church or Trophy Cabin's plate ("Church · lot", on its ground)
 		# overlaps no other plate at 2x and 3x
 		for fs in [20, 22]:
@@ -361,6 +393,27 @@ func _initialize() -> void:
 	check(TownView.cast(6, races.size(), 20001.2, races) == TownView.cast(6, races.size(), 20001.9, races), "the same cast all day")
 	# the lamps' glow is plain at the rainy look (where every window is lit) and as strong as before at night
 	check(TownView.glow_alpha(0.3) >= 0.3 and absf(TownView.glow_alpha(0.75) - 0.5) < 0.01, "lamp glow matches the lit windows at dark 0.3 and 0.75")
+	# (round 5) the Hardcore stop at the Church door only when the ruin stands
+	var stops0: Array = [Vector2i(1, 1), Vector2i(5, 14)]
+	var door := Vector2i(5, 14)
+	check(TownView.hardcore_stops(stops0, door, true, true).has(door), "Hardcore with the ruin built: people stop at the Church door")
+	check(not TownView.hardcore_stops(stops0, door, true, false).has(door) and not TownView.hardcore_stops(stops0, door, false, true).has(door), "no stop at an unbuilt Church lot, nor in a regular town")
+	check(TownView.hardcore_stops(stops0, door, false, false).has(Vector2i(1, 1)), "the other stops stay")
+	# your marker: over the door only once you went inside, not while you fade in about town
+	check(not TownView.door_marker({"you": true, "fade": 1.0, "arriving": true}), "no door marker while arriving")
+	check(TownView.door_marker({"you": true, "fade": 1.0}), "a door marker once you went inside")
+	check(not TownView.door_marker({"you": false, "fade": 1.0}), "no door marker for someone else")
+	# no chat with someone fading in or out at a door
+	var f1c := {"x": 100.0, "y": 100.0, "wait": 1.0}
+	check(not TownView.chat_ok(f1c, {"x": 108.0, "y": 104.0, "wait": 2.0, "fade": 0.5}, Vector2(108, 104)), "no chat with a ghost fading at a door")
+	check(not TownView.chat_ok({"x": 100.0, "y": 100.0, "wait": 1.0, "fade": 0.3}, {"x": 108.0, "y": 104.0, "wait": 2.0}, Vector2(108, 104)), "nobody fading starts a chat")
+	# a sound is heard only on screen: just inside and just outside the right edge at 2.56
+	var vo := Vector2(-100, -50)
+	check(TownView.view_has(vo, 2.56, Vector2(430, 932), Vector2((529.0 - 0.5) / 2.56, 100)), "a point just inside the view is in view")
+	check(not TownView.view_has(vo, 2.56, Vector2(430, 932), Vector2((530.0 + 0.5) / 2.56, 100)), "a point just past the right edge is not")
+	# the glow texture's core is capped and the light count shares a cluster's glow
+	check(TownView.band_alpha(0.0) <= 0.7 and TownView.band_alpha(1.0) == 0.0, "the glow core is capped at 0.7")
+	check(TownView.light_counts([[0, 0], [10, 0], [200, 0]]) == [2, 2, 1], "lamps within 56 px share their glow")
 	# the town map lands on whole device pixels wherever the view sits in the UI
 	var snapped := true
 	for cs in [1.488, 2.56, 3.0]:

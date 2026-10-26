@@ -1,6 +1,6 @@
 class_name AchievementsTab
 extends VBoxContainer
-## Town > Guild Hall: your deeds (achievements). Each one's reward (gold and a
+## Town › Guild Hall: your deeds (achievements). Each one's reward (gold and a
 ## piece of gear by how hard it was) is sent to the Mailbox as soon as you earn it. Some give a title you can
 ## show next to your hero's name.
 
@@ -86,7 +86,7 @@ func refresh() -> void:
 			for a in Codex.ACHIEVEMENTS:
 				if a["id"] == id:
 					box.add_child(_claim_row(a))
-		box.add_child(UI.label("ALL DEEDS", UI.FONT_BODY, UI.DIM))
+		box.add_child(UI.label("All deeds", UI.FONT_BODY, UI.DIM))
 	# Done ones last, so what's left to do is on top
 	var todo: Array = []
 	var done: Array = []
@@ -100,7 +100,7 @@ func _row(a: Dictionary) -> PanelContainer:
 	var card := UI.panel(Color("#16201a") if have else UI.INSET, UI.GREEN.darkened(0.4) if have else UI.BORDER, 6, 8, 1)
 	var h := UI.hbox(10)
 	card.add_child(h)
-	var mark := UI.label("✓" if have else "•", 18, UI.GREEN if have else UI.DIM)
+	var mark := UI.label("✓" if have else "•", UI.FONT_BODY, UI.GREEN if have else UI.DIM)
 	mark.custom_minimum_size = Vector2(18, 0)
 	h.add_child(mark)
 	var v := UI.vbox(2)
@@ -217,7 +217,7 @@ func _shop_row(kind: String, e: Dictionary) -> PanelContainer:
 		h.add_child(UI.label("Owned", UI.FONT_BODY, UI.GREEN))
 	else:
 		var cost := Cosmetics.shop_price(main.state, e)
-		var buy := UI.primary("%d gold" % cost, func():
+		var buy := UI.primary(UI.cost("Buy", cost), func():
 			if Cosmetics.buy(main.state, codex, e):
 				main.sfx.play("buy")
 				main.toast("Bought: %s. Pick it at the top of the Guild Hall." % e["name"])
@@ -237,7 +237,7 @@ func _fill_looks(pick: OptionButton, list: Array, current: String) -> void:
 		if not got and String(e["need"]) == "store":
 			continue  # supporter looks stay hidden until owned
 		if not got and String(e["need"]).begins_with("coll:"):
-			continue  # 2.1 G4: Codex rewards show once earned (Codex > Rewards lists what's coming)
+			continue  # 2.1 G4: Codex rewards show once earned (Codex › Rewards lists what's coming)
 		pick.add_item(String(e["name"]) if got else ("%s (looks shop)" % e["name"] if String(e["need"]) == "shop" else "%s (deed: %s)" % [e["name"], Cosmetics.need_name(e)]))
 		var i := pick.item_count - 1
 		pick.set_item_metadata(pick.item_count - 1, String(e["id"]))

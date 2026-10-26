@@ -70,6 +70,7 @@ var occluders: Array = []  # iso: {"tex", "rect", "y", "tag", "look"} sorted by 
 var occ_state := ""     # iso: which Church / Trophy Cabin occluders are active ("church:holy|cabin" style key)
 var occ_live: Array = []  # iso: occluders for the current state, sorted by y
 var up_tex := {}        # iso: level-prop name -> Texture2D
+var up_lit := {}        # iso: level-prop name -> its lit texture (the L2 lantern's panes), if it has one
 var walk_base := {}     # iso: the walk grid with no level props standing on it
 var stop_face := {}     # iso: stop cell -> x of the stall / well / board people turn to face there
 var live_stops: Array = []  # iso: walk_stops not blocked by a level prop
@@ -80,6 +81,15 @@ var build_queue: Array = []  # walkers still to build, one per frame once the to
 var pet_half := {}      # pet texture RID -> the same art halved for the iso town (an outline kept, no 0.5 sampling)
 var shadow_step: Texture2D  # the walker shadow squashed on a step frame
 var light_tex: Texture2D    # a stepped radial glow, one draw per lamp
+var light_n: Array = []     # per town.json light: how many lights (itself too) lie within 56 px (the glow is shared out)
+var lit_frame := 0          # which of the two flame frames shows, flipped at jittered times
+var next_flip := 0.0
+var cast_day := -1          # the day today's townsfolk were cast for
+var spots_live: Array = []  # _spots(), rebuilt when hidden_spots changes
+var spots_key := -1
+var level_seen := {}        # building id -> the level its props were last shown at
+var level_flash := {}       # building id -> [note, until t]: "Now level N" after an upgrade
+var flash_parts: Array = [] # sparkles over freshly upgraded level props
 var lit_ov: Array = []     # iso: [texture, map position] of the dusk overlay (lit windows and flames)
 var marker_tex := {}    # "you" / "hero" -> a pixel chevron over your heroes
 var bubble_tex: Texture2D   # a "..." chat bubble
@@ -97,7 +107,11 @@ func _spot(id: String) -> Dictionary:
 
 ## The buildings you can see and tap.
 func _spots() -> Array:
-	return data.get("spots", []).filter(func(sp): return not hidden_spots.has(String(sp["id"])))
+	var k := hidden_spots.hash()
+	if k != spots_key:     # (round 5) not a new filtered array on every mouse move
+		spots_key = k
+		spots_live = data.get("spots", []).filter(func(sp): return not hidden_spots.has(String(sp["id"])))
+	return spots_live
 
 ## The Clinic's pen in map pixels (the old garden plots on the top-down town; town.json "pen" on the iso town).
 var PEN := Rect2(462, 916, 160, 160)
@@ -198,10 +212,14 @@ func _ready() -> void:
 			for e in lv[id]:
 				if not up_tex.has(String(e[0])):
 					up_tex[String(e[0])] = load("res://art/town/iso/up/%s.png" % String(e[0]))
+					var lp := "res://art/town/iso/up/%s_lit.png" % String(e[0])
+					if ResourceLoader.exists(lp):
+						up_lit[String(e[0])] = load(lp)
 	shadow_tex = _shadow(12)
 	shadow_pet = _shadow(16)   # under 32 px pet art
 	shadow_step = _shadow(10)
 	light_tex = _light_texture()
+	light_n = light_counts(data.get("lights", []))
 	marker_tex = {"you": _chevron(Color("#fbbf24"), Color("#a86a12")), "hero": _chevron(Color("#d6c9a0"), Color("#8a7c58"))}
 	bubble_tex = _bubble()
 	set_notify_transform(true)
@@ -245,7 +263,7 @@ func _ready() -> void:
 	resized.connect(_layout)
 	set_look(Town.LOOKS[0])
 
-## The river's moving dashes: one per four water cells (the bridge's cells left out), each on its
+## The river's moving dashes: one per three water cells (the bridge's cells left out), each on its
 ## own phase, drifting down the river.
 func _make_river() -> void:
 	var water := []
@@ -261,16 +279,16 @@ func _make_river() -> void:
 						water.append(Vector2i(i, j))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
-	for k in range(0, water.size(), 4):
-		var c: Vector2i = water[(k + rng.randi_range(0, 3)) % water.size()]
+	for k in range(0, water.size(), 3):
+		var c: Vector2i = water[(k + rng.randi_range(0, 2)) % water.size()]
 		river.append([_cell_px(c), rng.randf(), rng.randf_range(-3.0, 3.0)])
 
-## The dashes: 2x1, pale, 6 px/s down the river (south-east, along the cell), under the walkers.
+## The dashes: 3x1, pale, 6 px/s down the river (south-east, along the cell), under the walkers.
 func _draw_river() -> void:
 	for d in river:
 		var u := fposmod(t * 6.0 / 18.0 + float(d[1]), 1.0)   # one cell (18 px along) every 3 s
 		var p: Vector2 = d[0] + Vector2(-8.0 + u * 16.0, -8.0 + u * 8.0 + float(d[2]))
-		people.draw_rect(Rect2(p.round(), Vector2(2, 1)), Color(0.45, 0.6, 0.65, 0.35 * minf(1.0, 4.0 * minf(u, 1.0 - u))))
+		people.draw_rect(Rect2(p.round(), Vector2(3, 1)), Color(0.55, 0.7, 0.75, 0.55 * minf(1.0, 4.0 * minf(u, 1.0 - u))))
 
 ## A `w`x3 pixel ellipse under a walker.
 func _shadow(w: int) -> Texture2D:
@@ -288,9 +306,38 @@ func _light_texture() -> Texture2D:
 		for x in 64:
 			var r := Vector2(x - 31.5, y - 31.5).length() / 32.0
 			if r < 1.0:
-				var band := floori(r * 5.0)    # 0 (centre) .. 4
-				im.set_pixel(x, y, Color(1, 1, 1, 1.0 if r < 0.09 else 0.55 * (5 - band) / 5.0))
+				im.set_pixel(x, y, Color(1, 1, 1, band_alpha(r)))
 	return ImageTexture.create_from_image(im)
+
+## The glow texture's alpha at `r` (0 centre .. 1 rim): a 0.7 core (not 1: four overlapping cores
+## whitened the porch), then five steps.
+static func band_alpha(r: float) -> float:
+	if r >= 1.0:
+		return 0.0
+	return 0.7 if r < 0.09 else 0.55 * (5 - floori(r * 5.0)) / 5.0
+
+## Per light: how many lights (itself included) lie within 56 px. A light shares its glow by the
+## square root of that, so a cluster of lamps lights a porch instead of washing it white.
+static func light_counts(lights: Array) -> Array:
+	var out: Array = []
+	for a in lights:
+		var n := 0
+		for b in lights:
+			if Vector2(float(a[0]), float(a[1])).distance_to(Vector2(float(b[0]), float(b[1]))) <= 56.0:
+				n += 1
+		out.append(maxi(n, 1))
+	return out
+
+## The summed glow alpha at map point `p` for darkness `dark` (no flicker): what the additive layer
+## puts over the picture there. The test keeps it under 0.9 where the lamps cluster.
+static func glow_sum(lights: Array, p: Vector2, dark: float) -> float:
+	var n := light_counts(lights)
+	var sum := 0.0
+	for i in lights.size():
+		var l: Array = lights[i]
+		var rad := float(l[3]) if l.size() > 3 else 46.0
+		sum += band_alpha(p.distance_to(Vector2(float(l[0]), float(l[1]))) / rad) * glow_alpha(dark) / sqrt(float(n[i]))
+	return sum
 
 ## A 7x5 chevron with a 1 px dark edge (9x7 in all), pointing down at a hero.
 func _chevron(lite: Color, mid: Color) -> Texture2D:
@@ -326,6 +373,7 @@ func refresh_levels() -> void:
 		key += "%s%d%s," % [id, Buildings.level(String(id)), hidden_spots.has(id)]
 	if key == levels_key:
 		return
+	var first := levels_key == ""
 	levels_key = key
 	level_live.clear()
 	level_occ.clear()
@@ -337,14 +385,22 @@ func refresh_levels() -> void:
 		if hidden_spots.has(id):
 			continue
 		var l := Buildings.level(String(id))
+		var up: bool = not first and is_visible_in_tree() and l > int(level_seen.get(id, l))
+		level_seen[id] = l
+		if up:   # you just paid for it: "Now level N" under the plate for 4 s
+			level_flash[id] = ["Now level %d" % l, t + 4.0]
 		for e in lv[id]:
 			if int(e[3]) != l:
 				continue
+			if up:
+				for _k in 10:
+					flash_parts.append({"pos": Vector2(float(e[1]), float(e[2])) + Vector2(randf_range(0, 24), randf_range(0, 30)),
+						"vel": Vector2(randf_range(-4, 4), -randf_range(6, 14)), "age": 0.0, "life": 1.5, "seed": randf() * TAU})
 			var tx: Texture2D = up_tex.get(String(e[0]))
 			if tx == null:
 				continue   # a missing png (town_logic.gd checks they all exist)
 			var pos := Vector2(float(e[1]), float(e[2]))
-			level_live.append([tx, pos])
+			level_live.append([tx, pos, up_lit.get(String(e[0]))])
 			var used := tx.get_image().get_used_rect()
 			level_occ.append({"tex": tx, "rect": Rect2(pos, tx.get_size()), "y": pos.y + used.end.y - 3.0, "tag": "level", "look": ""})
 			if e.size() > 5:
@@ -439,16 +495,22 @@ func set_mode(hc: bool) -> void:
 		var k := walk_door_ids.find("church")
 		if k >= 0:
 			var door: Vector2i = walk_doors[k]
-			walk_stops.erase(door)
+			walk_stops = hardcore_stops(walk_stops, door, hc, Buildings.built("church"))
 			stop_face.erase(door)
-			if hc:
-				walk_stops.append(door)
+			if walk_stops.has(door):
 				var r: Array = _spot("church").get("rect", [0, 0, 0, 0])
 				stop_face[door] = float(r[0]) + float(r[2]) / 2.0
 			live_stops = walk_stops.filter(func(c): return walk.has(c))
 	if iso and map:
 		map.texture = _iso_tex()
 		lit_ov = _lit_overlay()
+
+## The stops with the Church door as one only in Hardcore with the ruin built (nobody stares at a lot).
+static func hardcore_stops(stops: Array, door: Vector2i, hc: bool, built: bool) -> Array:
+	var out := stops.filter(func(c): return c != door)
+	if hc and built:
+		out.append(door)
+	return out
 
 func set_look(l: Dictionary) -> void:
 	if l == look:
@@ -581,7 +643,10 @@ func to_view(p: Vector2) -> Vector2:
 
 ## Is map point `m` on screen (so a sound there is heard)?
 func in_view(m: Vector2) -> bool:
-	return Rect2(Vector2.ZERO, size).has_point(to_view(m))
+	return view_has(origin, scale_f, size, m)
+
+static func view_has(o: Vector2, s: float, view: Vector2, m: Vector2) -> bool:
+	return Rect2(Vector2.ZERO, view).has_point(o + m * s)
 
 func to_map(p: Vector2) -> Vector2:
 	return (p - origin) / scale_f
@@ -690,6 +755,11 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_MOUSE_EXIT and hover != "":
 		hover = ""
 		labels.queue_redraw()
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		touches.clear()   # a finger lost to a system overlay must not leave every drag read as a pinch
+		pinch_from = 0.0
+		dragging = false
+		press = ""
 
 func _process(delta: float) -> void:
 	if not is_visible_in_tree():
@@ -701,7 +771,8 @@ func _process(delta: float) -> void:
 	_step_folk(delta)
 	people.queue_redraw()
 	fx.queue_redraw()
-	var key := [origin, scale_f, size, hover, press, badges.hash(), locked.hash(), notes.hash(), hidden_spots.hash()]
+	var key := [origin, scale_f, size, hover, press, badges.hash(), locked.hash(), notes.hash(), hidden_spots.hash(),
+		level_flash.size(), level_flash.values().filter(func(v): return t < float(v[1])).size()]
 	if key != label_key:
 		label_key = key
 		labels.queue_redraw()
@@ -714,7 +785,8 @@ func _process(delta: float) -> void:
 ## pixel, so they're built one per frame once the town is on screen (no hitch at launch).
 func _make_folk() -> void:
 	var races := TownFolk.PEOPLE.map(func(p): return String(p[0]["race"]))
-	for i in cast(MAX_FOLK, TownFolk.PEOPLE.size(), Time.get_unix_time_from_system() / 86400.0, races):
+	cast_day = int(floor(Time.get_unix_time_from_system() / 86400.0))
+	for i in cast(MAX_FOLK, TownFolk.PEOPLE.size(), float(cast_day), races):
 		build_queue.append({"i": i})
 
 ## Today's townsfolk: `n` of the `count` PEOPLE, picked by the day (the same cast all day, another
@@ -760,6 +832,10 @@ func _build_next() -> void:
 ## Rebuilt only when `key` changes (a new hero, new gear).
 var heroes_key := ""
 func set_heroes(list: Array, key: String) -> void:
+	if cast_day >= 0 and int(floor(Time.get_unix_time_from_system() / 86400.0)) != cast_day:
+		folk = folk.filter(func(f): return f.get("hero", false))   # a new day: a new cast (the app may never relaunch)
+		build_queue = build_queue.filter(func(q): return q.has("hero"))
+		_make_folk()
 	if key == heroes_key:
 		return
 	heroes_key = key
@@ -793,6 +869,7 @@ func _place_on_grid(f: Dictionary) -> void:
 	f["path"] = []
 	f["fade"] = 1.0
 	f["inside"] = randf_range(0.2, 2.5)
+	f["arriving"] = true   # not "went inside": no "you" marker over an empty cell while fading in
 	if stop_face.has(c):
 		f["flip"] = float(stop_face[c]) < p.x
 
@@ -863,10 +940,10 @@ func _arrive(f: Dictionary) -> void:
 ## Two people meeting on the street stop for a chat ("..." over both). Heroes join in; your own
 ## hero only half the time, so you keep moving.
 func _try_chat(f: Dictionary) -> bool:
-	if f.get("you", false) and randf() < 0.5:
+	if f.get("you", false) and randf() < 0.5 or float(f.get("fade", 0.0)) > 0.0:
 		return false
 	for o in folk:
-		if o == f or float(o.get("inside", 0.0)) > 0.0 or float(o.get("chat", 0.0)) > 0.0 or (o.get("you", false) and randf() < 0.5):
+		if o == f or float(o.get("inside", 0.0)) > 0.0 or float(o.get("fade", 0.0)) > 0.0 or float(o.get("chat", 0.0)) > 0.0 or (o.get("you", false) and randf() < 0.5):
 			continue
 		if chat_ok(f, o, _cell_px(o["cell"]) if o.has("cell") else Vector2(INF, INF)):
 			var t := randf_range(2.5, 5.0)
@@ -881,8 +958,10 @@ func _try_chat(f: Dictionary) -> bool:
 	return false
 
 ## The chat rule: the partner stands still, or walks but is right on a cell (`o_cell` is its cell's
-## pixel; nobody stops between cells), and is within 22 px.
+## pixel; nobody stops between cells), and is within 22 px. Nobody fading in or out (a ghost at a door).
 static func chat_ok(f: Dictionary, o: Dictionary, o_cell: Vector2) -> bool:
+	if float(o.get("fade", 0.0)) > 0.0 or float(f.get("fade", 0.0)) > 0.0:
+		return false
 	var op := Vector2(float(o["x"]), float(o["y"]))
 	if float(o["wait"]) <= 0.0 and op.distance_to(o_cell) >= 0.5:
 		return false
@@ -892,6 +971,8 @@ func _step_iso_walker(f: Dictionary, delta: float) -> void:
 	if float(f.get("inside", 0.0)) > 0.0:
 		f["inside"] = float(f["inside"]) - delta
 		f["fade"] = minf(1.0, float(f.get("fade", 0.0)) + delta * 3.0)
+		if float(f["inside"]) <= 0.0:
+			f.erase("arriving")
 		return
 	if float(f.get("fade", 0.0)) > 0.0:
 		f["fade"] = maxf(0.0, float(f["fade"]) - delta * 3.0)
@@ -970,10 +1051,14 @@ func _step_folk(delta: float) -> void:
 func _draw_people() -> void:
 	people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
 	if iso:
-		if _lit() and not lit_ov.is_empty():   # two flame frames, four flickers a second
-			people.draw_texture(lit_ov[2] if lit_ov[2] != null and int(t * 4.0) % 2 == 1 else lit_ov[0], lit_ov[1])
+		if _lit() and not lit_ov.is_empty():   # two flame frames, flipped at jittered times (never a metronome)
+			if t >= next_flip:
+				lit_frame = 1 - lit_frame
+				next_flip = t + randf_range(0.10, 0.34)
+			people.draw_texture(lit_ov[2] if lit_ov[2] != null and lit_frame == 1 else lit_ov[0], lit_ov[1])
 		_draw_river()
 		_draw_levels()
+		_draw_chimney()
 	else:
 		_draw_placeholders()
 	var live := _live_occluders() if iso else []   # once a frame, not once per walker or pet
@@ -989,7 +1074,7 @@ func _draw_people() -> void:
 		folk[b + 1] = f0
 	for f in folk:
 		if iso and float(f.get("fade", 0.0)) >= 1.0:
-			if f.get("you", false):   # you went inside: your marker stays over the door, faded
+			if door_marker(f):   # you went inside: your marker stays over the door, faded
 				var dp := _cell_px(f.get("cell", Vector2i.ZERO))
 				people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
 				var hy := roundf(dp.y) - float(f.get("foot", TownFolk.FOOT)) + float(f.get("head", 0.0)) - 7.0
@@ -1029,6 +1114,10 @@ func _draw_people() -> void:
 			_cover(cov, float(f["y"]) + up, live, "gate" if up > 0.0 else "")
 	people.draw_set_transform(Vector2.ZERO)
 
+## Your faded marker over a door: you went inside (not a walker still arriving about town).
+static func door_marker(f: Dictionary) -> bool:
+	return f.get("you", false) and float(f.get("fade", 0.0)) >= 1.0 and not f.get("arriving", false)
+
 ## Iso: redraw whatever stands in front of a walker (sorts lower on screen) and overlaps it,
 ## so people pass behind buildings, walls and trees instead of over their roofs.
 func _cover(r: Rect2, foot_y: float, live: Array, skip := "") -> void:
@@ -1046,8 +1135,9 @@ func _cover(r: Rect2, foot_y: float, live: Array, skip := "") -> void:
 ## Iso: each building's level props (L1 scaffolding + piles, L2 lantern + upgrade, L3 banners + showpiece).
 ## Made by refresh_levels (only when a level changes).
 func _draw_levels() -> void:
-	for e in level_live:
-		people.draw_texture(e[0], e[1])
+	var lit := _lit()
+	for e in level_live:   # a lantern's panes light up at dusk; by day it is glass
+		people.draw_texture(e[2] if lit and e[2] != null else e[0], e[1])
 
 ## 2.1: buildings the town picture doesn't have yet (Church, Trophy Cabin) borrow an
 ## existing building, scaled into their spot and recoloured (Buildings.ART: swap
@@ -1186,6 +1276,12 @@ func _step_weather(delta: float) -> void:
 	var want_ch := 4 if iso and data.has("smoke") and kind != "smoke" else 0
 	while chimney.size() < want_ch:
 		chimney.append(_new_part("smoke", ms, false))
+	for k in range(flash_parts.size() - 1, -1, -1):
+		var fp: Dictionary = flash_parts[k]
+		fp["pos"] += (fp["vel"] as Vector2) * delta
+		fp["age"] = float(fp["age"]) + delta
+		if float(fp["age"]) >= float(fp["life"]):
+			flash_parts.remove_at(k)
 	for k in range(chimney.size() - 1, -1, -1):
 		var p: Dictionary = chimney[k]
 		p["pos"] += (p["vel"] as Vector2) * delta
@@ -1225,6 +1321,14 @@ func _new_part(kind: String, ms: Vector2, anywhere: bool) -> Dictionary:
 			vel = Vector2(randf_range(-6, 6), randf_range(-8, -2))
 	return {"pos": pos, "vel": vel, "age": 0.0 if not anywhere else randf() * 2.0, "life": life, "seed": randf() * TAU}
 
+## The forge chimney's smoke in map px, normal blending under the night grade (round 5: drawn
+## additively it vanished on a sunlit roof).
+func _draw_chimney() -> void:
+	for p in chimney:
+		var a := clampf(minf(float(p["age"]), float(p["life"]) - float(p["age"])), 0.0, 1.0)
+		var g := floorf(2.0 + float(p["age"]) * 1.5) * 2.0
+		people.draw_rect(Rect2((p["pos"] as Vector2).round() - Vector2(g, g) / 2.0, Vector2(g, g)), Color(0.42, 0.40, 0.44, 0.35 * a))
+
 ## A puff of smoke at view point `v`, growing as it rises.
 func _draw_smoke(p: Dictionary, v: Vector2, a: float) -> void:
 	var grow := floorf(2.0 + float(p["age"]) * 1.5) * 2.0
@@ -1239,7 +1343,9 @@ func _draw_fx() -> void:
 	# lamp light, stronger the darker it is, with a gentle flicker
 	if dark > 0.1:
 		var view := Rect2(Vector2.ZERO, size)
-		for l in data.get("lights", []):
+		var lights: Array = data.get("lights", [])
+		for i in lights.size():
+			var l: Array = lights[i]
 			var c := to_view(Vector2(l[0], l[1]))
 			var rad := (float(l[3]) if l.size() > 3 else 46.0) * scale_f
 			if not view.grow(rad).has_point(c):
@@ -1248,11 +1354,14 @@ func _draw_fx() -> void:
 			if l.size() > 2 and l[2] is Array:
 				col = Color(float(l[2][0]) / 255.0, float(l[2][1]) / 255.0, float(l[2][2]) / 255.0)
 			var fl := 0.9 + 0.1 * sin(t * 7.0 + float(l[0]))
-			fx.draw_texture_rect(light_tex, Rect2(c - Vector2(rad, rad), Vector2(rad, rad) * 2.0), false, Color(col.lightened(0.1), glow_alpha(dark) * fl))
+			var share := sqrt(float(light_n[i])) if i < light_n.size() else 1.0
+			fx.draw_texture_rect(light_tex, Rect2(c - Vector2(rad, rad), Vector2(rad, rad) * 2.0), false, Color(col.lightened(0.1), glow_alpha(dark) * fl / share))
 	var kind := String(look.get("weather", ""))
 	var vr := Rect2(Vector2.ZERO, size).grow(80.0 * scale_f)
-	for p in chimney:
-		_draw_smoke(p, to_view((p["pos"] as Vector2).round()), clampf(minf(float(p["age"]), float(p["life"]) - float(p["age"])), 0.0, 1.0))
+	for p in flash_parts:    # sparkles over a building that just went up a level
+		var fa := clampf(minf(float(p["age"]) * 4.0, float(p["life"]) - float(p["age"])), 0.0, 1.0)
+		var tw0 := maxf(0.0, sin(t * 9.0 + float(p["seed"]) * 3.0))
+		fx.draw_rect(Rect2(to_view((p["pos"] as Vector2).round()), Vector2(2, 2) * scale_f), Color(1.0, 0.85, 0.45, 0.9 * fa * tw0))
 	for p in parts:
 		var a := clampf(minf(float(p["age"]), float(p["life"]) - float(p["age"])), 0.0, 1.0)
 		var v := to_view((p["pos"] as Vector2).round())
@@ -1369,8 +1478,12 @@ func _draw_labels() -> void:
 			labels.draw_circle(c, 12, Color(0.04, 0.03, 0.06))
 			labels.draw_circle(c, 11, Color("#dc2626"))
 			labels.draw_string(font, c + Vector2(-20, 6), str(n), HORIZONTAL_ALIGNMENT_CENTER, 40, 16, Color.WHITE)
-		if hot and notes.has(id):
-			var note := String(notes[id]) if why == "" else why
+		var flash: Array = level_flash.get(id, [])
+		if not flash.is_empty() and t >= float(flash[1]):
+			level_flash.erase(id)
+			flash = []
+		if (hot and notes.has(id)) or not flash.is_empty():
+			var note := String(flash[0]) if not flash.is_empty() else (String(notes[id]) if why == "" else why)
 			var nw := font.get_string_size(note, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x + 14.0
 			var nr := Rect2(rect.get_center().x - nw / 2.0, rect.end.y + 3, nw, 26)
 			nr.position.x = clampf(nr.position.x, 4.0, size.x - nw - 4.0)

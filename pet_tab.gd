@@ -1,6 +1,6 @@
 class_name PetTab
 extends ScrollContainer
-## Character > Pets (visible to everyone, so players know pets exist): your class
+## Hero › Pets (visible to everyone, so players know pets exist): your class
 ## companion if your class has one, your owned pets (pick who comes along),
 ## your eggs, and empty slots that hint at what's out there.
 
@@ -26,8 +26,13 @@ func refresh() -> void:
 		return
 	shown = key
 	OnlineUI.clear(box)
-	_pet_card()
-	_owned()
+	# Fable pets R5: with pets, they come first (a new owner lands here after a hatch); the companion after
+	if state.pets.is_empty():
+		_pet_card()
+		_owned()
+	else:
+		_owned()
+		_pet_card()
 
 func _owned() -> void:
 	var tamer := Menagerie.is_tamer(state)
@@ -118,10 +123,11 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 	h.add_child(v)
 	v.add_child(UI.label(String(p["name"]), UI.FONT_BODY, UI.GOLD if going else UI.TEXT))
 	var tier := int(p["tier"])
-	var tc := Color(GameData.color_of(mini(tier, 5)))
-	v.add_child(UI.label("%s %s  ·  Lv %d" % [Menagerie.TIER_NAMES[tier], Monsters.name_of(str(p["species"])), int(p["level"])], UI.FONT_BODY, tc))
+	var tc := Color(Menagerie.TIER_COLORS[clampi(tier, 0, 5)])   # Fable pets R5: one rank palette (Codex, fight, moments)
+	var lv := int(p["level"])
+	v.add_child(UI.label("%s %s  ·  Lv %d%s" % [Menagerie.TIER_NAMES[tier], Monsters.name_of(str(p["species"])), lv, " (max)" if lv >= Menagerie.MAX_LEVEL else ""], UI.FONT_BODY, tc))
 	v.add_child(UI.wrap(("Hurt: rests %d more floor%s, or the Clinic heals it for %s gold" % [int(p["hurt"]), "" if int(p["hurt"]) == 1 else "s", UI.short(Menagerie.heal_cost(p))]) if hurt else
-		"Hits for %d%% of your Attack" % _hits(p), UI.FONT_CAPTION, UI.RED if hurt else UI.DIM))
+		"Hits for %d%% of Attack" % _hits(p), UI.FONT_CAPTION, UI.RED if hurt else UI.DIM))
 	_ability_lines(v, p, renaming == id)   # names only on the card; the sentences and locked ones under "More"
 	var right := UI.vbox(8)
 	right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -185,6 +191,13 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 func _hits(p: Dictionary) -> int:
 	return int(Menagerie.power(p) * (Menagerie.WHISPER_POWER if Menagerie.whisperer_near(state) else 1.0) * state.party_mult() * 100)
 
+## "Level 3: 40 more kills to level 4", or "Level 30 (max)".
+static func level_line(p: Dictionary) -> String:
+	var lv := int(p["level"])
+	if lv >= Menagerie.MAX_LEVEL:
+		return "Level %d (max)" % lv
+	return "Level %d: %d more kills to level %d" % [lv, maxi(1, Menagerie.kills_for(lv + 1) - int(p["kills"])), lv + 1]
+
 ## 2.1: what the pet knows (by its rank), and what a higher-ranked one of its kind
 ## would know. A pet's rank never changes, so this pet won't learn those itself.
 func _ability_lines(v: VBoxContainer, p: Dictionary, show_locked := true) -> void:
@@ -195,7 +208,9 @@ func _ability_lines(v: VBoxContainer, p: Dictionary, show_locked := true) -> voi
 		for a in PetAbilities.lines(p):
 			if a["on"]:
 				names.append(String(a["text"]).get_slice(":", 0))
-		v.add_child(UI.wrap("  ·  ".join(names), UI.FONT_BODY, Color(GameData.color_of(mini(PetAbilities._rank(p), 5)))))
+		v.add_child(UI.wrap("  ·  ".join(names), UI.FONT_BODY, Color(Menagerie.TIER_COLORS[clampi(PetAbilities._rank(p), 0, 5)])))
+	else:
+		v.add_child(UI.wrap(level_line(p), UI.FONT_BODY, UI.DIM))   # Fable pets R5: levels show progress
 	for a in PetAbilities.lines(p):
 		if a["on"]:
 			if show_locked:
@@ -214,7 +229,8 @@ func _pet_card() -> void:
 		return
 	var st := World.pet_stage(state)
 	var col := Color(info["color"])
-	UI.section(box, "Companion", "A companion joins you at level %d. It fights every turn and evolves when your class does. Charisma makes it stronger." % World.PET_LEVEL)
+	# the paragraph is for players still waiting for theirs (Fable pets R5: it pushed pets off the SE screen)
+	UI.section(box, "Companion", ("A companion joins you at level %d. It fights every turn and evolves when your class does. Charisma makes it stronger." % World.PET_LEVEL) if st < 0 else "")
 	var c := _frame(UiSkin.IRON)   # the companion's own colour stays in its name
 	box.add_child(c[0])
 	if st < 0:
@@ -227,7 +243,7 @@ func _pet_card() -> void:
 	var v := UI.vbox(2)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
-	v.add_child(UI.label(World.pet_name(state), 17, col.lightened(0.3)))
+	v.add_child(UI.label(World.pet_name(state), UI.FONT_BODY, col.lightened(0.3)))
 	v.add_child(UI.label("%s, stage %d of 4" % [World.pet_species(state), st + 1], UI.FONT_BODY, UI.DIM))
 	var tog := UI.button("Fighting" if state.pet_on else "Send to fight", func():
 		state.pet_on = not state.pet_on
@@ -236,7 +252,7 @@ func _pet_card() -> void:
 		main.refresh())
 	tog.custom_minimum_size = Vector2(90, UI.TAP)
 	h.add_child(tog)
-	c[1].add_child(UI.wrap("%s Hits for %d%% of your Attack every turn." % [info["text"], int(float(World.PET_POWER[st]) * state.party_mult() * 100)], UI.FONT_BODY, UI.TEXT))
+	c[1].add_child(UI.wrap("%s Hits for %d%% of Attack every turn." % [info["text"], int(float(World.PET_POWER[st]) * state.party_mult() * 100)], UI.FONT_BODY, UI.TEXT))
 	var stages: Array = []
 	for i in 4:
 		stages.append(String(info["stages"][i]) if i <= st or state.dev_mode else "???")
