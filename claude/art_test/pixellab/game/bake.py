@@ -645,7 +645,7 @@ def build_src(race, fam, b, k):
 DYE_SHARE = []  # (family, dyed share of the non-skin, non-hair pixels) per build frame, checked after the bake
 
 
-def dye_index(c, fam, idx):
+def dye_index(c, fam, idx, green_skin=False):
     """Marks the family's dyed fabric in the index's blue channel (shade 1..255) for the class colour."""
     import colorsys
     cp, ip = c.load(), idx.load()
@@ -653,8 +653,8 @@ def dye_index(c, fam, idx):
     for y in range(C):
         for x in range(C):
             px = cp[x, y]
-            if not px[3] or ip[x, y][0] or ip[x, y][1]:
-                continue
+            if not px[3] or ip[x, y][0] or ip[x, y][1] or (green_skin and greenish(px)):
+                continue  # an orc's or goblin's drawn green skin is not cloth (it is indexed as skin after)
             h, sat, v = colorsys.rgb_to_hsv(*(q / 255 for q in px[:3]))
             if sat > 0.15 and v > 0.12:
                 pts.append((x, y, R.lum(px[:3]), int(h * 18) % 18))
@@ -666,7 +666,8 @@ def dye_index(c, fam, idx):
     pts = [q for q in pts if bins[q[3]] >= 0.15 * len(pts)]
     if not pts:
         return idx
-    tot = sum(1 for y in range(C) for x in range(C) if cp[x, y][3] and not ip[x, y][0] and not ip[x, y][1])
+    tot = sum(1 for y in range(C) for x in range(C) if cp[x, y][3] and not ip[x, y][0] and not ip[x, y][1]
+              and not (green_skin and greenish(cp[x, y])))
     DYE_SHARE.append((fam, round(len(pts) / max(1, tot), 2)))
     ls = sorted(q[2] for q in pts); lo, hi = ls[len(ls) // 20], ls[-(len(ls) // 20) - 1]
     for x, y, l, _ in pts:
@@ -745,11 +746,17 @@ def fit_build_hair(d, b, bcells, info, s):
     """Every drawn human hair style moved onto a build's head (0 generations): scaled by s (HAIR_FIT,
     the build's head against the human's, measured by eye: the drawings' necks hide under hair, beards
     and hoods) and pinned per frame by the top of the head and the middle of the skull's top rows."""
-    def box(c):
-        p = c.load(); top = c.getbbox()[1]
+    def box(c):  # the skull, not the frame's top pixel (a raised arm in atk1 took the hair with it)
+        p = c.load(); top = skull_top(c)
         xs = [x for y in range(top, top + 6) for x in range(C) if p[x, y][3]]
         return (min(xs) + max(xs)) / 2, top
-    hb = {k: box(CELL[b][k]) for k in K}; bb = {k: box(bcells[k]) for k in K}
+    def boxes(cells):  # a frame's head stays within 4 px of its idle's sideways (the arm beside it pulls)
+        out = {k: box(cells[k]) for k in K}
+        for k in K:
+            r = out["s_idle0" if k.startswith("s") else "n_idle0"]
+            out[k] = (max(r[0] - 4, min(r[0] + 4, out[k][0])), out[k][1])
+        return out
+    hb = boxes(CELL[b]); bb = boxes(bcells)
     for st, k_ in info["styles"].items():
         src = os.path.join(OUT, b, f"hair_{k_}")
         if not os.path.exists(src + ".png"):
@@ -872,7 +879,7 @@ def build_bodies(info):
                                 or 0.065 <= hsv((x, y))[0] <= 0.13 and hsv((x, y))[1] >= 0.42 and hsv((x, y))[2] >= 0.5)}
                         if more:
                             idx = index_of(c, hair | more)
-                    idx = dye_index(c, fam, idx)
+                    idx = dye_index(c, fam, idx, race in OWN_SKIN)
                     if race in OWN_SKIN:
                         own_skin_index(c, idx, fam)
                     if race in HAIR_EVEN:
