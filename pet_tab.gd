@@ -55,7 +55,7 @@ func _owned() -> void:
 		h.add_child(ev)
 		var etier := clampi(int(e.get("tier", 0)), 0, 5)
 		ev.add_child(UI.label(Menagerie.egg_name(e), UI.FONT_BODY, Color(Menagerie.TIER_COLORS[etier])))
-		ev.add_child(UI.wrap("Something inside is moving. It hatches in %d floor%s.\nQuest: %s" % [int(e["floors"]), "" if int(e["floors"]) == 1 else "s", EggQuests.text(e)], 13, UI.TEXT))
+		ev.add_child(UI.wrap("Something inside is moving. It hatches in %d floor%s.\nQuest: %s" % [int(e["floors"]), "" if int(e["floors"]) == 1 else "s", EggQuests.text(e)], UI.FONT_BODY, UI.TEXT))
 	# Empty slots hint at what's out there (never how)
 	var empty := maxi(0, 3 - state.pets.size() - state.eggs.size())
 	for i in empty:
@@ -80,10 +80,10 @@ func _pet_row(p: Dictionary) -> PanelContainer:
 	var v := UI.vbox(2)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
-	v.add_child(UI.label(String(p["name"]), 15, UI.GOLD if going else UI.TEXT))
+	v.add_child(UI.label(String(p["name"]), UI.FONT_BODY, UI.GOLD if going else UI.TEXT))
 	var tier := int(p["tier"])
 	var tc := Color(GameData.color_of(mini(tier, 5)))
-	v.add_child(UI.label("%s %s  ·  Lv %d" % [Menagerie.TIER_NAMES[tier], Monsters.name_of(str(p["species"])), int(p["level"])], 12, tc))
+	v.add_child(UI.label("%s %s  ·  Lv %d" % [Menagerie.TIER_NAMES[tier], Monsters.name_of(str(p["species"])), int(p["level"])], UI.FONT_BODY, tc))
 	v.add_child(UI.label(("Hurt: rests %d more floor%s" % [int(p["hurt"]), "" if int(p["hurt"]) == 1 else "s"]) if hurt else
 		"Hits for %d%% of your Attack" % _hits(p), 11, UI.RED if hurt else UI.DIM))
 	_ability_lines(v, p, renaming == id)   # names only on the card; the sentences and locked ones under "More"
@@ -155,11 +155,11 @@ func _ability_lines(v: VBoxContainer, p: Dictionary, show_locked := true) -> voi
 			if show_locked:
 				v.add_child(UI.wrap("+ " + String(a["text"]), UI.FONT_BODY, UI.TEXT))
 		elif show_locked:
-			v.add_child(UI.wrap("A higher-ranked %s pet (%s and up) would know: %s" % [fam, Menagerie.TIER_NAMES[int(a["rank"])], a["text"]], 11, UI.DIM))
+			v.add_child(UI.wrap("A higher-ranked %s pet (%s and up) would know: %s" % [fam, Menagerie.TIER_NAMES[int(a["rank"])], a["text"]], UI.FONT_BODY, UI.DIM))
 	# all Spirits together heal at most REGEN_CAP a turn: say so when it cuts this one
 	var rs := PetAbilities.regen_share(state, p)
 	if rs >= 0.0 and rs < PetAbilities.passive_value(String(p["species"]), PetAbilities._rank(p)) - 0.001:
-		v.add_child(UI.wrap("Team regen is capped at %s%% a turn: this pet adds %s%%." % [PetAbilities._num(PetAbilities.REGEN_CAP), PetAbilities._num(rs)], 11, UI.GOLD_DULL))
+		v.add_child(UI.wrap("Team regen is capped at %s%% a turn: this pet adds %s%%." % [PetAbilities._num(PetAbilities.REGEN_CAP), PetAbilities._num(rs)], UI.FONT_BODY, UI.GOLD_DULL))
 
 ## Your class companion: what it is, what it does, and what it becomes.
 func _pet_card() -> void:
@@ -182,7 +182,7 @@ func _pet_card() -> void:
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
 	v.add_child(UI.label(World.pet_name(state), 17, col.lightened(0.3)))
-	v.add_child(UI.label("%s, stage %d of 4" % [World.pet_species(state), st + 1], 12, UI.DIM))
+	v.add_child(UI.label("%s, stage %d of 4" % [World.pet_species(state), st + 1], UI.FONT_BODY, UI.DIM))
 	var tog := UI.button("Fighting" if state.pet_on else "Send to fight", func():
 		state.pet_on = not state.pet_on
 		state.save_game()
@@ -190,7 +190,7 @@ func _pet_card() -> void:
 		main.refresh())
 	tog.custom_minimum_size = Vector2(90, BTN)
 	h.add_child(tog)
-	c[1].add_child(UI.wrap("%s Hits for %d%% of your Attack every turn." % [info["text"], int(float(World.PET_POWER[st]) * state.party_mult() * 100)], 12, UI.TEXT))
+	c[1].add_child(UI.wrap("%s Hits for %d%% of your Attack every turn." % [info["text"], int(float(World.PET_POWER[st]) * state.party_mult() * 100)], UI.FONT_BODY, UI.TEXT))
 	var stages: Array = []
 	for i in 4:
 		stages.append(String(info["stages"][i]) if i <= st or state.dev_mode else "???")

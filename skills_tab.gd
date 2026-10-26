@@ -10,7 +10,7 @@ var slot_row_a: HBoxContainer
 var slot_row_p: HBoxContainer
 var sig_row: HBoxContainer
 var filter_pick: OptionButton   # the filter's state; the page shows it as chips (filter_chips)
-var filter_chips: HBoxContainer
+var filter_chips: HFlowContainer
 var cards: GridContainer
 var empty_note: Label
 var ids: Array[String] = []
@@ -39,14 +39,21 @@ func setup(m) -> void:
 	head.add_child(UI.button("Autoplay", func(): auto_battle_popup(main)))
 	head.add_child(UI.button("Craft", _craft_popup))
 
-	add_child(UI.heading("Active"))
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
+	var book := UI.vbox(8)
+	book.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(book)
+	book.add_child(UI.heading("Active"))
 	slot_row_a = UI.hbox(4)
-	add_child(slot_row_a)
+	book.add_child(slot_row_a)
 	sig_row = UI.hbox(4)
-	add_child(sig_row)
-	add_child(UI.heading("Passive"))
+	book.add_child(sig_row)
+	book.add_child(UI.heading("Passive"))
 	slot_row_p = UI.hbox(4)
-	add_child(slot_row_p)
+	book.add_child(slot_row_p)
 
 	filter_pick = OptionButton.new()
 	for f in FILTERS:
@@ -56,12 +63,11 @@ func setup(m) -> void:
 	filter_pick.item_selected.connect(func(_i): shown = ""; refresh())
 	filter_pick.visible = false
 	add_child(filter_pick)
-	var fscroll := ScrollContainer.new()   # one row of chips you can drag sideways
-	fscroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	fscroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
-	add_child(fscroll)
-	filter_chips = UI.hbox(6)
-	fscroll.add_child(filter_chips)
+	# Fable r2 #7: the chips wrap (every filter in sight), like the sub-tab chips
+	filter_chips = HFlowContainer.new()
+	filter_chips.add_theme_constant_override("h_separation", 6)
+	filter_chips.add_theme_constant_override("v_separation", 6)
+	filter_chips.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for i in filter_pick.item_count:
 		var c := UI.button(filter_pick.get_item_text(i), func():
 			filter_pick.select(i)
@@ -70,19 +76,17 @@ func setup(m) -> void:
 		c.focus_mode = Control.FOCUS_NONE
 		filter_chips.add_child(c)
 	# 0.13+ (Juzo): the skill book as cards, like the bag: icon, name, rank pips, rarity frame
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	add_child(scroll)
+	book.add_child(UI.heading("Skill book"))
+	book.add_child(filter_chips)
 	cards = GridContainer.new()
 	cards.columns = 4
 	cards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cards.add_theme_constant_override("h_separation", 6)
 	cards.add_theme_constant_override("v_separation", 6)
-	scroll.add_child(cards)
+	book.add_child(cards)
 	empty_note = UI.label("", UI.FONT_BODY, UI.DIM)
 	empty_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	add_child(empty_note)
+	book.add_child(empty_note)
 	var box := UI.panel(UI.INSET, UI.EMPTY, 8, 8, 1)
 	box.visible = false   # the detail and its buttons are copied into the tap popup (_popup)
 	add_child(box)
@@ -194,9 +198,8 @@ func refresh() -> void:
 		var sb := Button.new()
 		sb.focus_mode = Control.FOCUS_NONE
 		sb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		sb.custom_minimum_size = Vector2(0, 34)
 		sb.clip_text = true
-		sb.add_theme_font_size_override("font_size", UI.MIN_FONT)
+		sb.add_theme_font_size_override("font_size", UI.FONT_BODY)
 		sb.text = "Signature: %s" % (SkillData.skill_name(state.sig_slot) if state.sig_slot != "" else "(none)")
 		sb.custom_minimum_size = Vector2(0, UI.TAP)
 		_face(sb, UiSkin.SLATE, UI.GOLD_DULL)   # interface pass: the signature slot is gold-edged
@@ -415,7 +418,7 @@ static func _fill_auto(m, o: Overlay, st: GameState) -> void:
 		var c := Color(Classes.tag_color(String(s["tags"][0]))) if not Signatures.is_signature(id) else Color(Signatures.COLOR)
 		var row := UI.hbox(6)
 		o.content.add_child(row)
-		var nl := UI.label("%d. %s" % [i + 1, s["name"]], 15, c.lightened(0.3) if not st.skill_auto_off.has(id) else UI.DIM)
+		var nl := UI.label("%d. %s" % [i + 1, s["name"]], UI.FONT_BODY, c.lightened(0.3) if not st.skill_auto_off.has(id) else UI.DIM)
 		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nl.clip_text = true
 		row.add_child(nl)

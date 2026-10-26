@@ -11,6 +11,8 @@ var upgrade_button: Button
 var vault_grid: GridContainer
 var bag_grid: GridContainer
 var bag_title: Label
+var vault_head: Control   # Fable r2 #9: "Vault · 3 / 20" and "Your bag · 2 / 10" are headings
+var bag_head: Control
 var info: PanelContainer
 var info_pic: TextureRect
 var info_text: RichTextLabel
@@ -40,11 +42,13 @@ func setup(m) -> void:
 	var body := UI.vbox(8)
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(body)
-	body.add_child(UI.label("THE VAULT", UI.FONT_BODY, UI.DIM))
+	vault_head = UI.heading("Vault")
+	body.add_child(vault_head)
 	vault_grid = ItemGrid.grid()
 	body.add_child(vault_grid)
-	bag_title = UI.label("", UI.FONT_BODY, UI.DIM)
-	body.add_child(bag_title)
+	bag_head = UI.heading("Your bag")
+	body.add_child(bag_head)
+	bag_title = UI.heading_label(bag_head)
 	bag_grid = ItemGrid.grid()
 	body.add_child(bag_grid)
 	# The picked item: picture, stats and the move button
@@ -116,7 +120,8 @@ func _picked_item() -> Dictionary:
 
 func refresh() -> void:
 	var p: Profile = main.profile
-	title.text = "VAULT  %d / %d" % [p.stash.size(), p.stash_capacity()]
+	title.text = ""   # the count is on the Vault heading below
+	UI.heading_label(vault_head).text = "Vault · %d / %d" % [p.stash.size(), p.stash_capacity()]
 	var cost := GameData.stash_cost(p.stash_level)
 	if p.stash_level >= GameData.STASH_MAX_LEVEL:
 		upgrade_button.text = "Vault is max size"
@@ -145,7 +150,7 @@ func refresh() -> void:
 		var ec := ItemGrid.cell({}, Callable())
 		Drag.wire(ec, {}, null, _vault_takes, _drop_move)
 		vault_grid.add_child(ec)
-	bag_title.text = "YOUR BAG  %d / %d" % [state.bag.size(), state.bag_capacity()]
+	bag_title.text = "Your bag · %d / %d" % [state.bag.size(), state.bag_capacity()]
 	var items: Array = state.bag.duplicate()
 	items.reverse()
 	for it in items:

@@ -346,7 +346,7 @@ func refresh() -> void:
 	var cur := ClassTree.current(state)
 	role_label.text = String(cur["role_text"]) if not cur.is_empty() else String(state.class_info().get("blurb", ""))
 	level_label.text = "%s  ·  Lv %d" % [state.title(), state.level]
-	level_label.add_theme_color_override("font_color", color.lightened(0.3))   # the class colour lives in the class name
+	level_label.add_theme_color_override("font_color", UI.TEXT)   # Fable r2 #11: names in bone; the class colour lives in the outfit
 	_refresh_doll()
 	_fill_titles()
 	var al := ClassTree.alignment(state)

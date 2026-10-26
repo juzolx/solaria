@@ -33,7 +33,7 @@ func refresh() -> void:
 	for n in all:
 		if codex.pet_book.has(n):
 			owned += 1
-	box.add_child(UI.label("Owned  %d / %d     Seen  %d / %d" % [owned, all.size(), seen, all.size()], 15, UI.GOLD))
+	box.add_child(UI.label("Owned %d / %d · Seen %d / %d" % [owned, all.size(), seen, all.size()], UI.FONT_BODY, UI.GOLD))
 	box.add_child(Collections.cards(codex, ["pets", "pet_epic", "pet_myth"]))  # 2.1 G4: progress and the next reward
 	box.add_child(UI.wrap("Pets are a real find: hatch an egg, or tame a beast as a Beast Tamer. Tiers go from Common to Mythic.", UI.FONT_BODY, UI.DIM))
 	var legend := HFlowContainer.new()   # wraps on a phone

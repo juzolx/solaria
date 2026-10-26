@@ -33,6 +33,7 @@ static func cell(item: Dictionary, on_press: Callable, selected := false, px := 
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(px, px)
 	b.focus_mode = Control.FOCUS_NONE
+	b.set_meta("tour_small_ok", true)   # a picture square (its grid sizes it), not a text button
 	b.expand_icon = false   # whole pixels: the icon is already sized to the cell (UiIcons.big)
 	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER

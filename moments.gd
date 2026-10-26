@@ -54,6 +54,8 @@ func _build(kind: String, title: String, sub: String, color: Color, extra: Strin
 	add_child(band)
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.offset_top = UI.safe_top   # Fable r2 #13
+	center.offset_bottom = -UI.safe_bottom
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 	var v := UI.vbox(10)
@@ -171,6 +173,8 @@ func _build_evolve(d: Dictionary) -> void:
 	move_child(bg, 0)
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.offset_top = UI.safe_top   # Fable r2 #13
+	center.offset_bottom = -UI.safe_bottom
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 	var v := UI.vbox(8)

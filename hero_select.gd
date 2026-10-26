@@ -16,8 +16,8 @@ func show_for(main_node, from_title = null) -> void:
 	for n in range(1, GameData.MAX_HEROES + 1):
 		if GameState.has_slot(n):
 			count += 1
-	var note := UI.label("Roster %d / %d  ·  %d slots open. Pick any 3 Regular heroes to go down together from the Party page. Heroes in this town share its stash and skill book; the Codex is shared by every town." % [count, GameData.MAX_HEROES, p.slots_open()], 13, UI.DIM)
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var note := UI.label("Roster %d / %d · %d slots open" % [count, GameData.MAX_HEROES, p.slots_open()], UI.FONT_BODY, UI.DIM)
+	UI.tip(note, "Pick any 3 Regular heroes to go down together from the Party page. Heroes in this town share its stash and skill book; the Codex is shared by every town.")   # Fable r2: one line, the rest on a tap
 	content.add_child(note)
 	var towns_b := UI.button("Switch town...", func(): close(); TownSelect.new().show_for(m, title_screen))
 	towns_b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -39,7 +39,7 @@ func show_for(main_node, from_title = null) -> void:
 			locked.append(n)
 	if not locked.is_empty():
 		var n0: int = locked[0]
-		var more := UI.label(p.slot_lock_note(n0) + ((" %d more locked." % (locked.size() - 1)) if locked.size() > 1 else ""), 12, UI.DIM)
+		var more := UI.label(p.slot_lock_note(n0) + ((" %d more locked." % (locked.size() - 1)) if locked.size() > 1 else ""), UI.FONT_BODY, UI.DIM)
 		more.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		content.add_child(more)
 

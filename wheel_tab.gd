@@ -179,9 +179,9 @@ func setup(m) -> void:
 	info = UI.rich(UI.FONT_BODY)
 	right.add_child(info)
 	spin_button = UI.primary("Spin!", _spin, UI.GOLD)
-	spin_button.custom_minimum_size = Vector2(0, 44)
+	spin_button.custom_minimum_size = Vector2(0, UI.TAP)
 	right.add_child(spin_button)
-	result_label = UI.rich(15)
+	result_label = UI.rich(UI.FONT_BODY)
 	right.add_child(result_label)
 
 func _on_left_resized(left: Control) -> void:
@@ -554,7 +554,7 @@ func show_odds() -> void:
 		lines.append("[color=%s]%s[/color]  [color=%s]%s[/color]\n   yours [b]%s[/b]   [color=%s]base %s[/color]" % [col, row["name"], UI.hex(UI.DIM), amount, WheelTables.pct_text(row["pct"]), UI.hex(UI.DIM), WheelTables.pct_text(row["base_pct"])])
 	lt.text = "\n".join(lines)
 	o.content.add_child(lt)
-	o.content.add_child(UI.wrap("Amounts are for your deepest floor (%d): gold and scrap prizes grow the deeper you go. A spin needs %d free bag slots. Spins are paid with gold found in the dungeon. They are never sold for real money." % [state.best_floor, WheelTables.bag_room_needed()], 12, UI.DIM))
+	o.content.add_child(UI.wrap("Amounts are for your deepest floor (%d): gold and scrap prizes grow the deeper you go. A spin needs %d free bag slots. Spins are paid with gold found in the dungeon. They are never sold for real money." % [state.best_floor, WheelTables.bag_room_needed()], UI.FONT_BODY, UI.DIM))
 	var close := UI.primary("Close", o.close)
 	close.custom_minimum_size = Vector2(0, UI.TAP)
 	o.content.add_child(close)

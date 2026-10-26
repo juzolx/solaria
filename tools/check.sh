@@ -36,9 +36,15 @@ for t in tests/stage[0-9]_*.gd; do [ -f "$t" ] && run "$(basename $t .gd)" "time
 if [ "$1" = "shots" ]; then
   # Every screen at phone size into shots/tour (needs a real window: run on the PC, or under xvfb-run on Linux)
   wrap=""; command -v xvfb-run >/dev/null 2>&1 && wrap="xvfb-run -a -s \"-screen 0 1400x1400x24\""
-  out=$(eval "timeout 400 $wrap \"$G\" --path . --resolution 430x932 -s tests/ui_tour.gd" 2>&1)
-  echo "$out" | grep -E "TOUR DONE" || { echo "shots: FAILED"; echo "$out" | grep -E "SCRIPT ERROR|Refusing" -A1 | head; fail=1; }
-  echo "$out" | grep -E "SCREEN TOO (WIDE|TALL)" && fail=1
+  # Fable r2 #18: a gate at both phone sizes (430 pt and the 375 pt SE): overflow, short buttons,
+  # small text (TOUR FAIL lines) and any engine error fail the check
+  for sz in "430x932" "375x667 se"; do
+    read -r res arg <<< "$sz"
+    out=$(eval "timeout 400 $wrap \"$G\" --path . --resolution $res -s tests/ui_tour.gd -- $arg" 2>&1)
+    if echo "$out" | grep -q "TOUR DONE"; then echo "$out" | grep "TOUR DONE" | sed "s/^/shots $res: /"; else echo "shots $res: FAILED"; echo "$out" | grep -E "SCRIPT ERROR|Refusing" -A1 | head; fail=1; fi
+    echo "$out" | grep -E "TOUR FAIL" && fail=1   # (no head: its exit status is 0 even with no lines)
+    echo "$out" | grep -E "^(ERROR|SCRIPT ERROR|USER ERROR):" -A1 | grep -v "^--" | sort -u | head -10 | sed "s/^/shots $res: /" | grep . && fail=1
+  done
 fi
 if [ "$1" = "perf" ]; then
   # 60 s of Auto play at phone size; compare with earlier runs saved in shots/perf
