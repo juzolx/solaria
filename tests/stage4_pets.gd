@@ -18,7 +18,9 @@ func _initialize() -> void:
 	check(Menagerie.toggle_out(g, int(b["id"])), "bringing the second works with the spot taken")
 	check(g.pets_out == [int(b["id"])], "the two swap places")
 	b["hurt"] = 3
+	Menagerie.changed(g)   # set by hand: caches start over
 	g.pets_out.clear()
+	Menagerie.changed(g)
 	check(not Menagerie.toggle_out(g, int(b["id"])), "a hurt pet still has to rest")
 	print("STAGE4 PET TESTS DONE, failures: ", fails)
 	quit()

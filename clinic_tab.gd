@@ -17,35 +17,35 @@ func setup(m) -> void:
 
 func refresh() -> void:
 	var g: GameState = main.state
-	var key := "%s|%d|%s|%s" % [str(g.pets), g.gold, str(g.eggs), str(g.pets_out)]
+	var key := "%s|%d|%s|%s" % [PetTab.pets_key(g), g.gold, str(g.eggs), str(g.pets_out)]   # not kills: no rebuild per kill
 	if key == shown:
 		return
 	shown = key
 	OnlineUI.clear(box)
 	box.add_child(UI.heading("Clinic"))
-	box.add_child(UI.wrap("The keeper looks after your pets between dives. A hurt pet heals by resting (%d cleared floors), or the keeper can patch it up now for gold. Pets are never lost." % Menagerie.HEAL_FLOORS, UI.FONT_BODY, UI.DIM))
-	if not g.pets.is_empty():
-		box.add_child(UI.heading("Coming along", "%d of %d on your next dive" % [Menagerie.out(g).size(), Menagerie.max_out(g)]))
+	box.add_child(UI.wrap("Hurt pets rest %d floors, or the keeper patches them up for gold. Pets are never lost." % Menagerie.HEAL_FLOORS, UI.FONT_BODY, UI.DIM))
+	# Fable pets R5: the hurt ones first (they're why you came), then the team, then the rest
+	var order: Array = PetTab.sorted(g)
+	order = order.filter(func(q): return int(q["hurt"]) > 0) + order.filter(func(q): return int(q["hurt"]) <= 0)
 	var any_hurt := false
-	for p in g.pets:
+	var team_heading := false
+	for p in order:
 		var hurt := int(p["hurt"]) > 0
+		if not hurt and not team_heading:
+			team_heading = true
+			box.add_child(UI.heading("Coming along", "%d of %d on your next dive" % [Menagerie.out(g).size(), Menagerie.max_out(g)]))
 		any_hurt = any_hurt or hurt
 		var c := UI.card(UI.RED.darkened(0.3) if hurt else UI.GREEN.darkened(0.3))
 		box.add_child(c[0])
 		var h := UI.hbox(10)
 		c[1].add_child(h)
-		var pic := TextureRect.new()
-		pic.texture = Menagerie.texture(p)
-		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		pic.custom_minimum_size = Vector2(64, 64)  # 32 px art at a clean 2x
-		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		h.add_child(pic)
+		h.add_child(PixelPic.make(Menagerie.texture(p)))  # 32 px art at about 2x, whole screen pixels (Fable pets R4)
 		var v := UI.vbox(2)
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(v)
-		v.add_child(UI.label(String(p["name"]), UI.FONT_BODY, UI.TEXT))
-		v.add_child(UI.label(("Hurt: %d floor%s of rest left" % [int(p["hurt"]), "" if int(p["hurt"]) == 1 else "s"]) if hurt else "Healthy and ready", UI.FONT_BODY, UI.RED if hurt else UI.GREEN))
+		# wrapping lines: one-line labels next to a 130 px button pushed the page wider than an SE (Fable pets R4)
+		v.add_child(UI.wrap(String(p["name"]), UI.FONT_BODY, UI.TEXT))
+		v.add_child(UI.wrap(("Hurt: rests %d more floor%s" % [int(p["hurt"]), "" if int(p["hurt"]) == 1 else "s"]) if hurt else "Healthy and ready", UI.FONT_BODY, UI.RED if hurt else UI.GREEN))
 		if hurt:
 			var cost := Menagerie.heal_cost(p)
 			var id := int(p["id"])
@@ -63,16 +63,21 @@ func refresh() -> void:
 			var pid := int(p["id"])
 			var going: bool = pid in g.pets_out
 			var full := Menagerie.out(g).size() >= Menagerie.max_out(g)
-			var eb := UI.primary("Coming along" if going else ("Swap in" if full else "Bring along"), func():
+			var twin := not going and Menagerie.out_block(g, pid).begins_with("You already")   # one of each kind per team
+			var eb := UI.primary("Coming along" if going else ("One is out" if twin else ("Swap in" if full else "Bring along")), func():
 				if Menagerie.toggle_out(main.state, pid):
 					main.sfx.play("click")
 					main.state.save_game()
+				elif Menagerie.out_block(main.state, pid) != "":
+					main.toast(Menagerie.out_block(main.state, pid))   # one of each kind per team
 				shown = ""
 				main.refresh(), UI.GREEN if going else UI.GOLD)
 			eb.custom_minimum_size = Vector2(130, UI.TAP)
 			eb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			eb.tooltip_text = "Tap to leave it at home" if going else "Tap to bring it on your next dive"
 			h.add_child(eb)
+	if not team_heading and not g.pets.is_empty():
+		box.add_child(UI.heading("Coming along", "%d of %d on your next dive" % [Menagerie.out(g).size(), Menagerie.max_out(g)]))
 	if g.pets.is_empty():
 		box.add_child(UI.wrap("No pets yet. The pen is ready for whatever hatches.", UI.FONT_BODY, UI.DIM))
 	elif not any_hurt:

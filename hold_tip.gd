@@ -57,7 +57,7 @@ func _control_at(_screen_pos: Vector2) -> Control:
 func _show(c: Control) -> void:
 	var vp := get_viewport().get_visible_rect().size
 	var panel := UI.panel(Color(0.05, 0.06, 0.1, 0.97), UI.GOLD, 8, 10, 1)
-	var label := UI.label(c.tooltip_text, 15, UI.TEXT)
+	var label := UI.label(c.tooltip_text, UI.FONT_BODY, UI.TEXT)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.custom_minimum_size = Vector2(minf(320.0, vp.x - 40.0), 0)
 	panel.add_child(label)

@@ -95,7 +95,7 @@ func _header() -> void:
 	h.add_child(cv)
 	var top := UI.hbox(8)
 	cv.add_child(top)
-	var tl := UI.label(state.title().to_upper(), 22, border.lightened(0.25))
+	var tl := UI.name_plate(state.title())   # Fable r2 #11: the name in bone, the class colour stays on the frame
 	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(tl)
 	if r != "":

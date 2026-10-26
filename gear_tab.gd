@@ -210,11 +210,11 @@ func refresh() -> void:
 		cap.text = nm + (" !" if upg else "")   # "!" = an upgrade is waiting in your bag
 		cap.add_theme_color_override("font_color", UI.GREEN if upg else (UI.GOLD if picked else UI.DIM))
 		var cnt := _count(s)
-		var info := "%s: %s" % [String(s).to_upper(), (GameData.display_name(state.equipped[s]) + "  +%d %s" % [GameData.item_power(state.equipped[s]), state.equipped[s]["stat"]]) if state.equipped.has(s) else "Empty"]
+		var info := "%s · %s" % [nm, (GameData.display_name(state.equipped[s]) + "  +%d %s" % [GameData.item_power(state.equipped[s]), state.equipped[s]["stat"]]) if state.equipped.has(s) else "Empty"]
 		if cnt > 0:
 			info += "  (%d in bag)" % cnt
 		if upg:
-			info += "  UPGRADE!"
+			info += " · upgrade in your bag"
 		slot_info[s] = info
 		(slot_cards[s] as Control).tooltip_text = info
 	# the picked slot, in one line: what's worn there and what's waiting in the bag
@@ -224,10 +224,10 @@ func refresh() -> void:
 		extra += "  [color=%s]upgrade![/color]" % UI.hex(UI.GREEN)
 	if state.equipped.has(slot):
 		var item: Dictionary = state.equipped[slot]
-		slot_detail.text = "[color=%s]%s[/color]  [color=%s]%s[/color]  +%d %s%s" % [UI.hex(UI.GOLD), slot.to_upper(), GameData.color_of(item["rarity"]),
+		slot_detail.text = "[color=%s]%s[/color] · [color=%s]%s[/color]  +%d %s%s" % [UI.hex(UI.GOLD), slot, GameData.color_of(item["rarity"]),
 			GameData.display_name(item), GameData.item_power(item), item["stat"], extra]
 	else:
-		slot_detail.text = "[color=%s]%s[/color]  [color=%s]Empty[/color]%s" % [UI.hex(UI.GOLD), slot.to_upper(), UI.hex(UI.DIM), extra]
+		slot_detail.text = "[color=%s]%s[/color] · [color=%s]Empty[/color]%s" % [UI.hex(UI.GOLD), slot, UI.hex(UI.DIM), extra]
 	equip_best_button.text = "Equip Best (%d)" % ups if ups > 0 else "Equip Best"
 	equip_best_button.disabled = ups == 0
 

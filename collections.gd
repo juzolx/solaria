@@ -405,17 +405,22 @@ static func track_card(codex: Codex, track: String) -> PanelContainer:
 	bar.max_value = maxi(1, goal)
 	bar.value = mini(have, maxi(1, goal))
 	v.add_child(bar)
-	var nt := UI.wrap(("Next at %s: %s" % [need_text(nxt), reward_text(nxt)]) if not nxt.is_empty() else "Every reward here is yours.", UI.FONT_BODY, UI.DIM)
+	# Fable r2 #14: one short line ("Next at 9: name colour Curio Amber"); the long form is the tip
+	var nt := UI.wrap(("Next at %d: %s" % [int(nxt["need"]), reward_text(nxt)]) if not nxt.is_empty() else "Every reward here is yours.", UI.FONT_BODY, UI.DIM)
 	v.add_child(nt)
+	if not nxt.is_empty():
+		UI.tip(card, "Next at %s: %s" % [need_text(nxt), reward_text(nxt)])
 	return card
 
-## Progress cards for several tracks, two to a row.
+## Progress cards for several tracks: two to a row on a wide screen, one on a phone (Fable r2 #14).
 static func cards(codex: Codex, list: Array) -> GridContainer:
 	var g := GridContainer.new()
 	g.columns = 2
 	g.add_theme_constant_override("h_separation", 6)
 	g.add_theme_constant_override("v_separation", 6)
 	g.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	g.columns = 1
+	g.resized.connect(func(): g.columns = 2 if g.size.x >= 600.0 else 1)
 	for t in list:
 		var c := track_card(codex, String(t))
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL

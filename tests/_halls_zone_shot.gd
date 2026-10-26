@@ -18,6 +18,12 @@ func _initialize() -> void:
 	await process_frame
 	main.timer.stop()
 	var st: GameState = main.state
+	# another run sharing this user folder (check.sh) can swap the save under us: say so, loudly
+	print("user data: %s" % OS.get_user_data_dir())
+	assert(st.hero_name == "Thorin", "shots: the test hero is %s, not Thorin (another run shares %s)" % [st.hero_name, OS.get_user_data_dir()])
+	if st.hero_name != "Thorin":
+		quit(1)
+		return
 	var seen := {}
 	for rc in range(1, 40):
 		if seen.size() >= 3:
@@ -31,6 +37,9 @@ func _initialize() -> void:
 		st.in_town = false
 		main._room_ready = true
 		main.refresh()
+		# the doors you'd pick from, glowing and tappable, as the player sees the room
+		st.doors = ["fight", "treasure", "elite"]
+		st.path_offer = ["door_l", "door_m", "door_r"]
 		await create_timer(0.9).timeout
 		var rv: RoomView = main.room_view
 		var label: String = rv.scene.r3.kind if rv.scene.r3 else "2d"

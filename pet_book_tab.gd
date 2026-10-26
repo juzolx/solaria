@@ -33,7 +33,7 @@ func refresh() -> void:
 	for n in all:
 		if codex.pet_book.has(n):
 			owned += 1
-	box.add_child(UI.label("Owned  %d / %d     Seen  %d / %d" % [owned, all.size(), seen, all.size()], 15, UI.GOLD))
+	box.add_child(UI.label("Owned %d / %d · Seen %d / %d" % [owned, all.size(), seen, all.size()], UI.FONT_BODY, UI.GOLD))
 	box.add_child(Collections.cards(codex, ["pets", "pet_epic", "pet_myth"]))  # 2.1 G4: progress and the next reward
 	box.add_child(UI.wrap("Pets are a real find: hatch an egg, or tame a beast as a Beast Tamer. Tiers go from Common to Mythic.", UI.FONT_BODY, UI.DIM))
 	var legend := HFlowContainer.new()   # wraps on a phone
@@ -52,7 +52,7 @@ func refresh() -> void:
 		box.add_child(UI.heading(str(z["name"])))
 		box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text(String(z["id"])), UI.FONT_BODY, Color(Menagerie.TIER_COLORS[PetAbilities.SIGNATURE_RANK])))
 		var flow := HFlowContainer.new()
-		flow.add_theme_constant_override("h_separation", 6)
+		flow.add_theme_constant_override("h_separation", 4)
 		flow.add_theme_constant_override("v_separation", 6)
 		box.add_child(flow)
 		for n in mons:
@@ -61,7 +61,7 @@ func refresh() -> void:
 	box.add_child(UI.heading("Calamities"))
 	box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text("calamity"), UI.FONT_BODY, Color(Menagerie.TIER_COLORS[PetAbilities.SIGNATURE_RANK])))
 	var cflow := HFlowContainer.new()
-	cflow.add_theme_constant_override("h_separation", 6)
+	cflow.add_theme_constant_override("h_separation", 4)
 	cflow.add_theme_constant_override("v_separation", 6)
 	box.add_child(cflow)
 	for n in _calamity_pets():
@@ -92,7 +92,9 @@ func _cell(n: String) -> Control:
 	var met := have or _met(n)
 	var tier := int(codex.pet_book.get(n, 0))
 	var c := UI.panel(UI.INSET, Color(Menagerie.TIER_COLORS[tier]) if have else UI.BORDER, 4, 4, 2 if have else 1)
-	c.custom_minimum_size = Vector2(76, 0)
+	# wide enough for "Will-o'-Wisp" under a whole-pixel picture (Fable pets R4)
+	var cw := maxf(112.0, PixelPic.side(32, 2.0, PixelPic.stretch(self)) + 8.0)   # four a row (4 x 112 + 3 x 4 fits the 460 grid): the longest one-word name, Doppelganger, needs 102 at the 15 px floor
+	c.custom_minimum_size = Vector2(cw, 0)
 	var v := UI.vbox(2)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	c.add_child(v)
@@ -102,10 +104,18 @@ func _cell(n: String) -> Control:
 	if not have:
 		pic.modulate = Color(0.32, 0.3, 0.4, 0.9) if met else Color(0.12, 0.12, 0.16, 0.6)
 	v.add_child(pic)
-	var l := UI.label(_name(n) if met else "???", UI.FONT_BODY, Color(Menagerie.TIER_COLORS[tier]) if have else UI.DIM)
+	var nm := _name(n) if met else "???"
+	var l := UI.label(nm, UI.FONT_CAPTION, Color(Menagerie.TIER_COLORS[tier]) if have else UI.DIM)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size = Vector2(68, 0)
+	# Fable pets R5: a one-word name stays on one line (word wrap still broke "Will-o'-" / "Wisp" at the hyphen);
+	# a name with spaces wraps at them
+	if nm.contains(" "):
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD
+	else:
+		l.autowrap_mode = TextServer.AUTOWRAP_OFF
+		l.clip_text = true
+		l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	l.custom_minimum_size = Vector2(cw - 8.0, 0)
 	v.add_child(l)
 	if met:
 		# phones have no hover: a tap opens the card with what this pet does

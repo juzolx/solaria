@@ -87,7 +87,7 @@ func setup(m) -> void:
 		card.add_child(cv)
 		var head := UI.hbox(8)
 		cv.add_child(head)
-		var title := UI.label(String(info["name"]), 15, UI.GOLD)
+		var title := UI.label(String(info["name"]), UI.FONT_BODY, UI.GOLD)
 		head.add_child(title)
 		head.add_child(UI.spacer())
 		var wearing := UI.label("", UI.FONT_BODY, UI.DIM)
@@ -188,7 +188,7 @@ func _fill_wares(force := false) -> void:
 				main.sfx.play("buy")
 			_fill_wares(true)
 			main.refresh(), UI.GOLD)
-		b.custom_minimum_size = Vector2(110, 40)
+		b.custom_minimum_size = Vector2(120, UI.BUTTON_H)   # Fable r2 #8
 		b.disabled = e["sold"] or need > 0 or state.bag_full()
 		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(b)
@@ -200,7 +200,7 @@ func _recipe_card(parent: Control, title: String, color: Color, text: String) ->
 	parent.add_child(card)
 	var cv := UI.vbox(5)
 	card.add_child(cv)
-	cv.add_child(UI.label(title, 15, UI.GOLD))   # one accent: titles gold, not per-recipe colours
+	cv.add_child(UI.label(title, UI.FONT_BODY, UI.GOLD))   # one accent: titles gold, not per-recipe colours
 	var desc := UI.rich(UI.FONT_BODY)
 	desc.custom_minimum_size = Vector2(0, 32)
 	desc.text = "[color=%s]%s[/color]" % [UI.hex(UI.DIM), text]

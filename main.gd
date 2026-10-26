@@ -274,9 +274,9 @@ func _show_home_tally(e: Dictionary) -> void:
 	var kills := int(e.get("kills", 0))
 	if gold <= 0 and items <= 0 and kills <= 0:
 		return  # a quick look down and straight back up: nothing to report
-	var o := Overlay.new().open(self, "Made it home!", 460.0, UI.GOLD)
-	o.content.add_child(UI.label("Everything you carried is safe now.", 15, UI.GREEN))
-	var t := UI.rich(16)
+	var o := Overlay.new().open(self, "Made it home!", 460.0, UI.GOLD, false)   # Fable r2 #15: Stay in town is the way out, no third Close
+	o.content.add_child(UI.label("Everything you carried is safe now.", UI.FONT_BODY, UI.GREEN))
+	var t := UI.rich(UI.FONT_BODY)
 	var lines: Array[String] = []
 	if gold > 0:
 		lines.append("[color=%s]+%s gold[/color] banked" % [UI.hex(UI.GOLD), UI.short(gold)])
@@ -295,10 +295,10 @@ func _show_home_tally(e: Dictionary) -> void:
 		lines.append("[color=%s]Heroes at home:[/color] +%s" % [UI.hex(UI.GOLD), str(e["bench"])])
 	t.text = "\n".join(lines)
 	o.content.add_child(t)
-	var row := UI.hbox(8)
-	o.content.add_child(row)
+	var row := o.foot
+	o.foot.visible = true
 	var ok := UI.button("Stay in town", o.close)
-	var again := UI.primary("Dive again (floor %d)" % dive_again_floor(), func():
+	var again := UI.primary("Dive again · floor %d" % dive_again_floor(), func():
 		o.close()
 		dive_again(), UI.GOLD)
 	again.tooltip_text = "Straight back down from your last checkpoint, carrying the same share of gold as last time."
@@ -353,11 +353,13 @@ func _show_save_notices() -> void:
 		return
 	var text := "\n\n".join(SaveIO.notices)
 	SaveIO.notices.clear()
-	var o := Overlay.new().open(self, "Save restored", 440.0, UI.GOLD)
+	var o := Overlay.new().open(self, "Save restored", 440.0, UI.GOLD, false)
 	o.content.add_child(UI.wrap(text, UI.FONT_BODY, UI.TEXT))
 	var b := UI.primary("OK", o.close, UI.GOLD)
-	b.custom_minimum_size = Vector2(0, 44)
-	o.content.add_child(b)
+	b.custom_minimum_size = Vector2(0, UI.TAP)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	o.foot.visible = true
+	o.foot.add_child(b)
 
 ## Saves and goes back to the title screen (to switch heroes).
 func back_to_title() -> void:
@@ -459,7 +461,7 @@ func _daily_login() -> void:
 	state.save_game()
 	codex.save()
 	var o := Overlay.new().open(self, "Daily reward", 520.0, UI.GOLD)
-	o.content.add_child(UI.label("Day %d of your streak" % int(codex.login["streak"]), 15, UI.TEXT))
+	o.content.add_child(UI.label("Day %d of your streak" % int(codex.login["streak"]), UI.FONT_BODY, UI.TEXT))
 	var row := daily_grid()
 	o.content.add_child(row)
 	for i in Codex.LOGIN_REWARDS.size():
@@ -854,12 +856,20 @@ func _fit_layout() -> void:
 		ui_root.add_theme_constant_override("margin_" + side, 6 if tall else 10)  # phones need every pixel of width
 	# 0.13+: keep clear of the notch / Dynamic Island and the home bar (phones only: on a PC
 	# the "safe area" is the monitor minus the taskbar, which isn't about this window)
+	UI.safe_top = 0.0
+	UI.safe_bottom = 0.0
 	if OS.has_feature("mobile") and win.y > 0:
 		var safe := DisplayServer.get_display_safe_area()
 		if safe.size.y > 0:
 			var k := float(want.y) / float(win.y)
-			ui_root.add_theme_constant_override("margin_top", maxi(0, int(round(safe.position.y * k))))
-			ui_root.add_theme_constant_override("margin_bottom", maxi(0, int(round((win.y - safe.end.y) * k))))
+			UI.safe_top = maxf(0.0, roundf(safe.position.y * k))
+			UI.safe_bottom = maxf(0.0, roundf((win.y - safe.end.y) * k))
+	for a in OS.get_cmdline_user_args():   # Fable r2 #13: "--safe=59,34" fakes a notch and home bar (design px) for the tour
+		if a.begins_with("--safe=") and tall:
+			UI.safe_top = float(a.get_slice("=", 1).get_slice(",", 0))
+			UI.safe_bottom = float(a.get_slice("=", 1).get_slice(",", 1))
+	ui_root.add_theme_constant_override("margin_top", (6 if tall else 10) + int(UI.safe_top))
+	ui_root.add_theme_constant_override("margin_bottom", (6 if tall else 10) + int(UI.safe_bottom))
 	_apply_drawer()
 	_apply_nav()
 	left_panel.size_flags_stretch_ratio = 0.9 if tall else 1.0
@@ -883,7 +893,13 @@ func _fit_layout() -> void:
 	gsb.content_margin_right = 8 if tall else 12
 	xp_bar.custom_minimum_size.x = 100 if tall else 150
 	if log_label:
-		log_label.custom_minimum_size.y = 38 if tall else 80  # phones: the latest two lines
+		# phones: the latest two lines, whole (Fable r2 #3: 38 px cut the second line in half)
+		var fh := log_label.get_theme_font("normal_font").get_height(UI.FONT_BODY)
+		# a short phone (the SE, 896 design px) keeps one whole line: the fight stage needs every px
+		# for the tallest Calamities at 2x (monsters Fable r3)
+		var design_h := float(win.y) * float(want.x) / maxf(1.0, float(win.x))   # the layout is 504 wide and as tall as the screen allows
+		var lines := 2.0 if design_h >= 1000.0 else 1.0
+		log_label.custom_minimum_size.y = ceilf(lines * fh + 4.0) if tall else 80.0
 
 func _group(title: String) -> TabContainer:
 	var t := TabContainer.new()
@@ -1137,22 +1153,31 @@ func _build_town(parent: Control) -> void:
 	v.add_child(town_view)
 	var bar := UI.panel(UI.PANEL, UI.BORDER, 0, 8, 0)
 	v.add_child(bar)
+	# Fable r2 #6: the status is one line over one row of buttons (it used to wrap to seven lines
+	# beside them and stretch the row to 150 px)
+	var bv := UI.vbox(6)
+	bar.add_child(bv)
+	town_status = UI.label("", UI.FONT_BODY, UI.TEXT)
+	town_status.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	town_status.clip_text = true
+	bv.add_child(town_status)
 	var row := UI.hbox(8)
-	bar.add_child(row)
-	town_status = UI.wrap("", UI.FONT_BODY, UI.TEXT)   # wraps instead of pushing the buttons off a phone screen
-	town_status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(town_status)
+	bv.add_child(row)
 	var town_map := UI.button("Map", func():   # approved mockup 10: find a building fast in the busy iso town
 		sfx.play("click")
 		TownMap.open_for(self, town_view.hidden_spots, town_view.locked, _on_building))
 	town_map.custom_minimum_size = Vector2(0, UI.TAP)
+	town_map.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	town_map.tooltip_text = "The town map: tap a place to go there"
 	row.add_child(town_map)
 	town_mail = UI.button("Mail", func(): _on_building("mail"))
 	town_mail.custom_minimum_size = Vector2(0, UI.TAP)
+	town_mail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(town_mail)
 	town_leave = UI.primary("Into the dungeon", _choose_floor, UI.RED)
 	town_leave.custom_minimum_size = Vector2(0, UI.TAP)
+	town_leave.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	town_leave.size_flags_stretch_ratio = 2.0
 	row.add_child(town_leave)
 
 func _on_building(id: String) -> void:
@@ -1292,9 +1317,9 @@ func _sync_town() -> void:
 	var mw := Mail.waiting(state)
 	town_mail.text = "✉ Mail (%d)" % mw if mw > 0 else "✉ Mail"
 	town_mail.add_theme_color_override("font_color", UI.GOLD if Mail.unread(state) > 0 else UI.TEXT)
-	town_status.text = "HP %d / %d   ·   %s" % [state.hero_hp, state.get_max_hp(), String(GameData.zone_for_floor(maxi(1, state.floor_num))["name"])]
+	town_status.text = "HP %d / %d · %s" % [state.hero_hp, state.get_max_hp(), String(GameData.zone_for_floor(maxi(1, state.floor_num))["name"])]
 	if state.town_event != "":
-		town_status.text += "   ·   " + String(TownEvents.EVENTS[state.town_event]["name"])
+		town_status.text += " · " + String(TownEvents.EVENTS[state.town_event]["name"])
 	var notes := {}
 	for id in Town.BUILDINGS:
 		notes[id] = Town.BUILDINGS[id][1]
@@ -1333,7 +1358,7 @@ func confirm(title: String, text: String, yes_text: String, on_yes: Callable) ->
 	var yes := UI.primary(yes_text, func(): o.close(); on_yes.call(), UI.RED)
 	for b in [no, yes]:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(0, 40)
+		b.custom_minimum_size = Vector2(0, UI.TAP)   # Fable r2 #8: the destructive choice is a full tap target
 		row.add_child(b)
 
 ## A Calamity appears: the screen darkens and you choose to fight or run.
@@ -1358,7 +1383,7 @@ func _show_calamity(e: Dictionary) -> void:
 		refresh(), Color("#e43b44"))
 	for b in [run_b, fight_b]:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(0, 48)
+		b.custom_minimum_size = Vector2(0, UI.TAP)
 		row.add_child(b)
 
 ## The Calamity won: everything goes black, then you wake up.
@@ -1635,14 +1660,12 @@ func _handle_events() -> void:
 				moment_queue.append(["realm", e["name"], e["blurb"], Color(e["color"]), e["mechanic"], null, DarkGrade.texture(bgp, DarkGrade.SCENE, false)])
 			"boss_intro":
 				moment_queue.append(["boss", e["name"], e["lore"], Color(e["color"]), e.get("sub", ""), null])
-			"hatch_moment":
-				var htex := Menagerie.species_texture(String(e.get("species", "")), String(e["art"]))
-				moment_queue.append(["first" if e.get("first", false) else "hatch", ("Cherished " if e["cherished"] else "") + "Baby " + String(e["name"]),
-					("%s pet, a kind you've never had. It's in your Codex now." if e.get("first", false) else "%s pet. It already looks at you like you're its whole world.") % Monsters.tier_name(int(e["tier"])), Color(Monsters.tier_color(int(e["tier"]))), "", htex])
+			"hatch_moment", "egg_moment":   # Fable pets R4-R5: Menagerie.moment builds the screen
+				moment_queue.append(Menagerie.moment(e))
 			"first_find":  # next update: the first pet of a kind, the first of a Unique or Set piece
 				if e["kind"] == "pet":
 					var ftex := Menagerie.species_texture(String(e.get("species", "")), String(e["art"]))
-					moment_queue.append(["first", String(e["name"]), "%s pet, a kind you've never had. It's in your Codex now." % Monsters.tier_name(int(e["tier"])), Color(Monsters.tier_color(int(e["tier"]))), "", ftex])
+					moment_queue.append(["first", String(e["name"]), "%s pet, a kind you've never had. It's in your Codex now." % Monsters.tier_name(int(e["tier"])), Color(Menagerie.TIER_COLORS[clampi(int(e["tier"]), 0, 5)]), "", ftex])
 				else:
 					var fi: Dictionary = e["item"]
 					moment_queue.append(["first", String(e["name"]), ("Your first piece of this set. Wear more of it for its bonuses." if e["kind"] == "set" else "A Unique item. There's only one like it, and now it's in your collection."), Color(GameData.color_of(int(fi["rarity"]))), "", Sprites.item_icon(fi)])
@@ -1936,6 +1959,8 @@ static func _nav_icon(icon_name: String) -> ImageTexture:
 func _refresh_tabs() -> void:
 	# Town (and its Craft page) unlock as you go deeper
 	tabs.set_tab_hidden(2, not state.shop_unlocked())
+	# Fable r2 #1: no Online tab that says nothing in a player build (a debug build keeps it for testing)
+	tabs.set_tab_hidden(4, not online.is_configured() and not OS.is_debug_build())
 	town_tabs.set_tab_hidden(1, not state.craft_unlocked())
 	town_tabs.set_tab_hidden(2, not state.gamble_unlocked())
 	town_tabs.set_tab_hidden(4, state.hardcore)
@@ -1972,6 +1997,7 @@ func _refresh_tabs() -> void:
 		for i in NAV.size():
 			nav_buttons[i].text = NAV[i][0] + (" %d" % counts[i] if counts[i] > 0 else "")
 		nav_buttons[3].visible = not tabs.is_tab_hidden(2)
+		nav_buttons[5].visible = not tabs.is_tab_hidden(4)
 
 	# Only the page you're looking at needs updating
 	var group := _groups()[tabs.current_tab] as TabContainer

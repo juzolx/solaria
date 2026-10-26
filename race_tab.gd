@@ -57,7 +57,7 @@ func _power_card() -> void:
 	var title := Lineage.rank_name(state)
 	if state.form != "":
 		title += "  -  " + state.form
-	hv.add_child(UI.label(title.to_upper(), 20, c.lightened(0.3)))
+	hv.add_child(UI.name_plate(title))   # Fable r2 #11
 	var t := UI.rich(UI.FONT_BODY)
 	t.text = "[color=%s]%s.[/color] %s" % [UI.hex(UI.DIM), r, info["text"]]
 	hv.add_child(t)

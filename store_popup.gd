@@ -25,8 +25,14 @@ func show_for(m) -> void:
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(status)
 	_update()
+	# Fable r2 #17: the store is asked twice a second, not every frame
+	var timer := Timer.new()
+	timer.wait_time = 0.5
+	timer.timeout.connect(_poll)
+	add_child(timer)
+	timer.start()
 
-func _process(_d: float) -> void:
+func _poll() -> void:
 	if main == null:
 		return
 	var before := Store.last_message + str(Store.busy) + str(main.profile.owned_products.size()) + str(Store.prices.size())

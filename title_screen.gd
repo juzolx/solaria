@@ -215,6 +215,8 @@ func _build() -> void:
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 22)
+	margin.add_theme_constant_override("margin_top", 22 + int(UI.safe_top))   # Fable r2 #13
+	margin.add_theme_constant_override("margin_bottom", 22 + int(UI.safe_bottom))
 	add_child(margin)
 	var col := UI.vbox(10)
 	margin.add_child(col)
@@ -227,7 +229,7 @@ func _build() -> void:
 	title.add_theme_color_override("font_outline_color", UiSkin.SOOT)   # an ink outline, like the sprites
 	title.add_theme_constant_override("outline_size", 10)
 	col.add_child(title)
-	var sub := UI.label("A dungeon of myths and monsters", 15, UI.TEXT)
+	var sub := UI.label("A dungeon of myths and monsters", UI.FONT_BODY, UI.TEXT)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(sub)
 	var gap := Control.new()

@@ -285,6 +285,9 @@ func play(events: Array[Dictionary]) -> void:
 			"ability":
 				_ability_fx(e)
 			"buff":
+				if e.has("pet"):
+					_pet_trick(e, delay)
+					continue
 				_sfx("buff")
 				_float(str(e["name"]).to_upper() + "!", _hero_center() + Vector2(0, -30), Color("#c4b5fd"), 20)
 				_burst(_hero_center(), Color("#a78bfa"), 24, 260.0)
@@ -376,16 +379,27 @@ func play(events: Array[Dictionary]) -> void:
 				_sfx("buff")
 				_float(str(e["name"]).to_upper() + "!", _hero_center() + Vector2(30, -20), Color("#c4b5fd"), 18)
 			"summon_hit":
-				pet_hits[int(e.get("pet", -1))] = 0.3
-				var who := "summon_lunge" if String(e.get("name", "")) == state.summon_name and state.summon_turns > 0 else "pet_lunge"
-				if who == "summon_lunge" or (state.pet_on and World.pet_stage(state) >= 0):
-					var pt := create_tween()
-					pt.tween_property(self, who, 1.0, 0.1)
-					pt.tween_property(self, who, 0.0, 0.2)
+				# Fable pets R4: one after another, each pet hops on its own hit, its number in its rank colour
+				var who := who_lunges(e, state.summon_name, state.summon_turns, state.pet_on and World.pet_stage(state) >= 0)
+				var col := Color(Menagerie.TIER_COLORS[clampi(int(e["tier"]), 0, 5)]) if e.has("tier") else Color("#c4b5fd")
+				_later(delay, func():
+					if e.has("pet"):
+						pet_hits[int(e["pet"])] = 0.3
+					if who != "":
+						var pt := create_tween()
+						pt.tween_property(self, who, 1.0, 0.1)
+						pt.tween_property(self, who, 0.0, 0.2))
 				_later(delay + 0.15, func():
 					_fx("claw", _enemy_center() + Vector2(-16, 12), 0.7)
-					_float("%d" % e["dmg"], _enemy_center() + Vector2(-20, 20), Color("#c4b5fd"), 15)
-					_burst(_enemy_center() + Vector2(-20, 10), Color("#c4b5fd"), 6, 160.0))
+					_float("%d" % e["dmg"], _enemy_center() + Vector2(-20, 20), col, 15)
+					_burst(_enemy_center() + Vector2(-20, 10), col, 6, 160.0))
+				delay += 0.12
+			"pet_gold":
+				_later(delay, func():
+					var gh := _pet_head(int(e["pet"]))
+					if gh != Vector2.INF:   # gone home before this played: the log line names it
+						_sfx("loot")
+						_float("+%d" % int(e["amount"]), gh, UI.GOLD, 15))
 			"confused":
 				_later(delay, func():
 					_float("CONFUSED %d" % e["dmg"], _enemy_center() + Vector2(0, -30), Color("#a8ca58"), 16)
@@ -1266,7 +1280,33 @@ func _process(delta: float) -> void:
 	elif not toasts.is_empty():
 		toast_text = toasts.pop_front()
 		toast_life = 6.0
-	queue_redraw()
+	# Fable r2 #17: with Reduce motion on nothing breathes, so a still scene is redrawn 4 times a
+	# second (HP and state changes still show) instead of every frame; anything moving draws every frame
+	if profile == null or not profile.reduce_motion or _anything_moving():
+		_still_t = 0.0
+		queue_redraw()
+	else:
+		_still_t += delta
+		if _still_t >= 0.25:
+			_still_t = 0.0
+			queue_redraw()
+
+var _still_t := 0.0
+
+func _anything_moving() -> bool:
+	if shake > 0.01 or banner_alpha > 0.0 or toast_life > 0.0 or chest_t >= 0.0 or freeze_left > 0.0 or intro_t >= 0.0:
+		return true
+	if not (floaters.is_empty() and particles.is_empty() and rings.is_empty() and projectiles.is_empty()
+			and drops.is_empty() and beams.is_empty() and fx_sprites.is_empty() and pet_hits.is_empty() and toasts.is_empty()):
+		return true
+	if hero_anim != "combat_idle" or not hero_seq.is_empty() or not enemy_seq.is_empty():
+		return true
+	if summon_in > 0.0 and summon_in < 1.0:
+		return true
+	for key in bar_ghost:
+		if absf(float(bar_ghost[key]) - float(bar_target.get(key, 0.0))) > 0.001:
+			return true
+	return false
 
 ## Screen pixels per art pixel (whole numbers keep pixel art crisp).
 ## (The art is HD: 64x64 bodies, so a unit is half what it was at 32x32.)
@@ -1661,7 +1701,7 @@ func _draw() -> void:
 		_draw_old_bg(w, h)
 	else:
 		halls.t = Time.get_ticks_msec() / 1000.0
-		halls.build(state, size)
+		halls.build(state, size, HallsScene.screen_scale(self))
 		halls.draw_shell(self, size)
 		halls.draw_doors(self, null, {}, font)
 		var things: Array = halls.scenery()
@@ -1942,12 +1982,14 @@ func _draw() -> void:
 		# A slim strip along the bottom edge: never over the fighters or their plates
 		var ta := clampf(minf(toast_life, 6.0 - toast_life) * 4.0, 0.0, 1.0)
 		var tw := w - 16.0
-		var lines := minf(font.get_multiline_string_size(toast_text, HORIZONTAL_ALIGNMENT_CENTER, tw - 24, 12).y, 32.0)
+		# Fable r2 #3: body size (20, was a raw 12 = 9 pt on an SE), up to two lines, bone on ink
+		var fs := UI.FONT_BODY
+		var lines := minf(font.get_multiline_string_size(toast_text, HORIZONTAL_ALIGNMENT_CENTER, tw - 24, fs).y, 2.0 * font.get_height(fs))
 		var box := Rect2(8, h - lines - 14.0, tw, lines + 10.0)
 		toast_room = lines
 		draw_rect(box, Color(0.04, 0.05, 0.10, 0.92 * ta))
 		draw_rect(Rect2(box.position, Vector2(3, box.size.y)), Color(0.91, 0.69, 0.29, ta))
-		draw_multiline_string(font, Vector2(box.position.x + 12, box.position.y + 5 + 11), toast_text, HORIZONTAL_ALIGNMENT_CENTER, tw - 24, 12, 2, Color(1, 1, 1, ta))
+		draw_multiline_string(font, Vector2(box.position.x + 12, roundf(box.position.y + 5 + font.get_ascent(fs))), toast_text, HORIZONTAL_ALIGNMENT_CENTER, tw - 24, fs, 2, Color(UI.TEXT, ta))
 
 ## Draws the hero picture and the weapon (rotated around the hand for swings).
 func _draw_hero() -> void:
@@ -2567,12 +2609,13 @@ func _draw_hero_status(r: Rect2, font: Font) -> void:
 func _draw_menagerie() -> void:
 	if state == null or state.in_town:
 		return
-	var pets := Menagerie.out(state)
+	var pets := _team_out()
 	if pets.is_empty():
 		return
 	var pu := _u()
 	var w := 32.0 * pu
 	var lay := team_layout()
+	var hx := _hero_canvas().get_center().x   # hops lean toward the hero
 	for i in pets.size():
 		var p: Dictionary = pets[i]
 		var key := String(p.get("species", ""))
@@ -2582,7 +2625,7 @@ func _draw_menagerie() -> void:
 		# a hit is a hop: an arc over the 0.3 s (pet_hits counts down), a little toward the hero
 		var hop := sin(clampf(float(pet_hits.get(int(p["id"]), 0.0)) / 0.3, 0.0, 1.0) * PI)
 		var x0 := float(lay.get(i, 0.0)) + w / 2.0
-		var feet := Vector2(x0 + signf(_hero_canvas().get_center().x - x0) * hop * 4.0 * pu, _team_ground() - hop * 6.0 * pu)
+		var feet := Vector2(x0 + signf(hx - x0) * hop * 4.0 * pu, _team_ground() - hop * 6.0 * pu)
 		var r := Rect2(_snap(feet - Vector2(w / 2.0, (Pets.foot(key) + 1) * pu)), Vector2(w, w))
 		draw_set_transform(Vector2(x0, _team_ground()), 0.0, Vector2(1.0, 0.3))
 		draw_circle(Vector2.ZERO, w * 0.3 * (1.0 - 0.3 * hop), Color(0, 0, 0, 0.35 * hero_alpha))
@@ -2593,6 +2636,36 @@ func _draw_menagerie() -> void:
 				draw_texture_rect(Pets.white(key), Rect2(r.position + off, r.size), false, Color(1.0, 0.85, 0.4, gl * hero_alpha))
 		draw_texture_rect(tex, r, false, Color(1, 1, 1, hero_alpha))  # hurt pets stay home (Menagerie.out)
 
+## Who lunges for a summon_hit (Fable pets R4): the summon, the class companion (its hits carry no
+## "pet"), or nobody (a menagerie pet hops through pet_hits instead).
+static func who_lunges(e: Dictionary, summon_name: String, summon_turns: int, companion_out: bool) -> String:
+	if summon_turns > 0 and String(e.get("name", "")) == summon_name:
+		return "summon_lunge"
+	if not e.has("pet") and companion_out:
+		return "pet_lunge"
+	return ""
+
+## Over the head of menagerie pet id (Vector2.INF if it isn't out).
+func _pet_head(id: int) -> Vector2:
+	var pets := _team_out()
+	for i in pets.size():
+		if int(pets[i]["id"]) == id:
+			return Vector2(float(team_layout().get(i, 0.0)) + 16.0 * _u(), _team_ground() - 36.0 * _u())
+	return Vector2.INF   # not out (hurt, swapped): nothing floats over the hero by mistake
+
+## A pet's trick: its name over its head in its rank colour, and a hop.
+func _pet_trick(e: Dictionary, delay: float) -> void:
+	var id := int(e["pet"])
+	var col := Color(Menagerie.TIER_COLORS[clampi(int(e.get("tier", 0)), 0, 5)])
+	var label := String(e.get("label", e.get("name", "")))
+	_later(delay, func():
+		var head := _pet_head(id)
+		if head == Vector2.INF:
+			return
+		_sfx("buff")
+		pet_hits[id] = 0.3
+		_float(label.to_upper() + "!", head, col, 15))
+
 ## Where the team stands (Fable pets R2): the left edge x of each 32 px creature, keyed -1 for
 ## the class companion and 0.. for menagerie pets, companion first (Pets.row).
 var _lay := {}
@@ -2600,19 +2673,30 @@ var _lay_frame := -1
 
 func team_layout() -> Dictionary:
 	# once a frame: the pets, the companion and the hero plate all ask
+	_frame_cache()
+	return _lay
+
+var _out: Array = []
+
+## The pets out this frame (Menagerie.out once a frame, Fable pets R4).
+func _team_out() -> Array:
+	_frame_cache()
+	return _out
+
+func _frame_cache() -> void:
 	var fr := Engine.get_process_frames()
 	if fr == _lay_frame:
-		return _lay
+		return
 	_lay_frame = fr
+	_out = Menagerie.out(state) if state != null else []
 	_lay = _team_layout()
-	return _lay
 
 func _team_layout() -> Dictionary:
 	var who: Array = []
 	if state != null and state.pet_on and World.pet_stage(state) >= 0:
 		who.append(-1)
 	if state != null and not state.in_town:
-		for i in Menagerie.out(state).size():
+		for i in _team_out().size():
 			who.append(i)
 	var pu := _u()
 	var hc := _hero_canvas()
@@ -2621,9 +2705,14 @@ func _team_layout() -> Dictionary:
 	for i in _party_members().size():
 		var mc := _member_canvas(i).get_center().x
 		taken.append([mc - 16.0 * pu, mc + 16.0 * pu])
+	# Fable pets R5: a monster whose feet come down near the team row (staging changes) keeps its middle clear
+	if state != null and state.enemy_hp > 0 and not state.in_town:
+		var er := _enemy_rect(state.enemy_is_boss)
+		if absf(er.end.y - _team_ground()) < size.y * 0.1:
+			taken.append([er.position.x + er.size.x * 0.25, er.end.x - er.size.x * 0.25])
 	var first := ""
 	if not who.is_empty():
-		first = Pets.companion_key(state) if int(who[0]) == -1 else String(Menagerie.out(state)[0].get("species", ""))
+		first = Pets.companion_key(state) if int(who[0]) == -1 else String(_team_out()[0].get("species", ""))
 	var xs := Pets.row(who.size(), hc.get_center().x, hc.size.x, 32.0 * pu, 2.0 * pu, size.x, Pets.width(first) > 24, taken)
 	var out := {}
 	for k in who.size():

@@ -67,6 +67,7 @@ func _initialize() -> void:
 	Menagerie.make_pet(st, "barghest", "barghest", 2, "egg")
 	var hurt := Menagerie.make_pet(st, "will_o_wisp", "will_o_wisp", 1, "caught")
 	hurt["hurt"] = 6
+	Menagerie.changed(st)   # set by hand: caches start over
 	st.eggs.append({"id": st._new_id(), "floors": 4, "from": "reward"})
 	main.go_to_town(true)
 	main.refresh()

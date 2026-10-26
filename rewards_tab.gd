@@ -25,7 +25,7 @@ func refresh() -> void:
 	shown = key
 	OnlineUI.clear(box)
 	var all := Collections.all()
-	box.add_child(UI.label("Rewards  %d / %d" % [codex.coll_earned.size(), all.size()], 15, UI.GOLD))
+	box.add_child(UI.label("Rewards  %d / %d" % [codex.coll_earned.size(), all.size()], UI.FONT_BODY, UI.GOLD))
 	box.add_child(UI.wrap("Fill the Codex to earn titles, name colors and plate frames. Looks only: they never change your power. Every hero in every town shares them. Pick a title on the Hero tab; name colors and frames at the Guild Hall.", UI.FONT_BODY, UI.DIM))
 	var tracks := Collections.tracks()
 	for g in Collections.GROUPS:

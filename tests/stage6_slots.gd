@@ -162,8 +162,8 @@ func _gear_tab() -> void:
 	await process_frame
 	check(tab.slot_labels.has("Ring") and tab.slot_labels.has("Necklace"), "the Gear tab has Ring and Necklace slots")
 	# Interface pass: slots are squares with a name under them; each slot's full line is its tap-tip (slot_info)
-	check(String(tab.slot_info["Ring"]).contains("RING") and String(tab.slot_info["Ring"]).contains(String(ring["name"])), "the Ring card shows the worn ring")
-	check(String(tab.slot_info["Necklace"]).contains("NECKLACE") and String(tab.slot_info["Necklace"]).contains("UPGRADE"), "the Necklace card shows the upgrade in the bag")
+	check(String(tab.slot_info["Ring"]).contains("Ring ·") and String(tab.slot_info["Ring"]).contains(String(ring["name"])), "the Ring card shows the worn ring")
+	check(String(tab.slot_info["Necklace"]).contains("Neck ·") and String(tab.slot_info["Necklace"]).contains("upgrade in your bag"), "the Necklace card shows the upgrade in the bag")
 	var doll_row: Control = tab.slot_pics["Ring"].get_parent().get_parent().get_parent().get_parent()
 	check(doll_row.get_combined_minimum_size().x <= 406.0, "the slot columns and hero fit a phone width (min %s)" % doll_row.get_combined_minimum_size())
 	for s in GameData.SLOT_ORDER:
