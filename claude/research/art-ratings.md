@@ -100,3 +100,14 @@ Every rating Juzo gives goes here, so all sessions learn what he thinks is reall
 - Oct 25: smithy move "looks really good". Biggest mistake Juzo sees, town-wide and in the dungeon: props covered by buildings or looking like they float (base hidden or unsupported). Always check prop grounding in art reviews.
 
 - Oct 25: monster zone-light tint on the 13 grey monsters: Juzo "likes the color changes".
+
+- Oct 26: fights: Juzo prefers the old Surtr look (boss across from the hero, "facing off", clearly standing) over the round-5 2x boss that fills the stage. Merge of monsters r5 held; asking whether it applies to all fights.
+
+- Oct 26: dungeon grounding fix (mossy Hushwood rooms, door frames no longer drawn over props): Juzo likes it, "didn't overlap the same anymore".
+
+- Oct 26: fights: Juzo wants the face-off look for all fights ("more realistic, like they are guarding the door"): monster on the floor across from the hero, in front of the doors, no overlap.
+
+- Oct 26: LOCKED fight look: claude/art_test/monsters/faceoff/JUZO_REFERENCE_surtr_faceoff.jpg (Surtr between the doors, feet on the floor behind the hero, hero in front slightly overlapping). Juzo: "This specific look is so beautiful."
+- Oct 26: same face-off look, but scale the monster up "a little bit" ("guarding the doors, staring you down").
+- Oct 26: small monsters to the side so they stay visible is good, but they must not overlap room items (props).
+- Oct 26: face-off: Juzo picked option 2 (one whole size up where it fits; Surtr 2x at 430 between the doors, 1x on the SE).

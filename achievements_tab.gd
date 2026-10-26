@@ -21,7 +21,7 @@ func setup(m) -> void:
 	add_theme_constant_override("separation", 8)
 	var top := UI.hbox(8)
 	add_child(top)
-	head = UI.label("", 15, UI.GOLD)
+	head = UI.label("", UI.FONT_BODY, UI.GOLD)
 	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(head)
 	top.add_child(UI.label("Title:", UI.FONT_BODY, UI.DIM))
@@ -143,7 +143,7 @@ func _claim_row(a: Dictionary) -> PanelContainer:
 	var v := UI.vbox(2)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
-	var cn := UI.label(a["name"], 15, UI.GOLD)
+	var cn := UI.label(a["name"], UI.FONT_BODY, UI.GOLD)
 	cn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(cn)
 	var rw := UI.rich(UI.FONT_BODY)

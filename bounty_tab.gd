@@ -81,7 +81,7 @@ func _card(c: Dictionary, taken: bool) -> PanelContainer:
 		bar.max_value = int(c["need"])
 		bar.value = mini(int(c["have"]), int(c["need"]))
 		v.add_child(bar)
-		v.add_child(UI.label("%d / %d" % [mini(int(c["have"]), int(c["need"])), int(c["need"])], 11, UI.DIM))
+		v.add_child(UI.label("%d / %d" % [mini(int(c["have"]), int(c["need"])), int(c["need"])], UI.FONT_BODY, UI.DIM))
 	var right := UI.vbox(4)
 	right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(right)

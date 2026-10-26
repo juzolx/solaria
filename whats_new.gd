@@ -53,9 +53,9 @@ func show_for(main_node, fresh := false, on_done := Callable(), migrated := fals
 	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(head)
 	if fresh:
-		content.add_child(UI.wrap("A fresh start: every town and hero begins again under the new rules. Your settings are kept.", 15, UI.TEXT))
+		content.add_child(UI.wrap("A fresh start: every town and hero begins again under the new rules. Your settings are kept.", UI.FONT_BODY, UI.TEXT))
 	if migrated:
-		content.add_child(UI.wrap(MIGRATED_TEXT, 15, UI.GOLD.lightened(0.2)))
+		content.add_child(UI.wrap(MIGRATED_TEXT, UI.FONT_BODY, UI.GOLD.lightened(0.2)))
 	var items := summary()
 	if items.is_empty():
 		for l in (n["lines"] as Array).slice(0, 6):

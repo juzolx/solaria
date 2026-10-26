@@ -22,7 +22,7 @@ func _btn(text: String, on: bool, cb: Callable) -> Button:
 		_fill())
 	b.custom_minimum_size = Vector2(0, UI.TAP)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b.add_theme_font_size_override("font_size", 15)
+	b.add_theme_font_size_override("font_size", UI.FONT_BODY)
 	b.add_theme_color_override("font_color", UI.TEAL if on else UI.DIM)
 	body.add_child(b)
 	return b
@@ -57,7 +57,7 @@ func _fill() -> void:
 		state.save_game())
 	var prow := UI.hbox(8)
 	body.add_child(prow)
-	var pl := UI.label("", 15, UI.PINK)
+	var pl := UI.label("", UI.FONT_BODY, UI.PINK)
 	pl.custom_minimum_size = Vector2(110, 0)
 	var slider := HSlider.new()
 	slider.min_value = 10

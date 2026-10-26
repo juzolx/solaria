@@ -61,7 +61,7 @@ func _show(main_node, id: String, as_popup: bool) -> void:
 		row.add_child(skip)
 	row.add_child(UI.spacer())
 	var ok := UI.primary("Got it", close, UI.GOLD)
-	ok.custom_minimum_size = Vector2(140, 40)
+	ok.custom_minimum_size = Vector2(140, UI.TAP)   # Fable r2 #8
 	row.add_child(ok)
 	if id == "":
 		for p in Guide.PAGES:

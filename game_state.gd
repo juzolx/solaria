@@ -3545,6 +3545,10 @@ func load_game() -> bool:
 	return_scrolls = int(data.get("return_scrolls", 0))
 	pets = data.get("pets", [])
 	pets_out = data.get("pets_out", [])
+	Menagerie.convert_levels(self)   # the Oct 25 level curve (never lowers a level)
+	var home := Menagerie.one_of_each(self)   # Juzo (Oct 25): one of each kind; older saves could have two
+	if not home.is_empty():
+		say("[color=#d9a066]New rule: one of each kind of pet per team. %s went home to rest (nothing is lost).[/color]" % ", ".join(home))
 	eggs = data.get("eggs", [])
 	checkpoint = int(data.get("checkpoint", 0))
 	curses = data.get("curses", {})

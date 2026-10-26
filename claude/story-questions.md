@@ -47,3 +47,4 @@ store description. Mechanics stay; only names and text change (unless Juzo asks)
 - Pets (Juzo, Oct 25): only one copy of each pet species can be equipped at a time (ends Fairy Gold stacking).
 
 - Goddess name (Juzo, Oct 25): not decided; something that flows with Solaria, e.g. "Solaris". Use Solaris as the working name until he picks.
+- Oct 26 (design, Juzo): pack fights show only the monster you are fighting, plus a count of how many are left; the next steps in when one dies.

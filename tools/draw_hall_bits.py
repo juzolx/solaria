@@ -204,10 +204,14 @@ for f in range(2):
             d = math.hypot((x - 31.5) / 31.0, (y - 15.5) / 15.0)
             if d < 1.0:
                 c = hexc("#172038") if d < 0.62 else hexc("#253a5e")
-                if 0.80 <= d < 0.90 and (int(math.degrees(math.atan2((y - 15.5) * 2.0, x - 31.5))) // 20 + f) % 2 == 0:
+                # the rim ring moves 2 px in on frame 1 (and its dashes turn), so the ripple shows
+                lo = 0.80 - f * 2.0 / 31.0
+                if lo <= d < lo + 0.10 and (int(math.degrees(math.atan2((y - 15.5) * 2.0, x - 31.5))) // 20 + f) % 2 == 0:
                     c = hexc("#4fb0c6")   # the rippling rim
                 if 0.30 <= d < 0.38 and (x + y + f) % 7 == 0:
                     c = hexc("#3a4466")
+                if y == 11 + f * 3 and 22 + f * 4 <= x < 34 + f * 4:
+                    c = hexc("#c0cbdc")   # a glint on the water, one row lower each frame
                 px[x, y] = c
     save(img, "art", "halls", "z2_pool_%d.png" % f)
 

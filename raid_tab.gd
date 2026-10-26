@@ -89,7 +89,7 @@ func _show(gid: int, d: Dictionary) -> void:
 	bar.max_value = hp
 	bar.value = hp - dealt
 	v.add_child(bar)
-	v.add_child(UI.label("%s / %s HP left  -  %d guild members" % [_num(hp - dealt), _num(hp), int(d["members"])], 12, UI.DIM))
+	v.add_child(UI.label("%s / %s HP left  -  %d guild members" % [_num(hp - dealt), _num(hp), int(d["members"])], UI.FONT_BODY, UI.DIM))
 	v.add_child(UI.label("Resets in %s" % _time_left(), UI.FONT_BODY, UI.DIM))
 
 	var actions := UI.hbox(8)

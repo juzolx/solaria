@@ -25,6 +25,8 @@ func open(parent: Node, title: String, width := 560.0, border := UI.GOLD, closab
 	add_child(dim)
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.offset_top = UI.safe_top   # Fable r2 #13: clear of the notch / Dynamic Island and the home bar
+	center.offset_bottom = -UI.safe_bottom
 	add_child(center)
 	box = PanelContainer.new()
 	box.add_theme_stylebox_override("panel", UiSkin.frame(UI.PANEL, border, 18))  # next update: an iron frame in the popup's color
@@ -70,7 +72,7 @@ func _fit_height() -> void:
 		return
 	var vh := get_viewport().get_visible_rect().size.y
 	var need := content.get_combined_minimum_size().y
-	var max_h := vh - 70.0 - head.get_combined_minimum_size().y - 10.0
+	var max_h := vh - UI.safe_top - UI.safe_bottom - 70.0 - head.get_combined_minimum_size().y - 10.0
 	# a long popup also gets a Close at the bottom, so the way out is never a scroll away
 	if bottom_close:
 		bottom_close.visible = need > max_h

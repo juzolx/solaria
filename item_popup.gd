@@ -29,13 +29,20 @@ func _build(m, item: Dictionary, actions: Array) -> void:
 		content.add_child(_compare(state, item))
 	if not actions.is_empty():
 		foot.visible = true
+		var grid := GridContainer.new()   # up to three across; more go two by two (Fable r2 #4)
+		grid.columns = actions.size() if actions.size() <= 3 else 2
+		grid.add_theme_constant_override("h_separation", 8)
+		grid.add_theme_constant_override("v_separation", 8)
+		grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		foot.add_child(grid)
 		for a in actions:
 			var color: Color = a[2] if a.size() > 2 and a[2] != null else UI.GOLD
 			var cb: Callable = a[1]
 			var b := UI.primary(str(a[0]), func(): close(); cb.call(), color)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			b.custom_minimum_size = Vector2(0, UI.TAP)
-			foot.add_child(b)
+			b.clip_text = true
+			grid.add_child(b)
 
 ## "Defense   24   68 (+44)" under Now / With, and the overall change of your build.
 func _compare(state: GameState, item: Dictionary) -> Control:

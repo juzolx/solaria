@@ -1,5 +1,5 @@
 class_name BestiaryTab
-extends HBoxContainer
+extends BoxContainer   # a row on wide screens, stacked on phones (refresh sets vertical)
 ## Codex > Bestiary: every creature, zone by zone. Ones you haven't met are
 ## "???". Once you've met one you see its lore, your kills, the gear it likes
 ## to drop and the real drop odds. Its Signature item stays a secret until
@@ -88,12 +88,17 @@ func refresh() -> void:
 		return
 	shown = key
 	shown_kills = int(codex.stat("kills"))
-	# Phones: a narrower list ("Jack-in-Irons (12)" still fits) leaves the plate room for 2x bosses
-	# (fable r4: on an SE, 150 left the plate ~226 screen px, so half the bosses were 1x; 110 still
-	# shows the icon and a short name, which ellipsises)
-	var short := bool(main.is_tall) and _screen_scale() < 0.8
-	list.custom_minimum_size.x = (110.0 if short else 150.0) if bool(main.is_tall) else 200.0
-	add_theme_constant_override("separation", 4 if short else 10)   # the last 6 px Charybdis needs at 2x
+	# Phones (lead, interface r2): the list sits over the plate in two columns, so every name is
+	# whole (single words reach 113 px at 15, more than a side column can give), and the plate
+	# gets the full width, so every boss keeps 2 screen px per art px (fable r4)
+	var stacked := bool(main.is_tall)
+	vertical = stacked
+	add_theme_constant_override("separation", 8 if stacked else 10)
+	list.custom_minimum_size = Vector2(0, 186) if stacked else Vector2(200, 0)
+	list.size_flags_vertical = Control.SIZE_FILL if stacked else Control.SIZE_EXPAND_FILL
+	list.max_columns = 2 if stacked else 1
+	list.same_column_width = stacked
+	(get_child(1) as Control).size_flags_vertical = Control.SIZE_EXPAND_FILL   # the plate and its text
 	# ...and the plate as tall as the tallest boss (121 rows) at 2 screen px: 326 design on an SE
 	# (+10: the 8 px padding under the feet, fable r5: the tallest overhung the plate's top)
 	backdrop.custom_minimum_size.y = maxf(PLATE, ceilf(TALLEST * 2.0 / _screen_scale()) + 10.0)
@@ -102,11 +107,10 @@ func refresh() -> void:
 	# Icons are a head crop shown 1:1 on screen (fable r1: whole 76 px monsters squeezed to 22 px were blobs)
 	var icon := int(round(ICON / _screen_scale()))
 	list.fixed_icon_size = Vector2i(icon, icon)
+	list.add_theme_constant_override("v_separation", maxi(6, UI.TAP - icon))   # a row is one tap tall: the icon plus the gap
 	for zi in GameData.ZONES.size():
 		var z: Dictionary = GameData.ZONES[zi]
-		# the SE's narrow list shows the zone's first word ("MOSSY", fable r5: "MOSSY HOL..."); the
-		# full name is in the strip over the plate
-		var h := list.add_item(str(z["name"]).to_upper().get_slice(" ", 0) if short else str(z["name"]).to_upper())
+		var h := list.add_item(str(z["name"]))
 		list.set_item_selectable(h, false)
 		list.set_item_custom_fg_color(h, Color(z["color"]).lightened(0.4))
 		keys.append("")
@@ -166,9 +170,9 @@ func _label(n: String) -> String:
 	if not codex.seen(n):
 		return "  ???"
 	var boss: bool = Monsters.info(n).get("boss", false)
-	# the SE's narrow list has no room for the tag: boss rows are red there anyway
-	var tag := "[Boss] " if boss and list.custom_minimum_size.x > 120.0 else ""
-	var label := "  %s%s  (%d)" % [tag, Monsters.name_of(n), codex.kills(n)]
+	if bool(main.is_tall):   # phones: the whole name and its kills (boss rows are red)
+		return "%s · %d" % [Monsters.name_of(n), codex.kills(n)]
+	var label := "  %s%s  (%d)" % ["[Boss] " if boss else "", Monsters.name_of(n), codex.kills(n)]
 	if bool(codex.bestiary[n].get("sig", false)):
 		label += "  *"
 	return label

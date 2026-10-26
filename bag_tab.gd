@@ -26,6 +26,8 @@ var upgrade_button: Button
 var reroll_button: Button
 var salvage_all_buttons := {}
 var auto_salvage_button: Button
+var bulk_label: Label
+var bulk_row: HBoxContainer   # "Salvage all" by rarity: only when there is something to salvage
 var selected_id := -1
 var shown := ""
 var select_button: Button
@@ -64,11 +66,14 @@ func setup(m) -> void:
 		sort_pick.add_item("Sort: " + sname)
 	sort_pick.item_selected.connect(func(_i): shown = ""; main.refresh())
 	sort_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sort_pick.fit_to_longest_item = false   # sized to what it shows (the chevron made the row 5 px too wide on a phone)
+	sort_pick.clip_text = true
 	sort_pick.clip_text = true
 	head.add_child(sort_pick)
 	filter_pick = OptionButton.new()
 	filter_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	filter_pick.clip_text = true
+	filter_pick.fit_to_longest_item = false
 	filter_pick.add_item("All slots")
 	for s in GameData.SLOT_ORDER:
 		filter_pick.add_item(s)
@@ -91,7 +96,10 @@ func setup(m) -> void:
 	sv.add_child(empty_note)
 	resized.connect(_on_resized)
 
+	# Fable r2 #4: what an item does and what you can do with it is its tap popup (like Skills);
+	# the old detail box and its two rows of buttons stay hidden (drag targets and tests use them)
 	var box := UI.panel(UI.INSET, UI.EMPTY, 8, 8, 1)
+	box.visible = false
 	add_child(box)
 	var drow := UI.hbox(10)   # interface pass: the picked item's picture beside its text
 	box.add_child(drow)
@@ -119,6 +127,8 @@ func setup(m) -> void:
 
 	var row1 := UI.hbox(6)
 	var row2 := UI.hbox(6)
+	row1.visible = false
+	row2.visible = false
 	add_child(row1)
 	add_child(row2)
 	equip_button = UI.primary("Equip", func(): _act("equip"))   # the main action on this page
@@ -137,13 +147,15 @@ func setup(m) -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row2.add_child(b)
 
-	var bulk := UI.hbox(6)
+	bulk_label = UI.label("Salvage all", UI.FONT_BODY, UI.DIM)
+	add_child(bulk_label)
+	bulk_row = UI.hbox(6)
+	var bulk := bulk_row
 	add_child(bulk)
-	bulk.add_child(UI.label("Salvage all:", UI.FONT_BODY, UI.DIM))
 	for r in [0, 1, 2, 3]:
 		var b := UI.button("", _salvage_all.bind(r))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size.y = 52   # two lines ("Uncommon" over "(12)"): four fit a phone and the count stays visible
+		b.custom_minimum_size.y = UI.BUTTON_H   # two lines ("Uncommon" over "(12)"): four fit a phone and the count stays visible
 		b.add_theme_color_override("font_color", Color(GameData.color_of(r)))
 		b.tooltip_text = "Salvage every %s item. Locked items and upgrades are kept." % GameData.RARITY_NAMES[r]
 		bulk.add_child(b)
@@ -234,11 +246,21 @@ func _popup(id: int) -> void:
 	selected_id = id
 	var item: Dictionary = found["item"]
 	var acts := []
+	var locked: bool = item.get("locked", false)
 	if found["where"] == "bag":
 		acts.append(["Equip", func(): state.equip(id); main.sfx.play("equip"); main.refresh(), UI.GREEN])
-		if not item.get("locked", false):
-			acts.append(["Salvage (%d scrap)" % GameData.scrap_value(item, state.scrap_mult()), func(): _act("salvage"), UI.BLUE])
-			acts.append(["Sell (%d gold)" % state.sell_price(item), func(): _act("sell"), UI.GOLD])
+		if not locked:
+			acts.append(["Sell · %dg" % state.sell_price(item), func(): _act("sell"), UI.GOLD])
+			acts.append(["Salvage · %d scrap" % GameData.scrap_value(item, state.scrap_mult()), func(): _act("salvage"), UI.BLUE])
+	else:
+		acts.append(["Unequip", func(): _act("equip"), UI.GREEN])
+	acts.append(["Unlock" if locked else "Lock", func(): _act("lock"), null])
+	# Fable r2 #4: upgrade and reroll come only when they can happen; the price is on the button
+	if int(item["level"]) < GameData.MAX_UPGRADE and Economy.upgrade_short(state, item) == "":
+		acts.append(["Upgrade +%d" % (int(item["level"]) + 1), func(): _act("upgrade"), null])
+	if GameData.can_reroll(item) and Economy.reroll_short(state, item) == "":
+		acts.append(["Reroll · %d%%" % GameData.reroll_chance(item), func(): _act("reroll"), null])
+	_refresh_details()
 	ItemPopup.show_item(main, item, acts)
 
 func _act(action: String) -> void:
@@ -342,6 +364,9 @@ func refresh() -> void:
 		var b: Button = salvage_all_buttons[r]
 		b.text = "%s\n(%d)" % [GameData.RARITY_NAMES[r], n]
 		b.disabled = n == 0
+		b.visible = n > 0
+	bulk_row.visible = salvage_all_buttons.keys().any(func(r): return state.salvage_all_count(r) > 0)
+	bulk_label.visible = bulk_row.visible
 
 	var key := "%d|%d|%d|%d|%s|%s" % [state.bag_version, sort_pick.selected, filter_pick.selected, selected_id, picking, str(picked.keys())]
 	if key != shown:
