@@ -5,7 +5,7 @@ extends SceneTree
 ## the boss stage room, plates that stay put while the hero lunges, the boss chip column and the
 ## menagerie pet beside the hero plate.
 const TestHero := preload("res://tests/test_hero.gd")
-const KEYS := ["kobold", "imp", "umibozu", "chimera", "barghest+pack", "garmr+pack", "boss_grendel", "boss_charybdis",
+const KEYS := ["kobold", "imp", "rune_hound", "wolpertinger", "halo_wisp", "umibozu", "chimera", "barghest+pack", "garmr+pack", "boss_grendel", "boss_charybdis",
 	"boss_surtr", "boss_forgemaster_brann",
 	"calamity_0", "calamity_1", "calamity_2", "calamity_3", "calamity_4", "calamity_5", "calamity_6", "calamity_7", "calamity_8", "calamity_9"]
 const SIZES := [Vector2i(430, 932), Vector2i(375, 667)]
@@ -105,23 +105,19 @@ func _check_fight(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 		var feet_y := er.position.y + (float(art["foot"]) + 1.0) * er.size.y / (art["size"] as Vector2).y   # the lowest solid row
 		check(feet_y >= bv._floor_line() - 1.0 / sc, "%s: feet %.0f over the floor line %.0f (on the wall)" % [tag, feet_y, bv._floor_line()])
 		check(feet_y < bv._team_ground() - 0.5, "%s: feet %.0f not behind the hero's %.0f" % [tag, feet_y, bv._team_ground()])
-		# its head and body read above and beside the hero (the hero may cover its lower legs)
-		var cover: float = bv._hero_cover(er)
-		check(cover <= 0.45, "%s: the hero covers %d%% of it" % [tag, roundi(cover * 100.0)])
+		# its head and upper body show above the hero's head (the hero may cover its lower legs)
+		var shown: float = (bv._hero_rest_top() - er.position.y) / er.size.y
+		# commons size up until FACE_VISIBLE shows; bosses keep Juzo's size (opt2) and show at least 35%
+		var least: float = 0.35 if (st.enemy_is_boss or st.enemy_calamity > 0) else bv.FACE_VISIBLE
+		check(shown >= least - 0.01, "%s: %d%% shows above the hero, under %d%%" % [tag, roundi(shown * 100.0), roundi(least * 100.0)])
 		check(er.position.y >= bv._boss_bar().end.y + bv.BOSS_GAP - 0.5, "%s: top %.0f over the bar, name and chip row" % [tag, er.position.y])
 		check(er.size.y <= bv.size.y * 0.6, "%s: %.0f of the stage's %.0f, it fills the stage" % [tag, er.size.y, bv.size.y])
-		if st.enemy_is_boss or st.enemy_calamity > 0:
-			check(absf(er.get_center().x - bv.size.x * 0.5) < 1.0, "%s: a boss off the centre between the doors" % tag)
-		else:
-			check(er.get_center().x > bv._hero_head_right(), "%s: a common's centre behind the hero's head" % tag)
-			# 2x where it fits on the floor, never a 1x that could be 2x (lead, Oct 26)
-			var rows := float(art["foot"]) + 1.0
-			if roundf(ui) < bv._hero_unit():
-				check(bv._boss_bar().end.y + bv.BOSS_GAP + rows * (roundf(ui) + 1.0) / sc > bv._floor_line() + bv.size.y * (bv.face_drop + bv.COMMON_NEAR), "%s: %dx where %dx fits" % [tag, roundf(ui), roundf(ui) + 1.0])
+		# every monster centred between the doors, guarding them (Juzo, Oct 26)
+		check(absf(er.get_center().x - bv.size.x * 0.5) < 1.0, "%s: off the centre between the doors" % tag)
 		if st.horde_pack:
-			# a pack shows one monster; the badge counts the ones still waiting
+			# a pack shows one monster; the badge says which of the pack it is
 			var badge: String = BattleView._pack_badge(Vector2i(st.horde_total - st.horde_left + 1, st.horde_total))
-			check(badge == ("+%d more" % (st.horde_left - 1) if st.horde_left > 1 else "last"), "%s: badge %s with %d left" % [tag, badge, st.horde_left])
+			check(badge == "%d of %d" % [st.horde_total - st.horde_left + 1, st.horde_total], "%s: badge %s with %d of %d left" % [tag, badge, st.horde_left, st.horde_total])
 		# the monster stays put while the hero lunges or recoils (fable r3 item 1)
 		var keep := [bv.hero_lunge, bv.recoil]
 		for lr in [[1.4, 0.0], [0.0, 1.0], [1.4, 1.0]]:

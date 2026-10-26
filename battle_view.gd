@@ -1564,12 +1564,11 @@ func _rect_for(art: Dictionary, boss: bool, big := false, cal := -1) -> Rect2:
 	return Rect2(_snap(Vector2(x - sz.x / 2.0, gy - (foot + 1.0) * u)), sz)
 
 ## The face-off (Juzo, Oct 26, claude/art_test/monsters/faceoff/JUZO_REFERENCE_surtr_faceoff.jpg:
-## "guarding the doors, staring you down"): the monster stands further back, centred between the
+## "guarding the doors, staring you down"): every monster stands further back, centred between the
 ## doors, feet on the hall's floor just behind the hero, who stands in front and may cover its
 ## lower legs. A boss's size is the biggest whole scale no taller than face_share of the stage
-## (so it never fills the stage); every top stays under the bar, name and chip row; feet
-## face_drop of the stage nearer than the floor seam, or nearer still when even 1x needs it.
-## (Juzo picks between opt1 0.40 / 0.05 and opt2 0.46 / 0.03: faceoff/surtr_*_before_opt1_opt2.png)
+## (so it never fills the stage; Juzo's opt2); every top stays under the bar, name and chip row;
+## feet face_drop of the stage nearer than the floor seam, or nearer still when its size needs it.
 static var face_share := 0.46
 static var face_drop := 0.03
 
@@ -1578,38 +1577,34 @@ func _faceoff_rect(art: Dictionary, ui: float, sc: float, move: float, boss: boo
 	var top_min := _boss_bar().end.y + BOSS_GAP
 	var rows := float(art["foot"]) + 1.0
 	if boss:
-		# bosses and Calamities: centred between the doors, the hero in front of their legs
 		# a Calamity may stand taller than a zone boss (lead, Oct 26: it must read bigger)
 		var share := face_share + (CALAMITY_SHARE if cal else 0.0)
 		while ui > 1.0 and rows * ui / sc > size.y * share:
 			ui -= 1.0
 	else:
-		# commons and packs: offset right of the hero's head, as big as fits with the feet on the
-		# floor up to COMMON_NEAR of the stage nearer than the seam (lead, Oct 26: a 1x kobold on an
-		# SE was too small to read)
+		# commons and packs: as big as fits with the feet on the floor, up to COMMON_NEAR of the
+		# stage nearer than the seam (lead, Oct 26: a 1x kobold on an SE was too small to read)...
 		while ui > 1.0 and top_min + rows * ui / sc > seam + size.y * COMMON_NEAR:
 			ui -= 1.0
+		# ...and a step bigger while the hero would hide most of it (Juzo, Oct 26: centred like the
+		# bosses, never "practically disappearing behind the character")
+		# (its feet stay a tenth of the stage behind the hero's)
+		while ui < _hero_unit() + 1.0 and _face_visible(rows * ui / sc, seam, top_min) < FACE_VISIBLE 				and top_min + rows * (ui + 1.0) / sc <= _team_ground() - size.y * 0.1:
+			ui += 1.0
 	var u := ui / sc
 	var sz: Vector2 = art["size"] * u
 	var feet := maxf(seam, top_min + rows * u)
-	var x := size.x * 0.5
-	if not boss:
-		x = clampf(_hero_head_right() + sz.x * 0.25, x, size.x - sz.x * 0.5 - 2.0)
-	return Rect2(_snap(Vector2(x - sz.x / 2.0, feet + move - rows * u)), sz)
+	return Rect2(_snap(Vector2(size.x * 0.5 - sz.x / 2.0, feet + move - rows * u)), sz)
 
 const COMMON_NEAR := 0.08
 const CALAMITY_SHARE := 0.1   # on top of face_share: up to ~56% of the stage
+const FACE_VISIBLE := 0.45    # the least share of a monster's height showing above the hero's head
 
-## The right edge of the hero's head (the middle half of its body), standing still.
-func _hero_head_right() -> float:
-	return size.x * _leader_x() + 8.0 * Sprites.HD * _hu()
-
-## The share of r the hero's drawn body (the middle half of its rect, standing still) covers.
-func _hero_cover(r: Rect2) -> float:
-	var hu := _hu()
-	var w := 32.0 * Sprites.HD * hu
-	var mid := Rect2(size.x * _leader_x() - w * 0.25, _hero_rest_top(), w * 0.5, _team_ground() - _hero_rest_top())
-	return r.intersection(mid).get_area() / maxf(1.0, r.get_area())
+## The share of a monster h tall that shows above the hero's head where the face-off stands it
+## (feet on the seam, or nearer when its top would reach the chip row).
+func _face_visible(h: float, seam: float, top_min: float) -> float:
+	var feet := maxf(seam, top_min + h)
+	return clampf((_hero_rest_top() - (feet - h)) / maxf(1.0, h), 0.0, 1.0)
 
 ## Design px from the top bar's bottom to a monster's top row: the name line and one chip row,
 ## always, so chips coming and going never move it.
@@ -1850,7 +1845,9 @@ func _draw() -> void:
 		# The monster's plate is drawn after your team: the big 2.1 hero (one scale) stands in front of
 		# the monster and would otherwise hide its name and health
 		enemy_plate = func() -> void:
-			_draw_bar(er, label, state.enemy_hp, state.enemy_max_hp, bar_color, Color(name_color, enemy_alpha), pips, pack)
+			# the top bar stays whole while the next one steps in (lead, Oct 26): its name, the new count
+			var plate_a := 1.0 if _boss_stage() else enemy_alpha
+			_draw_bar(er, label, state.enemy_hp, state.enemy_max_hp, bar_color, Color(name_color, plate_a), pips, pack)
 			if state.enemy_shield > 0:
 				_draw_shield(er)
 			if not state.enemy_mods.is_empty() and not veiled:
@@ -2413,7 +2410,7 @@ func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color,
 	var tx := x0 + (pips * 12.0 + 6.0 if pips > 0 else 0.0)
 	_outlined(font, Vector2(tx, ny), shown, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FS, label_color)
 	if pack.y > 0:
-		# a pack: how many still wait off stage, "+2 more" down to "last" (Juzo, Oct 26: one on stage)
+		# a pack: which one this is, "1 of 3" (Juzo, Oct 26: one on stage, the rest off it)
 		var bt := _pack_badge(pack)
 		var bw := font.get_string_size(bt, HORIZONTAL_ALIGNMENT_LEFT, -1, PACK_FS).x + 10.0
 		var box := Rect2(tx + tw + 8.0, ny - PACK_FS - 3.0, bw, PACK_FS + 6.0)
@@ -2424,10 +2421,9 @@ func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color,
 
 const PACK_FS := 15
 
-## The pack badge's words: the ones still waiting after this one.
+## The pack badge's words: which one of the pack this is ("1 of 3"; lead, Oct 26).
 static func _pack_badge(pack: Vector2i) -> String:
-	var more := pack.y - pack.x
-	return "+%d more" % more if more > 0 else "last"
+	return "%d of %d" % [pack.x, pack.y]
 
 func _pack_badge_w(font: Font, pack: Vector2i) -> float:
 	return font.get_string_size(_pack_badge(pack), HORIZONTAL_ALIGNMENT_LEFT, -1, PACK_FS).x + 18.0
