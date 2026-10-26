@@ -936,7 +936,7 @@ func _draw_lot(r: Rect2) -> void:
 ## The Clinic's pen: a wooden fence around the plots, a little sign, and your pets.
 func _draw_pen() -> void:
 	if iso:
-		_draw_pen_pets(16.0)   # the iso town has its own fence and kennel
+		_draw_pen_pets(32.0)   # the iso town has its own fence and kennel; pets 1:1 (pets dev: never downscaled)
 		return
 	var wood := Color("#6b4423")
 	var light := Color("#a0703c")
@@ -963,7 +963,7 @@ func _draw_pen() -> void:
 	people.draw_rect(Rect2(sp.x - 6.0, sp.y - 14.5, 12.0, 4.0), Color("#3ca85a"))
 	_draw_pen_pets(34.0)
 
-## Your pets in the pen, `px` tall (16 in the iso town: knee-high to a ~28 px walker).
+## Your pets in the pen, `px` tall: their 32 px Pets 2 art 1:1 (a baby animal beside a ~28 px walker).
 func _draw_pen_pets(px: float) -> void:
 	for a in range(1, pen_pets.size()):   # insertion sort in place, like the folk
 		var p0: Dictionary = pen_pets[a]
@@ -987,8 +987,8 @@ func _draw_pen_pets(px: float) -> void:
 		if iso:
 			_cover(Rect2(pos, sz), float(p["y"]))   # pets hide behind the wall and the kennel too
 
-## A pet's art at `px` tall, drawn 1:1: the 32 px Pets 2 art is halved once with TownFolk.half
-## (outline kept) for the iso town instead of being sampled at 0.5 every frame.
+## A pet's art drawn 1:1. Only art far bigger than `px` is halved, once, with TownFolk.half
+## (outline kept) - never sampled at a fraction every frame.
 func _pet_tex(tx: Texture2D, px: float) -> Texture2D:
 	if maxf(tx.get_width(), tx.get_height()) <= px * 1.5:
 		return tx
