@@ -104,8 +104,15 @@ func _check_fight(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 				check(pr.position.y >= bv._boss_bar().end.y + bv.BOSS_NAME - 0.5, "%s: pack-mate top %.0f under the boss bar" % [tag, pr.position.y])
 				check(pr.end.y <= bv._team_ground() + 0.5, "%s: pack-mate feet %.0f under the team line" % [tag, pr.end.y])
 		var feet_y := er.position.y + (float(art["foot"]) + 1.0) * er.size.y / (art["size"] as Vector2).y   # the lowest solid row
-		check(feet_y <= bv._team_ground() + 0.5, "%s: feet %.0f under the team line %.0f" % [tag, feet_y, bv._team_ground()])
-		check(er.position.y >= bv._boss_bar().end.y + bv.BOSS_NAME - 0.5, "%s: top %.0f over the boss bar and name" % [tag, er.position.y])
+		# feet on or above the team line; only a Calamity too tall for that may go lower, behind the hero
+		var floor_y: float = bv.size.y if st.enemy_calamity > 0 else bv._team_ground()
+		check(feet_y <= floor_y + 0.5, "%s: feet %.0f under %.0f" % [tag, feet_y, floor_y])
+		if feet_y > bv._team_ground() + 0.5:
+			check(er.position.y <= bv._boss_bar().end.y + bv.BOSS_NAME + 0.5, "%s: below the team line with room left above" % tag)
+		var top_min: float = bv._boss_bar().end.y + (bv.CALAMITY_TUCK if st.enemy_calamity > 0 else bv.BOSS_NAME)
+		check(er.position.y >= top_min - 0.5, "%s: top %.0f over the boss bar and name" % [tag, er.position.y])
+		if er.position.y < bv._boss_bar().end.y + bv.BOSS_NAME - 0.5:
+			check(feet_y >= bv.size.y - 3.0, "%s: crown under the name with room left below" % tag)
 		check(bv._boss_chip_y(0) >= bv._boss_bar().end.y + bv.BOSS_NAME, "%s: status chips over the boss name" % tag)
 	else:
 		check(roundf(ui) == unit, "%s: common pixel %d, not the unit %d" % [tag, roundf(ui), unit])

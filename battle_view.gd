@@ -1505,10 +1505,17 @@ func _rect_for(art: Dictionary, boss: bool, big := false) -> Rect2:
 		# needs 366 of the SE's 367 design px, so the feet stand on the line itself)
 		var feet := _team_ground()
 		var tight := _boss_bar().end.y + BOSS_NAME   # the least room: just under its name
-		while ui > 1.0 and (float(art["foot"]) + 1.0) * ui / sc > feet - tight:
+		# Interface round 1 made the SE stage 57 px shorter: a Calamity that can't fit above the
+		# team line may stand lower, down to the stage's bottom edge (its base behind the hero),
+		# and as a last resort tuck its crown under its own name plate (CALAMITY_TUCK)
+		var cal := state.enemy_calamity > 0
+		var low := size.y - 2.0 if cal else feet
+		var hard := _boss_bar().end.y + CALAMITY_TUCK if cal else tight
+		while ui > 1.0 and (float(art["foot"]) + 1.0) * ui / sc > low - hard:
 			ui -= 1.0
 		var tall := (float(art["foot"]) + 1.0) * ui / sc
-		var top := maxf(tight, minf(_boss_bar().end.y + BOSS_GAP, feet - tall))
+		feet = maxf(feet, minf(low, tight + tall))
+		var top := maxf(hard, minf(_boss_bar().end.y + BOSS_GAP, feet - tall))
 		base = minf(maxf(base, top + tall), feet)
 	else:
 		# ...and never taller than the space above the team
@@ -1524,6 +1531,9 @@ func _rect_for(art: Dictionary, boss: bool, big := false) -> Rect2:
 ## Calamities on an SE.
 const BOSS_GAP := 44.0
 const BOSS_NAME := 26.0   # the plate box ends 24 px under the bar (_draw_plate)
+## A Calamity's top row at least this far under the bar: its name plate (24 px) may cover a few
+## rows of its crown, only when the tallest ones can't keep the hero's 2x on an SE otherwise.
+const CALAMITY_TUCK := 12.0
 
 ## Row i of the boss stage's right-edge chip column (statuses, then mods).
 func _boss_chip_y(i: int) -> float:
