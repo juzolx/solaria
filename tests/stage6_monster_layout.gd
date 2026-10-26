@@ -59,6 +59,7 @@ func _initialize() -> void:
 				await _check_death(main, bv, st, arg, wsz)
 		for arg in ["kobold", "boss_grendel", "calamity_2"]:
 			await _check_party(main, bv, st, arg, wsz)
+		await _check_box(main, bv, st, wsz)
 		await _check_bestiary(main, wsz)
 	# (f) Epic, Legendary and Mythic are told apart by their pips too
 	check(BattleView.tier_pips(3) != BattleView.tier_pips(4) and BattleView.tier_pips(4) != BattleView.tier_pips(5), "tiers 3-5 wear the same pips")
@@ -134,6 +135,33 @@ func _check_party(main, bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 	st.party = null
 	main.refresh()
 	await process_frame
+
+## Every monster's solid pixels stay inside Room3D.MONSTER_BOX (the dungeon keeps its props out
+## of it; dungeon r5: the Cyclops's hand reached 0.87 w, over a brazier).
+func _check_box(main, bv, st: GameState, wsz: Vector2i) -> void:
+	var box: Rect2 = Room3D.MONSTER_BOX
+	var worst := [1.0, 0.0, 0.0, ""]   # least left, most right, lowest bottom, who
+	for f in DirAccess.get_files_at("res://art/enemies"):
+		if not f.ends_with(".png"):
+			continue
+		var key := f.get_basename()
+		_fight(main, st, key)
+		await process_frame
+		var art: Dictionary = bv._enemy_art(st.enemy_is_boss)
+		if art.is_empty() or not bv._boss_stage():
+			continue
+		var er: Rect2 = bv._enemy_rect(st.enemy_is_boss)
+		var ub := Rect2((art["img"] as Image).get_used_rect())
+		var k: Vector2 = er.size / (art["size"] as Vector2)
+		var so := Rect2(er.position + ub.position * k, ub.size * k)
+		var l: float = so.position.x / bv.size.x
+		var r: float = so.end.x / bv.size.x
+		var b: float = so.end.y / bv.size.y
+		if l < worst[0] or r > worst[1] or b > worst[2]:
+			worst = [minf(l, worst[0]), maxf(r, worst[1]), maxf(b, worst[2]), key]
+		check(l >= box.position.x - 0.002 and r <= box.end.x + 0.002 and b <= box.end.y + 0.002,
+			"%s at %dx%d: solid pixels x %.3f-%.3f, down to %.3f h, outside the monster box %s" % [key, wsz.x, wsz.y, l, r, b, box])
+	print("monster box at %dx%d: solid pixels span x %.3f-%.3f, down to %.3f h (last widest: %s)" % [wsz.x, wsz.y, worst[0], worst[1], worst[2], worst[3]])
 
 ## True when a solid pixel of the monster's picture (drawn in er) falls inside the prop's rect r.
 func _touches(er: Rect2, art: Dictionary, r: Rect2) -> bool:
