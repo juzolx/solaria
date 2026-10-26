@@ -432,15 +432,19 @@ func play(events: Array[Dictionary]) -> void:
 				var dart := Sprites.enemy_by_key(e.get("art", ""))
 				var dtex: Texture2D = dart.get("tex", _enemy_tex(e["shape"], e["color"]))
 				var dimg: Image = null
+				# its own flags (fable r4: Calamity.on_slain clears the state's before the view sees this)
+				var dcal := bool(e.get("calamity", false))
+				var dbig := bool(e["boss"]) or dcal or _is_tall(dart)
 				if not dart.is_empty():
-					# bosses and Calamities reel back instead of kneeling (their top third sank before the burn)
-					var dpose := "hit1" if bool(e["boss"]) or state.enemy_calamity > 0 else "kneel2"
+					# the boss stage's monsters reel back instead of kneeling (their top third sank before the burn)
+					var dpose := "hit1" if dbig else "kneel2"
 					var dp: Dictionary = Sprites.poses_for("e" + str(e.get("art", "")), dart["img"], -1)[dpose]
 					dtex = dp["tex"]
 					dimg = dp["img"]
 				# the burn edge: the zone's light for commons, the monster's own colour for bosses
-				dying = {"tex": dtex, "img": dimg, "edge": e["color"] if bool(e["boss"]) else _rim_color().to_html(false), "boss": e["boss"], "alpha": 1.0, "color": e["color"],
-					"art": e.get("art", "")}
+				var edge: String = "e43b44" if dcal else (e["color"] if bool(e["boss"]) else _rim_color().to_html(false))
+				dying = {"tex": dtex, "img": dimg, "edge": edge, "boss": e["boss"], "alpha": 1.0, "color": e["color"],
+					"art": e.get("art", ""), "calamity": dcal, "big": dbig}
 				enemy_alpha = 0.0
 				_later(delay + 0.05, _enemy_died)
 			"hero_dead":
@@ -1424,16 +1428,18 @@ func _hero_rect() -> Rect2:
 
 ## The top of the hero's rect standing still (no breathing bob, lunge or recoil). The monster's
 ## feet and plate are placed from this, so they never hop when the hero attacks (fable r3).
+## From _hero_canvas's formula with no bob/lunge/recoil (fable r4: no toggling of live fields),
+## once a frame.
 func _hero_rest_top() -> float:
-	var keep := [hero_lunge, recoil, bob]
-	hero_lunge = 0.0
-	recoil = 0.0
-	bob = 0.0
-	var top := _hero_rect().position.y
-	hero_lunge = keep[0]
-	recoil = keep[1]
-	bob = keep[2]
-	return top
+	var fr := Engine.get_process_frames()
+	if fr != _rest_frame:
+		_rest_frame = fr
+		var u := _hu()
+		_rest_top = _snap(Vector2(0.0, _team_ground() - (Sprites.HERO_FOOT + 1) * u)).y + 12.0 * Sprites.HD * u
+	return _rest_top
+
+var _rest_frame := -1
+var _rest_top := 0.0
 
 func _hand_screen() -> Vector2:
 	var c := _hero_canvas()
@@ -1477,17 +1483,20 @@ func _enemy_art(boss: bool) -> Dictionary:
 	return Sprites.enemy_by_key(state.enemy_species)
 
 func _dying_rect() -> Rect2:
-	return _rect_for(Sprites.enemy_by_key(dying.get("art", "")), dying["boss"], bool(dying["boss"]) or String(dying.get("art", "")).begins_with("calamity_"))
+	# the flags were taken at the kill (fable r4: the state's Calamity flag is already cleared)
+	return _rect_for(Sprites.enemy_by_key(dying.get("art", "")), dying["boss"], bool(dying.get("big", dying["boss"])), 1 if bool(dying.get("calamity", false)) else 0)
 
 func _enemy_rect(boss: bool) -> Rect2:
 	return _rect_for(_enemy_art(boss), boss, _boss_stage())
 
 ## Every monster shows at the hero's pixel scale (fable r1: rank is shown by the aura,
 ## pips and name colour, never by a second pixel size).
-func _rect_for(art: Dictionary, boss: bool, big := false) -> Rect2:
+## cal: 1 / 0 for a Calamity or not, -1 = the current fight's (a dying one passes its own).
+func _rect_for(art: Dictionary, boss: bool, big := false, cal := -1) -> Rect2:
 	var sc := _scr()
 	var ui := float(_unit())
 	var u := ui / sc
+	var is_cal := state.enemy_calamity > 0 if cal < 0 else cal == 1
 	var x := size.x * 0.5
 	# Fable r2: the monster stands ON its plate (plate top = _bar_rect y - 6), never behind it
 	var base := _enemy_ground()
@@ -1495,7 +1504,7 @@ func _rect_for(art: Dictionary, boss: bool, big := false) -> Rect2:
 	if art.is_empty():
 		var s := _sprite_size(boss)
 		return Rect2(x - s / 2.0, base + move - s + sin(bob * 2.4 + 1.0) * 2.0, s, s)
-	ui = maxf(1.0, minf(ui, _width_cap(art, boss, sc)))
+	ui = maxf(1.0, minf(ui, _width_cap(art, boss, sc, 1 if is_cal else 0)))
 	if big:
 		# The boss stage (lead, Oct 25, option B): bosses and Calamities keep the hero's scale and
 		# stand lower, under the boss bar, with the hero in front of their feet. Only if even that
@@ -1505,11 +1514,23 @@ func _rect_for(art: Dictionary, boss: bool, big := false) -> Rect2:
 		# needs 366 of the SE's 367 design px, so the feet stand on the line itself)
 		var feet := _team_ground()
 		var tight := _boss_bar().end.y + BOSS_NAME   # the least room: just under its name
-		while ui > 1.0 and (float(art["foot"]) + 1.0) * ui / sc > feet - tight:
+		# Interface round 1 made the SE stage 57 px shorter: a Calamity that can't fit above the
+		# team line may stand lower, down to the stage's bottom edge (its base behind the hero),
+		# and as a last resort tuck its crown under its own name plate (CALAMITY_TUCK)
+		var low := size.y - 2.0 if is_cal else feet
+		var hard := _boss_bar().end.y + CALAMITY_TUCK if is_cal else tight
+		while ui > 1.0 and (float(art["foot"]) + 1.0) * ui / sc > low - hard:
 			ui -= 1.0
 		var tall := (float(art["foot"]) + 1.0) * ui / sc
-		var top := maxf(tight, minf(_boss_bar().end.y + BOSS_GAP, feet - tall))
+		feet = maxf(feet, minf(low, tight + tall))
+		var gap := maxf(BOSS_GAP, BOSS_NAME + _boss_chip_room() + 6.0)   # chips stay off its head
+		var top := maxf(hard, minf(_boss_bar().end.y + gap, feet - tall))
 		base = minf(maxf(base, top + tall), feet)
+		if not boss and not is_cal:
+			# a tall common (short screens) stands at the hall's focal point, right of the hero,
+			# so the hero covers its flank, not its face (fable r4: HallsScene focal 0.62)
+			var half := (art["size"] as Vector2).x * ui / sc * 0.5
+			x = clampf(size.x * TALL_X, x, size.x - half - 2.0)
 	else:
 		# ...and never taller than the space above the team
 		ui = maxf(1.0, minf(ui, floorf(base * 0.92 * sc / maxf(1.0, float(art["foot"]) + 1.0))))
@@ -1524,16 +1545,50 @@ func _rect_for(art: Dictionary, boss: bool, big := false) -> Rect2:
 ## Calamities on an SE.
 const BOSS_GAP := 44.0
 const BOSS_NAME := 26.0   # the plate box ends 24 px under the bar (_draw_plate)
+## A Calamity's top row at least this far under the bar: its name plate (24 px) may cover a few
+## rows of its crown, only when the tallest ones can't keep the hero's 2x on an SE otherwise.
+const CALAMITY_TUCK := 12.0
+## Where a tall common stands on the boss stage (share of the stage width, its centre).
+const TALL_X := 0.66
 
-## Row i of the boss stage's right-edge chip column (statuses, then mods).
-func _boss_chip_y(i: int) -> float:
-	return _boss_bar().end.y + BOSS_NAME + 6.0 + i * (SCENE_FS + 10.0)
+## Where the wind-up "!" stands (its centre x, its baseline): right of the boss bar on the boss
+## stage, else just over its plate's right end.
+func _telegraph_at(er: Rect2) -> Vector2:
+	if _boss_stage():
+		var bb := _boss_bar()
+		return Vector2(minf(bb.end.x + 24.0, size.x - 14.0), bb.end.y + 14.0)
+	var pl := _bar_rect(er)
+	return Vector2(minf(pl.end.x + 14.0, size.x - 14.0), pl.position.y - 4.0)
 
-var boss_statuses := 0  # status chips in that column (mods go under them)
+## Pips beside a ranked monster's name: one per tier, so Epic, Legendary and Mythic (3-5) are
+## told apart by count as well as colour (fable r4: all three wore 3). Calamities keep 3 red.
+static func tier_pips(tier: int) -> int:
+	return clampi(tier, 1, 5)
+
+## The banner's line: position = (left x, the big text's baseline), size.x = its width; the sub
+## line sits 17 lower. On the boss stage it goes under the bar, name and chips; elsewhere under
+## the zone title.
+func _banner_line() -> Rect2:
+	if _boss_stage():
+		return Rect2(8.0, _boss_bar().end.y + BOSS_NAME + _boss_chip_room() + 44.0, size.x - 16.0, 17.0)
+	return Rect2(0.0, 62.0, size.x, 17.0)
+
 
 ## Bosses and Calamities fight on the boss stage (big, behind the hero, their bar at the top).
 func _boss_stage() -> bool:
-	return state != null and (state.enemy_is_boss or state.enemy_calamity > 0 or _tall_common())
+	var fr := Engine.get_process_frames()   # asked ~10 times a frame (fable r4)
+	if fr != _stage_frame or _stage_key != _fight_key():
+		_stage_frame = fr
+		_stage_key = _fight_key()
+		_stage = state != null and (state.enemy_is_boss or state.enemy_calamity > 0 or _tall_common())
+	return _stage
+
+var _stage_frame := -1
+var _stage_key := ""
+var _stage := false
+
+func _fight_key() -> String:
+	return "" if state == null else "%s|%s|%d|%.3f" % [state.enemy_art, state.enemy_is_boss, state.enemy_calamity, size.y + _scr()]
 
 ## A common too tall to keep the one pixel scale above the hero on a short screen (an iPhone SE:
 ## ~90 of 112 commons were 1x beside the 2x hero): it takes the boss stage's place instead,
@@ -1541,11 +1596,14 @@ func _boss_stage() -> bool:
 func _tall_common() -> bool:
 	if state == null or state.enemy_is_boss or state.enemy_calamity > 0:
 		return false
-	var art := _enemy_art(false)
+	return _is_tall(_enemy_art(false))
+
+## True if this common's art can't keep the unit above the hero (see _tall_common).
+func _is_tall(art: Dictionary) -> bool:
 	if art.is_empty() or not art.has("foot"):
 		return false
 	var sc := _scr()
-	var ui := maxf(1.0, minf(float(_unit()), _width_cap(art, false, sc)))
+	var ui := maxf(1.0, minf(float(_unit()), _width_cap(art, false, sc, 0)))
 	return (float(art["foot"]) + 1.0) * ui / sc > _enemy_ground() * 0.92
 
 ## The boss bar (health bar; the name sits under it) along the top of the stage.
@@ -1557,12 +1615,13 @@ func _boss_bar() -> Rect2:
 func _enemy_ground() -> float:
 	return minf(_ground(), _hero_rest_top() - 52.0)
 
-## Most screen pixels per art pixel the stage width allows: commons keep to ~56% of
+## Most screen pixels per art pixel the stage width allows: commons keep to 60% of
 ## the width, bosses may reach the edges (92%) and Calamities fill the stage (96%), so
 ## all of them stay at the hero's 3x on a phone.
-func _width_cap(art: Dictionary, boss: bool, sc: float) -> float:
+func _width_cap(art: Dictionary, boss: bool, sc: float, cal := -1) -> float:
 	var span: float = (art["size"] as Vector2).x
-	var share := 0.96 if state.enemy_calamity > 0 else (0.92 if boss else 0.6)   # 0.6: umibozu (80 px) keeps 3x at 430
+	var is_cal := state.enemy_calamity > 0 if cal < 0 else cal == 1
+	var share := 0.96 if is_cal else (0.92 if boss else ArtStyle.COMMON_SHARE)
 	return floorf(size.x * share * sc / maxf(1.0, span))
 
 ## A waiting pack-mate: one whole screen pixel per art pixel smaller than the monster
@@ -1571,7 +1630,10 @@ func _pack_rect(pr: Rect2, art: Dictionary, side: float) -> Rect2:
 	var sc := _scr()
 	var ui := maxf(1.0, roundf(pr.size.x * sc / maxf(1.0, (art["size"] as Vector2).x)))
 	var sz := pr.size * (maxf(1.0, ui - 1.0) / ui)
-	var pos := pr.position + Vector2(side * pr.size.x * 0.62 + (pr.size.x - sz.x) * 0.5, pr.size.y * 0.68 - sz.y)
+	# feet a tenth of the lead's height up (behind it), not a third (fable r4: they stood on the wall)
+	var pos := pr.position + Vector2(side * pr.size.x * 0.62 + (pr.size.x - sz.x) * 0.5, pr.size.y * 0.9 - sz.y)
+	pos.x = clampf(pos.x, 2.0 - sz.x * 0.3, size.x - sz.x * 0.7 - 2.0)   # at most a third off the edge
+	pos.y = minf(pos.y, _team_ground() - sz.y)
 	return Rect2(_snap(pos), sz)
 
 func _hero_center() -> Vector2:
@@ -1611,6 +1673,10 @@ func _draw() -> void:
 			_draw_mood(w, h, _ground())
 	if not _boss_stage():  # the boss bar takes the title's place on the boss stage
 		_outlined(font, Vector2(12, 26), _fit_text(font, "%s  -  %s" % [zone["name"], GameData.sub_name(state.floor_num)], SCENE_FS, size.x - 24.0), HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS, Color(1, 1, 1, 0.7))
+	elif _tall_common():
+		# a tall common keeps the zone's name: small and dim over its plate (which starts at 14)
+		# (fable r4: 59% of SE fights lost it); bosses keep the clean bar
+		_outlined(font, Vector2(0, 12), _fit_text(font, "%s  -  %s" % [zone["name"], GameData.sub_name(state.floor_num)], 13, size.x - 24.0), HORIZONTAL_ALIGNMENT_CENTER, size.x, 13, Color(1, 1, 1, 0.55))
 	_draw_status(font)
 
 	# Shake as "trauma": strength grows faster than linearly (small taps barely move the
@@ -1626,10 +1692,10 @@ func _draw() -> void:
 	if dying.has("tex"):
 		var dr := _dying_rect()
 		# 0.13+: it crumbles away pixel by pixel, edges glowing, instead of fading
-		var frames := _dissolve(dying["tex"], dying.get("img"), Color(String(dying.get("edge", dying.get("color", "#ff8040")))))
-		var fi := clampi(int((1.0 - float(dying["alpha"])) * frames.size()), 0, frames.size() - 1)
+		var fi := clampi(int((1.0 - float(dying["alpha"])) * DISSOLVE_FRAMES), 0, DISSOLVE_FRAMES - 1)
+		var frame: Texture2D = _dissolve(dying["tex"], dying.get("img"), Color(String(dying.get("edge", dying.get("color", "#ff8040")))), fi)
 		dr.position.y -= (1.0 - float(dying["alpha"])) * 6.0
-		draw_texture_rect(frames[fi], dr, false, Color(1, 1, 1, minf(1.0, float(dying["alpha"]) * 3.0)))
+		draw_texture_rect(frame, dr, false, Color(1, 1, 1, minf(1.0, float(dying["alpha"]) * 3.0)))
 
 	# A pack (horde): the ones still waiting stand behind, either side
 	if state.horde_left > 1 and enemy_alpha > 0.0 and not state.enemy_is_boss:
@@ -1641,7 +1707,7 @@ func _draw() -> void:
 				var rr := _pack_rect(pr, part, side)
 				draw_ellipse_shadow(rr)
 				var mate: Dictionary = _enemy_poses(part).get("idle0", {})
-				draw_texture_rect(mate["tex"] if mate.has("tex") else part["tex"], rr, false, Color(0.62, 0.6, 0.66, 0.9 * enemy_alpha))
+				draw_texture_rect(mate["tex"] if mate.has("tex") else part["tex"], rr, false, Color(0.55, 0.53, 0.6, 0.9 * enemy_alpha))
 	# Current enemy
 	if enemy_alpha > 0.0:
 		var boss := state.enemy_is_boss
@@ -1691,12 +1757,13 @@ func _draw() -> void:
 				for off in [Vector2(-one, 0), Vector2(one, 0), Vector2(0, -one), Vector2(0, one)]:
 					draw_texture_rect(ewhite, Rect2(local.position + off, local.size), false, Color(Color(Monsters.tier_color(state.enemy_tier)), 0.55 * enemy_alpha))
 		draw_texture_rect(etex, local, false, etint)
-		if Combat.winding(state) and state.enemy_calamity <= 0:
-			# telegraph: it glows and shows a "!" while it gathers a big blow
-			var wp := 0.5 + 0.5 * sin(bob * 12.0)
+		if Combat.winding(state):
+			# telegraph: it glows and shows a "!" while it gathers a big blow (Calamities too;
+			# the glow holds still with flashes off; the "!" sits by its plate, not on its face)
+			var wp := 0.5 + 0.5 * sin(bob * 12.0) if (profile == null or profile.flashes) else 0.5
 			draw_texture_rect(ewhite, local, false, Color(1.0, 0.55, 0.1, (0.25 + 0.3 * wp) * enemy_alpha))
-			var fnt := get_theme_default_font()
-			var ex := Vector2(er.end.x - 44.0, er.position.y + er.size.y * 0.3 - 6.0 * wp)
+			var fnt := UI.game_font()
+			var ex := _telegraph_at(er) - Vector2(40.0, 6.0 * wp)
 			draw_string_outline(fnt, ex, "!", HORIZONTAL_ALIGNMENT_CENTER, 80, 48, 10, Color(0, 0, 0, enemy_alpha))
 			draw_string(fnt, ex, "!", HORIZONTAL_ALIGNMENT_CENTER, 80, 48, Color(1.0, 0.7 + 0.3 * wp, 0.2, enemy_alpha))
 		if enemy_flash > 0.0:
@@ -1719,7 +1786,7 @@ func _draw() -> void:
 			name_color = Color("#ff6b6b")
 			pips = 3
 		elif state.enemy_tier > 0 and not boss and not state.enemy_wanderer:
-			pips = clampi(state.enemy_tier, 1, 3)
+			pips = tier_pips(state.enemy_tier)
 		if state.enemy_goblin:
 			label += " (%d)" % state.goblin_turns
 		var pack := Vector2i.ZERO
@@ -1854,16 +1921,17 @@ func _draw() -> void:
 		var slide := (1.0 - clampf((1.8 - banner_alpha) / 0.2, 0.0, 1.0)) * 40.0
 		# Just the words, heavily outlined: a band would hide the fighters' heads
 		var big_color := banner_color
+		var bl := _banner_line()   # x, baseline, width (fable r4: off the boss name)
 		var bfs := 26  # long names shrink to fit the screen
-		while bfs > 14 and font.get_string_size(banner_text, HORIZONTAL_ALIGNMENT_LEFT, -1, bfs).x > w - 20.0:
+		while bfs > 14 and font.get_string_size(banner_text, HORIZONTAL_ALIGNMENT_LEFT, -1, bfs).x > bl.size.x - 20.0:
 			bfs -= 1
-		draw_string_outline(font, Vector2(slide, 62), banner_text, HORIZONTAL_ALIGNMENT_CENTER, w, bfs, 6, Color(0, 0, 0, a))
-		draw_string(font, Vector2(slide, 62), banner_text, HORIZONTAL_ALIGNMENT_CENTER, w, bfs, Color(big_color, a))
+		draw_string_outline(font, bl.position + Vector2(slide, 0), banner_text, HORIZONTAL_ALIGNMENT_CENTER, bl.size.x, bfs, 6, Color(0, 0, 0, a))
+		draw_string(font, bl.position + Vector2(slide, 0), banner_text, HORIZONTAL_ALIGNMENT_CENTER, bl.size.x, bfs, Color(big_color, a))
 		var sfs := 13  # the line under it shrinks to fit too
-		while sfs > 9 and font.get_string_size(banner_sub, HORIZONTAL_ALIGNMENT_LEFT, -1, sfs).x > w - 12.0:
+		while sfs > 9 and font.get_string_size(banner_sub, HORIZONTAL_ALIGNMENT_LEFT, -1, sfs).x > bl.size.x - 12.0:
 			sfs -= 1
-		draw_string_outline(font, Vector2(-slide, 79), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, w, sfs, 3, Color(0, 0, 0, 0.8 * a))
-		draw_string(font, Vector2(-slide, 79), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, w, sfs, Color(1, 1, 1, 0.85 * a))
+		draw_string_outline(font, bl.position + Vector2(-slide, 17), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, bl.size.x, sfs, 3, Color(0, 0, 0, 0.8 * a))
+		draw_string(font, bl.position + Vector2(-slide, 17), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, bl.size.x, sfs, Color(1, 1, 1, 0.85 * a))
 
 	_draw_team_strip(font)
 	_draw_intro(font, w, h)
@@ -2085,12 +2153,7 @@ func _draw_shield(r: Rect2) -> void:
 func _draw_mods(r: Rect2) -> void:
 	var font := UI.game_font()   # interface pass: the game font everywhere
 	if _boss_stage():
-		# Boss stage: in the right-edge column under its statuses (fable r3: over the bar they
-		# landed on the title row)
-		for i in state.enemy_mods.size():
-			var m: String = state.enemy_mods[i]
-			_chip_row([[m, Color(Monsters.MODS[m]["color"])]], size.x, _boss_chip_y(boss_statuses + i), font)
-		return
+		return   # with the statuses under the boss plate (_boss_chip_layout)
 	var x := r.get_center().x
 	var y := _bar_rect(r).position.y - 15.0   # just above the monster's bar, wherever the bar sits
 	var total := 0.0
@@ -2211,6 +2274,9 @@ func _bar_rect(r: Rect2) -> Rect2:
 			var y := low
 			if not team_layout().is_empty():
 				y = minf(y, _team_ground() - 32.0 * _u() - NAME_FS - 30.0)
+			# a tall common stands right of the hero (fable r4): its side is taken, try the left first
+			if _tall_common() and left - bw >= 6.0:
+				return Rect2(left - bw, y, bw, 14.0)
 			if beside + bw <= size.x - 6.0:
 				return Rect2(beside, y, bw, 14.0)
 			if left - bw >= 6.0:
@@ -2380,16 +2446,18 @@ func _chip_row(chips: Array, x: float, y: float, font: Font, fs := SCENE_FS) -> 
 		for item in lines[li]:
 			var c: Array = item[0]
 			var wdt: float = item[1]
-			var col: Color = c[1]
-			var box := Rect2(cx, ly, wdt, fs + 6.0)
-			draw_rect(box, Color(0.03, 0.04, 0.08, 0.82))
-			draw_rect(box, Color(col, 0.85), false, 1.0)
-			draw_string(font, Vector2(cx + 5.0, ly + fs + 1.0), String(c[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+			_chip_box(c, Rect2(cx, ly, wdt, fs + 6.0), font, fs)
 			cx += wdt + 4.0
 
-## The monster's statuses and its boss clock. (Juzo, Oct 24: weaknesses and
-## resistances live in the Codex only, not over the monster in the fight.)
-func _draw_enemy_info(r: Rect2, font: Font) -> void:
+## One chip: [text, colour] in a dark box.
+func _chip_box(c: Array, box: Rect2, font: Font, fs: int) -> void:
+	var col: Color = c[1]
+	draw_rect(box, Color(0.03, 0.04, 0.08, 0.82))
+	draw_rect(box, Color(col, 0.85), false, 1.0)
+	draw_string(font, Vector2(box.position.x + 5.0, box.position.y + fs + 1.0), String(c[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+
+## The monster's statuses and boss clock as chips: [text, colour].
+func _enemy_statuses() -> Array:
 	var st: Array = []
 	if state.burn_turns > 0:
 		st.append(["Burning", Color("#fb923c")])
@@ -2423,11 +2491,59 @@ func _draw_enemy_info(r: Rect2, font: Font) -> void:
 		st.append(["ENRAGED", Color("#ef4444")])
 	if state.boss_minions > 0:
 		st.append(["Minions x%d" % state.boss_minions, Color("#d4d4d4")])
+	return st
+
+## The boss stage's chips (statuses, then mods) laid out in centred rows right under the boss
+## plate: [[chip, Rect2], ...]. Once a frame; _rect_for leaves room for them.
+func _boss_chip_layout() -> Array:
+	var fr := Engine.get_process_frames()
+	if fr == _chip_frame:
+		return _chip_lay
+	_chip_frame = fr
+	_chip_lay = []
+	if state == null or not _boss_stage():
+		return _chip_lay
+	var chips := _enemy_statuses()
+	for m in state.enemy_mods:
+		chips.append([m, Color(Monsters.MODS[m]["color"])])
+	var font := UI.game_font()
+	var rows: Array = [[]]
+	var row_w: Array = [0.0]
+	for c in chips:
+		var wdt := font.get_string_size(String(c[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS).x + 10.0
+		if not (rows[-1] as Array).is_empty() and float(row_w[-1]) + wdt > size.x - 16.0:
+			rows.append([])
+			row_w.append(0.0)
+		(rows[-1] as Array).append([c, wdt])
+		row_w[-1] = float(row_w[-1]) + wdt + 4.0
+	for ri in rows.size():
+		var cx := (size.x - float(row_w[ri]) + 4.0) / 2.0
+		var y := _boss_bar().end.y + BOSS_NAME + 2.0 + ri * CHIP_ROW
+		for it in rows[ri]:
+			_chip_lay.append([it[0], Rect2(cx, y, it[1], SCENE_FS + 6.0)])
+			cx += float(it[1]) + 4.0
+	return _chip_lay
+
+var _chip_frame := -1
+var _chip_lay: Array = []
+const CHIP_ROW := 28.0
+
+## Design px the boss-stage chip rows take under the plate (0 with none).
+func _boss_chip_room() -> float:
+	var lay := _boss_chip_layout()
+	if lay.is_empty():
+		return 0.0
+	return (lay[-1][1] as Rect2).end.y + 4.0 - (_boss_bar().end.y + BOSS_NAME)
+
+## The monster's statuses and its boss clock. (Juzo, Oct 24: weaknesses and
+## resistances live in the Codex only, not over the monster in the fight.)
+func _draw_enemy_info(r: Rect2, font: Font) -> void:
+	var st := _enemy_statuses()
 	if _boss_stage():
-		# Boss stage: down the right edge under the boss bar, so they never sit on its face
-		boss_statuses = st.size()
-		for i in st.size():
-			_chip_row([st[i]], size.x, _boss_chip_y(i), font)
+		# Boss stage: statuses and mods in rows right under the plate; the boss stands lower by
+		# that much (fable r4: a right-edge column sat on its shoulder)
+		for it in _boss_chip_layout():
+			_chip_box(it[0], it[1], font, SCENE_FS)
 		return
 	var top := maxf(34.0, r.position.y - 6.0)
 	_chip_row(st, r.get_center().x, top - 30.0, font)
@@ -2555,48 +2671,56 @@ static var _dissolves := {}
 const DISSOLVE_FRAMES := 12
 ## A monster's death as frames: pixels burn away in a noisy order, with a glowing edge
 ## in its color just ahead of the hole. Made once per sprite and kept.
-func _dissolve(tex: Texture2D, src_img: Image, glow: Color) -> Array:
+## Dissolve frame f (0 = whole) of a dying monster. Frames are cut the first time they're shown,
+## one per drawn frame at most, not all twelve on the kill (fable r4); frame 0 is the pose itself.
+func _dissolve(tex: Texture2D, src_img: Image, glow: Color, f: int) -> Texture2D:
+	if f <= 0:
+		return tex
 	var key := tex.get_rid().get_id()
-	if _dissolves.has(key):
-		return _dissolves[key]
-	# The kept pose Image (no GPU readback); the noise is worked out once per pixel and every
-	# frame is cut from raw bytes (fable r3: 12 x w x h get/set_pixel and noise calls stalled the kill)
-	var src := (src_img if src_img != null else tex.get_image()).duplicate() as Image
-	if src.is_compressed():
-		src.decompress()
-	src.convert(Image.FORMAT_RGBA8)
-	var w := src.get_width()
-	var h := src.get_height()
-	var noise := FastNoiseLite.new()
-	noise.seed = key % 9973
-	noise.frequency = 0.12
-	var data := src.get_data()
-	var order := PackedFloat32Array()
-	order.resize(w * h)
-	for y in h:
-		for x in w:
-			# higher pixels go first, broken up by noise
-			order[y * w + x] = (noise.get_noise_2d(x, y) + 1.0) * 0.5 * 0.7 + (1.0 - float(y) / h) * 0.3
-	var edge := glow.lightened(0.5)
+	if not _dissolves.has(key):
+		if _dissolves.size() >= 8:
+			_dissolves.clear()  # a few deaths' worth (a Calamity's 12 frames are ~1 MB)
+		# The kept pose Image (no GPU readback); the noise is worked out once per pixel
+		var src := (src_img if src_img != null else tex.get_image()).duplicate() as Image
+		if src.is_compressed():
+			src.decompress()
+		src.convert(Image.FORMAT_RGBA8)
+		var w := src.get_width()
+		var h := src.get_height()
+		var noise := FastNoiseLite.new()
+		noise.seed = key % 9973
+		noise.frequency = 0.12
+		var order := PackedFloat32Array()
+		order.resize(w * h)
+		for y in h:
+			for x in w:
+				# higher pixels go first, broken up by noise
+				order[y * w + x] = (noise.get_noise_2d(x, y) + 1.0) * 0.5 * 0.7 + (1.0 - float(y) / h) * 0.3
+		var frames: Array = []
+		frames.resize(DISSOLVE_FRAMES)
+		_dissolves[key] = {"w": w, "h": h, "data": src.get_data(), "order": order, "edge": glow.lightened(0.5), "frames": frames}
+	var d: Dictionary = _dissolves[key]
+	var frames: Array = d["frames"]
+	if frames[f] != null:
+		return frames[f]
+	var w: int = d["w"]
+	var h: int = d["h"]
+	var order: PackedFloat32Array = d["order"]
+	var edge: Color = d["edge"]
 	var er := int(edge.r * 255.0)
 	var eg := int(edge.g * 255.0)
 	var eb := int(edge.b * 255.0)
-	var out: Array = []
-	for f in DISSOLVE_FRAMES:
-		var cut := float(f) / DISSOLVE_FRAMES     # 0 = whole, near 1 = almost gone
-		var px := data.duplicate()
-		for i in w * h:
-			if px[i * 4 + 3] == 0:
-				continue
-			var n := order[i]
-			if n < cut:
-				px[i * 4 + 3] = 0
-			elif n < cut + 0.08 and f > 0:
-				px[i * 4] = er
-				px[i * 4 + 1] = eg
-				px[i * 4 + 2] = eb
-		out.append(ImageTexture.create_from_image(Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, px)))
-	if _dissolves.size() >= 8:
-		_dissolves.clear()  # a few deaths' worth (a Calamity's 12 frames are ~1 MB)
-	_dissolves[key] = out
-	return out
+	var cut := float(f) / DISSOLVE_FRAMES     # near 1 = almost gone
+	var px: PackedByteArray = (d["data"] as PackedByteArray).duplicate()
+	for i in w * h:
+		if px[i * 4 + 3] == 0:
+			continue
+		var n := order[i]
+		if n < cut:
+			px[i * 4 + 3] = 0
+		elif n < cut + 0.08:
+			px[i * 4] = er
+			px[i * 4 + 1] = eg
+			px[i * 4 + 2] = eb
+	frames[f] = ImageTexture.create_from_image(Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, px))
+	return frames[f]

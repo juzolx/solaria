@@ -1802,7 +1802,7 @@ func _enemy_defeated() -> void:
 	var species := enemy_species
 	var zone_i := GameData.zone_index(floor_num)
 	events.append({"type": "enemy_dead", "shape": enemy_shape, "color": enemy_color, "boss": was_boss, "name": enemy_name,
-		"art": enemy_art, "tier": tier})
+		"art": enemy_art, "tier": tier, "calamity": was_calamity})
 	if not was_boss:
 		Combat.on_enemy_death(self)
 	if enemy_boss_kind == "trial":
