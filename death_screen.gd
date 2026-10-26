@@ -25,7 +25,7 @@ static func regular(r: Dictionary, on_ok: Callable, on_never: Callable) -> Panel
 	plate.add_theme_stylebox_override("panel", UiSkin.bevel(UiSkin.SLATE, UI.GOLD_DULL, 6))
 	plate.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	v.add_child(plate)
-	var title := UI.label("You fell on floor %d" % int(r.get("floor", 0)), 19, UI.GOLD)
+	var title := UI.label("You fell on floor %d" % int(r.get("floor", 0)), UI.FONT_TITLE, UI.GOLD)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	plate.add_child(title)
 	var who := UI.wrap("%s got you.%s" % [String(r.get("enemy", "A monster")),
@@ -59,15 +59,25 @@ static func regular(r: Dictionary, on_ok: Callable, on_never: Callable) -> Panel
 		var t := UI.rich(UI.FONT_BODY)
 		t.text = "[color=%s]Tip:[/color] %s" % [UI.hex(UI.GOLD), tip_text]
 		v.add_child(t)
+	var keep := UI.button("Show this card after every fall", func(): pass)
+	keep.name = "ShowAgain"
+	keep.custom_minimum_size = Vector2(0, UI.TAP)
+	keep.tooltip_text = "Also in Menu › Settings › Game"
+	keep.set_meta("on", true)
+	UI.toggle_look(keep, true)
+	keep.pressed.connect(func():
+		var on := not bool(keep.get_meta("on"))
+		keep.set_meta("on", on)
+		UI.toggle_look(keep, on)
+		on_never.call(on))
+	outer.add_child(keep)
 	var row := UI.hbox(8)
 	row.name = "Buttons"
 	outer.add_child(row)
 	var ok := UI.primary("OK", on_ok)
-	var never := UI.button("Don't show again", on_never)
-	for b in [ok, never]:
-		b.custom_minimum_size = Vector2(0, UI.TAP)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(b)
+	ok.custom_minimum_size = Vector2(0, UI.TAP)
+	ok.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(ok)
 	# Fable r1 #15: the fight dims under the card (like the Hardcore Overlay): a screen-wide
 	# veil drawn just under the card, above the action row and the nav bar
 	p.z_index = 60
@@ -102,7 +112,7 @@ static func hardcore(content: VBoxContainer, hero: String, level: int, race: Str
 	stone.custom_minimum_size = Vector2(0, 92)
 	stone.draw.connect(func(): _draw_stone(stone))
 	content.add_child(stone)
-	var name_l := UI.label("%s is gone" % hero, 21, Color("#f6757a"))
+	var name_l := UI.label("%s is gone" % hero, UI.FONT_TITLE, UI.RED)
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(name_l)
 	var line := UI.wrap("Level %d %s %s. Fell on floor %d. Hardcore heroes get one life." % [level, race, title, floor_num], UI.FONT_BODY, UI.TEXT)

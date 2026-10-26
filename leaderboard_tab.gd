@@ -1,10 +1,12 @@
 class_name LeaderboardTab
 extends ScrollContainer
-## Online > Leaders: the deepest Hardcore runs, online and your own.
+## Online › Leaders: the deepest Hardcore runs, online and your own.
 
 var main
 var box: VBoxContainer
 var online_box: VBoxContainer
+var board_head: Control   # the "Deepest Hardcore runs" heading and Refresh
+var refresh_button: Button
 var loaded_at := -100000
 var loading := false
 
@@ -21,7 +23,9 @@ func setup(m) -> void:
 	var t := UI.heading("Deepest Hardcore runs")
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(t)
-	head.add_child(UI.button("Refresh", func(): loaded_at = -100000; refresh()))
+	refresh_button = UI.button("Refresh", func(): loaded_at = -100000; refresh())
+	head.add_child(refresh_button)
+	board_head = head
 	UI.tip(t, "Only Hardcore counts: one life, no second chances. Your best run is sent when a Hardcore hero falls.")   # Fable r2: rules on a tap, not before the list
 
 	online_box = UI.vbox(6)
@@ -48,6 +52,7 @@ func _load() -> void:
 	loading = true
 	loaded_at = Time.get_ticks_msec()
 	OnlineUI.clear(online_box)
+	board_head.visible = main.online.is_configured()   # Fable r3 #13: no heading or Refresh over a board that can't load
 	if not main.online.is_configured():
 		online_box.add_child(OnlineUI.not_setup_card())
 		loading = false

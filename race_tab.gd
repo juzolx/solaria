@@ -1,6 +1,6 @@
 class_name RaceTab
 extends ScrollContainer
-## Character > Race: your racial power and awakening, your transformation
+## Hero › Race: your racial power and awakening, your transformation
 ## (and any cure), how every race feels about you, and the realms.
 
 var main

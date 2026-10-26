@@ -8,7 +8,7 @@ extends RefCounted
 ##    through DEED_PHRASES, so a new God class gets riddles for free.
 ## Shown sparingly and only after milestones: a stranger at the Inn now and then,
 ## a whisper in the log when a hero first passes a milestone floor, and riddles in
-## Character > Class that open a few at a time as the hero goes deeper.
+## Hero › Class that open a few at a time as the hero goes deeper.
 
 ## Deed key -> a vague phrase ("one who ..."). Keys that would point at a route
 ## (class:, path:, race:) or are too plain (level) are left out on purpose.

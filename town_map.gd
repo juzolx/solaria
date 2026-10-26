@@ -46,7 +46,7 @@ var selected := ""
 var _pins := {}        # id -> Rect2 of its pin (for taps)
 var _icons := {}
 
-static func icon(id: String) -> ImageTexture:
+static func icon(id: String, px := UiSkin.PX) -> ImageTexture:
 	var rows: Array = PINS.get(id, PINS["obelisk"])
 	var w := 0
 	for r in rows:
@@ -57,7 +57,7 @@ static func icon(id: String) -> ImageTexture:
 		for x in row.length():
 			if INK.has(row[x]):
 				img.set_pixel(x, y, Color(INK[row[x]]))
-	img.resize(w * UiSkin.PX, rows.size() * UiSkin.PX, Image.INTERPOLATE_NEAREST)
+	img.resize(w * px, rows.size() * px, Image.INTERPOLATE_NEAREST)
 	return ImageTexture.create_from_image(img)
 
 func _ready() -> void:
@@ -195,11 +195,14 @@ static func open_for(main, hidden_spots: Dictionary, locked_spots: Dictionary, o
 	var spots: Array = m.data.get("spots", [])
 	for sp in spots:
 		var id := String(sp["id"])
-		if hidden_spots.has(id):
+		if hidden_spots.has(id) or id == "gate":
 			continue
 		var empty := String(sp.get("kind", "")) == "lot" and not Buildings.built(id)
-		var b := UI.button(("+  " if empty else "") + String(sp["label"]).replace(" (lot)", ""), func(): go.call(id))
-		b.icon = icon(id)
+		var b := UI.button(String(sp["label"]).replace(" (lot)", "") + (" · not built" if empty else ""), func(): go.call(id))
+		b.icon = icon(id, UiSkin.PX * 2)
+		b.add_theme_constant_override("icon_max_width", 0)   # the glyph at its own whole pixels
+		b.clip_text = true
+		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.custom_minimum_size = Vector2(0, UI.TAP)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL

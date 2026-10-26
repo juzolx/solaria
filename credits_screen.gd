@@ -1,6 +1,6 @@
 class_name CreditsScreen
 extends RefCounted
-## Menu > Credits: who made Solaria, then every asset source by group (data: credits_data.gd).
+## Menu › Credits: who made Solaria, then every asset source by group (data: credits_data.gd).
 
 var overlay: Overlay
 

@@ -1,6 +1,6 @@
 class_name ShopTab
 extends ScrollContainer
-## Town > Shop: Marta's Goods. A featured deal, gear on the shelves as
+## Town › Shop: Marta's Goods. A featured deal, gear on the shelves as
 ## item squares, supplies (potions and elixirs), upgrades, and quick selling.
 
 const GREETINGS := [
@@ -49,7 +49,7 @@ func setup(m) -> void:
 	var mcol := UI.vbox(2)
 	mcol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mrow.add_child(mcol)
-	mcol.add_child(UI.label(GameData.MERCHANT_NAME.to_upper(), 20, UI.GOLD))
+	mcol.add_child(UI.label(GameData.MERCHANT_NAME, UI.FONT_BODY, UI.GOLD))
 	greeting = UI.rich(UI.FONT_BODY)
 	mcol.add_child(greeting)
 	gold_label = UI.rich(16)
@@ -206,7 +206,7 @@ func _gear_card(item: Dictionary, index: int) -> void:
 	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(tv)
 	# three cards across a phone: these two lines shorten with "..." rather than widen the screen
-	for l in [UI.label(GameData.RARITY_NAMES[r].to_upper(), UI.FONT_BODY, color), UI.label(item["slot"], UI.FONT_BODY, UI.DIM)]:
+	for l in [UI.label(GameData.RARITY_NAMES[r], UI.FONT_BODY, color), UI.label(item["slot"], UI.FONT_BODY, UI.DIM)]:
 		l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		l.clip_text = true
 		tv.add_child(l)
@@ -223,7 +223,7 @@ func _gear_card(item: Dictionary, index: int) -> void:
 	fill.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	cv.add_child(fill)
 	var price := state.shop_cost(item)
-	var b := UI.primary("%d gold" % price, func():
+	var b := UI.primary(UI.cost("Buy", price), func():
 		if state.buy_shop(index):
 			main.sfx.play("buy")
 		main.refresh(), UI.GOLD)
@@ -283,16 +283,16 @@ func refresh() -> void:
 	for entry in gear_buttons:
 		var b: Button = entry[0]
 		b.disabled = state.gold < int(entry[2]) or state.bag_full()
-		b.text = "Bag full" if state.bag_full() else "%d gold" % int(entry[2])
-	restock_button.text = "Restock (%d gold)" % state.restock_cost()
+		b.text = "Bag full" if state.bag_full() else UI.cost("Buy", int(entry[2]))
+	restock_button.text = UI.cost("Restock", state.restock_cost())
 	restock_button.disabled = state.gold < state.restock_cost()
 
 	# Supplies
 	var potion: Array = supplies["potion"]
-	(potion[0] as Button).text = "Buy  -  %d gold   (you have %d)" % [state.potion_cost(), state.potions]
+	(potion[0] as Button).text = UI.cost("Buy", state.potion_cost()) + " · have %d" % state.potions
 	(potion[0] as Button).disabled = state.gold < state.potion_cost()
 	var greater: Array = supplies["greater"]
-	(greater[0] as Button).text = "Buy & drink  -  %d gold" % state.greater_potion_cost()
+	(greater[0] as Button).text = UI.cost("Buy & drink", state.greater_potion_cost())
 	(greater[0] as Button).disabled = state.gold < state.greater_potion_cost() or state.hero_hp >= state.get_max_hp()
 	for id in GameData.ELIXIR_ORDER:
 		var info: Dictionary = GameData.ELIXIRS[id]
@@ -300,7 +300,7 @@ func refresh() -> void:
 		var active := int(state.elixirs.get(id, 0))
 		(entry[1] as RichTextLabel).text = "[color=%s]%s[/color]\n[color=#c4b5fd]At home: %d   Carried: %d[/color]%s" % [UI.hex(UI.DIM), entry[2], state.supply_home(id), state.supply_carried(id),
 			("\n[color=#c4b5fd]Active: %d turns left[/color]" % active) if active > 0 else ""]
-		(entry[0] as Button).text = "Buy  -  %d gold" % state.elixir_cost(id)
+		(entry[0] as Button).text = UI.cost("Buy", state.elixir_cost(id))
 		(entry[0] as Button).disabled = state.gold < state.elixir_cost(id)
 
 	# Bag
@@ -312,7 +312,7 @@ func refresh() -> void:
 		var cost := state.next_bag_cost()
 		bag_text.text = "[b]Bigger Bag[/b]  [color=%s]level %d / %d[/color]\n%d -> [color=#4ade80]%d slots[/color]  [color=%s](or craft one with scrap at the Blacksmith)[/color]" % [
 			UI.hex(UI.DIM), state.bag_level, GameData.BAG_MAX_LEVEL, state.bag_capacity(), state.bag_capacity() + GameData.BAG_STEP, UI.hex(UI.DIM)]
-		bag_button.text = "%d gold" % cost
+		bag_button.text = UI.cost("Buy", cost)
 		bag_button.disabled = state.gold < cost
 
 	# Quick sell

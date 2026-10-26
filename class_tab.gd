@@ -1,6 +1,6 @@
 class_name ClassTab
 extends ScrollContainer
-## Character > Class: your Evolution Tree. Shows the shape of the tree
+## Hero › Class: your Evolution Tree. Shows the shape of the tree
 ## (1 > 2 > 4 > 8: you pick one of two at levels 15, 35 and 75) but only names
 ## the classes you've reached and the ones you can choose right now; the rest
 ## stay "???" until you get there. Also your faith, your signature skills, the
@@ -176,7 +176,7 @@ static func class_card(m, n: Dictionary, with_button: bool, on_pick: Callable) -
 	v.add_child(st)
 	var head := UI.hbox(6)
 	v.add_child(head)
-	var nl := UI.label(String(n["name"]), 16, UI.GOLD if why == "" else UI.DIM)
+	var nl := UI.label(String(n["name"]), UI.FONT_BODY, UI.GOLD if why == "" else UI.DIM)
 	nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(nl)
 	var tags := UI.rich(UI.FONT_BODY)
@@ -250,7 +250,7 @@ static func pick_card(m, cname: String, on_pick: Callable) -> PanelContainer:
 	var hv := UI.vbox(2)
 	hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(hv)
-	hv.add_child(UI.label(cname.to_upper(), 18, UI.GOLD))   # one accent: the class colour lives in its outfit
+	hv.add_child(UI.label(cname, UI.FONT_TITLE, UI.GOLD))   # one accent: the class colour lives in its outfit
 	var tags: Array = []
 	for t in info["tags"]:
 		tags.append("[color=%s]%s[/color]" % [Classes.tag_color(t), t])
@@ -429,7 +429,7 @@ func _hidden_classes() -> void:
 		p.add_child(v)
 		var head := UI.hbox(6)
 		v.add_child(head)
-		var nl := UI.label(Hidden.title(state), 16, col)
+		var nl := UI.label(Hidden.title(state), UI.FONT_BODY, col)
 		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(nl)
 		head.add_child(UI.label(Hidden.TIER_NAMES[int(c["tier"])], UI.FONT_BODY, Color(Hidden.TIER_COLORS[int(c["tier"])])))
@@ -465,7 +465,7 @@ func _hidden_classes() -> void:
 	for id in Hidden.ORDER:
 		var c := Hidden.info(id)
 		var r := UI.rich(UI.FONT_BODY)
-		var lines: Array = ["[b]%s[/b]  %s  [color=%s]%s[/color]" % [c["name"], "EARNED" if state.hidden.has(id) else "", UI.hex(UI.DIM), c["rumor"]]]
+		var lines: Array = ["[b]%s[/b]  %s  [color=%s]%s[/color]" % [c["name"], "Earned" if state.hidden.has(id) else "", UI.hex(UI.DIM), c["rumor"]]]
 		for line in Hidden.progress(state, id):
 			lines.append(_line(line))
 		r.text = "\n".join(lines)
@@ -486,7 +486,7 @@ static func hidden_offer_cards(m, parent: Control, on_done: Callable) -> void:
 		p.add_child(v)
 		var head := UI.hbox(6)
 		v.add_child(head)
-		var nl := UI.label(c["stages"][stage - 1], 16, col)
+		var nl := UI.label(c["stages"][stage - 1], UI.FONT_CAPTION, col)
 		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(nl)
 		head.add_child(UI.label(Hidden.TIER_NAMES[int(c["tier"])], UI.FONT_BODY, Color(Hidden.TIER_COLORS[int(c["tier"])])))

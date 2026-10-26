@@ -1,6 +1,6 @@
 class_name GuildTab
 extends ScrollContainer
-## Online > Guild: make or join a guild (up to 20 players), see your members
+## Online › Guild: make or join a guild (up to 20 players), see your members
 ## and the guild rankings.
 
 var main
@@ -60,7 +60,7 @@ func _load() -> void:
 	loading = false
 
 func _no_guild() -> void:
-	box.add_child(UI.label("You're not in a guild", 18, UI.GOLD))
+	box.add_child(UI.label("You're not in a guild", UI.FONT_TITLE, UI.GOLD))
 	box.add_child(UI.label("Guilds fight a raid boss together every week and climb the guild rankings. Up to %d players." % Online.GUILD_MAX, UI.FONT_BODY, UI.DIM))
 
 	# Make one

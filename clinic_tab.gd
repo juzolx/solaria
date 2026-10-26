@@ -1,6 +1,6 @@
 class_name ClinicTab
 extends ScrollContainer
-## Town > Clinic (only once you own a pet or an egg): choose who comes along, heal hurt pets with gold,
+## Town › Clinic (only once you own a pet or an egg): choose who comes along, heal hurt pets with gold,
 ## or let them rest (they heal as you clear floors). Your pets live in its pen.
 
 var main
@@ -49,7 +49,7 @@ func refresh() -> void:
 		if hurt:
 			var cost := Menagerie.heal_cost(p)
 			var id := int(p["id"])
-			var b := UI.primary("Heal (%s gold)" % UI.short(cost), func():
+			var b := UI.primary(UI.cost("Heal", cost), func():
 				if Menagerie.heal(main.state, id):
 					main.sfx.play("buy")
 				shown = ""

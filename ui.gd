@@ -78,6 +78,20 @@ static func short(n: int) -> String:
 		return "%.1fk" % (n / 1000.0)
 	return "%.1fM" % (n / 1000000.0)
 
+## Fable r3 #9: every button that spends says it one way: "Buy · 1,899 gold", "Build · 12.4k gold
+## + 60 scrap". Never "g", never brackets.
+static func cost(verb: String, gold: int, extra := "") -> String:
+	var g := short(gold) if absi(gold) >= 10000 else _commas(gold)
+	return "%s · %s gold%s" % [verb, g, (" + " + extra) if extra != "" else ""]
+
+static func _commas(n: int) -> String:
+	var s := str(absi(n))
+	var out := ""
+	while s.length() > 3:
+		out = "," + s.substr(s.length() - 3) + out
+		s = s.substr(0, s.length() - 3)
+	return ("-" if n < 0 else "") + s + out
+
 static func hex(c: Color) -> String:
 	return "#" + c.to_html(false)
 
@@ -136,24 +150,33 @@ static func heading(text: String, note := "") -> Control:
 		text = text.get_slice("  -  ", 0)
 	var v := vbox(4)
 	v.set_meta("heading", text)
+	# Fable r3 #2: a heading is never raised (a bevel is the game's "press me"): gold words on a
+	# flat 2 px rule across the row, so "Active" or "Help" can't be mistaken for a chip
 	var plate := PanelContainer.new()
-	var sb := UiSkin.bevel(UiSkin.SLATE, UiSkin.IRON, 4)
-	sb.content_margin_left = 12
-	sb.content_margin_right = 12
-	sb.content_margin_top = 6
-	sb.content_margin_bottom = 6
-	plate.add_theme_stylebox_override("panel", sb)
-	plate.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	plate.add_theme_stylebox_override("panel", _heading_rule())
+	plate.size_flags_horizontal = Control.SIZE_FILL
 	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(plate)
 	var l := label(text, FONT_BODY, GOLD)
-	if text.length() > 24:   # a long title wraps across the row (a wrapping label in a shrunk plate goes one letter a line)
+	if text.length() > 24:   # a long title wraps across the row (short ones keep their width in a row of buttons)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		plate.size_flags_horizontal = Control.SIZE_FILL
 	plate.add_child(l)
 	if note != "":
 		v.add_child(UI.wrap(note, FONT_BODY, DIM))   # UI.: a bare wrap() is Godot's number wrap
 	return v
+
+static var _rule: StyleBoxFlat
+static func _heading_rule() -> StyleBoxFlat:
+	if _rule == null:
+		_rule = StyleBoxFlat.new()
+		_rule.bg_color = Color(0, 0, 0, 0)
+		_rule.border_color = GOLD_DULL
+		_rule.border_width_bottom = 2
+		_rule.content_margin_left = 0
+		_rule.content_margin_right = 0
+		_rule.content_margin_top = 4
+		_rule.content_margin_bottom = 4
+	return _rule
 
 ## The title label inside a heading (for counts that change: "Vault · 3 / 20").
 static func heading_label(h: Control) -> Label:
@@ -199,19 +222,38 @@ static func sync_tabs(t: TabContainer) -> void:
 		if b.has_meta("on") and bool(b.get_meta("on")) == on:   # (get_meta with a null default logs an engine error)
 			continue
 		b.set_meta("on", on)
-		var face := UiSkin.bevel(UiSkin.SLATE, GOLD_DULL, 6) if on else UiSkin.bevel(PANEL, EMPTY, 6)
-		for st in ["normal", "hover", "pressed", "focus"]:
-			var sb := (face if st != "hover" or on else UiSkin.bevel(UiSkin.SLATE, EDGE, 6)).duplicate() as StyleBox
-			sb.content_margin_left = 17
-			sb.content_margin_right = 17
-			b.add_theme_stylebox_override(st, sb)
-		for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-			b.add_theme_color_override(c, GOLD if on else (TEXT if c == "font_hover_color" else DIM))
+		chip_look(b, on)
+
+## The chip look (tab strips, the floor picker's zones): gold on slate when on, dim when off.
+static func chip_look(b: Button, on: bool) -> void:
+	var faces: Array = _chip_faces()   # Fable r3 #16: built once, shared by every chip
+	for st in ["normal", "hover", "pressed", "focus"]:
+		b.add_theme_stylebox_override(st, faces[0] if on else (faces[2] if st == "hover" else faces[1]))
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		b.add_theme_color_override(c, GOLD if on else (TEXT if c == "font_hover_color" else DIM))
+
+static var _chip_face_cache: Array = []
+## [on, off, off-hover] chip faces with the 17 px side margins.
+static func _chip_faces() -> Array:
+	if _chip_face_cache.is_empty():
+		for sb in [UiSkin.bevel(UiSkin.SLATE, GOLD_DULL, 6), UiSkin.bevel(PANEL, EMPTY, 6), UiSkin.bevel(UiSkin.SLATE, EDGE, 6)]:
+			var c := (sb as StyleBox).duplicate() as StyleBox
+			c.content_margin_left = 17
+			c.content_margin_right = 17
+			_chip_face_cache.append(c)
+	return _chip_face_cache
 
 ## Fable r2 #13: the notch / Dynamic Island (top) and home bar (bottom) in design px, set by
 ## main._fit_layout; popups, the title and the creator keep their controls out of them.
 static var safe_top := 0.0
 static var safe_bottom := 0.0
+static var nav_ref: Control   # the phone nav bar (main sets it)
+
+## The lowest y a floating card may reach: the nav bar's top, else above the home bar.
+static func floor_y(vp_h: float) -> float:
+	if nav_ref != null and is_instance_valid(nav_ref) and nav_ref.is_visible_in_tree():
+		return nav_ref.get_global_rect().position.y
+	return vp_h - safe_bottom
 
 ## Fable r2 #5: the OptionButton arrow, a 7x4 bone chevron on the 2 px grid (Godot's is smoothed).
 static var _chevron: Texture2D
@@ -411,7 +453,7 @@ static func show_tip(near: Control, text: String) -> void:
 		return
 	var at := near.get_global_rect()
 	var pos := Vector2(at.position.x, at.end.y + 6)
-	if pos.y + p.size.y > vp.y - 8:
+	if pos.y + p.size.y > floor_y(vp.y) - 8:
 		pos.y = at.position.y - p.size.y - 6
 	pos.x = clampf(pos.x, 8, vp.x - p.size.x - 8)
 	p.position = pos

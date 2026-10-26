@@ -141,7 +141,7 @@ const LOGIN_REWARDS := [
 var bestiary := {}      # monster id -> {"kills": n, "tiers": [6 counts], "sig": bool}  (ids: Monsters.registry())
 var stats := {}         # counter name -> number (see value())
 var collection := {}    # Unique / Signature / Set item def id (item["def"]) -> date found
-var pet_book := {}      # next update: pet species (monster id) you have owned -> best tier (Codex > Pets)
+var pet_book := {}      # next update: pet species (monster id) you have owned -> best tier (Codex › Pets)
 var achievements := {}  # id -> date unlocked
 var title := ""         # the achievement title you're showing ("" = your class)
 var name_color := ""    # Stage 3: the name color you show (cosmetics.gd), "" = Plain

@@ -13,7 +13,7 @@ static func add(g: GameState, outcome: String, gold: int, items: int, killer := 
 	while g.runs.size() > MAX:
 		g.runs.pop_back()
 
-## The log as lines for Codex > Stats.
+## The log as lines for Codex › Stats.
 static func lines(g: GameState) -> Array:
 	var out: Array = []
 	for r in g.runs:
