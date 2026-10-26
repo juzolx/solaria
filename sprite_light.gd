@@ -30,6 +30,18 @@ static func lit(tex: Texture2D, zone: int) -> Texture2D:
 	_cache[key] = out
 	return out
 
+## The rimmed copy of an Image for region `zone` (no texture, no readback): fights shade the
+## monster's source once per zone and build every pose from it (fable monsters r3).
+static func lit_image(src: Image, zone: int) -> Image:
+	if src == null or not enabled:
+		return src
+	var img := src.duplicate() as Image
+	if img.is_compressed():
+		img.decompress()
+	img.convert(Image.FORMAT_RGBA8)
+	var mood: Dictionary = HallsScene.MOODS[clampi(zone, 0, HallsScene.MOODS.size() - 1)]
+	return shade(img, mood["accent"])
+
 ## A new RGBA8 image with a 1 px rim of `rim` on every solid, non-outline pixel whose
 ## neighbour up or to the right is the outline or see-through (light from the upper right).
 static func shade(img: Image, rim: Color) -> Image:

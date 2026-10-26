@@ -659,7 +659,7 @@ static func poses_for(key: String, src: Image, facing: int, hand_row := -1) -> D
 		var hdx := 0
 		if hand_row >= top and hand_row < waist:
 			hdx = int(round(lean * float(waist - hand_row) / maxf(1.0, waist - top))) * facing
-		out[p] = {"tex": ImageTexture.create_from_image(img), "white": ImageTexture.create_from_image(pose_image(white_src, waist, top, lean, squash, facing)),
+		out[p] = {"tex": ImageTexture.create_from_image(img), "img": img, "white": ImageTexture.create_from_image(pose_image(white_src, waist, top, lean, squash, facing)),
 			"dx": hdx, "dy": squash if hand_row < waist else 0}
 	_cache["pose_" + key] = out
 	return out
