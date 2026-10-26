@@ -42,7 +42,7 @@ static func give_dust(g: GameState, n: int) -> void:
 		return
 	g.dust += n
 	g.say("[color=#c4b5fd]+%d dust[/color]" % n)
-	g.tip("dust", "Dust! Use it to craft skills (Hero › Skills), Set items (Town › Blacksmith) and the last upgrades of your best gear.")
+	g.tip("dust", "Dust! Use it to craft skills (Hero › Skills), Set items (Town › Blacksmith) and the last upgrades of your best gear.")
 
 ## Dust from salvaging this item: Epic and Legendary finds only. Anything
 ## bought with gold (marked "bought") salvages for scrap only.

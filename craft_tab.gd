@@ -38,7 +38,7 @@ func setup(m) -> void:
 	var who := UI.hbox(10)
 	v.add_child(who)
 	# Hilde's picture is the town page's keeper picture above (main.gd town_keeper)
-	who.add_child(UI.wrap("%s, dwarf smith of the town forge" % Smith.NAME, UI.FONT_BODY, UI.GOLD))
+	who.visible = false   # Fable r5 #13: the keeper line above already introduces Hilde
 	var tabs_row := UI.hbox(6)
 	v.add_child(tabs_row)
 	for sec in [["forge", "Forge"], ["sets", "Set Recipes"], ["wares", "Dwarf's Wares"]]:
@@ -244,16 +244,18 @@ func refresh() -> void:
 		bag_info.text = "[color=%s]Your bag is fully upgraded (%d slots).[/color]" % [UI.hex(UI.DIM), state.bag_capacity()]
 		bag_cost.text = ""
 		bag_button.text = "Fully upgraded"
-		bag_button.disabled = true
-		bag_button.remove_theme_color_override("font_disabled_color")
+		UI.why(bag_button, "Your bag is as big as it gets.")
+		bag_button.remove_theme_color_override("font_color")
 	else:
 		bag_info.text = "[color=%s]%d -> [/color][color=#4ade80]%d slots[/color][color=%s]. Sewn from scrap.[/color]" % [
 			UI.hex(UI.DIM), state.bag_capacity(), state.bag_capacity() + GameData.BAG_STEP, UI.hex(UI.DIM)]
 		bag_cost.visible = false
 		bag_button.text = "Craft · %d scrap" % GameData.bag_craft_scrap(state.bag_level)
-		bag_button.disabled = state.bag_craft_block_reason() != ""
-		bag_button.add_theme_color_override("font_disabled_color", UI.RED)
-		bag_button.tooltip_text = state.bag_craft_block_reason()
+		UI.why(bag_button, state.bag_craft_block_reason())   # Fable r5 #4: "Need 20 scrap" on a tap
+		if state.bag_craft_block_reason() != "":
+			bag_button.add_theme_color_override("font_color", UI.RED)
+		else:
+			bag_button.remove_theme_color_override("font_color")
 
 	var counts := state.set_counts()
 	for set_name in GameData.SET_ORDER:

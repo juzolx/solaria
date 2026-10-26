@@ -279,22 +279,22 @@ func refresh() -> void:
 		featured_box.tooltip_text = ItemText.tip(state, f)
 		featured_buy.visible = true
 		featured_buy.text = "Bag full" if state.bag_full() else "Buy · %d gold" % state.featured_price()
-		featured_buy.disabled = state.gold < state.featured_price() or state.bag_full()
+		UI.why(featured_buy, "Your bag is full." if state.bag_full() else UI.need_gold(state.gold, state.featured_price()))
 
 	for entry in gear_buttons:
 		var b: Button = entry[0]
-		b.disabled = state.gold < int(entry[2]) or state.bag_full()
+		UI.why(b, "Your bag is full." if state.bag_full() else UI.need_gold(state.gold, int(entry[2])))
 		b.text = "Bag full" if state.bag_full() else UI.cost("Buy", int(entry[2]))
 	restock_button.text = UI.cost("Restock", state.restock_cost())
-	restock_button.disabled = state.gold < state.restock_cost()
+	UI.why(restock_button, UI.need_gold(state.gold, state.restock_cost()))
 
 	# Supplies
 	var potion: Array = supplies["potion"]
 	(potion[0] as Button).text = UI.cost("Buy", state.potion_cost()) + " · have %d" % state.potions
-	(potion[0] as Button).disabled = state.gold < state.potion_cost()
+	UI.why(potion[0], UI.need_gold(state.gold, state.potion_cost()))
 	var greater: Array = supplies["greater"]
 	(greater[0] as Button).text = UI.cost("Buy & drink", state.greater_potion_cost())
-	(greater[0] as Button).disabled = state.gold < state.greater_potion_cost() or state.hero_hp >= state.get_max_hp()
+	UI.why(greater[0], "You're at full health." if state.hero_hp >= state.get_max_hp() else UI.need_gold(state.gold, state.greater_potion_cost()))
 	for id in GameData.ELIXIR_ORDER:
 		var info: Dictionary = GameData.ELIXIRS[id]
 		var entry: Array = supplies[id]
@@ -302,19 +302,19 @@ func refresh() -> void:
 		(entry[1] as RichTextLabel).text = "[color=%s]%s[/color]\n[color=#c4b5fd]At home: %d   Carried: %d[/color]%s" % [UI.hex(UI.DIM), entry[2], state.supply_home(id), state.supply_carried(id),
 			("\n[color=#c4b5fd]Active: %d turns left[/color]" % active) if active > 0 else ""]
 		(entry[0] as Button).text = UI.cost("Buy", state.elixir_cost(id))
-		(entry[0] as Button).disabled = state.gold < state.elixir_cost(id)
+		UI.why(entry[0], UI.need_gold(state.gold, state.elixir_cost(id)))
 
 	# Bag
 	if state.bag_level >= GameData.BAG_MAX_LEVEL:
 		bag_text.text = "[b]Bigger Bag[/b]\n[color=%s]Fully upgraded: %d slots.[/color]" % [UI.hex(UI.DIM), state.bag_capacity()]
 		bag_button.text = "Maxed"
-		bag_button.disabled = true
+		UI.why(bag_button, "Your bag is as big as it gets.")
 	else:
 		var cost := state.next_bag_cost()
 		bag_text.text = "[b]Bigger Bag[/b]  [color=%s]level %d / %d[/color]\n%d -> [color=#4ade80]%d slots[/color]  [color=%s](or craft one with scrap at the Blacksmith)[/color]" % [
 			UI.hex(UI.DIM), state.bag_level, GameData.BAG_MAX_LEVEL, state.bag_capacity(), state.bag_capacity() + GameData.BAG_STEP, UI.hex(UI.DIM)]
 		bag_button.text = UI.cost("Buy", cost)
-		bag_button.disabled = state.gold < cost
+		UI.why(bag_button, UI.need_gold(state.gold, cost))
 
 	# Quick sell
 	for r in quick_sell:
@@ -325,7 +325,7 @@ func refresh() -> void:
 				total += state.sell_price(item)
 		var b: Button = quick_sell[r]
 		b.text = "%s (%d)\n+%d gold" % [GameData.RARITY_NAMES[r], n, total]   # two lines: three across must fit a phone
-		b.disabled = n == 0
+		UI.why(b, "Nothing of that rarity to sell." if n == 0 else "")
 
 ## Interface pass: a shop card wears the panel frame, its line in `edge`.
 func _frame(edge: Color) -> PanelContainer:

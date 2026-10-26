@@ -406,10 +406,10 @@ func refresh() -> void:
 				Drag.wire(cell, {"kind": "item", "id": id}, Sprites.item_icon(item))  # next update: drag onto Equip, Sell, Salvage or Lock
 			grid.add_child(cell)
 			ids.append(id)
-		empty_card.visible = ids.is_empty()
+		empty_card.visible = ids.is_empty() or state.bag.size() <= 8   # Fable r5 #12: a short bag says what a tap does
 		empty_filter.visible = state.bag.is_empty()
 		filter_row.visible = not state.bag.is_empty()
-		empty_note.text = "Your bag is empty. What you find in fights lands here; the Loot filter can sell or salvage drops for you." if state.bag.is_empty() else "No items match this filter."
+		empty_note.text = "Your bag is empty. What you find in fights lands here; the Loot filter can sell or salvage drops for you." if state.bag.is_empty() else ("No items match this filter." if ids.is_empty() else "Tap an item to wear, sell or salvage it.")
 	_refresh_details()
 
 func _refresh_details() -> void:

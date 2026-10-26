@@ -236,7 +236,7 @@ func slot_lock_note(n: int) -> String:
 		return ""
 	if n <= GameData.SLOT_UNLOCKS.size():
 		return "Slot %d opens when a hero in this town reaches floor %d." % [n, int(GameData.SLOT_UNLOCKS[n - 1])]
-	return ("Slot %d: Menu › Supporter store." if Store.ENABLED else "Slot %d can be bought later.") % n
+	return ("Slot %d: Menu › Supporter store." if Store.ENABLED else "Slot %d can be bought later.") % n
 
 func stash_capacity() -> int:
 	return GameData.STASH_START + stash_level * GameData.STASH_STEP + int(Buildings.pick("stash", Economy.VAULT_EXTRA))  # 2.1: a bigger Vault building

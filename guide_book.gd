@@ -67,7 +67,7 @@ func _show(main_node, id: String, as_popup: bool) -> void:
 			codex.guide_queue.clear()
 			codex.save()
 			close())
-		skip.tooltip_text = "Stop showing new pages. You can still read them in Codex › Guide."
+		skip.tooltip_text = "Stop showing new pages. You can still read them in Codex › Guide."
 		row.add_child(skip)
 	row.add_child(UI.spacer())
 	var ok := UI.primary("Got it", close, UI.GOLD)

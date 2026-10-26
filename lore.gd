@@ -33,9 +33,9 @@ static func maybe_find(g: GameState, chance: float) -> bool:
 	var i := g.codex.lore.size()
 	g.codex.lore.append(i)
 	g.codex.dirty = true
-	g.say("[color=#e8b14a]You find a torn page: \"%s\".[/color] Read it in Codex › Lore." % PAGES[i][0])
+	g.say("[color=#e8b14a]You find a torn page: \"%s\".[/color] Read it in Codex › Lore." % PAGES[i][0])
 	g.events.append({"type": "toast", "text": "A lore page: \"%s\"" % PAGES[i][0]})
-	g.tip("lore", "Lore pages tell Solaria's story, a page at a time. Read them in Codex › Lore.")
+	g.tip("lore", "Lore pages tell Solaria's story, a page at a time. Read them in Codex › Lore.")
 	return true
 
 # =====================================================================

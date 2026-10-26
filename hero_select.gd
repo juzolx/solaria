@@ -77,9 +77,11 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 	v.add_child(row)
 	if m.started and active:   # Fable r4 #4: the hero you're playing is a chip, not a dead gold button
 		var now := UI.chip("Playing now", UI.DIM, UI.FONT_BODY)
-		now.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		now.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		now.size_flags_vertical = Control.SIZE_SHRINK_CENTER   # Fable r5 #11: a tag, not a wide text box
 		row.add_child(now)
+		var gap := Control.new()
+		gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(gap)
 	else:
 		var play := UI.primary("Play", func(): _play(n), UI.GOLD)
 		play.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -96,8 +98,7 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 				title_screen.refresh_menu()
 			HeroSelect.new().show_for(m, title_screen)))
 	del.add_theme_color_override("font_color", UI.DIM)
-	del.add_theme_font_size_override("font_size", UI.FONT_CAPTION)
-	del.custom_minimum_size = Vector2(0, UI.TAP)
+	del.custom_minimum_size = Vector2(96, UI.TAP)   # Fable r5 #11: body size, a real target (the confirm guards it)
 	row.add_child(del)
 	return card
 
