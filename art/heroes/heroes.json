@@ -563,6 +563,99 @@
    ]
   ]
  },
+ "dye": {
+  "warrior": [
+   "#17171d",
+   "#25242d",
+   "#373440",
+   "#4a4553",
+   "#5d5766"
+  ],
+  "knight": [
+   "#1b2732",
+   "#2c3a4e",
+   "#434f70",
+   "#5d6792",
+   "#7a80b3"
+  ],
+  "wanderer": [
+   "#3d0f06",
+   "#5e260e",
+   "#874a1d",
+   "#b07233",
+   "#d89e50"
+  ],
+  "cleric": [
+   "#6c6356",
+   "#a89e88",
+   "#e6dfbd",
+   "#e6e2c1",
+   "#e6e5c5"
+  ],
+  "acolyte": [
+   "#474650",
+   "#706e7c",
+   "#a49fb1",
+   "#d8d0e6",
+   "#dbd3e6"
+  ],
+  "mage": [
+   "#1b0e2d",
+   "#311947",
+   "#512865",
+   "#723c83",
+   "#9454a2"
+  ],
+  "trickster": [
+   "#13190f",
+   "#1c2719",
+   "#273825",
+   "#334933",
+   "#415a42"
+  ],
+  "ranger": [
+   "#23080a",
+   "#36110f",
+   "#4d231a",
+   "#643828",
+   "#7b4f3a"
+  ],
+  "bard": [
+   "#4d2035",
+   "#78374e",
+   "#ac5568",
+   "#e07a88",
+   "#e6898f"
+  ],
+  "sentinel": [
+   "#1f2026",
+   "#30313b",
+   "#474654",
+   "#5f5d6d",
+   "#787486"
+  ],
+  "ironbark": [
+   "#25090a",
+   "#391511",
+   "#52291d",
+   "#6b402d",
+   "#83593f"
+  ],
+  "nightstalker": [
+   "#08050e",
+   "#0f0916",
+   "#190e20",
+   "#23152a",
+   "#2e1c33"
+  ],
+  "conjurer": [
+   "#092523",
+   "#11393a",
+   "#1d4b53",
+   "#2d5d6c",
+   "#407085"
+  ]
+ },
  "races": {
   "Elf": [
    "m",
@@ -595,6 +688,34 @@
   "Lich": [
    "m",
    "f"
+  ],
+  "Fallen Angel": [
+   "m",
+   "f"
+  ]
+ },
+ "looks": {
+  "wings2": [
+   "m/race_angel",
+   "f/race_angel"
+  ],
+  "wings3": [
+   "m/race_angel",
+   "f/race_angel"
+  ],
+  "horns_big": [
+   "m/race_demon",
+   "f/race_demon"
+  ],
+  "crown": [
+   "m/look_crown",
+   "f/look_crown",
+   "dwarf_m/look_crown",
+   "dwarf_f/look_crown"
+  ],
+  "wings_big": [
+   "fairy_m/race_fairy",
+   "fairy_f/race_fairy"
   ]
  },
  "builds": {

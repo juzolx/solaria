@@ -236,9 +236,10 @@ def index_of(c, hair_pts=()):
 
 
 def sheet(cells):
-    s = Image.new("RGBA" if cells[0].mode == "RGBA" else "RGB", (C * len(cells), C))
+    n = cells[0].width  # 96, or F for the weapon cells
+    s = Image.new("RGBA" if cells[0].mode == "RGBA" else "RGB", (n * len(cells), n))
     for i, c in enumerate(cells):
-        s.paste(c, (i * C, 0))
+        s.paste(c, (i * n, 0))
     return s
 
 
@@ -256,10 +257,43 @@ def despeck(c, smallest=3, loose=0):
     return c
 
 
+def despeck4(c, smallest):
+    """Drops bits joined to the rest only at a corner (4-connected islands under `smallest` pixels, never the
+    main shape): loose hair over the chest, a lump under a lock read as specks at phone size."""
+    p = c.load()
+    pts = {(x, y) for y in range(c.height) for x in range(c.width) if p[x, y][3]}
+    seen, parts = set(), []
+    for q in pts:
+        if q in seen:
+            continue
+        g, todo = [], [q]; seen.add(q)
+        while todo:
+            x, y = todo.pop(); g.append((x, y))
+            for r in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                if r in pts and r not in seen:
+                    seen.add(r); todo.append(r)
+        parts.append(g)
+    parts.sort(key=len)
+    gone = 0
+    for g in parts[:-1]:
+        if len(g) < smallest:
+            gone += len(g)
+            for q in g:
+                p[q] = (0, 0, 0, 0)
+    SPECKS[0] += gone
+    return c
+
+
+SPECKS = [0]
+
+
 def save(name, cells, idx=None):
     os.makedirs(os.path.dirname(os.path.join(OUT, name)), exist_ok=True)
-    whole = os.path.basename(name).startswith("outfit_")
+    base = os.path.basename(name)
+    whole = base.startswith("outfit_")
     cells = [despeck(c, 3, 20 if whole else 0) for c in cells]
+    if base.startswith("hair_") or base.startswith("race_"):
+        cells = [despeck4(c, 8 if base.startswith("hair_") else 3) for c in cells]
     sheet(cells).save(os.path.join(OUT, name + ".png"), optimize=True)
     if idx is not None:
         sheet(idx).save(os.path.join(OUT, name + "_idx.png"), optimize=True)
@@ -299,7 +333,12 @@ def main():
                         print("size mismatch", cls, tier, b, k, im.size); break
                     cells.append(body_cell(im, b, k))
                 else:
-                    save(f"{b}/outfit_{cls}" + (f"_t{tier}" if tier else ""), cells, [index_of(c) for c in cells])
+                    idxs = [index_of(c) for c in cells]
+                    save(f"{b}/outfit_{cls}" + (f"_t{tier}" if tier else ""), cells, idxs)
+                    if b == "m" and not tier:
+                        dy = class_dye(cells, idxs)
+                        if dy:
+                            info.setdefault("dye", {})[cls] = dy
                     info["classes"].setdefault(cls, {}).setdefault(b, []).append(int(tier or 0))
         print(b, "outfits done")
         # ---- hair styles (heads) ----
@@ -338,22 +377,10 @@ def main():
                 info["faces"].append(e)
         print(b, "faces done")
         # ---- weapons ----
-        info["hand"][b] = [list(SW[b][k][1]) for k in K]
+        hands = {k: SW[b][k][1] for k in K}
+        info["hand"][b] = [list(hands[k]) for k in K]
         for wt, drawing in WEAPON_DRAWINGS.items():
-            # at rest (idle, hit) a weapon is held as drawn on his first idle frame, turned as much as the sword
-            # turns; in the swing it points where the blade points. The portrait (front) holds the mirror image.
-            a0 = SW["m"]["n_idle0"][2]
-            mir = mirrored(drawing)
-            cells = []
-            for k in K:
-                g, a = SW[b][k][1], SW[b][k][2]
-                if k.startswith("n_atk"):
-                    cells.append(drawing.placed((C, C), g, a))
-                elif k.startswith("s"):
-                    cells.append(mir.placed((C, C), g, mir.ang + a - (math.pi - a0)))
-                else:
-                    cells.append(drawing.placed((C, C), g, drawing.ang + a - a0))
-            save(f"{b}/weapon_{wt}", cells)
+            save(f"{b}/weapon_{wt}", weapon_cells(wt, drawing, hands, b))
             if wt not in info["weapons"]:
                 info["weapons"].append(wt)
         print(b, "weapons done")
@@ -362,13 +389,16 @@ def main():
             paths = {k: os.path.join(FEATURES, f"{race.lower()}_{b}_{k}.png") for k in K}
             if not all(os.path.exists(p) for p in paths.values()):
                 continue
-            front, back = race_cells(b, paths)
+            front, back = race_cells(b, paths, race)
             save(f"{b}/race_{race.lower()}", front, [index_of(c) for c in front])
             if any(c.getbbox() for c in back):
                 save(f"{b}/race_{race.lower()}_back", back, [index_of(c) for c in back])
             info.setdefault("races", {}).setdefault(race, []).append(b)
         print(b, "races done")
+        derived_looks(b, info)
+        print(b, "looks done")
     build_bodies(info)
+    print("specks dropped (corner-only bits):", SPECKS[0], "px")
     with open(os.path.join(OUT, "heroes.json"), "w", newline=chr(10)) as f:
         json.dump(info, f, indent=1)
 
@@ -377,7 +407,7 @@ RACES = ["Elf", "Angel", "Demon", "Beastkin", "Dragonkin", "Undead", "Vampire", 
 FEATURES = os.path.abspath(os.path.join(REPO, "..", "solaria_dev", "claude", "art_test", "races", "features", "raw"))
 
 
-def race_cells(b, paths):
+def race_cells(b, paths, race=""):
     """A race's signature feature (PixelLab edits of the base frames, 'add only ...'): the pixels the edit
     changed, minus edit noise on the hair (the hair is its own layer) and specks. Front view: what sticks
     out below the head (wings, tail) goes to a layer drawn BEHIND the body; the rest is drawn on top."""
@@ -388,6 +418,7 @@ def race_cells(b, paths):
         bp, ep = base.load(), ed.load()
         bm = R.masks(base)
         hair_cols = {bp[p][:3] for p, kd in bm.items() if kd == "hair"}
+        near_sword = {(x + i, y + j) for (x, y) in SW[b][k][0] for i in range(-2, 3) for j in range(-2, 3)}
         def hairlike(c):
             return any(sum(abs(c[i] - h[i]) for i in range(3)) < 45 for h in hair_cols)
         pts = set()
@@ -400,6 +431,8 @@ def race_cells(b, paths):
                     continue  # the edit redrew some hair: not part of the feature
                 if (x, y) in SW[b][k][0]:
                     continue  # nor the sword
+                if R.lum(e[:3]) < 80 and (x, y) in near_sword:
+                    continue  # nor the dark trace of the old sword the edit kept (lines across the angel wings)
                 pts.add((x, y))
         hl = (OFF_OWN[b][k][1] + HS.head_bottom(ROT[b][d_of(k)]))
         # keep real features: specks go, and so do small changes entirely inside the body below the head
@@ -410,6 +443,8 @@ def race_cells(b, paths):
             if len(c) >= 6 and not (inside and len(c) < 25):
                 keep.append(c)
         pts = set().union(*keep) if keep else set()
+        if race in BONE_OFF:  # the bone drawn over the clothes below the head (a spine on the coat) goes
+            pts = no_bone(pts, ep, hl)
         f = Image.new("RGBA", (C, C)); bk = Image.new("RGBA", (C, C))
         for (x, y) in pts:
             if k.startswith("s") and y > hl:
@@ -421,6 +456,27 @@ def race_cells(b, paths):
     return front, back
 
 
+BONE_OFF = ["Undead"]  # keep the soul fire and the eyes; a glowing spine over the outfit read as a caterpillar
+
+
+def no_bone(pts, ep, hl):
+    """The feature's pixels without pale bone below the head line, nor the outline left around it."""
+    import colorsys
+    def bone(px):
+        h, sat, v = colorsys.rgb_to_hsv(*(q / 255 for q in px[:3]))
+        return v > 0.5 and sat < 0.4 and (h < 0.2 or h > 0.9 or sat < 0.12)
+    gone = {q for q in pts if q[1] > hl and bone(ep[q])}
+    pts = pts - gone
+    for _ in range(3):  # the dark outline that hugged the bone
+        edge = {q for q in pts if q[1] > hl and R.lum(ep[q][:3]) < 90
+                and any((q[0] + i, q[1] + j) in gone for i in (-1, 0, 1) for j in (-1, 0, 1))}
+        if not edge:
+            break
+        pts -= edge; gone |= edge
+    keep = [c for c in comps(pts) if len(c) >= 6] if pts else []
+    return set().union(*keep) if keep else set()
+
+
 def mirrored(w):
     """The same weapon drawing flipped left-right (held in the other hand as seen from the front)."""
     m = W.Weapon.__new__(W.Weapon)
@@ -430,6 +486,67 @@ def mirrored(w):
     m.grip, m.tip = fx(w.grip), fx(w.tip)
     m.ang = math.atan2(m.tip[1] - m.grip[1], m.tip[0] - m.grip[0])
     return m
+
+
+# Weapon cells are bigger than the body cell (the body cell sits in the middle), so a staff or spear in the
+# swing is never cut by the 96-px cell edge. HeroArt lays the 96 layers PAD in from each side.
+PAD = 16
+F = C + 2 * PAD
+# where the hand holds the weapon, as a fraction from its grip end to its tip (a staff or spear a third up the
+# shaft, so its foot rests near the ground and a swing reaches both ways; a bow by its middle)
+HOLD = {"staff": 0.3, "spear": 0.3, "bow": 0.5}
+# at rest (idle, hit; seen from behind) every weapon is held up beside the body, angle in degrees (0 = right,
+# -90 = straight up), so it reads at phone size; the portrait holds the mirror image in the other hand
+REST = {"sword": -60, "dagger": -58, "axe": -64, "mace": -68, "spear": -84, "bow": -88, "staff": -84}
+HIT_TILT = 22  # the hit frame knocks the tip back (clockwise)
+
+
+def held(w, f):
+    """The same drawing gripped f of the way from its grip end to its tip."""
+    if not f:
+        return w
+    m = W.Weapon.__new__(W.Weapon)
+    m.img, m.x0, m.y0, m.tip, m.ang = w.img, w.x0, w.y0, w.tip, w.ang
+    m.grip = (round(w.grip[0] + (w.tip[0] - w.grip[0]) * f), round(w.grip[1] + (w.tip[1] - w.grip[1]) * f))
+    return m
+
+
+def swing(b):
+    """The swing's angle per attack frame (the standard body b's sword) and its hand points. The drawn bodies
+    repeat the low-left pose on atk2 and atk3, so atk2 becomes the middle of the arc: the blade across the
+    back, between the raised atk1 and the low follow-through atk3."""
+    a = {k: SW[b][k][2] for k in K if k.startswith("n_atk")}
+    d = (a["n_atk3"] - a["n_atk1"]) % (2 * math.pi) - 2 * math.pi  # the way over the head (decreasing angle)
+    a["n_atk2"] = a["n_atk1"] + d / 2
+    return a
+
+
+def weapon_cells(wt, drawing, hands, b):
+    """The weapon on every frame (F x F cells, the body cell PAD in): one drawing, turned and pinned to the hand."""
+    sb = b
+    sw_a = swing(sb)
+    w = held(drawing, HOLD.get(wt, 0))
+    mir = held(mirrored(drawing), HOLD.get(wt, 0))
+    rest = math.radians(REST[wt])
+    i0 = SW[sb]["n_idle0"][2]
+    cells = []
+    for k in K:
+        g = hands[k]
+        if k == "n_atk2":  # the hand halfway along the arc too
+            g = ((hands["n_atk1"][0] + hands["n_atk3"][0]) // 2, (hands["n_atk1"][1] + hands["n_atk3"][1]) // 2)
+        g = (g[0] + PAD, g[1] + PAD)
+        if k.startswith("n_atk"):
+            a = sw_a[k]
+            if wt in HOLD:  # a long weapon never swings steeply down: its far end would go through the floor
+                deg = math.degrees(a) % 360
+                a = math.radians(150 if 90 < deg < 150 else 30 if 30 < deg <= 90 else deg)
+            cells.append(w.placed((F, F), g, a))
+        elif k.startswith("s"):
+            cells.append(mir.placed((F, F), g, math.pi - rest))
+        else:  # idle sways a little with the drawn arm; the hit frame tilts back
+            ang = rest + (SW[sb][k][2] - i0) * 0.4 + (math.radians(HIT_TILT) if k == "n_hit" else 0)
+            cells.append(w.placed((F, F), g, ang))
+    return cells
 
 
 def weapon_drawings():
@@ -471,6 +588,7 @@ STONE = ["Golem"]  # grey stone bodies: the sword is found as bright steel only
 WINGS = {"Fairy": (0.68, 0.92)}
 # hovering builds: feet this many art pixels above the foot row, per frame (idle frames bob)
 FLOAT = {"Fairy": {"n_idle0": 4, "n_idle1": 6, "s_idle0": 4, "s_idle1": 6}}
+CROWNED = ["Dwarf"]  # build races with a crown awakening (races.gd look "crown")
 FAMILY_SRC = {"plate": "warrior", "robe": "mage", "leather": "leather", "cloth": "cloth"}
 FAMILY_OF = {"Warrior": "plate", "Knight": "plate", "Sentinel": "plate",
              "Mage": "robe", "Cleric": "robe", "Acolyte": "robe", "Conjurer": "robe",
@@ -645,20 +763,15 @@ def build_bodies(info):
                             p[q] = (0, 0, 0, 0)
                         drop_stray_lines(c, er)
                     out.append(c); idxs.append(idx)
+                if (key, b) in BIG_HEAD:
+                    heads = head_regions(cells)
+                    out = [grow_head(c, heads[k], BIG_HEAD[(key, b)]) for c, k in zip(out, K)]
+                    idxs = [grow_head(c, heads[k], BIG_HEAD[(key, b)]) for c, k in zip(idxs, K)]
                 save(f"{d}/outfit_{fam}", out, idxs)
                 fams.append(fam)
             for wt, drawing in WEAPON_DRAWINGS.items():
-                mir = mirrored(drawing)
-                wc = []
-                for k in K:
-                    g, a = sw[k][1], sw[k][2]
-                    if k.startswith("n_atk"):
-                        wc.append(drawing.placed((C, C), g, a))
-                    elif k.startswith("s"):
-                        wc.append(mir.placed((C, C), g, mir.ang + a - (math.pi - a0)))
-                    else:
-                        wc.append(drawing.placed((C, C), g, drawing.ang + a - a0))
-                save(f"{d}/weapon_{wt}", wc)
+                # the build's own hands, the standard body's swing (its own detected angles drop the staff)
+                save(f"{d}/weapon_{wt}", weapon_cells(wt, drawing, {k: sw[k][1] for k in K}, b))
             info["hand"][d] = [list(sw[k][1]) for k in K]
             if fams:  # a body is only offered once it has an outfit
                 info["builds"].setdefault(race, {"key": key, "bodies": {}, "skin": race not in OWN_SKIN})["bodies"][b] = fams
@@ -668,6 +781,18 @@ def build_bodies(info):
                 save(f"{d}/race_{race.lower()}", front)
                 save(f"{d}/race_{race.lower()}_back", back)
                 info["builds"][race]["feature"] = f"race_{race.lower()}"
+                big_f, big_b = wing_layer(cells, WINGS[race], race, 1.25)
+                save(f"{d}/race_{race.lower()}__wings_big", big_f)
+                save(f"{d}/race_{race.lower()}__wings_big_back", big_b)
+                info.setdefault("looks", {}).setdefault("wings_big", []).append(f"{d}/race_{race.lower()}")
+            if race in CROWNED and fams:  # the crown on the build head (its top centre per frame)
+                tops = []
+                for k in K:
+                    bb = cells[k].getbbox(); cp = cells[k].load()
+                    top = [x for x in range(C) if any(cp[x, y][3] for y in range(bb[1], bb[1] + 3))]
+                    tops.append(((min(top) + max(top)) // 2, bb[1]))
+                save(f"{d}/look_crown", [crown_on((C, C), t) for t in tops])
+                info.setdefault("looks", {}).setdefault("crown", []).append(f"{d}/look_crown")
             if race in SHARED and fams:
                 e = info["builds"][race]
                 for ob in "mf":
@@ -678,6 +803,10 @@ def build_bodies(info):
                 if fk != key or not fams or not all(os.path.exists(q) for q in fp.values()):
                     continue
                 front, back = build_feature(cells, {k: bcell(L(fp[k]), k) for k in K}, sw)
+                front, back = [above_floor(c) for c in front], [above_floor(c) for c in back]
+                if (key, b) in BIG_HEAD:  # the wolf head sits on the grown orc head
+                    heads = head_regions(cells)
+                    front = [grow_head(c, heads[k], BIG_HEAD[(key, b)], 10) for c, k in zip(front, K)]
                 save(f"{d}/race_{fr.lower()}", front)
                 save(f"{d}/race_{fr.lower()}_back", back)
                 e = info["builds"].setdefault(fr, {"key": key, "bodies": {}, "skin": fr not in OWN_SKIN, "feature": f"race_{fr.lower()}"})
@@ -791,7 +920,7 @@ def petal_drawing(src_cell, hues):
     return w, (ax, ay)
 
 
-def wing_layer(cells, hues, race="Fairy"):
+def wing_layer(cells, hues, race="Fairy", scale=1.0):
     """Big butterfly wings on every frame, all behind the body (the class outfit reads from behind
     too): the one drawing per view, centred where the frame's own small wings were, so every frame
     has the same wings. The second idle frame draws them narrower: a gentle flap."""
@@ -802,6 +931,8 @@ def wing_layer(cells, hues, race="Fairy"):
         draw = {d: petal_drawing(src[d][0], hues) for d in "ns"}
     else:
         draw = {d: wing_drawing(feat % d, src[d][0], hues, src[d][1]) for d in "ns"}
+    if scale != 1.0:  # an awakening's bigger wings, grown from their root
+        draw = {d: (scaled_part(w, pts_of(w), scale, a, a), a) for d, (w, a) in draw.items()}
     front, back = [], []
     for k in K:
         w, (sx, sy) = draw[d_of(k)]
@@ -831,6 +962,23 @@ def bcell_of(key, b, k):
     at = ((C - im.width) // 2, FOOT - im.getbbox()[3] - lift.get(k, 4 if lift else 0))
     c = Image.new("RGBA", (C, C)); c.alpha_composite(im, at)
     return c, at
+
+
+def above_floor(c, last=FOOT - 2):
+    """A feature never goes through the floor: any piece reaching below `last` (the werewolf tail tip under
+    the feet) is lifted to end on it."""
+    pts = pts_of(c)
+    if not pts:
+        return c
+    p = c.load(); out = c.copy(); op = out.load()
+    for g in comps(pts):
+        low = max(q[1] for q in g)
+        if low > last:
+            for q in g:
+                op[q] = (0, 0, 0, 0)
+            for (x, y) in g:
+                op[x, y - (low - last)] = p[x, y]
+    return out
 
 
 def build_feature(cells, edits, sw):
@@ -863,6 +1011,273 @@ def build_feature(cells, edits, sw):
                 f.putpixel((x, y), ep[x, y])
         front.append(f); back.append(bk)
     return front, back
+
+
+# ---------- awakening looks and the Fallen Angel, made from the drawn layers (no new drawings) ----------
+# A look that changes a race's own feature is a full variant of the race layer ("race_angel__wings2"),
+# worn instead of it; the crown is drawn over any head (look_crown). "glow" is drawn by HeroArt.
+FALLEN = [(18, 14, 24), (30, 24, 40), (44, 36, 56), (62, 52, 76), (84, 72, 100)]  # black wings, dark to light
+CROWN = [".K...K...K.",
+         "KYK.KYK.KYK",
+         "KGYKGYGKYGK",
+         "KGGGGRGGGGK",
+         "KDGGGGGGGDK",
+         "KDDDDDDDDDK",
+         ".KKKKKKKKK."]
+CROWN_COL = {"K": (58, 36, 24), "Y": (254, 231, 97), "G": (254, 174, 52), "D": (190, 74, 47), "R": (228, 59, 68)}
+
+
+def sheet_cells(name):
+    p = os.path.join(OUT, name + ".png")
+    if not os.path.exists(p):
+        return None
+    im = L(p); n = im.height
+    return [im.crop((i * n, 0, i * n + n, n)) for i in range(im.width // n)]
+
+
+def pts_of(c):
+    p = c.load()
+    return {(x, y) for y in range(c.height) for x in range(c.width) if p[x, y][3]}
+
+
+def halo_of(c):
+    """The halo: the flat ring floating over the head."""
+    out = set()
+    pts = pts_of(c)
+    for g in comps(pts) if pts else []:
+        xs = [q[0] for q in g]; ys = [q[1] for q in g]
+        if max(ys) - min(ys) <= 6 and max(xs) - min(xs) >= 6 and min(ys) < 40:
+            out |= g
+    return out
+
+
+def recolour(c, pts, ramp):
+    """pts mapped by brightness onto a dark-to-light ramp."""
+    p = c.load()
+    if not pts:
+        return
+    ls = sorted(R.lum(p[q][:3]) for q in pts); lo, hi = ls[len(ls) // 20], ls[-len(ls) // 20 - 1]
+    for q in pts:
+        t = (R.lum(p[q][:3]) - lo) / max(1, hi - lo)
+        r = ramp[max(0, min(len(ramp) - 1, int(t * len(ramp))))]
+        p[q] = r + (p[q][3],)
+
+
+def cracked(c, halo):
+    """The halo broken in two (a 2-px gap, the right piece dropped a pixel) and its gold dulled."""
+    p = c.load()
+    if not halo:
+        return
+    xs = [q[0] for q in halo]; cut = (min(xs) + max(xs)) // 2 + (max(xs) - min(xs)) // 6
+    old = {q: p[q] for q in halo}
+    for q in halo:
+        p[q] = (0, 0, 0, 0)
+    for (x, y), px in old.items():
+        if cut <= x <= cut + 1:
+            continue
+        g = (px[0] * 0.55 + 60, px[1] * 0.5 + 50, px[2] * 0.6 + 50)  # dull, greyed gold
+        q = (x, y + 1) if x > cut + 1 else (x, y)
+        if 0 <= q[1] < c.height:
+            p[q] = tuple(int(v) for v in g) + (px[3],)
+
+
+def scaled_part(c, pts, s, anchor, to):
+    """The pixels pts of c scaled by s (clean pixel-art scaling) with `anchor` moved to `to`."""
+    out = Image.new("RGBA", c.size)
+    if not pts:
+        return out
+    xs = [q[0] for q in pts]; ys = [q[1] for q in pts]
+    box = (min(xs), min(ys), max(xs) + 1, max(ys) + 1)
+    part = Image.new("RGBA", (box[2] - box[0], box[3] - box[1])); pp, cp = part.load(), c.load()
+    for (x, y) in pts:
+        pp[x - box[0], y - box[1]] = cp[x, y]
+    big = W.scale2x(W.scale2x(part))
+    small = big.resize((max(1, round(part.width * s)), max(1, round(part.height * s))), Image.NEAREST)
+    ax, ay = (anchor[0] - box[0]) * s, (anchor[1] - box[1]) * s
+    layer = Image.new("RGBA", (c.width * 2, c.height * 2))
+    layer.alpha_composite(small, (round(to[0] - ax) + c.width // 2, round(to[1] - ay) + c.height // 2))
+    return layer.crop((c.width // 2, c.height // 2, c.width // 2 + c.width, c.height // 2 + c.height))
+
+
+def extra_wings(c, s, drop):
+    """A smaller pair of the wings in c (not the halo), hung `drop` px lower, a touch paler."""
+    wings = pts_of(c) - halo_of(c)
+    if not wings:
+        return Image.new("RGBA", c.size)
+    xs = [q[0] for q in wings]; ys = [q[1] for q in wings]
+    root = ((min(xs) + max(xs)) / 2, min(ys))
+    w = scaled_part(c, wings, s, root, (root[0], root[1] + drop))
+    p = w.load()
+    for y in range(w.height):
+        for x in range(w.width):
+            if p[x, y][3]:
+                r, g, bb, a = p[x, y]
+                p[x, y] = (min(255, r + 14), min(255, g + 14), min(255, bb + 18), a)
+    return w
+
+
+def under(top, bottom):
+    """bottom drawn first, top over it."""
+    out = Image.new("RGBA", top.size); out.alpha_composite(bottom); out.alpha_composite(top)
+    return out
+
+
+def head_tops(b):
+    """Where a crown sits on each frame: the top centre of the short-hair head."""
+    out = []
+    for c in sheet_cells(f"{b}/hair_short"):
+        bb = c.getbbox()
+        p = c.load()
+        top = [x for x in range(c.width) if any(p[x, y][3] for y in range(bb[1], bb[1] + 3))]
+        out.append(((min(top) + max(top)) // 2 if top else (bb[0] + bb[2]) // 2, bb[1]))
+    return out
+
+
+def crown_on(size, at):
+    """The crown drawn with its band's bottom centre at `at` (it sits 3 rows into the hair)."""
+    c = Image.new("RGBA", size); p = c.load()
+    h, w = len(CROWN), len(CROWN[0])
+    x0, y0 = at[0] - w // 2, at[1] + 3 - h
+    for j, row in enumerate(CROWN):
+        for i, ch in enumerate(row):
+            if ch != "." and 0 <= x0 + i < size[0] and 0 <= y0 + j < size[1]:
+                p[x0 + i, y0 + j] = CROWN_COL[ch] + (255,)
+    return c
+
+
+def derived_looks(b, info):
+    looks = info.setdefault("looks", {})
+    ang, angb = sheet_cells(f"{b}/race_angel"), sheet_cells(f"{b}/race_angel_back")
+    if ang and angb:
+        # the Fallen Angel: black wings, a cracked dull halo
+        fr, fb = [c.copy() for c in ang], [c.copy() for c in angb]
+        for c in fr + fb:
+            h = halo_of(c)
+            recolour(c, pts_of(c) - h, FALLEN)
+            cracked(c, h)
+        save(f"{b}/race_fallen_angel", fr, [index_of(c) for c in fr])
+        save(f"{b}/race_fallen_angel_back", fb, [index_of(c) for c in fb])
+        info.setdefault("races", {}).setdefault("Fallen Angel", []).append(b)
+        # Archangel: a second pair under the first; Seraph: a third
+        for look, pairs in (("wings2", [(0.72, 9)]), ("wings3", [(0.72, 9), (0.5, 17)])):
+            vf, vb = [], []
+            for c, cb in zip(ang, angb):
+                f2, b2 = c, cb
+                for s, drop in pairs:
+                    f2 = under(f2, extra_wings(c, s, drop))
+                    b2 = under(b2, extra_wings(cb, s, drop))
+                vf.append(f2); vb.append(b2)
+            save(f"{b}/race_angel__{look}", vf, [index_of(c) for c in vf])
+            save(f"{b}/race_angel__{look}_back", vb, [index_of(c) for c in vb])
+            looks.setdefault(look, []).append(f"{b}/race_angel")
+    dem = sheet_cells(f"{b}/race_demon")
+    if dem:
+        # Demon Noble: great horns (each horn 1.4x from its base)
+        big = []
+        for c in dem:
+            out = c.copy(); op = out.load()
+            horns = [g for g in comps(pts_of(c)) if min(q[1] for q in g) < 45 and len(g) >= 6]
+            for g in horns:
+                for q in g:
+                    op[q] = (0, 0, 0, 0)
+            for g in horns:
+                base = (sum(q[0] for q in g) / len(g), max(q[1] for q in g))
+                out.alpha_composite(scaled_part(c, g, 1.4, base, base))
+            big.append(out)
+        save(f"{b}/race_demon__horns_big", big, [index_of(c) for c in big])
+        looks.setdefault("horns_big", []).append(f"{b}/race_demon")
+    crown = [crown_on((C, C), t) for t in head_tops(b)]
+    save(f"{b}/look_crown", crown)
+    looks.setdefault("crown", []).append(f"{b}/look_crown")
+
+
+def class_dye(cells, idxs):
+    """A class's dye for the other builds, from its drawn human outfit: the main colourful cloth (the
+    commonest saturated hue, not skin or hair) as the middle shade, with shadows shifted 15 degrees and
+    more saturated and highlights warmer and softer, dark to light (hex)."""
+    import colorsys
+    bins, by = {}, {}
+    for c, ix in zip(cells[:2], idxs[:2]):  # the idle frames
+        p, q = c.load(), ix.load()
+        for y in range(C):
+            for x in range(C):
+                if not p[x, y][3] or q[x, y][0] or q[x, y][1]:
+                    continue
+                h, sat, v = colorsys.rgb_to_hsv(*(t / 255 for t in p[x, y][:3]))
+                if sat < 0.1 or v < 0.12:  # 0.1 keeps cream and pale robes (the Cleric came out trim-red)
+                    continue
+                k = int(h * 18) % 18
+                bins[k] = bins.get(k, 0) + 1
+                by.setdefault(k, []).append((v, h, sat))
+    if not bins:
+        return None
+    px = sorted(by[max(bins, key=bins.get)])
+    v, h, sat = px[len(px) // 2]
+    out = []
+    for dv, dh, ds in ((0.45, -15, 1.15), (0.7, -8, 1.08), (1.0, 0, 1.0), (1.3, 5, 0.9), (1.6, 9, 0.8)):
+        r, g, b = colorsys.hsv_to_rgb((h + dh / 360) % 1, min(1, sat * ds), min(0.9, v * dv))
+        out.append("#%02x%02x%02x" % (round(r * 255), round(g * 255), round(b * 255)))
+    return out
+
+
+BIG_HEAD = {("orc", "m"): 1.4}  # his orc head was a pea on a boulder (25% of the height; the chibi rule is ~40%)
+
+
+def head_regions(cells):
+    """Per frame: (x0, x1, neck) of the head on the bare build body. The head is the top part down to the
+    first row much wider than the head itself (the shoulders)."""
+    out = {}
+    for k in K:
+        c = cells[k]; p = c.load(); bb = c.getbbox()
+        widest, neck, x0, x1 = 0, bb[3], C, 0
+        for y in range(bb[1], bb[3]):
+            xs = [x for x in range(C) if p[x, y][3]]
+            if not xs:
+                continue
+            w = max(xs) - min(xs) + 1
+            if widest and w > widest * 1.6 and y - bb[1] > 6:
+                neck = y - 1
+                break
+            widest = max(widest, w); x0 = min(x0, min(xs)); x1 = max(x1, max(xs))
+        out[k] = (x0, x1, neck, bb)
+    # where the shoulders were missed (wide ears, a raised arm) the "head" ran down the whole body and the
+    # whole body grew: those frames take the head height the good frames found, and the head's columns
+    # from its rows only
+    good = [r[2] - r[3][1] for r in out.values() if r[2] - r[3][1] <= 0.45 * (r[3][3] - r[3][1])]
+    head_h = sorted(good)[len(good) // 2] if good else 0
+    for k, (x0, x1, neck, bb) in out.items():
+        if head_h and neck - bb[1] > 0.45 * (bb[3] - bb[1]):
+            p = cells[k].load(); neck = bb[1] + head_h
+            xs = [x for y in range(bb[1], neck + 1) for x in range(C) if p[x, y][3]]
+            x0, x1 = min(xs), max(xs)
+        out[k] = (x0, x1, neck)
+    return out
+
+
+def grow_head(c, reg, s, margin=4):
+    """The pixels above the neck within the head's columns (plus a margin for ears and tusks), scaled by s
+    from the middle of the neck, so the head grows up and out and the shoulders stay put."""
+    x0, x1, neck = reg
+    x0, x1 = max(0, x0 - margin), min(C - 1, x1 + margin)
+    p = c.load()
+    part = Image.new(c.mode, (x1 - x0 + 1, neck + 1)); pp = part.load()
+    for y in range(neck + 1):
+        for x in range(x0, x1 + 1):
+            pp[x - x0, y] = p[x, y]
+    big = part.resize((round(part.width * s), round(part.height * s)), Image.NEAREST)
+    out = c.copy(); op = out.load()
+    empty = (0, 0, 0, 0) if c.mode == "RGBA" else (0, 0, 0)
+    for y in range(neck + 1):
+        for x in range(x0, x1 + 1):
+            op[x, y] = empty
+    ox = round((x0 + x1) / 2 - big.width / 2); oy = neck + 1 - big.height
+    bp = big.load()
+    for y in range(big.height):
+        for x in range(big.width):
+            px = bp[x, y]
+            if (px[3] if c.mode == "RGBA" else any(px)) and 0 <= ox + x < C and 0 <= oy + y < C:
+                op[ox + x, oy + y] = px
+    return out
 
 if __name__ == "__main__":
     main()
