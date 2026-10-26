@@ -17,8 +17,12 @@ def town(level=3, hardcore=False, empty=()):
     C.EMPTY.clear()
     C.EMPTY.update(empty)
     D.LIGHTS.clear()
-    base = C.compose()
-    return C.day(base), C.dusk(base)
+    C.LIT[:] = [False]                 # by day: glass windows, torches out (the game's base picture)
+    day = C.compose()
+    C.LIT[:] = [True]
+    D.LIGHTS.clear()
+    base = C.compose()                 # at dusk the lit overlay is on
+    return C.day(day), C.dusk(base)
 
 
 def view(img):
