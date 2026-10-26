@@ -112,3 +112,4 @@ Every rating Juzo gives goes here, so all sessions learn what he thinks is reall
 - Oct 26: small monsters to the side so they stay visible is good, but they must not overlap room items (props).
 - Oct 26: face-off: Juzo picked option 2 (one whole size up where it fits; Surtr 2x at 430 between the doors, 1x on the SE).
 - Oct 26: REPLACES the side spot: every monster stays centred between the doors ("guarding"); small ones get bigger so they never disappear behind the hero. Juzo does not like the side placement.
+- 2026-10-26 Dungeon r5 SE before/after: Juzo approved the new look ("The doors look good"): steel unread door frames, hero clear of the middle door, slight boot crop and hidden title on the shortest SE views.
