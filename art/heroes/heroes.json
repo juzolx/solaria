@@ -735,7 +735,8 @@
      "cloth"
     ]
    },
-   "skin": false
+   "skin": false,
+   "hair": true
   },
   "Dwarf": {
    "key": "dwarf",
@@ -753,7 +754,8 @@
      "cloth"
     ]
    },
-   "skin": true
+   "skin": true,
+   "hair": true
   },
   "Orc": {
    "key": "orc",
@@ -771,7 +773,8 @@
      "cloth"
     ]
    },
-   "skin": false
+   "skin": false,
+   "hair": true
   },
   "Werewolf": {
    "key": "orc",
@@ -816,7 +819,8 @@
     ]
    },
    "skin": true,
-   "feature": "race_fairy"
+   "feature": "race_fairy",
+   "hair": true
   }
  },
  "family_of": {

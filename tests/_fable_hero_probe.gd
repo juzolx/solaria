@@ -4,6 +4,7 @@ extends SceneTree
 ## 2 builds: every body build as a Mage (staff) and a Warrior (sword)
 ## 3 looks: race signatures, awakening looks and the Fallen Angel (battle idle + portrait)
 ## 4 portraits: the menu portrait crop of 13 classes holding their own weapon, 3x
+## 5 build hair: the 8 build bodies (rows) x 4 hair styles, each as battle back idle + front portrait
 const BG := Color("#1e1c24")
 const EDGE := Color("#3a3646")
 var out_dir := "res://shots"
@@ -16,6 +17,7 @@ func _initialize() -> void:
 	_builds()
 	_looks()
 	_portraits()
+	_build_hair()
 	print("FABLE HERO PROBE DONE ", out_dir)
 	quit()
 
@@ -111,3 +113,15 @@ func _portraits() -> void:
 			i += 1
 	img.resize(img.get_width() * 3, img.get_height() * 3, Image.INTERPOLATE_NEAREST)
 	img.save_png(out_dir.path_join("4_portraits.png"))
+
+func _build_hair() -> void:
+	var rows := []
+	for race in ["Orc", "Goblin", "Dwarf", "Fairy"]:
+		for body in ["masc", "fem"]:
+			var row := []
+			for st in ["Short", "Spiky", "Long", "Ponytail"]:
+				var app := {"body": body, "race": race, "skin": Races.skins(race)[0], "hair": st, "hair_color": 1}
+				row.append(HeroArt.frames(app, "Wanderer", 0, "", true)["img"][0])
+				row.append(HeroArt.frames(app, "Wanderer", 0, "", false)["img"][7])
+			rows.append(row)
+	_sheet(rows, "5_build_hair.png")

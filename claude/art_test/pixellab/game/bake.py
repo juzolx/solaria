@@ -690,6 +690,45 @@ def greenish(px):
     return 0.11 <= h <= 0.40 and sat > 0.25
 
 
+HAIR_BUILDS = ["Goblin", "Dwarf", "Orc", "Fairy"]  # builds that take the creator's hair style (Fable hero R1 item 6)
+
+
+HAIR_FIT = {("goblin", "m"): 0.9, ("goblin", "f"): 0.9, ("dwarf", "m"): 0.9, ("dwarf", "f"): 0.9,
+            ("orc", "m"): 0.85, ("orc", "f"): 0.9, ("fairy", "m"): 0.7, ("fairy", "f"): 0.8}  # head size vs the human, by eye
+
+
+def fit_build_hair(d, b, bcells, info, s):
+    """Every drawn human hair style moved onto a build's head (0 generations): scaled by s (HAIR_FIT,
+    the build's head against the human's, measured by eye: the drawings' necks hide under hair, beards
+    and hoods) and pinned per frame by the top of the head and the middle of the skull's top rows."""
+    def box(c):
+        p = c.load(); top = c.getbbox()[1]
+        xs = [x for y in range(top, top + 6) for x in range(C) if p[x, y][3]]
+        return (min(xs) + max(xs)) / 2, top
+    hb = {k: box(CELL[b][k]) for k in K}; bb = {k: box(bcells[k]) for k in K}
+    for st, k_ in info["styles"].items():
+        src = os.path.join(OUT, b, f"hair_{k_}")
+        if not os.path.exists(src + ".png"):
+            continue
+        sh, si = Image.open(src + ".png"), Image.open(src + "_idx.png")
+        cells, idxs = [], []
+        for i, k in enumerate(K):
+            hcx, htop = hb[k]; bcx, btop = bb[k]
+            at = (round(bcx - hcx * s), round(btop - htop * s))
+            hc, ic = sh.crop((i * C, 0, i * C + C, C)).convert("RGBA"), si.crop((i * C, 0, i * C + C, C))
+            hp, ip = hc.load(), ic.load()
+            for y in range(C):  # the hair only: the human scalp and ears under it stay human
+                for x in range(C):
+                    if not ip[x, y][1]:
+                        hp[x, y] = (0, 0, 0, 0)
+            for im, out in ((hc, cells), (ic, idxs)):
+                big = im.resize((round(C * s), round(C * s)), Image.NEAREST)
+                c = Image.new(big.mode, (C, C))
+                c.paste(big, at)
+                out.append(c)
+        save(f"{d}/hair_{k_}", cells, idxs)
+
+
 def build_bodies(info):
     info["builds"] = {}; info["family_of"] = FAMILY_OF
     a0 = SW["m"]["n_idle0"][2]
@@ -793,6 +832,13 @@ def build_bodies(info):
                     tops.append(((min(top) + max(top)) // 2, bb[1]))
                 save(f"{d}/look_crown", [crown_on((C, C), t) for t in tops])
                 info.setdefault("looks", {}).setdefault("crown", []).append(f"{d}/look_crown")
+            if race in HAIR_BUILDS and fams:  # the creator's hair style on the build's own head
+                hc = cells
+                if (key, b) in BIG_HEAD:
+                    heads = head_regions(cells)
+                    hc = {k: grow_head(cells[k], heads[k], BIG_HEAD[(key, b)]) for k in K}
+                fit_build_hair(d, b, hc, info, HAIR_FIT[(key, b)])
+                info["builds"][race]["hair"] = True
             if race in SHARED and fams:
                 e = info["builds"][race]
                 for ob in "mf":

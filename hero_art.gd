@@ -216,6 +216,8 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 			feat = _looked("%s/%s" % [build, feat], app).get_file()  # the fairy's bigger wings once awakened
 			_lay(data, "%s/%s_back" % [build, feat], PackedColorArray(), PackedColorArray(), cells)
 		_lay(data, "%s/outfit_%s" % [build, fam], bskin, hair, cells, false, 0, dye)
+		if bool(bd.get("hair", false)):  # the creator's hair style, fitted to the build's head (bake.py)
+			_lay(data, "%s/hair_%s" % [build, style_key(app)], bskin, hair, cells)
 		if feat != "":
 			_lay(data, "%s/%s" % [build, feat], PackedColorArray(), PackedColorArray(), cells)
 		_lay_look(data, build, app, cells)
