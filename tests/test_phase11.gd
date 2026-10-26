@@ -10,6 +10,14 @@ func check(cond: bool, msg: String) -> void:
 		fails += 1
 		printerr("FAIL: " + msg)
 
+## A plain monster: a spawn can roll a horde, goblin or Calamity, which you can't run from or spare.
+func _plain(g: GameState) -> void:
+	g.horde_left = 0
+	g.horde_pack = false
+	g.enemy_goblin = false
+	g.enemy_calamity = 0
+	g.enemy_is_boss = false
+
 func hero(race := "Human", cls := "Warrior") -> GameState:
 	var g := GameState.new()
 	g.autosave = false
@@ -137,6 +145,7 @@ func _initialize() -> void:
 	var e := hero("Elf")
 	e.floor_num = 20
 	e.spawn_enemy()
+	_plain(e)
 	var c := Lineage.escape_chance(e)
 	check(c >= Races.ESCAPE_MIN and c <= Races.ESCAPE_MAX, "escape chance in range")
 	e.stats["AGI"] = 200
@@ -153,6 +162,7 @@ func _initialize() -> void:
 	check(Lineage.escape_block(e) != "" and not Lineage.try_escape(e), "no running from bosses")
 	e.floor_num = 21
 	e.spawn_enemy()
+	_plain(e)
 	check(not Lineage.can_spare(e), "can't spare a healthy monster")
 	e.enemy_hp = int(e.enemy_max_hp * 0.2)
 	var sp := e.enemy_species

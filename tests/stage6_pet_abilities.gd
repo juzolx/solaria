@@ -43,6 +43,9 @@ func _initialize() -> void:
 		var vals: Array = d["passive"]["values"]
 		for i in 5:
 			check(float(vals[i + 1]) >= float(vals[i]), "%s passive never gets weaker with rank" % f)
+			# Fable pets R1: "a stronger passive" means a bigger number (Calamity pets only come at Mythic)
+			if f != "calamity":
+				check(float(vals[i + 1]) > float(vals[i]), "%s passive is stronger at every rank (%s)" % [f, str(vals)])
 	for z in GameData.ZONES:
 		check(PetAbilities.SIGNATURES.has(String(z["id"])), "region %s has a Mythic signature" % z["id"])
 	# Every zone monster maps to a known family and its home region
@@ -120,9 +123,26 @@ func _initialize() -> void:
 	check(gg.enemy_poison_turns == Combat.POISON_TURNS and gg.enemy_poison_dmg == 50, "Venom poisons")
 	PetAbilities.apply(gg, gs[1], "poison", 0.5, 100, "Venom")
 	check(gg.enemy_poison_dmg == 50, "pet poison doesn't stack")
+	# Fable pets R1: a pet's weaker venom/burn never keeps the hero's stronger one going
+	gg.enemy_poison_dmg = 500
+	gg.enemy_poison_turns = 1
+	PetAbilities.apply(gg, gs[1], "poison", 0.5, 100, "Venom")
+	check(gg.enemy_poison_dmg == 500 and gg.enemy_poison_turns == 2, "weak venom only tops a strong poison up to 2 turns (%d, %d)" % [gg.enemy_poison_dmg, gg.enemy_poison_turns])
+	gg.burn_dmg = 400
+	gg.burn_turns = 1
+	PetAbilities.apply(gg, gs[1], "burn", 1.0, 40, "Ember Breath")
+	check(gg.burn_dmg == 400 and gg.burn_turns == 2, "weak pet fire only tops a strong burn up to 2 turns (%d, %d)" % [gg.burn_dmg, gg.burn_turns])
+	gg.burn_turns = 0
+	gg.enemy_poison_turns = 0
+	gg.enemy_poison_dmg = 0
 	var gold := gg.gold
 	PetAbilities.apply(gg, gs[1], "gold", 3, 0, "Pickpocket")
 	check(gg.gold > gold, "Pickpocket steals gold")
+	# Fable pets R1: Pickpocket at Epic beats Folk's best passive on the same kill
+	var kill := float(2 + gg.floor_num) * float(Monsters.TIERS[gg.enemy_tier]["gold"])
+	gold = gg.gold
+	PetAbilities.apply(gg, gs[1], "gold", float(PetAbilities.FAMILIES["humanoid"]["trick"]["value"][0]), 0, "Pickpocket")
+	check(gg.gold - gold >= int(kill * float(PetAbilities.FAMILIES["humanoid"]["passive"]["values"][5]) / 100.0), "Pickpocket is worth more than Sticky Fingers (%d)" % (gg.gold - gold))
 	var hp := gg.enemy_hp
 	PetAbilities.apply(gg, gs[1], "strike", 2.0, 100, "Pounce")
 	check(gg.enemy_hp < hp, "Pounce hits")
@@ -159,6 +179,10 @@ func _initialize() -> void:
 	check(Menagerie.out(tm).size() == 3, "a tamer brings three pets")
 	check(tm.effect_value("regen") - regen0 <= PetAbilities.REGEN_CAP + 0.001, "three Mythic spirits heal at most %.1f%% a turn (%.2f)" % [PetAbilities.REGEN_CAP, tm.effect_value("regen") - regen0])
 	check(str(PetAbilities.bonus_sources(tm)) == str(PetAbilities.bonus_sources(tm)), "cached passives stay the same")
+	var shares: Array = []
+	for p in Menagerie.out(tm):
+		shares.append(PetAbilities.regen_share(tm, p))
+	check(is_equal_approx(shares[0] + shares[1] + shares[2], minf(PetAbilities.REGEN_CAP, 3 * PetAbilities.passive_value(spirit, 5))) and float(shares[2]) < PetAbilities.passive_value(spirit, 5), "regen_share shows the cap cutting the third spirit (%s)" % str(shares))
 	(Menagerie.out(tm)[0] as Dictionary)["hurt"] = 2
 	check(Menagerie.out(tm).size() == 2 and PetAbilities.bonus_sources(tm).size() == 2, "the cache notices a pet getting hurt")
 	# Pickpocket: once a fight

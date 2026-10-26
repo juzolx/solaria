@@ -64,36 +64,71 @@ func _cell(n: String) -> Control:
 	var c := UI.panel(UI.INSET, Color(Menagerie.TIER_COLORS[tier]) if have else UI.BORDER, 4, 4, 2 if have else 1)
 	c.custom_minimum_size = Vector2(76, 0)
 	var v := UI.vbox(2)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	c.add_child(v)
+	# the pet's own baby art (art/pets/32) at a clean 2x; met-not-owned is its silhouette
 	var pic := TextureRect.new()
-	pic.texture = Sprites.enemy_by_key(String(Monsters.by_id(n).get("art", n))).get("tex", null)
+	pic.texture = Menagerie.species_texture(n, String(Monsters.by_id(n).get("art", n))) if have else Pets.white(n)
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(56, 56)
+	pic.custom_minimum_size = Vector2(64, 64)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if not have:
-		pic.modulate = Color(0.12, 0.12, 0.16, 0.9) if met else Color(0.05, 0.05, 0.07, 0.6)
+		pic.modulate = Color(0.32, 0.3, 0.4, 0.9) if met else Color(0.12, 0.12, 0.16, 0.6)
 	v.add_child(pic)
 	var l := UI.label(Monsters.name_of(n) if met else "???", UI.FONT_CAPTION, Color(Menagerie.TIER_COLORS[tier]) if have else UI.DIM)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.custom_minimum_size = Vector2(68, 0)
 	v.add_child(l)
-	c.tooltip_text = ("Owned: best %s" % Menagerie.TIER_NAMES[tier]) if have else ("Seen in the dungeon, never owned" if met else "Not met yet")
 	if met:
-		c.tooltip_text += "\n%s family. %s" % [PetAbilities.FAMILIES[PetAbilities.family(n)]["name"], PetAbilities.passive_text(n, tier if have else 0)]
-		if have and tier >= PetAbilities.TRICK_RANK:
-			c.tooltip_text += "\n" + PetAbilities.trick_text(n, tier)
-		if have and tier >= PetAbilities.SIGNATURE_RANK:
-			c.tooltip_text += "\n" + PetAbilities.signature_text(n)
+		# phones have no hover: a tap opens the card with what this pet does
+		c.mouse_filter = Control.MOUSE_FILTER_STOP
+		c.tooltip_text = "
+".join(_lines(n, have, tier))
+		c.gui_input.connect(func(ev: InputEvent):
+			if ev is InputEventMouseButton and ev.button_index == MOUSE_BUTTON_LEFT:
+				if ev.pressed:
+					c.set_meta("down", ev.global_position)
+				elif c.has_meta("down") and ev.global_position.distance_to(c.get_meta("down")) < 12.0:
+					_show(n, have, tier))   # a tap, not the end of a scroll
 	return c
+
+## What a met species does: its family, passive, and (when owned high enough) trick and signature.
+func _lines(n: String, have: bool, tier: int) -> Array:
+	var out: Array = [("Owned: best %s" % Menagerie.TIER_NAMES[tier]) if have else "Seen in the dungeon, never owned"]
+	out.append("%s family. %s" % [PetAbilities.FAMILIES[PetAbilities.family(n)]["name"], PetAbilities.passive_text(n, tier if have else 0)])
+	if have and tier >= PetAbilities.TRICK_RANK:
+		out.append(PetAbilities.trick_text(n, tier))
+	if have and tier >= PetAbilities.SIGNATURE_RANK:
+		out.append(PetAbilities.signature_text(n))
+	return out
+
+func _show(n: String, have: bool, tier: int) -> void:
+	var col := Color(Menagerie.TIER_COLORS[tier]) if have else UI.BORDER
+	var o := Overlay.new().open(main, Monsters.name_of(n), 400.0, col)
+	var pic := TextureRect.new()
+	pic.texture = Menagerie.species_texture(n, String(Monsters.by_id(n).get("art", n))) if have else Pets.white(n)
+	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	pic.custom_minimum_size = Vector2(96, 96)  # 3x, like in a fight
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	if not have:
+		pic.modulate = Color(0.32, 0.3, 0.4, 0.9)
+	o.content.add_child(pic)
+	var ls := _lines(n, have, tier)
+	for i in ls.size():
+		o.content.add_child(UI.wrap(String(ls[i]), UI.FONT_CAPTION, col if i == 0 and have else UI.TEXT))
+	if have and tier < PetAbilities.SIGNATURE_RANK:
+		o.content.add_child(UI.wrap("A higher rank of this pet unlocks more (Abilities by rank, above).", UI.FONT_CAPTION, UI.DIM))
 
 ## 2.1: what pets can do by rank, and each family's passive and trick.
 func _abilities() -> void:
 	box.add_child(UI.heading("Abilities by rank"))
 	for t in PetAbilities.RANK_TEXT.size():
 		box.add_child(UI.wrap("%s: %s" % [Menagerie.TIER_NAMES[t], PetAbilities.RANK_TEXT[t]], UI.FONT_CAPTION, Color(Menagerie.TIER_COLORS[t])))
-	box.add_child(UI.wrap("A pet's family is its kind of monster. Hold a pet below to see its own.", UI.FONT_CAPTION, UI.DIM))
+	box.add_child(UI.wrap("A pet's family is its kind of monster. Tap a pet below to see its own.", UI.FONT_CAPTION, UI.DIM))
 	for f in PetAbilities.FAMILIES:
 		box.add_child(UI.label(String(PetAbilities.FAMILIES[f]["name"]).to_upper(), UI.FONT_CAPTION, UI.GOLD))
 		box.add_child(UI.wrap("Passive, %s" % PetAbilities.family_passive_range(f), UI.FONT_CAPTION, UI.TEXT))
