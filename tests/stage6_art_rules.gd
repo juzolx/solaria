@@ -90,6 +90,15 @@ func _phone_width(key: String, w: int) -> void:
 ## (tools/monster_import.py TINT); none may slide back to grey on a re-import.
 const TINTED := ["barghest", "pooka", "spriggan", "leshy", "boss_black_annis", "draugr", "ankou", "revenant",
 	"vetala", "boss_dullahan", "boss_hel", "bunyip", "afanc"]
+## Fable r5: a boss or Calamity taller than the SE's boss stage would drop to 1x there (16 of 20
+## bosses did); fail at import instead of in the fight.
+func _se_height(key: String) -> void:
+	if not key.begins_with("boss_") and not key.begins_with("calamity_"):
+		return
+	var rows := float(ArtInfo.DATA["enemies"][key]["foot"]) + 1.0
+	var room := ArtStyle.SE_STAGE.y - 2.0 - (20.0 + 14.0 + 12.0)   # bottom edge; bar end + CALAMITY_TUCK
+	check(rows * 2.0 / ArtStyle.SE_SCALE <= room, "%s: %d rows can't keep 2x on an SE's %.0f px boss stage" % [key, rows, room])
+
 func _tinted(key: String, img: Image) -> void:
 	if not key in TINTED:
 		return
@@ -103,7 +112,9 @@ func _tinted(key: String, img: Image) -> void:
 			total += maxf(c.r, maxf(c.g, c.b)) - minf(c.r, minf(c.g, c.b))
 			n += 1
 	var ch := total / maxf(1.0, n)
-	check(ch >= 0.07, "%s: mean chroma %.3f, grey again (tools/monster_import.py TINT)" % [key, ch])
+	# fable r5: as close under the lowest as the import allows (pooka 0.077, barghest 0.086; the rest
+	# 0.100-0.113); the colours stay as Juzo approved them (art-ratings.md, Oct 25)
+	check(ch >= 0.075, "%s: mean chroma %.3f, grey again (tools/monster_import.py TINT)" % [key, ch])
 
 func _luma_floor(key: String, img: Image) -> void:
 	var total := 0.0
@@ -175,6 +186,7 @@ func _initialize() -> void:
 				_phone_width(f.get_basename(), img.get_width())
 				_luma_floor(f.get_basename(), img)
 				_tinted(f.get_basename(), img)
+				_se_height(f.get_basename())
 				continue
 			check(img.get_size() == ArtStyle.MONSTER_SIZE or img.get_size() == ArtStyle.TALL_SIZE, "%s%s is %s (68x68 or 68x132)" % [d, f, img.get_size()])
 			var rough := 0

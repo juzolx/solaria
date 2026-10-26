@@ -445,6 +445,8 @@ func play(events: Array[Dictionary]) -> void:
 				var edge: String = "e43b44" if dcal else (e["color"] if bool(e["boss"]) else _rim_color().to_html(false))
 				dying = {"tex": dtex, "img": dimg, "edge": edge, "boss": e["boss"], "alpha": 1.0, "color": e["color"],
 					"art": e.get("art", ""), "calamity": dcal, "big": dbig}
+				dying["rect"] = _dying_rect()
+				_burn_setup()
 				enemy_alpha = 0.0
 				_later(delay + 0.05, _enemy_died)
 			"hero_dead":
@@ -1018,7 +1020,9 @@ func _enemy_died() -> void:
 		_burst(_dying_rect().get_center(), Color(dying["color"]), 24, 300.0)
 	var t := create_tween()
 	t.tween_method(_set_dying_alpha, 1.0, 0.0, 0.6 if (profile == null or not profile.reduce_motion) else 0.3)
-	t.tween_callback(func(): dying = {})
+	t.tween_callback(func():
+		dying = {}
+		_burn_off())
 	t.tween_property(self, "enemy_alpha", 1.0, 0.25)
 
 func _hero_died() -> void:
@@ -1483,6 +1487,8 @@ func _enemy_art(boss: bool) -> Dictionary:
 	return Sprites.enemy_by_key(state.enemy_species)
 
 func _dying_rect() -> Rect2:
+	if dying.has("rect"):
+		return dying["rect"]   # taken at the kill (fable r5: re-measured, the corpse moved)
 	# the flags were taken at the kill (fable r4: the state's Calamity flag is already cleared)
 	return _rect_for(Sprites.enemy_by_key(dying.get("art", "")), dying["boss"], bool(dying.get("big", dying["boss"])), 1 if bool(dying.get("calamity", false)) else 0)
 
@@ -1517,20 +1523,24 @@ func _rect_for(art: Dictionary, boss: bool, big := false, cal := -1) -> Rect2:
 		# Interface round 1 made the SE stage 57 px shorter: a Calamity that can't fit above the
 		# team line may stand lower, down to the stage's bottom edge (its base behind the hero),
 		# and as a last resort tuck its crown under its own name plate (CALAMITY_TUCK)
-		var low := size.y - 2.0 if is_cal else feet
-		var hard := _boss_bar().end.y + CALAMITY_TUCK if is_cal else tight
+		# (fable r5: and so may a zone boss; 16 of 20 were 1x on the SE when only Calamities could)
+		var stage := is_cal or boss
+		var low := size.y - 2.0 if stage else feet
+		var hard := _boss_bar().end.y + CALAMITY_TUCK if stage else tight
 		while ui > 1.0 and (float(art["foot"]) + 1.0) * ui / sc > low - hard:
 			ui -= 1.0
 		var tall := (float(art["foot"]) + 1.0) * ui / sc
 		feet = maxf(feet, minf(low, tight + tall))
-		var gap := maxf(BOSS_GAP, BOSS_NAME + _boss_chip_room() + 6.0)   # chips stay off its head
-		var top := maxf(hard, minf(_boss_bar().end.y + gap, feet - tall))
+		# one chip row is always kept free (fable r5: it hopped 18-46 px as chips came and went)
+		var top := maxf(hard, minf(_boss_bar().end.y + BOSS_GAP, feet - tall))
 		base = minf(maxf(base, top + tall), feet)
-		if not boss and not is_cal:
-			# a tall common (short screens) stands at the hall's focal point, right of the hero,
-			# so the hero covers its flank, not its face (fable r4: HallsScene focal 0.62)
+		if not stage:
+			# a common on a phone: feet on the hall's floor, never on the wall over the doors
+			# (fable r5, Juzo: nothing may float), right of the hero's column (hero 0.34-0.66 w)
+			# with at most its left part behind the hero
+			base = minf(maxf(base, _floor_line()), feet)
 			var half := (art["size"] as Vector2).x * ui / sc * 0.5
-			x = clampf(size.x * TALL_X, x, size.x - half - 2.0)
+			x = clampf(maxf(size.x * TALL_X, _hero_rest_right() + half * 0.6), x, size.x - half - 2.0)
 	else:
 		# ...and never taller than the space above the team
 		ui = maxf(1.0, minf(ui, floorf(base * 0.92 * sc / maxf(1.0, float(art["foot"]) + 1.0))))
@@ -1541,15 +1551,27 @@ func _rect_for(art: Dictionary, boss: bool, big := false, cal := -1) -> Rect2:
 	return Rect2(_snap(Vector2(x - sz.x / 2.0, gy - (foot + 1.0) * u)), sz)
 
 ## Design px from the boss bar's bottom to the boss's top row: BOSS_GAP when the stage has the
-## room (a 430 pt phone), down to BOSS_NAME (the name line under the bar) for the tallest
-## Calamities on an SE.
-const BOSS_GAP := 44.0
+## room (a 430 pt phone): the name line and one chip row, always, so chips never move it;
+## down to CALAMITY_TUCK for the tallest bosses and Calamities on an SE.
+const BOSS_GAP := 64.0   # BOSS_NAME + CHIP_ROW + 10
 const BOSS_NAME := 26.0   # the plate box ends 24 px under the bar (_draw_plate)
 ## A Calamity's top row at least this far under the bar: its name plate (24 px) may cover a few
 ## rows of its crown, only when the tallest ones can't keep the hero's 2x on an SE otherwise.
 const CALAMITY_TUCK := 12.0
-## Where a tall common stands on the boss stage (share of the stage width, its centre).
+## Where a common stands on the boss stage (share of the stage width, its centre): right of
+## the hero's column (hero 0.34-0.66 w), its left quarter behind the hero.
 const TALL_X := 0.66
+
+## Where the hall's floor meets its far wall (HallsScene's projection: horizon 0.40 h, focal
+## length 0.62 w, eye 1.5 over the floor, far wall at D), a little in front of it.
+func _floor_line() -> float:
+	if state != null and (state.in_town or state.trial_active):
+		return _ground()
+	return size.y * 0.40 + size.x * 0.62 * -HallsScene.FLOOR_Y / HallsScene.D + 8.0
+
+## The right edge of the hero's body standing still (_hero_rect without bob or lunge).
+func _hero_rest_right() -> float:
+	return size.x * _leader_x() + (40.0 * Sprites.HD - Sprites.CANVAS / 2.0) * _hu()
 
 ## Where the wind-up "!" stands (its centre x, its baseline): right of the boss bar on the boss
 ## stage, else just over its plate's right end.
@@ -1557,8 +1579,8 @@ func _telegraph_at(er: Rect2) -> Vector2:
 	if _boss_stage():
 		var bb := _boss_bar()
 		return Vector2(minf(bb.end.x + 24.0, size.x - 14.0), bb.end.y + 14.0)
-	var pl := _bar_rect(er)
-	return Vector2(minf(pl.end.x + 14.0, size.x - 14.0), pl.position.y - 4.0)
+	# top-right of the monster, over the wall (fable r5: by the plate it stood on its foot)
+	return Vector2(minf(er.end.x + 10.0, size.x - 14.0), er.position.y + 40.0)
 
 ## Pips beside a ranked monster's name: one per tier, so Epic, Legendary and Mythic (3-5) are
 ## told apart by count as well as colour (fable r4: all three wore 3). Calamities keep 3 red.
@@ -1570,7 +1592,12 @@ static func tier_pips(tier: int) -> int:
 ## the zone title.
 func _banner_line() -> Rect2:
 	if _boss_stage():
-		return Rect2(8.0, _boss_bar().end.y + BOSS_NAME + _boss_chip_room() + 44.0, size.x - 16.0, 17.0)
+		# over its chest, under its face (the top 35%), over the top of the hero's hair at most
+		# allows (fable r5: the text sat on the imp's and Grendel's faces)
+		var er := _dying_rect() if dying.has("tex") and enemy_alpha <= 0.0 else _enemy_rect(state.enemy_is_boss)
+		var chips_end := _boss_bar().end.y + BOSS_NAME + _boss_chip_room()
+		var by := maxf(minf(er.position.y + er.size.y * 0.35 + 24.0, _hero_rest_top() + 24.0), chips_end + 30.0)
+		return Rect2(8.0, by, size.x - 16.0, 17.0)
 	return Rect2(0.0, 62.0, size.x, 17.0)
 
 
@@ -1603,6 +1630,8 @@ func _is_tall(art: Dictionary) -> bool:
 	if art.is_empty() or not art.has("foot"):
 		return false
 	var sc := _scr()
+	if sc < 1.0:
+		return true   # every common on a phone (fable r5: one layout for both, feet on the floor)
 	var ui := maxf(1.0, minf(float(_unit()), _width_cap(art, false, sc, 0)))
 	return (float(art["foot"]) + 1.0) * ui / sc > _enemy_ground() * 0.92
 
@@ -1632,6 +1661,9 @@ func _pack_rect(pr: Rect2, art: Dictionary, side: float) -> Rect2:
 	var sz := pr.size * (maxf(1.0, ui - 1.0) / ui)
 	# feet a tenth of the lead's height up (behind it), not a third (fable r4: they stood on the wall)
 	var pos := pr.position + Vector2(side * pr.size.x * 0.62 + (pr.size.x - sz.x) * 0.5, pr.size.y * 0.9 - sz.y)
+	if _boss_stage():
+		# by column, not by the lead (fable r5: at 0.66 w the left mate stood behind the hero)
+		pos.x = (0.2 if side < 0.0 else 0.92) * size.x - sz.x * 0.5
 	pos.x = clampf(pos.x, 2.0 - sz.x * 0.3, size.x - sz.x * 0.7 - 2.0)   # at most a third off the edge
 	pos.y = minf(pos.y, _team_ground() - sz.y)
 	return Rect2(_snap(pos), sz)
@@ -1691,9 +1723,8 @@ func _draw() -> void:
 	# Dying enemy fading out
 	if dying.has("tex"):
 		var dr := _dying_rect()
-		# 0.13+: it crumbles away pixel by pixel, edges glowing, instead of fading
-		var fi := clampi(int((1.0 - float(dying["alpha"])) * DISSOLVE_FRAMES), 0, DISSOLVE_FRAMES - 1)
-		var frame: Texture2D = _dissolve(dying["tex"], dying.get("img"), Color(String(dying.get("edge", dying.get("color", "#ff8040")))), fi)
+		# 0.13+: it crumbles away pixel by pixel, edges glowing, instead of fading (_burn_setup)
+		var frame := _burn_tex(1.0 - float(dying["alpha"]))
 		dr.position.y -= (1.0 - float(dying["alpha"])) * 6.0
 		draw_texture_rect(frame, dr, false, Color(1, 1, 1, minf(1.0, float(dying["alpha"]) * 3.0)))
 
@@ -2493,8 +2524,9 @@ func _enemy_statuses() -> Array:
 		st.append(["Minions x%d" % state.boss_minions, Color("#d4d4d4")])
 	return st
 
-## The boss stage's chips (statuses, then mods) laid out in centred rows right under the boss
-## plate: [[chip, Rect2], ...]. Once a frame; _rect_for leaves room for them.
+## The boss stage's chips (statuses, then mods) in one centred row right under the boss plate:
+## [[chip, Rect2], ...]. Once a frame. One row only, so the room _rect_for keeps (BOSS_GAP)
+## never changes (fable r5): a long row drops to 15 px, then its last mods fold into "+N".
 func _boss_chip_layout() -> Array:
 	var fr := Engine.get_process_frames()
 	if fr == _chip_frame:
@@ -2504,28 +2536,40 @@ func _boss_chip_layout() -> Array:
 	if state == null or not _boss_stage():
 		return _chip_lay
 	var chips := _enemy_statuses()
+	var n_st := chips.size()
 	for m in state.enemy_mods:
 		chips.append([m, Color(Monsters.MODS[m]["color"])])
 	var font := UI.game_font()
-	var rows: Array = [[]]
-	var row_w: Array = [0.0]
+	_chip_fs = SCENE_FS
+	var folded := 0
+	while _chips_width(chips, font, _chip_fs) > size.x - 16.0:
+		if _chip_fs > 15:
+			_chip_fs = 15
+		elif chips.size() - (1 if folded > 0 else 0) > n_st:
+			if folded > 0:
+				chips.pop_back()
+			chips.pop_back()
+			folded += 1
+			chips.append(["+%d" % folded, Color("#d4d4d4")])
+		else:
+			break
+	var cx := (size.x - _chips_width(chips, font, _chip_fs)) / 2.0
+	var y := _boss_bar().end.y + BOSS_NAME + 2.0
 	for c in chips:
-		var wdt := font.get_string_size(String(c[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS).x + 10.0
-		if not (rows[-1] as Array).is_empty() and float(row_w[-1]) + wdt > size.x - 16.0:
-			rows.append([])
-			row_w.append(0.0)
-		(rows[-1] as Array).append([c, wdt])
-		row_w[-1] = float(row_w[-1]) + wdt + 4.0
-	for ri in rows.size():
-		var cx := (size.x - float(row_w[ri]) + 4.0) / 2.0
-		var y := _boss_bar().end.y + BOSS_NAME + 2.0 + ri * CHIP_ROW
-		for it in rows[ri]:
-			_chip_lay.append([it[0], Rect2(cx, y, it[1], SCENE_FS + 6.0)])
-			cx += float(it[1]) + 4.0
+		var wdt := font.get_string_size(String(c[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, _chip_fs).x + 10.0
+		_chip_lay.append([c, Rect2(cx, y, wdt, _chip_fs + 6.0)])
+		cx += wdt + 4.0
 	return _chip_lay
+
+func _chips_width(chips: Array, font: Font, fs: int) -> float:
+	var total := -4.0
+	for c in chips:
+		total += font.get_string_size(String(c[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 14.0
+	return total
 
 var _chip_frame := -1
 var _chip_lay: Array = []
+var _chip_fs := SCENE_FS
 const CHIP_ROW := 28.0
 
 ## Design px the boss-stage chip rows take under the plate (0 with none).
@@ -2543,7 +2587,7 @@ func _draw_enemy_info(r: Rect2, font: Font) -> void:
 		# Boss stage: statuses and mods in rows right under the plate; the boss stands lower by
 		# that much (fable r4: a right-edge column sat on its shoulder)
 		for it in _boss_chip_layout():
-			_chip_box(it[0], it[1], font, SCENE_FS)
+			_chip_box(it[0], it[1], font, _chip_fs)
 		return
 	var top := maxf(34.0, r.position.y - 6.0)
 	_chip_row(st, r.get_center().x, top - 30.0, font)
@@ -2667,60 +2711,70 @@ func _draw_team_strip(font: Font) -> void:
 		draw_string_outline(font, Vector2(6, y + 54), "Team Strike in %d" % tsl, HORIZONTAL_ALIGNMENT_LEFT, -1, UI.MIN_FONT, 3, Color(0, 0, 0, 0.9))
 		draw_string(font, Vector2(6, y + 54), "Team Strike in %d" % tsl, HORIZONTAL_ALIGNMENT_LEFT, -1, UI.MIN_FONT, Color("#fbbf24"))
 
-static var _dissolves := {}
-const DISSOLVE_FRAMES := 12
-## A monster's death as frames: pixels burn away in a noisy order, with a glowing edge
-## in its color just ahead of the hole. Made once per sprite and kept.
-## Dissolve frame f (0 = whole) of a dying monster. Frames are cut the first time they're shown,
-## one per drawn frame at most, not all twelve on the kill (fable r4); frame 0 is the pose itself.
-func _dissolve(tex: Texture2D, src_img: Image, glow: Color, f: int) -> Texture2D:
-	if f <= 0:
-		return tex
-	var key := tex.get_rid().get_id()
-	if not _dissolves.has(key):
-		if _dissolves.size() >= 8:
-			_dissolves.clear()  # a few deaths' worth (a Calamity's 12 frames are ~1 MB)
-		# The kept pose Image (no GPU readback); the noise is worked out once per pixel
-		var src := (src_img if src_img != null else tex.get_image()).duplicate() as Image
-		if src.is_compressed():
-			src.decompress()
-		src.convert(Image.FORMAT_RGBA8)
-		var w := src.get_width()
-		var h := src.get_height()
+## The burn on a kill (fable r5): a canvas shader eats the dying pose in a noisy order, top
+## first, with a glowing edge just ahead of the hole. It draws into a small viewport, one texel
+## per art pixel, and _draw shows that like any picture: nothing is cut on the CPU.
+const BURN_SHADER := """
+shader_type canvas_item;
+uniform sampler2D noise : filter_nearest, repeat_enable;
+uniform float cut = 0.0;
+uniform vec4 edge : source_color = vec4(1.0, 0.6, 0.3, 1.0);
+uniform vec2 shift = vec2(0.0);
+void fragment() {
+	vec4 c = texture(TEXTURE, UV);
+	float n = texture(noise, (floor(UV / TEXTURE_PIXEL_SIZE) + 0.5 + shift) / 64.0).r * 0.7 + (1.0 - UV.y) * 0.3;
+	if (n < cut) {
+		discard;
+	}
+	if (n < cut + 0.08) {
+		c.rgb = edge.rgb;
+	}
+	COLOR = c;
+}
+"""
+var _burn_vp: SubViewport
+var _burn_pic: TextureRect
+
+## Makes the burn's viewport once (on the first kill) and points it at the new corpse.
+func _burn_setup() -> void:
+	if not dying.has("tex"):
+		return
+	if _burn_vp == null:
 		var noise := FastNoiseLite.new()
-		noise.seed = key % 9973
 		noise.frequency = 0.12
-		var order := PackedFloat32Array()
-		order.resize(w * h)
-		for y in h:
-			for x in w:
-				# higher pixels go first, broken up by noise
-				order[y * w + x] = (noise.get_noise_2d(x, y) + 1.0) * 0.5 * 0.7 + (1.0 - float(y) / h) * 0.3
-		var frames: Array = []
-		frames.resize(DISSOLVE_FRAMES)
-		_dissolves[key] = {"w": w, "h": h, "data": src.get_data(), "order": order, "edge": glow.lightened(0.5), "frames": frames}
-	var d: Dictionary = _dissolves[key]
-	var frames: Array = d["frames"]
-	if frames[f] != null:
-		return frames[f]
-	var w: int = d["w"]
-	var h: int = d["h"]
-	var order: PackedFloat32Array = d["order"]
-	var edge: Color = d["edge"]
-	var er := int(edge.r * 255.0)
-	var eg := int(edge.g * 255.0)
-	var eb := int(edge.b * 255.0)
-	var cut := float(f) / DISSOLVE_FRAMES     # near 1 = almost gone
-	var px: PackedByteArray = (d["data"] as PackedByteArray).duplicate()
-	for i in w * h:
-		if px[i * 4 + 3] == 0:
-			continue
-		var n := order[i]
-		if n < cut:
-			px[i * 4 + 3] = 0
-		elif n < cut + 0.08:
-			px[i * 4] = er
-			px[i * 4 + 1] = eg
-			px[i * 4 + 2] = eb
-	frames[f] = ImageTexture.create_from_image(Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, px))
-	return frames[f]
+		var sh := Shader.new()
+		sh.code = BURN_SHADER
+		var mat := ShaderMaterial.new()
+		mat.shader = sh
+		mat.set_shader_parameter("noise", ImageTexture.create_from_image(noise.get_seamless_image(64, 64)))
+		_burn_vp = SubViewport.new()
+		_burn_vp.transparent_bg = true
+		_burn_vp.disable_3d = true
+		_burn_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		_burn_pic = TextureRect.new()
+		_burn_pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_burn_pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_burn_pic.material = mat
+		_burn_vp.add_child(_burn_pic)
+		add_child(_burn_vp)
+	var tex: Texture2D = dying["tex"]
+	var sz := Vector2i(tex.get_size())
+	_burn_vp.size = sz
+	_burn_pic.size = Vector2(sz)
+	_burn_pic.texture = tex
+	var mat := _burn_pic.material as ShaderMaterial
+	mat.set_shader_parameter("edge", Color(String(dying.get("edge", dying.get("color", "#ff8040")))).lightened(0.5))
+	mat.set_shader_parameter("shift", Vector2(randi() % 64, randi() % 64))
+	mat.set_shader_parameter("cut", 0.0)
+	_burn_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+
+## The dying pose burnt to cut (0 = whole, 1 = gone): the pose itself until the burn starts.
+func _burn_tex(cut: float) -> Texture2D:
+	if cut <= 0.0 or _burn_vp == null:
+		return dying["tex"]
+	(_burn_pic.material as ShaderMaterial).set_shader_parameter("cut", cut)
+	return _burn_vp.get_texture()
+
+func _burn_off() -> void:
+	if _burn_vp != null:
+		_burn_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED

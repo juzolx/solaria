@@ -5,7 +5,8 @@ extends SceneTree
 ## the boss stage room, plates that stay put while the hero lunges, the boss chip column and the
 ## menagerie pet beside the hero plate.
 const TestHero := preload("res://tests/test_hero.gd")
-const KEYS := ["kobold", "umibozu", "chimera", "barghest+pack", "garmr+pack", "boss_grendel", "boss_charybdis",
+const KEYS := ["kobold", "imp", "umibozu", "chimera", "barghest+pack", "garmr+pack", "boss_grendel", "boss_charybdis",
+	"boss_surtr", "boss_forgemaster_brann",
 	"calamity_0", "calamity_1", "calamity_2", "calamity_3", "calamity_4", "calamity_5", "calamity_6", "calamity_7", "calamity_8", "calamity_9"]
 const SIZES := [Vector2i(430, 932), Vector2i(375, 667)]
 var fails := 0
@@ -51,7 +52,7 @@ func _initialize() -> void:
 			await process_frame
 			await process_frame
 			_check_fight(bv, st, arg, wsz)
-			if arg in ["boss_charybdis", "calamity_2"]:
+			if arg in ["boss_grendel", "boss_charybdis", "calamity_2"]:
 				await _check_chips(bv, st, arg, wsz)
 			if arg == "calamity_2":
 				await _check_death(main, bv, st, arg, wsz)
@@ -92,7 +93,8 @@ func _check_fight(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 	var unit: int = bv._unit()
 	check(unit == ArtStyle.unit(sc), "%s: pixel unit %d, the phone's is %d" % [tag, unit, ArtStyle.unit(sc)])
 	if arg == "kobold":
-		print("%s: stretch %.3f, stage %s" % [tag, sc, bv.size])
+		# the stage's height moves every layout rule (fable r5: interface round 1's 618 / 400 went unnoticed)
+		print("%s: stretch %.3f, stage %s, team %.0f, ground %.0f, floor %.0f" % [tag, sc, bv.size, bv._team_ground(), bv._enemy_ground(), bv._floor_line()])
 	var er: Rect2 = bv._enemy_rect(st.enemy_is_boss)
 	var ui := er.size.x / (art["size"] as Vector2).x * sc
 	check(absf(ui - roundf(ui)) < 0.01, "%s: monster pixel %.2f screen px, not whole" % [tag, ui])
@@ -101,18 +103,23 @@ func _check_fight(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 		check(roundf(ui) <= bv._hero_unit(), "%s: boss pixel %d over the hero's %d" % [tag, roundf(ui), bv._hero_unit()])
 		if not st.enemy_is_boss and st.enemy_calamity == 0:
 			check(roundf(ui) == unit, "%s: tall common pixel %d, not the unit %d" % [tag, roundf(ui), unit])
-		if st.enemy_calamity > 0 and wsz.y < 800:
-			# fable r3 item 2: all ten Calamities keep the hero's 2x on an SE (a taller one fails here)
-			check(roundf(ui) == unit, "%s: Calamity pixel %d on the SE, not %d" % [tag, roundf(ui), unit])
+		if (st.enemy_calamity > 0 or st.enemy_is_boss) and wsz.y < 800:
+			# fable r3 item 2: all ten Calamities keep the hero's 2x on an SE (a taller one fails here);
+			# fable r5: so does every zone boss (16 of 20 were 1x, the old check was <=)
+			check(roundf(ui) == unit, "%s: boss pixel %d on the SE, not %d" % [tag, roundf(ui), unit])
 		if st.horde_pack:
 			# a tall pack on the boss stage: the mates stay under the top bar and its name, on screen
 			for side in [-1.0, 1.0]:
 				var pr: Rect2 = bv._pack_rect(er, art, side)
 				check(pr.position.y >= bv._boss_bar().end.y + bv.BOSS_NAME - 0.5, "%s: pack-mate top %.0f under the boss bar" % [tag, pr.position.y])
 				check(pr.end.y <= bv._team_ground() + 0.5, "%s: pack-mate feet %.0f under the team line" % [tag, pr.end.y])
+				# fable r5: and not behind the hero (on the SE the left one was gone)
+				var hf0: Rect2 = bv._hero_rect()
+				var mid := hf0.grow_individual(-hf0.size.x * 0.25, 0.0, -hf0.size.x * 0.25, 0.0)
+				check(pr.intersection(mid).get_area() < 0.25 * pr.get_area(), "%s: pack-mate %s behind the hero" % [tag, side])
 		var feet_y := er.position.y + (float(art["foot"]) + 1.0) * er.size.y / (art["size"] as Vector2).y   # the lowest solid row
 		# feet on or above the team line; only a Calamity too tall for that may go lower, behind the hero
-		var floor_y: float = bv.size.y if st.enemy_calamity > 0 else bv._team_ground()
+		var floor_y: float = bv.size.y if (st.enemy_calamity > 0 or st.enemy_is_boss) else bv._team_ground()
 		check(feet_y <= floor_y + 0.5, "%s: feet %.0f under %.0f" % [tag, feet_y, floor_y])
 		if feet_y > bv._team_ground() + 0.5:
 			check(er.position.y <= bv._boss_bar().end.y + bv.BOSS_NAME + 0.5, "%s: below the team line with room left above" % tag)
@@ -124,7 +131,13 @@ func _check_fight(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 		var bl: Rect2 = bv._banner_line()
 		var band := Rect2(bl.position.x, bl.position.y - 26.0, bl.size.x, 26.0 + bl.size.y + 4.0)
 		check(not band.intersects(Rect2(bv._boss_bar().position.x, 14.0, bv._boss_bar().size.x, bv.BOSS_NAME + 20.0)), "%s: banner %s on the boss name" % [tag, band])
+		if arg in ["boss_grendel", "imp", "garmr+pack"]:
+			# fable r5: the banner over the chest, not the face (the top 35%)
+			var face := Rect2(er.position, Vector2(er.size.x, er.size.y * 0.35))
+			check(not Rect2(0.0, bl.position.y - 22.0, bv.size.x, 22.0).intersects(face), "%s: banner at %.0f on the face %s" % [tag, bl.position.y, face])
 		if not st.enemy_is_boss and st.enemy_calamity == 0:
+			# fable r5 (Juzo: nothing floats): a common's feet on the hall's floor, not on the wall
+			check(feet_y >= bv._floor_line() - 1.0 / sc, "%s: feet %.0f over the floor line %.0f" % [tag, feet_y, bv._floor_line()])
 			# (e) a tall common stands right of the hero: the hero covers its flank, not its face
 			var hf: Rect2 = bv._hero_rect()   # the 64 px frame; the drawn back is its middle half
 			var hr := hf.grow_individual(-hf.size.x * 0.25, 0.0, -hf.size.x * 0.25, 0.0)
@@ -158,6 +171,7 @@ func _check_fight(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 ## (c) statuses and mods on the boss stage stay off the boss (rows under its plate).
 func _check_chips(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 	var tag := "%s at %dx%d with chips" % [arg, wsz.x, wsz.y]
+	var er0: Rect2 = bv._enemy_rect(st.enemy_is_boss)
 	st.burn_turns = 3
 	st.enemy_poison_turns = 2
 	st.cfight["windup"] = 1
@@ -165,8 +179,12 @@ func _check_chips(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 	await process_frame
 	await process_frame
 	var er: Rect2 = bv._enemy_rect(st.enemy_is_boss)
+	# fable r5: chips never move the boss (one row is always kept for them)
+	check(er == er0, "%s: the boss moved from %s to %s" % [tag, er0, er])
 	var lay: Array = bv._boss_chip_layout()
-	check(lay.size() >= 6, "%s: %d chips laid out, not 6+" % [tag, lay.size()])
+	check(lay.size() >= 4, "%s: %d chips laid out, not 4+" % [tag, lay.size()])
+	for it in lay:
+		check(absf((it[1] as Rect2).position.y - (lay[0][1] as Rect2).position.y) < 0.5, "%s: chips in more than one row" % tag)
 	var squeezed: bool = er.position.y < bv._boss_bar().end.y + bv.BOSS_NAME + bv._boss_chip_room()
 	for it in lay:
 		var box: Rect2 = it[1]
@@ -186,11 +204,13 @@ func _check_chips(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 ## before the view gets the event: Calamity.on_slain).
 func _check_death(main, bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 	var tag := "%s at %dx%d dying" % [arg, wsz.x, wsz.y]
+	st.burn_turns = 3   # its chips go with it (fable r5: the corpse jumped by their room)
 	var er: Rect2 = bv._enemy_rect(false)
 	st.enemy_calamity = 0   # what Calamity.on_slain does first
 	var ev: Array[Dictionary] = [{"type": "enemy_dead", "shape": st.enemy_shape, "color": st.enemy_color, "boss": false,
 		"name": st.enemy_name, "art": st.enemy_art, "tier": 0, "calamity": true}]
 	bv.play(ev)
+	st.burn_turns = 0
 	check(not bv.dying.is_empty(), tag + ": no dying monster")
 	if not bv.dying.is_empty():
 		check(bv._dying_rect() == er, "%s: corpse %s, it stood at %s" % [tag, bv._dying_rect(), er])

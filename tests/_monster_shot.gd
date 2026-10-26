@@ -3,7 +3,7 @@ extends SceneTree
 ##   godot --path . --resolution 430x932 -s tests/_monster_shot.gd -- <tag> <key>[@floor][#tier][+pack][+mods][+status][+pet][+dead] ...
 ## -> shots/monsters/<tag>/<key>.png (floor picks the zone's hall behind it, tier 0-5 its rank,
 ## +pack two pack-mates waiting behind it; +mods two mods; +status burning, poisoned and winding
-## up; +pet a menagerie pet out; +dead the frame 0.3 s after it dies; calamity_N keys appear as
+## up; +pet a menagerie pet out; +dead a frame of its burn (alpha under 0.6); calamity_N keys appear as
 ## that Calamity; +banner a rank banner over it)
 const TestHero := preload("res://tests/test_hero.gd")
 func _initialize() -> void:
@@ -104,7 +104,11 @@ func _initialize() -> void:
 			var ev: Array[Dictionary] = [{"type": "enemy_dead", "shape": st.enemy_shape, "color": st.enemy_color, "boss": st.enemy_is_boss,
 				"name": st.enemy_name, "art": st.enemy_art, "tier": tier, "calamity": cal}]
 			main.battle.play(ev)
-			await create_timer(0.3).timeout
+			# into the burn itself (fable r5: 0.3 s was still the kill burst at full alpha)
+			var waited := 0.0
+			while waited < 2.0 and float(main.battle.dying.get("alpha", 1.0)) > 0.6:
+				await process_frame
+				waited += 1.0 / 60.0
 		root.get_texture().get_image().save_png(dir.path_join(shot + ".png"))
 	quit()
 
