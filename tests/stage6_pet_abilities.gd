@@ -207,6 +207,7 @@ func _r3_tests() -> void:
 	for i in 3:
 		ps.append(Menagerie.make_pet(sg, kind_of("beast", i), "", 1, "egg"))
 	(ps[0] as Dictionary)["hurt"] = 2
+	Menagerie.changed(sg)   # set by hand: caches start over
 	var fourth := Menagerie.make_pet(sg, kind_of("beast", 3), "", 1, "egg")
 	check(int(fourth["id"]) in sg.pets_out, "a new pet takes a resting pet's spot")
 	check(not int(ps[0]["id"]) in sg.pets_out and int(ps[1]["id"]) in sg.pets_out and int(ps[2]["id"]) in sg.pets_out, "the resting one left, the two healthy stay")
@@ -217,6 +218,7 @@ func _r3_tests() -> void:
 		qs.append(Menagerie.make_pet(sg2, kind_of("beast", i), "", 1, "egg"))
 	var extra := Menagerie.make_pet(sg2, kind_of("beast", 3), "", 1, "egg")   # waits at home: the team is full
 	(qs[0] as Dictionary)["hurt"] = 2
+	Menagerie.changed(sg2)   # set by hand: caches start over
 	Menagerie.toggle_out(sg2, int(extra["id"]))
 	check(not int(qs[0]["id"]) in sg2.pets_out and int(qs[1]["id"]) in sg2.pets_out and int(qs[2]["id"]) in sg2.pets_out and int(extra["id"]) in sg2.pets_out, "Swap in drops the hurt pet, not a fighter (%s)" % str(sg2.pets_out))
 	# 12: copy
@@ -264,9 +266,7 @@ func _r4_tests() -> void:
 	var baby := Menagerie.hatch(ng, ng.eggs[0])
 	check(ng.events.filter(func(e): return e["type"] == "hatch_moment").size() == 1 and not ng.events.any(func(e): return e["type"] == "mini_event"), "a hatch is one moment, no banner")
 	check(str(ng.messages).contains("joins your team") or str(ng.messages).contains("waits at home"), "the hatch line says where the baby went")
-	# 5: Legendary and Mythic hatches and nests get the light (main.gd passes "rare")
-	var msrc := FileAccess.get_file_as_string("res://main.gd")
-	check(msrc.count("\"rare\" if int(e[\"tier\"]) >= 4") == 2, "rare hatches and nests open with light")
+	# 5: the light for rare hatches and nests is tested on Menagerie.moment itself (_r5_tests)
 	# 14: the Codex reward lands with the find
 	var cg := hero()
 	cg.codex.coll_earned.clear()
@@ -277,12 +277,17 @@ func _r4_tests() -> void:
 	var og := hero()
 	var hurt_rare := Menagerie.make_pet(og, of_shape("beast"), "", 2, "egg")
 	og.pets_out.clear()
+	Menagerie.changed(og)
 	var common := Menagerie.make_pet(og, of_shape("beast"), "", 0, "egg")
 	og.pets_out.clear()
+	Menagerie.changed(og)
 	var myth := Menagerie.make_pet(og, of_shape("beast"), "", 5, "egg")
 	hurt_rare["hurt"] = 3
+	Menagerie.changed(og)   # set by hand: caches start over
 	og.pets_out.clear()
+	Menagerie.changed(og)
 	og.pets_out.append(int(myth["id"]))
+	Menagerie.changed(og)
 	var order := PetTab.sorted(og)
 	check(order.size() == 3 and order[0] == myth and order[1] == common and order[2] == hurt_rare, "Pet tab order: coming along, healthy, resting")
 	var key := PetTab.pets_key(og)
@@ -290,6 +295,7 @@ func _r4_tests() -> void:
 	check(PetTab.pets_key(og) == key, "a kill doesn't rebuild the Pet tab")
 	# 7: a hurt pet's button can't drop it from the team
 	og.pets_out.append(int(hurt_rare["id"]))
+	Menagerie.changed(og)
 	var tab := PetTab.new()
 	tab.state = og
 	var row := tab._pet_row(hurt_rare)
@@ -336,6 +342,7 @@ func _r4_tests() -> void:
 	var hi := Menagerie.make_pet(mg, sp, "", 5, "egg")
 	var other := Menagerie.make_pet(mg, kind_of("beast", 1), "", 0, "egg")
 	mg.pets_out = [int(lo["id"]), int(hi["id"]), int(other["id"])]
+	Menagerie.changed(mg)
 	mg.slot = 6
 	mg.autosave = true
 	mg.save_game()
@@ -384,6 +391,8 @@ func _r4_tests() -> void:
 	var old_lo := Menagerie.make_pet(cg2, kind_of("beast", 1), "", 1, "egg")
 	old_lo["level"] = 1
 	old_lo["kills"] = 400
+	old_lo.erase("curve")   # an old-curve pet
+	old_hi.erase("curve")
 	Menagerie.convert_levels(cg2)
 	check(int(old_hi["level"]) == 40 and int(old_lo["level"]) == Menagerie.level_for(400) and int(old_lo["level"]) > 1, "converting old saves never lowers a level (%d, %d)" % [int(old_hi["level"]), int(old_lo["level"])])
 
@@ -391,6 +400,98 @@ func _r4_tests() -> void:
 	var bv := _stage(og, 647.0)
 	check(is_same(bv._team_out(), bv._team_out()), "the fight's pets are listed once a frame")
 	bv.queue_free()
+
+func _tamer() -> GameState:
+	var g := hero()
+	g.hidden_class = "beast_tamer"
+	return g
+
+func _r5_tests() -> void:
+	var sp := kind_of("beast", 0)
+	# 1: an old save with a resting Mythic and a fighting Rare of one kind keeps the Rare out
+	var g1 := _tamer()
+	var rare := Menagerie.make_pet(g1, sp, "", 2, "egg")
+	var myth := Menagerie.make_pet(g1, sp, "", 5, "egg")
+	myth["hurt"] = 5
+	g1.pets_out = [int(myth["id"]), int(rare["id"])]
+	Menagerie.changed(g1)
+	var home := Menagerie.one_of_each(g1)
+	check(int(rare["id"]) in g1.pets_out and not int(myth["id"]) in g1.pets_out and home == [String(myth["name"])], "the healthy copy stays out, the resting one goes home (%s)" % str(g1.pets_out))
+	# 2: a resting twin doesn't block the healthy copy: label and tap agree
+	var g2 := _tamer()
+	var a := Menagerie.make_pet(g2, sp, "", 2, "egg")
+	var b := Menagerie.make_pet(g2, sp, "", 3, "egg")
+	a["hurt"] = 4
+	Menagerie.changed(g2)
+	check(Menagerie.out_block(g2, int(b["id"])) == "" and Menagerie.same_kind_out(g2, int(b["id"])).is_empty(), "a resting twin doesn't count as out")
+	var tab := PetTab.new()
+	tab.state = g2
+	var row := tab._pet_row(b)
+	check(_find_button(row, "Bring along") != null or _find_button(row, "Swap in") != null, "its button offers to bring it")
+	row.free()
+	check(Menagerie.toggle_out(g2, int(b["id"])) and Menagerie.out(g2).filter(func(q): return String(q["species"]) == sp).size() == 1, "the tap brings it, and the team holds one of the kind")
+	# 3 + 17: an old-curve save says so once, never lowers a level, and the note doesn't repeat
+	var g3 := hero()
+	var old := Menagerie.make_pet(g3, sp, "", 0, "egg")
+	old["level"] = 20
+	old["kills"] = 800
+	old.erase("curve")
+	g3.slot = 7
+	g3.autosave = true
+	g3.save_game()
+	var l1 := GameState.new()
+	l1.codex.path = ""
+	l1.slot = 7
+	l1.autosave = true
+	check(l1.load_game() and str(l1.messages).contains("Pet levels were rebalanced") and int(l1.pets[0]["level"]) == 20, "an old-curve pet keeps its level and the load says levels changed")
+	var l2 := GameState.new()
+	l2.codex.path = ""
+	l2.slot = 7
+	l2.autosave = true
+	check(l2.load_game() and not str(l2.messages).contains("rebalanced") and not str(l2.messages).contains("one of each kind"), "the note shows once")
+	for path in GameState.slot_paths(7):
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	check(PetTab.level_line({"level": 1, "kills": 20}) == "Level 1: 30 more kills to level 2" and PetTab.level_line({"level": Menagerie.MAX_LEVEL, "kills": 0}).ends_with("(max)"), "levels show progress (%s)" % PetTab.level_line({"level": 1, "kills": 20}))
+	# 4: one rank palette
+	check(not FileAccess.get_file_as_string("res://pet_tab.gd").contains("color_of"), "the Pet tab uses the pets' rank colours")
+	# 13 + 14: the moment entries themselves
+	var mh := Menagerie.moment({"type": "hatch_moment", "name": "Rex", "species": sp, "art": "", "cherished": false, "tier": 5})
+	var mc := Menagerie.moment({"type": "hatch_moment", "name": "Rex", "species": sp, "art": "", "cherished": true, "tier": 1})
+	var mp := Menagerie.moment({"type": "hatch_moment", "name": "Rex", "species": sp, "art": "", "cherished": false, "tier": 2})
+	var me := Menagerie.moment({"type": "egg_moment", "name": "Legendary Egg", "zone": String(GameData.ZONES[0]["id"]), "tier": 4})
+	check(mh[0] == "hatch" and mh[4] == "rare" and mp[4] == "" and mc[4] == "rare", "Mythic and Cherished hatches open with light, a Rare doesn't")
+	check(me[0] == "egg" and me[4] == "rare" and me[5] == Pets.egg(String(GameData.ZONES[0]["id"])), "a Legendary nest shows its region's egg, with light")
+	check(mh[3] == Color(Menagerie.TIER_COLORS[5]), "the hatch uses the pets' rank colour")
+	# 16: no head for a pet that isn't out
+	var bv := _stage(g2, 647.0)
+	check(bv._pet_head(999999) == Vector2.INF, "a pet that isn't out floats nothing over the hero")
+	bv.queue_free()
+	# 6: a kill doesn't change the team's revision; out() is cached
+	var r0 := g2.pets_rev
+	Menagerie.on_kill(g2)
+	check(g2.pets_rev == r0 and is_same(Menagerie.out(g2), Menagerie.out(g2)), "a kill keeps the cached team")
+
+## 5: every one-word pet name fits a Codex cell on one line.
+func _codex_names() -> void:
+	var l := UI.label("x", UI.FONT_CAPTION)
+	root.add_child(l)
+	await process_frame
+	var font := l.get_theme_font("font")
+	var book := PetBookTab.new()
+	var worst := ""
+	var widest := 0.0
+	for n in Menagerie.all_species():
+		var nm := book._name(String(n))
+		var fs := UI.FONT_CAPTION   # as _cell shows names
+		for word in ([nm] if not nm.contains(" ") else nm.split(" ")):
+			var w := font.get_string_size(String(word), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			if w > widest:
+				widest = w
+				worst = String(word)
+	check(widest <= 104.0, "every Codex name fits its cell line (widest %s, %.0f px)" % [worst, widest])
+	book.free()
+	l.queue_free()
 
 ## 13: a live PixelPic in a container shows whole screen pixels per art pixel.
 func _live_pic() -> void:
@@ -453,8 +554,10 @@ func _initialize() -> void:
 	check((gf[0] as GameState).effect_value("gold_find") > g0.effect_value("gold_find"), "a folk pet adds gold find")
 	# A hurt pet, or one left home, gives nothing
 	(a[1] as Dictionary)["hurt"] = 3
+	Menagerie.changed(g)   # set by hand: caches start over
 	check(is_equal_approx(g.effect_value("crit"), crit0), "a hurt pet's passive is off")
 	(a[1] as Dictionary)["hurt"] = 0
+	Menagerie.changed(g)   # set by hand: caches start over
 	Menagerie.toggle_out(g, int((a[1] as Dictionary)["id"]))
 	check(is_equal_approx(g.effect_value("crit"), crit0), "a pet left home gives nothing")
 	# Balance: even a Mythic's passive stays small next to class skills and gear
@@ -555,6 +658,7 @@ func _initialize() -> void:
 		shares.append(PetAbilities.regen_share(tm, p))
 	check(is_equal_approx(shares[0] + shares[1] + shares[2], minf(PetAbilities.REGEN_CAP, 3 * PetAbilities.passive_value(spirit, 5))) and float(shares[2]) < PetAbilities.passive_value(spirit, 5), "regen_share shows the cap cutting the third spirit (%s)" % str(shares))
 	(Menagerie.out(tm)[0] as Dictionary)["hurt"] = 2
+	Menagerie.changed(tm)   # set by hand: caches start over
 	check(Menagerie.out(tm).size() == 2 and PetAbilities.bonus_sources(tm).size() == 2, "the cache notices a pet getting hurt")
 	# Pickpocket: once a fight
 	var pk := with_pet(of_shape("humanoid"), 4)
@@ -642,6 +746,8 @@ func _initialize() -> void:
 	_r2_tests()
 	_r3_tests()
 	_r4_tests()
+	_r5_tests()
 	await _live_pic()
+	await _codex_names()
 	print("STAGE6 PET ABILITY TESTS DONE, failures: ", fails)
 	quit()

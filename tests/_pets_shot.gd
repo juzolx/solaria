@@ -9,7 +9,7 @@ func _initialize() -> void:
 		quit(1)
 		return
 	var args := OS.get_cmdline_user_args()
-	var out := ProjectSettings.globalize_path("res://" + (args[0] if args.size() > 0 else "claude/art_test/pets/fable_r4"))
+	var out := ProjectSettings.globalize_path("res://" + (args[0] if args.size() > 0 else "claude/art_test/pets/fable_r5"))
 	DirAccess.make_dir_recursive_absolute(out)
 	TestHero.make(12, "Knight")
 	TitleScreen.pending = {"play": 1}
@@ -25,6 +25,7 @@ func _initialize() -> void:
 	st.hidden_class = "beast_tamer"   # three pets out
 	st.pets.clear()
 	st.pets_out.clear()
+	Menagerie.changed(st)
 	for e in [["banshee", 5], ["will_o_wisp", 2], ["pale_stag", 3]]:
 		var sp: String = e[0]
 		var p := Menagerie.make_pet(st, sp, String(Monsters.by_id(sp).get("art", sp)), int(e[1]), "test")
@@ -32,6 +33,7 @@ func _initialize() -> void:
 	# Fable pets R4: one hurt pet at home and one egg, so their cards and the Clinic are in the pictures
 	var sore := Menagerie.make_pet(st, "barghest", "barghest", 2, "test")
 	sore["hurt"] = 4
+	Menagerie.changed(st)   # set by hand: caches start over
 	Menagerie.give_egg(st, "nest", 0, 3)
 	st.events.clear()   # no first-find fanfare over the shots
 	await _close(main)
@@ -89,6 +91,14 @@ func _initialize() -> void:
 			await _shot(out, "tab_%d_%s" % [gi, title.to_lower()])
 			_check_pixels(grp.get_child(s))
 			var page = grp.get_child(s)
+			if page is PetTab:
+				# Fable pets R5: the egg card and the resting pet at phone size
+				for want in [["Egg of", "tab_%d_pets_egg" % gi], ["RESTING", "tab_%d_pets_hurt" % gi]]:
+					var lb := _find_label(page, String(want[0]))
+					if lb != null:
+						page.scroll_vertical += int(lb.get_global_rect().position.y - page.get_global_rect().position.y) - 60
+						await create_timer(0.3).timeout
+						await _shot(out, String(want[1]))
 			if page is PetBookTab:
 				var flow := _find_flow(page)
 				if flow != null:
@@ -114,6 +124,15 @@ func _check_pixels(n: Node) -> void:
 			if not ok:
 				pixel_fail = true   # the run ends with quit(1)
 		_check_pixels(c)
+
+func _find_label(n: Node, text: String) -> Label:
+	for c in n.get_children():
+		if c is Label and (c as Label).text.contains(text):
+			return c
+		var f := _find_label(c, text)
+		if f != null:
+			return f
+	return null
 
 func _find_flow(n: Node) -> HFlowContainer:
 	for c in n.get_children():
