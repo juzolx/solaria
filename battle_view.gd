@@ -1683,8 +1683,8 @@ func _draw() -> void:
 		draw_arc(Vector2.ZERO, hr.size.x * (0.35 + 0.15 * (1.0 - cast_glow)), 0.0, TAU, 24, Color(cast_color, cast_glow * 0.6), 2.0)
 		draw_set_transform(_off)
 	_draw_summon()
+	_draw_members()     # Fable pets R3: members stand further back, so the front row (pets) draws over them
 	_draw_menagerie()
-	_draw_members()
 	_draw_pet()
 	_draw_hero()
 	if enemy_plate.is_valid():
@@ -1935,6 +1935,10 @@ func _draw_pet() -> void:
 	var pu := _u()
 	var s := float(tex.get_width()) * pu
 	var x: float = team_layout().get(-1, 0.0)
+	# a shadow on the ground like every pet (it stays down while the companion hops)
+	draw_set_transform(Vector2(x + s / 2.0, _team_ground()), 0.0, Vector2(1.0, 0.3))
+	draw_circle(Vector2.ZERO, s * 0.3 * (1.0 - 0.3 * pet_lunge), Color(0, 0, 0, 0.35 * hero_alpha))
+	draw_set_transform(Vector2.ZERO)
 	# feet on the ground: the 32 px still's bottom row (the idle strip does the breathing)
 	var y := _team_ground() - (Pets.foot(Pets.companion_key(state)) + 1) * pu - pet_lunge * size.y * 0.1
 	draw_texture_rect(tex, Rect2(_snap(Vector2(x, y)), Vector2(s, s)), false, Color(1, 1, 1, hero_alpha))
@@ -2346,14 +2350,16 @@ func _draw_menagerie() -> void:
 	for i in pets.size():
 		var p: Dictionary = pets[i]
 		var key := String(p.get("species", ""))
-		var tex := Pets.frame(key, bob + i * 0.31)
+		var tex := Pets.frame(key, bob + i * 0.23 + 0.17)   # out of step with each other and the companion
 		if tex == null:
 			continue
-		var lunge := 1.0 if pet_hits.has(int(p["id"])) else 0.0
-		var feet := Vector2(float(lay.get(i, 0.0)) + w / 2.0, _team_ground() - lunge * size.y * 0.05)
+		# a hit is a hop: an arc over the 0.3 s (pet_hits counts down), a little toward the hero
+		var hop := sin(clampf(float(pet_hits.get(int(p["id"]), 0.0)) / 0.3, 0.0, 1.0) * PI)
+		var x0 := float(lay.get(i, 0.0)) + w / 2.0
+		var feet := Vector2(x0 + signf(_hero_canvas().get_center().x - x0) * hop * 4.0 * pu, _team_ground() - hop * 6.0 * pu)
 		var r := Rect2(_snap(feet - Vector2(w / 2.0, (Pets.foot(key) + 1) * pu)), Vector2(w, w))
-		draw_set_transform(Vector2(r.get_center().x, feet.y), 0.0, Vector2(1.0, 0.3))
-		draw_circle(Vector2.ZERO, w * 0.3, Color(0, 0, 0, 0.35 * hero_alpha))
+		draw_set_transform(Vector2(x0, _team_ground()), 0.0, Vector2(1.0, 0.3))
+		draw_circle(Vector2.ZERO, w * 0.3 * (1.0 - 0.3 * hop), Color(0, 0, 0, 0.35 * hero_alpha))
 		draw_set_transform(Vector2.ZERO)
 		if p.get("cherished", false):
 			var gl := 0.25 + 0.15 * sin(bob * 3.0 + i)
@@ -2363,7 +2369,19 @@ func _draw_menagerie() -> void:
 
 ## Where the team stands (Fable pets R2): the left edge x of each 32 px creature, keyed -1 for
 ## the class companion and 0.. for menagerie pets, companion first (Pets.row).
+var _lay := {}
+var _lay_frame := -1
+
 func team_layout() -> Dictionary:
+	# once a frame: the pets, the companion and the hero plate all ask
+	var fr := Engine.get_process_frames()
+	if fr == _lay_frame:
+		return _lay
+	_lay_frame = fr
+	_lay = _team_layout()
+	return _lay
+
+func _team_layout() -> Dictionary:
 	var who: Array = []
 	if state != null and state.pet_on and World.pet_stage(state) >= 0:
 		who.append(-1)
@@ -2372,7 +2390,15 @@ func team_layout() -> Dictionary:
 			who.append(i)
 	var pu := _u()
 	var hc := _hero_canvas()
-	var xs := Pets.row(who.size(), hc.get_center().x, hc.size.x, 32.0 * pu, 2.0 * pu, size.x)
+	# party members' bodies (Fable pets R3): nobody stands more than half behind one
+	var taken: Array = []
+	for i in _party_members().size():
+		var mc := _member_canvas(i).get_center().x
+		taken.append([mc - 16.0 * pu, mc + 16.0 * pu])
+	var first := ""
+	if not who.is_empty():
+		first = Pets.companion_key(state) if int(who[0]) == -1 else String(Menagerie.out(state)[0].get("species", ""))
+	var xs := Pets.row(who.size(), hc.get_center().x, hc.size.x, 32.0 * pu, 2.0 * pu, size.x, Pets.width(first) > 24, taken)
 	var out := {}
 	for k in who.size():
 		out[who[k]] = xs[k]

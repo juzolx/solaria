@@ -1846,13 +1846,14 @@ func _enemy_defeated() -> void:
 	gain_xp(xp_gain)
 	if party != null:
 		party.on_kill(xp_gain)
-	Menagerie.on_kill(self)
-	EggQuests.on_kill(self, tier, was_boss)
-	if was_boss:
-		Milestones.on_boss(self, Monsters.name_of(species))
+	# the drop first (Fable pets R3): pets' gold signatures pay a share of what really falls
 	var gold_gain := kill_gold(bonus_pct)
 	if was_goblin:
 		gold_gain = (2 + floor_num) * GameData.GOBLIN_GOLD
+	Menagerie.on_kill(self, gold_gain)
+	EggQuests.on_kill(self, tier, was_boss)
+	if was_boss:
+		Milestones.on_boss(self, Monsters.name_of(species))
 	_add_gold(gold_gain)
 	Bench.on_kill(self)  # next update: heroes at home find things too
 	_maybe_find_pack(was_boss)

@@ -116,6 +116,12 @@ func _pet32_rules() -> void:
 			var strip := _load(strip_path)
 			for fi in 2:
 				check(strip.get_region(Rect2i(fi * 32, 0, 32, 32)).get_used_rect().end.y <= img.get_used_rect().end.y, "pet %s idle frame %d stays above its ground row" % [f, fi])
+			# Fable pets R3: frame 0 is the still, pixel for pixel (an outline pass on the stills alone would split them)
+			var f0 := strip.get_region(Rect2i(0, 0, 32, 32))
+			var still := img.duplicate() as Image
+			f0.convert(Image.FORMAT_RGBA8)
+			still.convert(Image.FORMAT_RGBA8)
+			check(f0.get_data() == still.get_data(), "pet %s idle frame 0 is its still" % f)
 
 func _initialize() -> void:
 	check(not ArtStyle.in_palette(ArtStyle.OUTLINE), "the outline color is not a palette color")

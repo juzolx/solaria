@@ -24,7 +24,7 @@ func refresh() -> void:
 		return
 	shown = key
 	OnlineUI.clear(box)
-	var all := Monsters.all_monsters() + _calamity_pets()
+	var all := Menagerie.all_species()
 	var seen := 0
 	for n in all:
 		if _met(n) or codex.pet_book.has(n):
@@ -121,7 +121,7 @@ func _cell(n: String) -> Control:
 
 ## What a met species does: its family, passive, and (when owned high enough) trick and signature.
 func _lines(n: String, have: bool, tier: int) -> Array:
-	var out: Array = [("Owned: best %s" % Menagerie.TIER_NAMES[tier]) if have else "Seen in the dungeon, never owned"]
+	var out: Array = [("Best owned: %s" % Menagerie.TIER_NAMES[tier]) if have else "Seen in the dungeon, never owned"]
 	out.append("%s family. %s" % [PetAbilities.FAMILIES[PetAbilities.family(n)]["name"], PetAbilities.passive_text(n, tier if have else 0)])
 	if have and tier >= PetAbilities.TRICK_RANK:
 		out.append(PetAbilities.trick_text(n, tier))
@@ -140,19 +140,33 @@ func _show(n: String, have: bool, tier: int) -> void:
 	for i in ls.size():
 		o.content.add_child(UI.wrap(String(ls[i]), UI.FONT_CAPTION, col if i == 0 and have else UI.TEXT))
 	if have and tier < PetAbilities.SIGNATURE_RANK:
-		o.content.add_child(UI.wrap("A higher rank of this pet unlocks more (Abilities by rank, above).", UI.FONT_CAPTION, UI.DIM))
+		o.content.add_child(UI.wrap("A higher rank of this pet unlocks more (How pet abilities work, above).", UI.FONT_CAPTION, UI.DIM))
+
+## Fable pets R3: one line here (the grid is the tab's point); the rank ladder and the
+## families open in an Overlay.
+func _abilities() -> void:
+	var row := UI.hbox(8)
+	box.add_child(row)
+	var l := UI.wrap("How pet abilities work: by rank, and by family.", UI.FONT_CAPTION, UI.DIM)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(l)
+	var b := UI.button("Read", func():
+		var o := Overlay.new().open(main, "Pet abilities", 400.0, UI.GOLD_DULL)
+		_ability_text(o.content))
+	b.custom_minimum_size = Vector2(80, 52)
+	row.add_child(b)
 
 ## 2.1: what pets can do by rank, and each family's passive and trick.
-func _abilities() -> void:
-	box.add_child(UI.heading("Abilities by rank"))
+func _ability_text(to: Control) -> void:
+	to.add_child(UI.heading("Abilities by rank"))
 	for t in PetAbilities.RANK_TEXT.size():
-		box.add_child(UI.wrap("%s: %s" % [Menagerie.TIER_NAMES[t], PetAbilities.RANK_TEXT[t]], UI.FONT_CAPTION, Color(Menagerie.TIER_COLORS[t])))
-	box.add_child(UI.wrap("A pet's family is its kind of monster. Tap a pet below to see its own.", UI.FONT_CAPTION, UI.DIM))
+		to.add_child(UI.wrap("%s: %s" % [Menagerie.TIER_NAMES[t], PetAbilities.RANK_TEXT[t]], UI.FONT_CAPTION, Color(Menagerie.TIER_COLORS[t])))
+	to.add_child(UI.wrap("A pet's family is its kind of monster. Tap a pet in the Codex to see its own.", UI.FONT_CAPTION, UI.DIM))
 	for f in PetAbilities.FAMILIES:
-		box.add_child(UI.label(String(PetAbilities.FAMILIES[f]["name"]).to_upper(), UI.FONT_CAPTION, UI.GOLD))
+		to.add_child(UI.label(String(PetAbilities.FAMILIES[f]["name"]).to_upper(), UI.FONT_CAPTION, UI.GOLD))
 		if f == "calamity":
 			# Calamity pets only ever come at Mythic, so the rank ladder above doesn't apply
-			box.add_child(UI.wrap("Calamity pets come only at Mythic. %s. %s. %s." % [PetAbilities.family_passive_range(f), PetAbilities.family_trick_text(f, PetAbilities.SIGNATURE_RANK), PetAbilities.region_signature_text("calamity")], UI.FONT_CAPTION, UI.TEXT))
+			to.add_child(UI.wrap("Calamity pets come only at Mythic. %s. %s. %s." % [PetAbilities.family_passive_range(f), PetAbilities.family_trick_text(f, PetAbilities.SIGNATURE_RANK), PetAbilities.region_signature_text("calamity")], UI.FONT_CAPTION, UI.TEXT))
 			continue
-		box.add_child(UI.wrap("Passive, %s" % PetAbilities.family_passive_range(f), UI.FONT_CAPTION, UI.TEXT))
-		box.add_child(UI.wrap("Epic trick, %s" % PetAbilities.family_trick_text(f, PetAbilities.TRICK_RANK), UI.FONT_CAPTION, UI.TEXT))
+		to.add_child(UI.wrap("Passive, %s" % PetAbilities.family_passive_range(f), UI.FONT_CAPTION, UI.TEXT))
+		to.add_child(UI.wrap("Epic trick, %s" % PetAbilities.family_trick_text(f, PetAbilities.TRICK_RANK), UI.FONT_CAPTION, UI.TEXT))

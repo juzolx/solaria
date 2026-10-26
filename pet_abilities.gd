@@ -126,6 +126,8 @@ static func _num(v: float) -> String:
 	return str(int(v)) if is_equal_approx(v, round(v)) else "%.1f" % v
 
 static func _fill(text: String, v: float, c := 0.0) -> String:
+	if is_equal_approx(v, 1.0):
+		text = text.replace("{v}x its hit", "its hit")   # "pounce again for 1x its hit" reads oddly
 	return text.replace("{v}", _num(v)).replace("{c}", _num(c))
 
 static func passive_text(species: String, rank: int) -> String:
@@ -265,15 +267,16 @@ static func on_pet_turn(g: GameState, p: Dictionary, hit: int) -> void:
 				g.cfight["pet_pick"] = picked
 
 ## A kill: "kill" signatures go off.
-static func on_kill(g: GameState) -> void:
+static func on_kill(g: GameState, drop := 0) -> void:
 	for p in Menagerie.out(g):
 		if has_signature(p):
 			var sig := signature_of(String(p["species"]))
 			if String(sig["when"]) == "kill":
-				apply(g, p, String(sig["do"]), float(sig["value"]), 0, String(sig["name"]))
+				apply(g, p, String(sig["do"]), float(sig["value"]), 0, String(sig["name"]), drop)
 
 ## One effect. Returns false if it couldn't happen (you're down, the fight's over).
-static func apply(g: GameState, p: Dictionary, what: String, value: float, hit: int, label: String) -> bool:
+## drop: the gold the kill pays, for "gold" (0 = mid-fight: the kill formula, GameState.kill_gold).
+static func apply(g: GameState, p: Dictionary, what: String, value: float, hit: int, label: String, drop := 0) -> bool:
 	var helps_you := what in ["heal", "shield"]
 	if helps_you and (g.leader_down or g.hero_hp <= 0):
 		return false
@@ -320,8 +323,8 @@ static func apply(g: GameState, p: Dictionary, what: String, value: float, hit: 
 			else:
 				g.enemy_poison_turns = maxi(g.enemy_poison_turns, 2)
 		"gold":
-			# value % of what this kill pays (GameState.kill_gold: the real drop, multipliers and all)
-			var gold := maxi(1, int(g.kill_gold() * value / 100.0))
+			# value % of what this kill pays: the real drop (goblins, milestone bonus), else the formula
+			var gold := maxi(1, int((drop if drop > 0 else g.kill_gold()) * value / 100.0))
 			g._add_gold(gold)
 			g.say("[color=#fbbf24]%s's %s: +%d gold.[/color]" % [p["name"], label, gold])
 		_:
