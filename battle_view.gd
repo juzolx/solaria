@@ -142,6 +142,7 @@ var hero_flash := 0.0
 var enemy_flash := 0.0
 var hero_alpha := 1.0
 var enemy_alpha := 1.0
+var walk_in := 0.0   # 1 = still at the doors, 0 = in its place (the next monster stepping in)
 var dying := {}  # the enemy that just died, fading out
 var shake := 0.0
 var freeze_left := 0.0  # hit stop: seconds the fight picture stays frozen
@@ -1023,7 +1024,10 @@ func _enemy_died() -> void:
 	t.tween_callback(func():
 		dying = {}
 		_burn_off())
+	t.tween_callback(func(): walk_in = 1.0)
 	t.tween_property(self, "enemy_alpha", 1.0, 0.25)
+	# the next one steps out from the doors toward you as it fades in (Juzo, Oct 26)
+	t.parallel().tween_property(self, "walk_in", 0.0, 0.35).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 func _hero_died() -> void:
 	_sfx("death")
@@ -1506,72 +1510,79 @@ func _rect_for(art: Dictionary, boss: bool, big := false, cal := -1) -> Rect2:
 	var x := size.x * 0.5
 	# Fable r2: the monster stands ON its plate (plate top = _bar_rect y - 6), never behind it
 	var base := _enemy_ground()
-	var move := enemy_lunge * size.y * 0.16 - enemy_recoil * u * 3.0 * Sprites.HD
+	var move := enemy_lunge * size.y * 0.16 - enemy_recoil * u * 3.0 * Sprites.HD - walk_in * size.y * 0.03
 	if art.is_empty():
 		var s := _sprite_size(boss)
 		return Rect2(x - s / 2.0, base + move - s + sin(bob * 2.4 + 1.0) * 2.0, s, s)
 	ui = maxf(1.0, minf(ui, _width_cap(art, boss, sc, 1 if is_cal else 0)))
 	if big:
-		# The boss stage (lead, Oct 25, option B): bosses and Calamities keep the hero's scale and
-		# stand lower, under the boss bar, with the hero in front of their feet. Only if even that
-		# can't fit (the tallest Calamities on an SE) do they step down a whole pixel size.
-		# (fable r3: the feet may reach the team line, the hero stands in front of them; then all
-		# ten Calamities keep 2x on an SE; with whole screen px (_scr fix) the tallest, 137 rows,
-		# needs 366 of the SE's 367 design px, so the feet stand on the line itself)
-		var feet := _team_ground()
-		var tight := _boss_bar().end.y + BOSS_NAME   # the least room: just under its name
-		# Interface round 1 made the SE stage 57 px shorter: a Calamity that can't fit above the
-		# team line may stand lower, down to the stage's bottom edge (its base behind the hero),
-		# and as a last resort tuck its crown under its own name plate (CALAMITY_TUCK)
-		# (fable r5: and so may a zone boss; 16 of 20 were 1x on the SE when only Calamities could)
-		var stage := is_cal or boss
-		var low := size.y - 2.0 if stage else feet
-		var hard := _boss_bar().end.y + CALAMITY_TUCK if stage else tight
-		while ui > 1.0 and (float(art["foot"]) + 1.0) * ui / sc > low - hard:
-			ui -= 1.0
-		var tall := (float(art["foot"]) + 1.0) * ui / sc
-		feet = maxf(feet, minf(low, tight + tall))
-		# one chip row is always kept free (fable r5: it hopped 18-46 px as chips came and went)
-		var top := maxf(hard, minf(_boss_bar().end.y + BOSS_GAP, feet - tall))
-		base = minf(maxf(base, top + tall), feet)
-		if not stage:
-			# a common on a phone: feet on the hall's floor, never on the wall over the doors
-			# (fable r5, Juzo: nothing may float), right of the hero's column (hero 0.34-0.66 w)
-			# with at most its left part behind the hero
-			base = minf(maxf(base, _floor_line()), feet)
-			var half := (art["size"] as Vector2).x * ui / sc * 0.5
-			x = clampf(maxf(size.x * TALL_X, _hero_rest_right() + half * 0.6), x, size.x - half - 2.0)
-	else:
-		# ...and never taller than the space above the team
-		ui = maxf(1.0, minf(ui, floorf(base * 0.92 * sc / maxf(1.0, float(art["foot"]) + 1.0))))
+		return _faceoff_rect(art, ui, sc, move, boss or is_cal, is_cal)
+	# ...and never taller than the space above the team
+	ui = maxf(1.0, minf(ui, floorf(base * 0.92 * sc / maxf(1.0, float(art["foot"]) + 1.0))))
 	var gy := base + move
 	u = ui / sc
 	var sz: Vector2 = art["size"] * u
 	var foot: float = art["foot"]
 	return Rect2(_snap(Vector2(x - sz.x / 2.0, gy - (foot + 1.0) * u)), sz)
 
-## Design px from the boss bar's bottom to the boss's top row: BOSS_GAP when the stage has the
-## room (a 430 pt phone): the name line and one chip row, always, so chips never move it;
-## down to CALAMITY_TUCK for the tallest bosses and Calamities on an SE.
+## The face-off (Juzo, Oct 26, claude/art_test/monsters/faceoff/JUZO_REFERENCE_surtr_faceoff.jpg:
+## "guarding the doors, staring you down"): the monster stands further back, centred between the
+## doors, feet on the hall's floor just behind the hero, who stands in front and may cover its
+## lower legs. A boss's size is the biggest whole scale no taller than face_share of the stage
+## (so it never fills the stage); every top stays under the bar, name and chip row; feet
+## face_drop of the stage nearer than the floor seam, or nearer still when even 1x needs it.
+## (Juzo picks between opt1 0.40 / 0.05 and opt2 0.46 / 0.03: faceoff/surtr_*_before_opt1_opt2.png)
+static var face_share := 0.46
+static var face_drop := 0.03
+
+func _faceoff_rect(art: Dictionary, ui: float, sc: float, move: float, boss: bool, cal := false) -> Rect2:
+	var seam := _floor_line() + size.y * face_drop
+	var top_min := _boss_bar().end.y + BOSS_GAP
+	var rows := float(art["foot"]) + 1.0
+	if boss:
+		# bosses and Calamities: centred between the doors, the hero in front of their legs
+		# a Calamity may stand taller than a zone boss (lead, Oct 26: it must read bigger)
+		var share := face_share + (CALAMITY_SHARE if cal else 0.0)
+		while ui > 1.0 and rows * ui / sc > size.y * share:
+			ui -= 1.0
+	else:
+		# commons and packs: offset right of the hero's head, as big as fits with the feet on the
+		# floor up to COMMON_NEAR of the stage nearer than the seam (lead, Oct 26: a 1x kobold on an
+		# SE was too small to read)
+		while ui > 1.0 and top_min + rows * ui / sc > seam + size.y * COMMON_NEAR:
+			ui -= 1.0
+	var u := ui / sc
+	var sz: Vector2 = art["size"] * u
+	var feet := maxf(seam, top_min + rows * u)
+	var x := size.x * 0.5
+	if not boss:
+		x = clampf(_hero_head_right() + sz.x * 0.25, x, size.x - sz.x * 0.5 - 2.0)
+	return Rect2(_snap(Vector2(x - sz.x / 2.0, feet + move - rows * u)), sz)
+
+const COMMON_NEAR := 0.08
+const CALAMITY_SHARE := 0.1   # on top of face_share: up to ~56% of the stage
+
+## The right edge of the hero's head (the middle half of its body), standing still.
+func _hero_head_right() -> float:
+	return size.x * _leader_x() + 8.0 * Sprites.HD * _hu()
+
+## The share of r the hero's drawn body (the middle half of its rect, standing still) covers.
+func _hero_cover(r: Rect2) -> float:
+	var hu := _hu()
+	var w := 32.0 * Sprites.HD * hu
+	var mid := Rect2(size.x * _leader_x() - w * 0.25, _hero_rest_top(), w * 0.5, _team_ground() - _hero_rest_top())
+	return r.intersection(mid).get_area() / maxf(1.0, r.get_area())
+
+## Design px from the top bar's bottom to a monster's top row: the name line and one chip row,
+## always, so chips coming and going never move it.
 const BOSS_GAP := 64.0   # BOSS_NAME + CHIP_ROW + 10
 const BOSS_NAME := 26.0   # the plate box ends 24 px under the bar (_draw_plate)
-## A Calamity's top row at least this far under the bar: its name plate (24 px) may cover a few
-## rows of its crown, only when the tallest ones can't keep the hero's 2x on an SE otherwise.
-const CALAMITY_TUCK := 12.0
-## Where a common stands on the boss stage (share of the stage width, its centre): right of
-## the hero's column (hero 0.34-0.66 w), its left quarter behind the hero.
-const TALL_X := 0.66
-
 ## Where the hall's floor meets its far wall (HallsScene's projection: horizon 0.40 h, focal
 ## length 0.62 w, eye 1.5 over the floor, far wall at D), a little in front of it.
 func _floor_line() -> float:
 	if state != null and (state.in_town or state.trial_active):
 		return _ground()
 	return size.y * 0.40 + size.x * 0.62 * -HallsScene.FLOOR_Y / HallsScene.D + 8.0
-
-## The right edge of the hero's body standing still (_hero_rect without bob or lunge).
-func _hero_rest_right() -> float:
-	return size.x * _leader_x() + (40.0 * Sprites.HD - Sprites.CANVAS / 2.0) * _hu()
 
 ## Where the wind-up "!" stands (its centre x, its baseline): right of the boss bar on the boss
 ## stage, else just over its plate's right end.
@@ -1653,21 +1664,6 @@ func _width_cap(art: Dictionary, boss: bool, sc: float, cal := -1) -> float:
 	var share := 0.96 if is_cal else (0.92 if boss else ArtStyle.COMMON_SHARE)
 	return floorf(size.x * share * sc / maxf(1.0, span))
 
-## A waiting pack-mate: one whole screen pixel per art pixel smaller than the monster
-## in front (3x -> 2x on a phone), so it never draws in-between pixel sizes.
-func _pack_rect(pr: Rect2, art: Dictionary, side: float) -> Rect2:
-	var sc := _scr()
-	var ui := maxf(1.0, roundf(pr.size.x * sc / maxf(1.0, (art["size"] as Vector2).x)))
-	var sz := pr.size * (maxf(1.0, ui - 1.0) / ui)
-	# feet a tenth of the lead's height up (behind it), not a third (fable r4: they stood on the wall)
-	var pos := pr.position + Vector2(side * pr.size.x * 0.62 + (pr.size.x - sz.x) * 0.5, pr.size.y * 0.9 - sz.y)
-	if _boss_stage():
-		# by column, not by the lead (fable r5: at 0.66 w the left mate stood behind the hero)
-		pos.x = (0.2 if side < 0.0 else 0.92) * size.x - sz.x * 0.5
-	pos.x = clampf(pos.x, 2.0 - sz.x * 0.3, size.x - sz.x * 0.7 - 2.0)   # at most a third off the edge
-	pos.y = minf(pos.y, _team_ground() - sz.y)
-	return Rect2(_snap(pos), sz)
-
 func _hero_center() -> Vector2:
 	var r := _hero_rect()
 	return Vector2(r.get_center().x, r.position.y + r.size.y * 0.35)
@@ -1728,17 +1724,7 @@ func _draw() -> void:
 		dr.position.y -= (1.0 - float(dying["alpha"])) * 6.0
 		draw_texture_rect(frame, dr, false, Color(1, 1, 1, minf(1.0, float(dying["alpha"]) * 3.0)))
 
-	# A pack (horde): the ones still waiting stand behind, either side
-	if state.horde_left > 1 and enemy_alpha > 0.0 and not state.enemy_is_boss:
-		var pr := _enemy_rect(false)
-		var part := _enemy_art(false)
-		if part.has("tex"):
-			for k in mini(2, state.horde_left - 1):
-				var side := -1.0 if k == 0 else 1.0
-				var rr := _pack_rect(pr, part, side)
-				draw_ellipse_shadow(rr)
-				var mate: Dictionary = _enemy_poses(part).get("idle0", {})
-				draw_texture_rect(mate["tex"] if mate.has("tex") else part["tex"], rr, false, Color(0.55, 0.53, 0.6, 0.9 * enemy_alpha))
+	# A pack shows only the one you fight; the rest wait off stage, counted by its name (Juzo, Oct 26)
 	# Current enemy
 	if enemy_alpha > 0.0:
 		var boss := state.enemy_is_boss
@@ -2354,7 +2340,7 @@ func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color,
 	var pct := clampf(float(value) / maxf(1.0, max_value), 0.0, 1.0)
 	# Interface pass: a plate behind the bar and the name, so both read on any backdrop
 	# (ink fill, slate line, #0e0812 outline: the same frame as every panel)
-	var pextra := (pips * 12.0 + 6.0 if pips > 0 else 0.0) + (pack.y * 10.0 + 8.0 if pack.y > 0 else 0.0)
+	var pextra := (pips * 12.0 + 6.0 if pips > 0 else 0.0) + (_pack_badge_w(font, pack) if pack.y > 0 else 0.0)
 	var pw := maxf(b.size.x, font.get_string_size(_fit_text(font, label, NAME_FS, minf(b.size.x + 100.0, size.x - 12.0) - pextra), HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FS).x + pextra) + 16.0
 	var plate := Rect2(clampf(b.get_center().x - pw / 2.0, 2.0, maxf(2.0, size.x - pw - 2.0)), b.position.y - 6.0, pw, b.size.y + NAME_FS + 16.0)
 	draw_rect(plate, Color(UiSkin.SOOT, 0.9 * a))
@@ -2375,7 +2361,7 @@ func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color,
 	draw_rect(Rect2(b.position, Vector2(fw, 3.0)), Color(fill.lightened(0.35), a))
 	_outlined(font, Vector2(b.position.x, b.position.y + b.size.y * 0.5 + SCENE_FS * 0.36), "%s / %s" % [_short(maxi(value, 0)), _short(max_value)], HORIZONTAL_ALIGNMENT_CENTER, b.size.x, SCENE_FS, Color(1, 1, 1, a))
 	# The name on its own line under the bar (never over the sprite), one line only
-	var extra := (pips * 12.0 + 6.0 if pips > 0 else 0.0) + (pack.y * 10.0 + 8.0 if pack.y > 0 else 0.0)
+	var extra := (pips * 12.0 + 6.0 if pips > 0 else 0.0) + (_pack_badge_w(font, pack) if pack.y > 0 else 0.0)
 	var max_w := minf(b.size.x + 100.0, size.x - 12.0) - extra
 	var shown := _fit_text(font, label, NAME_FS, max_w)
 	var tw := font.get_string_size(shown, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FS).x
@@ -2386,10 +2372,25 @@ func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color,
 		_pip(Vector2(x0 + 5.0 + i * 12.0, ny - NAME_FS * 0.36), 4.0, label_color)
 	var tx := x0 + (pips * 12.0 + 6.0 if pips > 0 else 0.0)
 	_outlined(font, Vector2(tx, ny), shown, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FS, label_color)
-	for i in pack.y:   # a pack: one dot per monster, filled up to this one
-		var dc := Vector2(tx + tw + 10.0 + i * 10.0, ny - NAME_FS * 0.36)
-		draw_circle(dc, 4.5, Color(0.04, 0.03, 0.06, a))
-		draw_circle(dc, 3.0, Color(label_color, a) if i < pack.x else Color(0.35, 0.33, 0.42, a))
+	if pack.y > 0:
+		# a pack: how many still wait off stage, "+2 more" down to "last" (Juzo, Oct 26: one on stage)
+		var bt := _pack_badge(pack)
+		var bw := font.get_string_size(bt, HORIZONTAL_ALIGNMENT_LEFT, -1, PACK_FS).x + 10.0
+		var box := Rect2(tx + tw + 8.0, ny - PACK_FS - 3.0, bw, PACK_FS + 6.0)
+		var bc := Color("#fca5a5")
+		draw_rect(box, Color(0.03, 0.04, 0.08, 0.85 * a))
+		draw_rect(box, Color(bc, 0.85 * a), false, 1.0)
+		draw_string(font, Vector2(box.position.x + 5.0, box.position.y + PACK_FS + 1.0), bt, HORIZONTAL_ALIGNMENT_LEFT, -1, PACK_FS, Color(bc, a))
+
+const PACK_FS := 15
+
+## The pack badge's words: the ones still waiting after this one.
+static func _pack_badge(pack: Vector2i) -> String:
+	var more := pack.y - pack.x
+	return "+%d more" % more if more > 0 else "last"
+
+func _pack_badge_w(font: Font, pack: Vector2i) -> float:
+	return font.get_string_size(_pack_badge(pack), HORIZONTAL_ALIGNMENT_LEFT, -1, PACK_FS).x + 18.0
 
 ## 1234567 -> "1.23M" so bars stay readable.
 func _short(v: int) -> String:

@@ -1,5 +1,5 @@
 extends SceneTree
-## Fight layout at phone size (fable monsters r3, item 11): the real BattleView in the real main
+## Fight layout at phone size (fable monsters r3, item 11; the face-off staging, Juzo Oct 26): the real BattleView in the real main
 ## scene at 430x932 and 375x667 (iPhone SE), with the monsters that broke before: commons, a pack,
 ## two wide bosses and the tallest Calamities. Checks the one pixel scale, plates under the feet,
 ## the boss stage room, plates that stay put while the hero lunges, the boss chip column and the
@@ -98,35 +98,38 @@ func _check_fight(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 	var er: Rect2 = bv._enemy_rect(st.enemy_is_boss)
 	var ui := er.size.x / (art["size"] as Vector2).x * sc
 	check(absf(ui - roundf(ui)) < 0.01, "%s: monster pixel %.2f screen px, not whole" % [tag, ui])
+	check(big, "%s: not on the face-off stage on a phone" % tag)
 	if big:
-		# boss stage: the hero's scale or less, feet on the team line, below the boss bar and name
-		check(roundf(ui) <= bv._hero_unit(), "%s: boss pixel %d over the hero's %d" % [tag, roundf(ui), bv._hero_unit()])
-		if not st.enemy_is_boss and st.enemy_calamity == 0:
-			check(roundf(ui) == unit, "%s: tall common pixel %d, not the unit %d" % [tag, roundf(ui), unit])
-		if (st.enemy_calamity > 0 or st.enemy_is_boss) and wsz.y < 800:
-			# fable r3 item 2: all ten Calamities keep the hero's 2x on an SE (a taller one fails here);
-			# fable r5: so does every zone boss (16 of 20 were 1x, the old check was <=)
-			check(roundf(ui) == unit, "%s: boss pixel %d on the SE, not %d" % [tag, roundf(ui), unit])
-		if st.horde_pack:
-			# a tall pack on the boss stage: the mates stay under the top bar and its name, on screen
-			for side in [-1.0, 1.0]:
-				var pr: Rect2 = bv._pack_rect(er, art, side)
-				check(pr.position.y >= bv._boss_bar().end.y + bv.BOSS_NAME - 0.5, "%s: pack-mate top %.0f under the boss bar" % [tag, pr.position.y])
-				check(pr.end.y <= bv._team_ground() + 0.5, "%s: pack-mate feet %.0f under the team line" % [tag, pr.end.y])
-				# fable r5: and not behind the hero (on the SE the left one was gone)
-				var hf0: Rect2 = bv._hero_rect()
-				var mid := hf0.grow_individual(-hf0.size.x * 0.25, 0.0, -hf0.size.x * 0.25, 0.0)
-				check(pr.intersection(mid).get_area() < 0.25 * pr.get_area(), "%s: pack-mate %s behind the hero" % [tag, side])
+		# The face-off (Juzo, Oct 26): the monster further back on the hall's floor, the hero in front
+		check(roundf(ui) <= bv._hero_unit(), "%s: monster pixel %d over the hero's %d" % [tag, roundf(ui), bv._hero_unit()])
 		var feet_y := er.position.y + (float(art["foot"]) + 1.0) * er.size.y / (art["size"] as Vector2).y   # the lowest solid row
-		# feet on or above the team line; only a Calamity too tall for that may go lower, behind the hero
-		var floor_y: float = bv.size.y if (st.enemy_calamity > 0 or st.enemy_is_boss) else bv._team_ground()
-		check(feet_y <= floor_y + 0.5, "%s: feet %.0f under %.0f" % [tag, feet_y, floor_y])
-		if feet_y > bv._team_ground() + 0.5:
-			check(er.position.y <= bv._boss_bar().end.y + bv.BOSS_NAME + 0.5, "%s: below the team line with room left above" % tag)
-		var top_min: float = bv._boss_bar().end.y + (bv.CALAMITY_TUCK if st.enemy_calamity > 0 else bv.BOSS_NAME)
-		check(er.position.y >= top_min - 0.5, "%s: top %.0f over the boss bar and name" % [tag, er.position.y])
-		if er.position.y < bv._boss_bar().end.y + bv.BOSS_NAME - 0.5:
-			check(feet_y >= bv.size.y - 3.0, "%s: crown under the name with room left below" % tag)
+		check(feet_y >= bv._floor_line() - 1.0 / sc, "%s: feet %.0f over the floor line %.0f (on the wall)" % [tag, feet_y, bv._floor_line()])
+		check(feet_y < bv._team_ground() - 0.5, "%s: feet %.0f not behind the hero's %.0f" % [tag, feet_y, bv._team_ground()])
+		# its head and body read above and beside the hero (the hero may cover its lower legs)
+		var cover: float = bv._hero_cover(er)
+		check(cover <= 0.45, "%s: the hero covers %d%% of it" % [tag, roundi(cover * 100.0)])
+		check(er.position.y >= bv._boss_bar().end.y + bv.BOSS_GAP - 0.5, "%s: top %.0f over the bar, name and chip row" % [tag, er.position.y])
+		check(er.size.y <= bv.size.y * 0.6, "%s: %.0f of the stage's %.0f, it fills the stage" % [tag, er.size.y, bv.size.y])
+		if st.enemy_is_boss or st.enemy_calamity > 0:
+			check(absf(er.get_center().x - bv.size.x * 0.5) < 1.0, "%s: a boss off the centre between the doors" % tag)
+		else:
+			check(er.get_center().x > bv._hero_head_right(), "%s: a common's centre behind the hero's head" % tag)
+			# 2x where it fits on the floor, never a 1x that could be 2x (lead, Oct 26)
+			var rows := float(art["foot"]) + 1.0
+			if roundf(ui) < bv._hero_unit():
+				check(bv._boss_bar().end.y + bv.BOSS_GAP + rows * (roundf(ui) + 1.0) / sc > bv._floor_line() + bv.size.y * (bv.face_drop + bv.COMMON_NEAR), "%s: %dx where %dx fits" % [tag, roundf(ui), roundf(ui) + 1.0])
+		if st.horde_pack:
+			# a pack shows one monster; the badge counts the ones still waiting
+			var badge: String = BattleView._pack_badge(Vector2i(st.horde_total - st.horde_left + 1, st.horde_total))
+			check(badge == ("+%d more" % (st.horde_left - 1) if st.horde_left > 1 else "last"), "%s: badge %s with %d left" % [tag, badge, st.horde_left])
+		# the monster stays put while the hero lunges or recoils (fable r3 item 1)
+		var keep := [bv.hero_lunge, bv.recoil]
+		for lr in [[1.4, 0.0], [0.0, 1.0], [1.4, 1.0]]:
+			bv.hero_lunge = lr[0]
+			bv.recoil = lr[1]
+			check(bv._enemy_rect(st.enemy_is_boss) == er, "%s: monster moves with lunge %s recoil %s" % [tag, lr[0], lr[1]])
+		bv.hero_lunge = keep[0]
+		bv.recoil = keep[1]
 		# (b) a banner sits clear of the boss bar and its name
 		var bl: Rect2 = bv._banner_line()
 		var band := Rect2(bl.position.x, bl.position.y - 26.0, bl.size.x, 26.0 + bl.size.y + 4.0)
@@ -135,31 +138,6 @@ func _check_fight(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 			# fable r5: the banner over the chest, not the face (the top 35%)
 			var face := Rect2(er.position, Vector2(er.size.x, er.size.y * 0.35))
 			check(not Rect2(0.0, bl.position.y - 22.0, bv.size.x, 22.0).intersects(face), "%s: banner at %.0f on the face %s" % [tag, bl.position.y, face])
-		if not st.enemy_is_boss and st.enemy_calamity == 0:
-			# fable r5 (Juzo: nothing floats): a common's feet on the hall's floor, not on the wall
-			check(feet_y >= bv._floor_line() - 1.0 / sc, "%s: feet %.0f over the floor line %.0f" % [tag, feet_y, bv._floor_line()])
-			# (e) a tall common stands right of the hero: the hero covers its flank, not its face
-			var hf: Rect2 = bv._hero_rect()   # the 64 px frame; the drawn back is its middle half
-			var hr := hf.grow_individual(-hf.size.x * 0.25, 0.0, -hf.size.x * 0.25, 0.0)
-			var cut := er.intersection(hr)
-			check(cut.get_area() < 0.2 * er.get_area(), "%s: the hero covers %d%% of the tall common" % [tag, roundi(100.0 * cut.get_area() / er.get_area())])
-			check(not (er.get_center().x > hr.position.x and er.get_center().x < hr.end.x), "%s: the tall common's centre is behind the hero" % tag)
-	else:
-		check(roundf(ui) == unit, "%s: common pixel %d, not the unit %d" % [tag, roundf(ui), unit])
-		var plate: Rect2 = bv._bar_rect(er)
-		check(er.end.y <= plate.position.y - 4.0, "%s: feet %.0f on the plate at %.0f" % [tag, er.end.y, plate.position.y])
-		# the plate and feet stay put while the hero lunges or recoils (fable r3 item 1)
-		var keep := [bv.hero_lunge, bv.recoil]
-		for lr in [[1.4, 0.0], [0.0, 1.0], [1.4, 1.0]]:
-			bv.hero_lunge = lr[0]
-			bv.recoil = lr[1]
-			check(bv._enemy_rect(false) == er and bv._bar_rect(er) == plate, "%s: monster or plate moves with lunge %s recoil %s" % [tag, lr[0], lr[1]])
-		bv.hero_lunge = keep[0]
-		bv.recoil = keep[1]
-		if st.horde_pack:
-			var pr: Rect2 = bv._pack_rect(er, art, -1.0)
-			var pu := pr.size.x / (art["size"] as Vector2).x * sc
-			check(absf(pu - (unit - 1)) < 0.01, "%s: pack-mate pixel %.2f, not %d" % [tag, pu, unit - 1])
 	# no pet (companion or menagerie, placed by team_layout) under the hero's plate
 	var w: float = 32.0 * bv._u()
 	var hp: Rect2 = bv._bar_rect(bv._hero_rect())
@@ -215,8 +193,10 @@ func _check_death(main, bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 	if not bv.dying.is_empty():
 		check(bv._dying_rect() == er, "%s: corpse %s, it stood at %s" % [tag, bv._dying_rect(), er])
 		check(String(bv.dying["edge"]) == "e43b44", "%s: burn edge %s, not crimson" % [tag, bv.dying["edge"]])
+	# the burn, then the next one's walk-in, play out before the next fight is measured
+	await create_timer(1.4).timeout
+	check(bv.walk_in == 0.0 and bv.enemy_alpha == 1.0, "%s: the next monster never finished stepping in" % tag)
 	bv.dying = {}
-	bv.enemy_alpha = 1.0
 	await process_frame
 
 ## (d) the Bestiary shows commons and bosses at one scale: 2 screen px per art px on a phone,

@@ -4,7 +4,7 @@ extends SceneTree
 ## -> shots/monsters/<tag>/<key>.png (floor picks the zone's hall behind it, tier 0-5 its rank,
 ## +pack two pack-mates waiting behind it; +mods two mods; +status burning, poisoned and winding
 ## up; +pet a menagerie pet out; +dead a frame of its burn (alpha under 0.6); calamity_N keys appear as
-## that Calamity; +banner a rank banner over it)
+## that Calamity; +banner a rank banner over it; +next with +pack: the first falls, the next steps in)
 const TestHero := preload("res://tests/test_hero.gd")
 func _initialize() -> void:
 	if not TestHero.safe():
@@ -31,10 +31,14 @@ func _initialize() -> void:
 	st.in_town = false  # the fight, never the town (a reused test save may be in town)
 	main.nav_page = 0
 	main._apply_nav()
+	if args[0].contains("@share"):   # mocks: <tag>@share@drop, e.g. opt1@0.40@0.06
+		BattleView.face_share = float(args[0].get_slice("@", 2))
+		BattleView.face_drop = float(args[0].get_slice("@", 3))
+		args[0] = args[0].get_slice("@", 0)
 	var dir := TestHero.shots_dir("monsters/" + args[0])
 	for arg in args.slice(1):
 		var flags: Array = []
-		for f in ["+dead", "+pet", "+status", "+mods", "+pack", "+banner"]:
+		for f in ["+dead", "+next", "+pet", "+status", "+mods", "+pack", "+banner"]:
 			if arg.contains(f):
 				flags.append(f)
 				arg = arg.replace(f, "")
@@ -109,6 +113,16 @@ func _initialize() -> void:
 			while waited < 2.0 and float(main.battle.dying.get("alpha", 1.0)) > 0.6:
 				await process_frame
 				waited += 1.0 / 60.0
+		if "+next" in flags:
+			# a pack: the first one falls and the next steps in from the doors (the badge counts down)
+			var ev2: Array[Dictionary] = [{"type": "enemy_dead", "shape": st.enemy_shape, "color": st.enemy_color, "boss": false,
+				"name": st.enemy_name, "art": st.enemy_art, "tier": tier, "calamity": false}]
+			main.battle.play(ev2)
+			st.horde_left -= 1
+			var waited2 := 0.0
+			while waited2 < 3.0 and not (main.battle.dying.is_empty() and float(main.battle.walk_in) < 0.6 and float(main.battle.walk_in) > 0.0):
+				await process_frame
+				waited2 += 1.0 / 60.0
 		root.get_texture().get_image().save_png(dir.path_join(shot + ".png"))
 	quit()
 

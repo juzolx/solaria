@@ -32,8 +32,8 @@ const NATIVE_MAX := Vector2i(168, 168)
 ## every common keeps the hero's scale inside it).
 const COMMON_SHARE := 0.6
 ## The iPhone SE's fight stage (design px) and stretch, after interface round 1: the tallest
-## boss or Calamity must keep the hero's 2x in it (stage6_art_rules; battle_view._rect_for
-## lets them stand from CALAMITY_TUCK under the 34 px boss bar down to 2 px above the bottom).
+## boss or Calamity must fit the face-off there at 1x, under the bar, name and chip row and
+## behind the hero's feet (stage6_art_rules; battle_view._faceoff_rect).
 const SE_STAGE := Vector2(488.0, 417.0)
 const SE_SCALE := 0.744
 ## ...with at most this many colours each (outline included)

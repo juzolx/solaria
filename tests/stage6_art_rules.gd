@@ -90,14 +90,14 @@ func _phone_width(key: String, w: int) -> void:
 ## (tools/monster_import.py TINT); none may slide back to grey on a re-import.
 const TINTED := ["barghest", "pooka", "spriggan", "leshy", "boss_black_annis", "draugr", "ankou", "revenant",
 	"vetala", "boss_dullahan", "boss_hel", "bunyip", "afanc"]
-## Fable r5: a boss or Calamity taller than the SE's boss stage would drop to 1x there (16 of 20
-## bosses did); fail at import instead of in the fight.
+## A boss or Calamity must fit the SE's face-off at 1x: its top under the bar, name and chip
+## row (98 design px), its feet behind the hero's (the team line, 0.9 of the stage).
 func _se_height(key: String) -> void:
 	if not key.begins_with("boss_") and not key.begins_with("calamity_"):
 		return
 	var rows := float(ArtInfo.DATA["enemies"][key]["foot"]) + 1.0
-	var room := ArtStyle.SE_STAGE.y - 2.0 - (20.0 + 14.0 + 12.0)   # bottom edge; bar end + CALAMITY_TUCK
-	check(rows * 2.0 / ArtStyle.SE_SCALE <= room, "%s: %d rows can't keep 2x on an SE's %.0f px boss stage" % [key, rows, room])
+	var room := ArtStyle.SE_STAGE.y * 0.9 - (20.0 + 14.0 + 64.0)   # team line; bar end + BOSS_GAP
+	check(rows / ArtStyle.SE_SCALE <= room, "%s: %d rows can't stand in an SE's %.0f px face-off at 1x" % [key, rows, room])
 
 func _tinted(key: String, img: Image) -> void:
 	if not key in TINTED:
