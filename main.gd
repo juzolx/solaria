@@ -876,7 +876,6 @@ func _group(title: String) -> TabContainer:
 	var t := TabContainer.new()
 	t.name = title
 	t.theme_type_variation = "SubTabs"
-	t.get_tab_bar().custom_minimum_size.y = 48  # a comfortable tap target (fable monsters r3: it was 37)
 	t.tab_changed.connect(func(_i): sfx.play("click"); refresh(); UI.fade_in(t.get_current_tab_control()))
 	tabs.add_child(t)
 	return t
@@ -1277,6 +1276,7 @@ func _sync_town() -> void:
 		"stash": "" if not state.hardcore else "Hardcore heroes can't use the Vault",
 	}
 	town_view.hidden_spots = {} if Menagerie.has_any(state) else {"clinic": true}
+	town_view.refresh_levels()   # level props: which stand in the street (walkers go round them)
 	var hurt_pets := state.pets.filter(func(p): return int(p["hurt"]) > 0).size()
 	town_view.badges = {"bounty": Town.ready_count(state), "guild": codex.deeds.size(), "mail": Mail.waiting(state), "clinic": hurt_pets,
 		"inn": 1 if state.hero_hp < state.get_max_hp() * 0.6 else 0}

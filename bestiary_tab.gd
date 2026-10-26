@@ -269,7 +269,7 @@ func _num(n: int) -> String:
 
 ## Screen pixels per design pixel (the window's stretch factor).
 func _screen_scale() -> float:
-	var sc := get_global_transform_with_canvas().get_scale().x if is_inside_tree() else 1.0
+	var sc := PixelPic.stretch(self) if is_inside_tree() else 1.0   # the window's stretch, not the canvas
 	return sc if sc > 0.01 else 1.0
 
 ## Puts the monster on the plate at a whole number of screen pixels per art pixel

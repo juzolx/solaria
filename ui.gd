@@ -381,10 +381,12 @@ static func make_theme() -> Theme:
 	t.set_stylebox("tab_unselected", "SubTabs", UiSkin.bevel(PANEL, EMPTY, 6))
 	t.set_stylebox("tab_hovered", "SubTabs", UiSkin.bevel(UiSkin.SLATE, EDGE, 6))
 	t.set_font_size("font_size", "SubTabs", FONT_CAPTION)
-	for st_name in ["tab_selected", "tab_unselected", "tab_hovered"]:   # UX pass: sub-tabs are a full 44 px tap target
+	# UX pass: sub-tabs are a full tap target; 56 design px = 48 screen px on a 430 pt phone
+	# (fable monsters r3: 44 design was only 37 screen px)
+	for st_name in ["tab_selected", "tab_unselected", "tab_hovered"]:
 		var sb := t.get_stylebox(st_name, "SubTabs").duplicate() as StyleBox
-		sb.content_margin_top = 13
-		sb.content_margin_bottom = 13
+		sb.content_margin_top = 19
+		sb.content_margin_bottom = 19
 		t.set_stylebox(st_name, "SubTabs", sb)
 	t.set_color("font_selected_color", "SubTabs", GOLD)
 

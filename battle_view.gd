@@ -168,12 +168,12 @@ var hero_art := {}       # from Sprites.hero()
 var hero_has_aura := false  # a God class's golden aura (set with hero_art, not looked up every frame)
 var hero_art_key := ""
 var swing := 0.0         # weapon swing: -1 wind-up, +1 strike
-var lpc_anim := "combat_idle"  # LPC heroes: the animation playing (lpc.gd)
-var lpc_t := 0.0
+var hero_anim := "combat_idle"  # the hero's animation playing (HeroArt frames)
+var hero_anim_t := 0.0
 var pet_lunge := 0.0
 var summon_lunge := 0.0   # 0.13+: the skeleton or wolf you called steps in to hit
 var summon_in := 0.0      # fades the summon in and out
-var pet_hits := {}        # 0.13+: menagerie pet name -> seconds of its lunge left
+var pet_hits := {}        # 0.13+: menagerie pet id -> seconds of its lunge left
 var chest_t := -1.0   # chest-opening moment: seconds since it appeared (-1 = none)
 static var _chest_tex: Array = []  # [closed, open]
 const CHEST_ART := [
@@ -190,8 +190,6 @@ var fx_sprites: Array = []   # sprite effects: {"name", "pos", "t", "scale", "fl
 static var _fx_tex := {}
 static var _fx_frames := {}
 const FX_FPS := 26.0
-var enemy_lpc_anim := "combat_idle"  # LPC monsters: the animation playing
-var enemy_lpc_t := 0.0
 var recoil := 0.0        # hero knocked back when hit
 var enemy_recoil := 0.0
 var hero_squash := 0.0   # A6: hit squash (see _squash)
@@ -378,7 +376,7 @@ func play(events: Array[Dictionary]) -> void:
 				_sfx("buff")
 				_float(str(e["name"]).to_upper() + "!", _hero_center() + Vector2(30, -20), Color("#c4b5fd"), 18)
 			"summon_hit":
-				pet_hits[String(e.get("name", ""))] = 0.3
+				pet_hits[int(e.get("pet", -1))] = 0.3
 				var who := "summon_lunge" if String(e.get("name", "")) == state.summon_name and state.summon_turns > 0 else "pet_lunge"
 				if who == "summon_lunge" or (state.pet_on and World.pet_stage(state) >= 0):
 					var pt := create_tween()
@@ -652,19 +650,19 @@ func _fx(fx_name: String, pos: Vector2, scale_mult := 1.0, flip := false) -> voi
 const ELEMENT_FX := {"Fire": "fire", "Ice": "ice", "Lightning": "lightning", "Poison": "poison", "Holy": "holy",
 	"Dark": "shadow", "Shadow": "shadow", "Nature": "nature", "Arcane": "arcane", "Storm": "lightning"}
 
-## LPC heroes play a real animation (slash, thrust, cast, shoot).
-func _lpc_play(anim: String) -> void:
-	if hero_art.has("lpc") and (hero_art["lpc"] as Dictionary).has(anim):
-		lpc_anim = anim
-		lpc_t = 0.0
+## The hero plays a real animation (slash, thrust, cast, shoot).
+func _hero_play(anim: String) -> void:
+	if hero_art.has("anims") and (hero_art["anims"] as Dictionary).has(anim):
+		hero_anim = anim
+		hero_anim_t = 0.0
 
 ## The hit frame, unless a swing is still playing (getting hit never cuts an attack short).
-func _lpc_hurt() -> void:
-	if lpc_anim == "combat_idle":
-		_lpc_play("hurt")
+func _hero_hurt() -> void:
+	if hero_anim == "combat_idle":
+		_hero_play("hurt")
 
 func _hero_attack(e: Dictionary) -> void:
-	_lpc_play(Lpc.attack_anim(_weapon_type()))
+	_hero_play(HeroArt.attack_anim(_weapon_type()))
 	var ranged := _weapon_type() in ["bow", "staff"]
 	if ranged:
 		_pose_hero([["crouch", 0.08], ["follow", 0.16]])
@@ -714,12 +712,6 @@ func _hero_attack(e: Dictionary) -> void:
 		_float("x2", target + Vector2(40, -10), Color("#fbbf24"), 16)
 
 func _enemy_attack(e: Dictionary) -> void:
-	var eart := _enemy_art(state.enemy_is_boss)
-	if eart.has("lpc"):
-		var an: String = eart.get("attack", "slash")
-		if (eart["lpc"] as Dictionary).has(an):
-			enemy_lpc_anim = an
-			enemy_lpc_t = 0.0
 	_pose_enemy([["windup", 0.1], ["strike", 0.07], ["follow", 0.12]])
 	_later(0.08, func(): _pose_hero([["hit1", 0.07], ["hit2", 0.14]]))
 	var t := create_tween()
@@ -731,7 +723,7 @@ func _enemy_attack(e: Dictionary) -> void:
 	kb.tween_property(self, "recoil", 0.0, 0.22)
 	hero_flash = 1.0
 	create_tween().tween_property(self, "hero_flash", 0.0, 0.1)
-	_later(0.08, _lpc_hurt)  # 2.1 heroes have a hit frame
+	_later(0.08, _hero_hurt)  # 2.1 heroes have a hit frame
 	shake = maxf(shake, 4.0)
 	_squash("hero_squash")
 	_burst(_hero_center(), Color("#f87171"), 8, 200.0)
@@ -742,7 +734,7 @@ func _ability_fx(e: Dictionary) -> void:
 	var c := Color(e.get("color", "#ffffff"))
 	_sfx("ability", randf_range(0.95, 1.05))
 	_pose_hero([["crouch", 0.1], ["cast", 0.18], ["strike", 0.06], ["follow", 0.14]])
-	_lpc_play("spellcast" if _weapon_type() in ["staff", "", "orb", "tome"] else Lpc.attack_anim(_weapon_type()))
+	_hero_play("spellcast" if _weapon_type() in ["staff", "", "orb", "tome"] else HeroArt.attack_anim(_weapon_type()))
 	cast_color = c
 	cast_glow = 1.0
 	create_tween().tween_property(self, "cast_glow", 0.0, 0.6)
@@ -854,7 +846,7 @@ func _flash_col(v: float, red: bool, a := 1.0) -> Color:
 	return Color(c, a if v > 0.55 else 0.0)
 
 ## A6: a quick squash on whoever got hit ("hero_squash" / "enemy_squash"). Pose-frame
-## art squashes by whole pixel rows (Sprites.POSES hit1); frame-animated (LPC) art
+## art squashes by whole pixel rows (Sprites.POSES hit1); frame-animated (HeroArt) art
 ## squashes its rect here, so any sprite gets it. Off with Reduce motion.
 func _squash(prop: String, amount := 1.0) -> void:
 	if not _motion_ok():
@@ -1207,7 +1199,7 @@ func _process(delta: float) -> void:
 	shake = move_toward(shake * exp(-delta * 6.0), 0.0, delta * 8.0)  # quick fade with a short tail
 	for key in bar_ghost:  # R6: no keys() copy every frame
 		bar_ghost[key] = move_toward(float(bar_ghost[key]), float(bar_target.get(key, 0.0)), delta * 0.8)
-	lpc_t += delta
+	hero_anim_t += delta
 	if chest_t >= 0.0:
 		chest_t += delta
 		if chest_t > 2.2:
@@ -1230,17 +1222,11 @@ func _process(delta: float) -> void:
 	for i in range(fx_sprites.size() - 1, -1, -1):
 		if float(fx_sprites[i]["t"]) * FX_FPS >= float(_fx_frames.get(fx_sprites[i]["name"], 1)):
 			fx_sprites.remove_at(i)
-	enemy_lpc_t += delta
-	if enemy_lpc_anim != "combat_idle":
-		var ea: Dictionary = _enemy_art(state.enemy_is_boss).get("lpc", {}).get(enemy_lpc_anim, {}) if state != null else {}
-		if ea.is_empty() or enemy_lpc_t >= float((ea["tex"] as Array).size()) / float(ea["fps"]):
-			enemy_lpc_anim = "combat_idle"
-			enemy_lpc_t = 0.0
-	if lpc_anim != "combat_idle" and hero_art.has("lpc"):
-		var la: Dictionary = hero_art["lpc"].get(lpc_anim, {})
-		if la.is_empty() or lpc_t >= float((la["tex"] as Array).size()) / float(la["fps"]):
-			lpc_anim = "combat_idle"
-			lpc_t = 0.0
+	if hero_anim != "combat_idle" and hero_art.has("anims"):
+		var la: Dictionary = hero_art["anims"].get(hero_anim, {})
+		if la.is_empty() or hero_anim_t >= float((la["tex"] as Array).size()) / float(la["fps"]):
+			hero_anim = "combat_idle"
+			hero_anim_t = 0.0
 	var hs := _step_pose(hero_seq, hero_pose, hero_pose_t, delta, 0.0)
 	hero_seq = hs[0]
 	hero_pose = hs[1]
@@ -1299,8 +1285,9 @@ static var test_scale := 0.0
 func _scr() -> float:
 	if test_scale > 0.0:
 		return test_scale
-	var sc := get_global_transform_with_canvas().get_scale().x
-	return sc if sc > 0.01 else 1.0
+	# the window's stretch (fable/pets: the canvas transform reads 1.0 under canvas_items stretch,
+	# so "3x" was 2.56 screen px at 430); shared with the pets' and dungeon's pictures
+	return PixelPic.stretch(self)
 
 ## One art pixel, in this control's (design) units.
 func _u() -> float:
@@ -1384,18 +1371,20 @@ func _draw_members() -> void:
 		var body_r := Rect2(c.position + Vector2(8, 12) * Sprites.HD * u, Vector2(32, 32) * Sprites.HD * u)
 		draw_ellipse_shadow(body_r)
 		var fx0: Dictionary = party_fx.get(i, {})
-		if art.has("lpc"):
-			# Seen from behind, like the leader: a real LPC frame (kneeling = faded)
-			var anims: Dictionary = art["lpc"]
+		if art.has("anims"):
+			# Seen from behind, like the leader: a real animation frame (kneeling = faded)
+			var anims: Dictionary = art["anims"]
 			var striking := float(fx0.get("lunge", 0.0)) > 0.3
 			var an: Dictionary = anims.get("slash" if striking and anims.has("slash") else "combat_idle", {})
 			if not an.is_empty():
 				var n: int = (an["tex"] as Array).size()
 				var fi := (int(bob * float(an["fps"]) + i * 3) % n) if not striking else mini(n - 1, int((1.0 - float(fx0.get("lunge", 0.0))) * n))
 				var sz: int = an["size"]
-				var off := Vector2(Sprites.BODY_OFFSET) - Vector2((sz - Lpc.CORE) / 2, (sz - Lpc.CORE) / 2)
+				var off := Vector2(Sprites.BODY_OFFSET) - Vector2((sz - HeroArt.CORE) / 2, (sz - HeroArt.CORE) / 2)
 				var r := Rect2(c.position + off * u, Vector2(sz, sz) * u)
-				draw_texture_rect(an["white"][fi], Rect2(r.position + Vector2(0, -u), r.size), false, Color(_rim_color(), 0.42 * a))
+				draw_texture_rect(an["white"][fi], Rect2(r.position + Vector2(0, -u), r.size), false, Color(_rim_color(), 0.6 * a))
+				for d in [Vector2(-u, 0), Vector2(u, 0)]:
+					draw_texture_rect(an["white"][fi], Rect2(r.position + d, r.size), false, Color(_rim_color(), 0.3 * a))
 				draw_texture_rect(an["tex"][fi], r, false, Color(1, 1, 1, a))
 				if float(fx0.get("flash", 0.0)) > 0.0:
 					draw_texture_rect(an["white"][fi], r, false, _flash_col(float(fx0["flash"]), true))
@@ -1512,8 +1501,9 @@ func _rect_for(art: Dictionary, boss: bool, big := false) -> Rect2:
 		# stand lower, under the boss bar, with the hero in front of their feet. Only if even that
 		# can't fit (the tallest Calamities on an SE) do they step down a whole pixel size.
 		# (fable r3: the feet may reach the team line, the hero stands in front of them; then all
-		# ten Calamities keep 2x on an SE)
-		var feet := _team_ground() - 4.0
+		# ten Calamities keep 2x on an SE; with whole screen px (_scr fix) the tallest, 137 rows,
+		# needs 366 of the SE's 367 design px, so the feet stand on the line itself)
+		var feet := _team_ground()
 		var tight := _boss_bar().end.y + BOSS_NAME   # the least room: just under its name
 		while ui > 1.0 and (float(art["foot"]) + 1.0) * ui / sc > feet - tight:
 			ui -= 1.0
@@ -1533,7 +1523,7 @@ func _rect_for(art: Dictionary, boss: bool, big := false) -> Rect2:
 ## room (a 430 pt phone), down to BOSS_NAME (the name line under the bar) for the tallest
 ## Calamities on an SE.
 const BOSS_GAP := 44.0
-const BOSS_NAME := 28.0
+const BOSS_NAME := 26.0   # the plate box ends 24 px under the bar (_draw_plate)
 
 ## Row i of the boss stage's right-edge chip column (statuses, then mods).
 func _boss_chip_y(i: int) -> float:
@@ -1570,9 +1560,8 @@ func _enemy_ground() -> float:
 ## Most screen pixels per art pixel the stage width allows: commons keep to ~56% of
 ## the width, bosses may reach the edges (92%) and Calamities fill the stage (96%), so
 ## all of them stay at the hero's 3x on a phone.
-## (LPC frames are padded for big weapon swings, so measure the ~48-pixel body instead)
 func _width_cap(art: Dictionary, boss: bool, sc: float) -> float:
-	var span: float = Lpc.CORE * 0.75 if art.has("lpc") else (art["size"] as Vector2).x
+	var span: float = (art["size"] as Vector2).x
 	var share := 0.96 if state.enemy_calamity > 0 else (0.92 if boss else 0.6)   # 0.6: umibozu (80 px) keeps 3x at 430
 	return floorf(size.x * share * sc / maxf(1.0, span))
 
@@ -1671,28 +1660,11 @@ func _draw() -> void:
 		draw_ellipse_shadow(er)
 		# Pose frames (breathing, attacking, getting hit) are made from whole pixels
 		var local := er
-		if art.has("lpc"):
-			# LPC monsters play real frames (bigger frames for weapon swings are centered on the body)
-			var anims: Dictionary = art["lpc"]
-			var an: Dictionary = anims.get(enemy_lpc_anim, anims.get("combat_idle", {}))
-			if not an.is_empty():
-				var n := (an["tex"] as Array).size()
-				var fi := int(enemy_lpc_t * float(an["fps"]))
-				fi = fi % n if enemy_lpc_anim == "combat_idle" else mini(fi, n - 1)
-				etex = an["tex"][fi]
-				ewhite = an["white"][fi]
-				var fs := float(an["size"])
-				var uu := er.size.x / (art["size"] as Vector2).x
-				local = Rect2(er.position - Vector2(fs - (art["size"] as Vector2).x, fs - (art["size"] as Vector2).y) * 0.5 * uu, Vector2(fs, fs) * uu)
-				local = squashed(local, enemy_squash)
+		var epose: Dictionary = _enemy_poses(art).get(enemy_pose, {})
+		if not epose.is_empty():
+			etex = epose["tex"]   # already in its variant and the zone's rim (_enemy_poses)
+			ewhite = epose["white"]
 		else:
-			var epose: Dictionary = _enemy_poses(art).get(enemy_pose, {})
-			if not epose.is_empty():
-				etex = epose["tex"]
-				ewhite = epose["white"]
-			else:
-				etex = SpriteLight.lit(Variants.tex(etex, state.enemy_variant), clampi(GameData.zone_index(state.floor_num), 0, 9))
-		if art.has("lpc"):
 			etex = SpriteLight.lit(Variants.tex(etex, state.enemy_variant), clampi(GameData.zone_index(state.floor_num), 0, 9))
 		var etint := Color(1, 1, 1, enemy_alpha)
 		var rank := GameData.zone_rank(state.floor_num)
@@ -1966,8 +1938,8 @@ func _draw_hero() -> void:
 		var piv: Vector2 = hero_art["pivot"]
 		draw_texture_rect(hero_art["weapon_white"], Rect2(-piv - Vector2(2, 2), wtex.get_size() + Vector2(4, 4)), false, Color(glow, pulse))
 		draw_set_transform(_off)
-	if hero_art.has("lpc"):
-		_draw_lpc_hero(c, u, a, glow)
+	if hero_art.has("anims"):
+		_draw_anim_hero(c, u, a, glow)
 		return
 	var poses := _hero_poses()
 	var pose: Dictionary = poses.get(hero_pose, {})
@@ -2028,31 +2000,33 @@ func _draw_pet() -> void:
 		return
 	var pu := _u()
 	var s := float(tex.get_width()) * pu
-	var hc := _hero_canvas()
-	var x := hc.position.x + hc.size.x * 0.62
+	var x: float = team_layout().get(-1, 0.0)
 	# feet on the ground: the 32 px still's bottom row (the idle strip does the breathing)
 	var y := _team_ground() - (Pets.foot(Pets.companion_key(state)) + 1) * pu - pet_lunge * size.y * 0.1
 	draw_texture_rect(tex, Rect2(_snap(Vector2(x, y)), Vector2(s, s)), false, Color(1, 1, 1, hero_alpha))
 
-## An LPC hero: the current animation frame, with rim light, weapon glow and hit flash.
-func _draw_lpc_hero(c: Rect2, u: float, a: float, glow: Color) -> void:
-	var anims: Dictionary = hero_art["lpc"]
-	var an: Dictionary = anims.get(lpc_anim, anims.get("combat_idle", {}))
+## A frame-animated hero: the current animation frame, with rim light, weapon glow and hit flash.
+func _draw_anim_hero(c: Rect2, u: float, a: float, glow: Color) -> void:
+	var anims: Dictionary = hero_art["anims"]
+	var an: Dictionary = anims.get(hero_anim, anims.get("combat_idle", {}))
 	if an.is_empty():
 		return
 	var tex: Array = an["tex"]
 	var n := tex.size()
-	var fi := int(lpc_t * float(an["fps"]))
-	fi = fi % n if lpc_anim == "combat_idle" else mini(fi, n - 1)
+	var fi := int(hero_anim_t * float(an["fps"]))
+	fi = fi % n if hero_anim == "combat_idle" else mini(fi, n - 1)
 	var s: int = an["size"]
-	var off := Vector2(Sprites.BODY_OFFSET) - Vector2((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2)
+	var off := Vector2(Sprites.BODY_OFFSET) - Vector2((s - HeroArt.CORE) / 2, (s - HeroArt.CORE) / 2)
 	var r := squashed(Rect2(c.position + off * u, Vector2(s, s) * u), hero_squash)
 	var white: Texture2D = an["white"][fi]
 	if glow.a > 0.0:
 		var pulse := 0.22 + 0.1 * sin(bob * 4.0)
 		for d in [Vector2(-u, 0), Vector2(u, 0), Vector2(0, -u), Vector2(0, u)]:
 			draw_texture_rect(white, Rect2(r.position + d, r.size), false, Color(glow, pulse * a))
-	draw_texture_rect(white, Rect2(r.position + Vector2(0, -u), r.size), false, Color(_rim_color(), 0.42 * a))
+	# rim light: strong from above, fainter on both sides, so a dark hero still reads on a dark floor
+	draw_texture_rect(white, Rect2(r.position + Vector2(0, -u), r.size), false, Color(_rim_color(), 0.6 * a))
+	for d in [Vector2(-u, 0), Vector2(u, 0)]:
+		draw_texture_rect(white, Rect2(r.position + d, r.size), false, Color(_rim_color(), 0.3 * a))
 	draw_texture_rect(tex[fi], r, false, Color(1, 1, 1, a))
 	if hero_flash > 0.0:
 		draw_texture_rect(white, r, false, _flash_col(hero_flash, true))
@@ -2224,10 +2198,23 @@ func _bar_rect(r: Rect2) -> Rect2:
 	if r.get_center().y > size.y * 0.62:
 		var beside := r.get_center().x + r.size.x * 0.32 + 8.0   # the drawn body is about 0.6 of this box wide
 		var low := _plate_floor()
-		if maxf(r.end.y, _team_ground()) + 8.0 > low and beside + bw <= size.x - 6.0:
+		var left := r.get_center().x - r.size.x * 0.32 - 8.0
+		if maxf(r.end.y, _team_ground()) + 8.0 > low:
 			# Phone sweep: the 2.1 hero's feet stand on the team line, under this box; a plate that
-			# can't fit under them goes beside the hero (the approved fight mockup) instead of over the legs
-			return Rect2(beside, low, bw, 14.0)
+			# can't fit under them goes beside the hero (the approved fight mockup), never over the boots:
+			# right if it fits, else left, else narrowed to the roomier side.
+			# Fable pets R2: when a pet stands there, the plate goes over its head, not over the pet
+			var y := low
+			if not team_layout().is_empty():
+				y = minf(y, _team_ground() - 32.0 * _u() - NAME_FS - 30.0)
+			if beside + bw <= size.x - 6.0:
+				return Rect2(beside, y, bw, 14.0)
+			if left - bw >= 6.0:
+				return Rect2(left - bw, y, bw, 14.0)
+			var room_r := size.x - 6.0 - beside
+			var room_l := left - 6.0
+			var w := maxf(room_r, room_l)
+			return Rect2(beside if room_r >= room_l else 6.0, y, maxf(w, 80.0), 14.0)
 		return Rect2(bx, minf(r.end.y + 8.0, low), bw, 14.0)   # room for the name above the message strip
 	if _boss_stage() and r.get_center().y <= size.y * 0.62:
 		return _boss_bar()
@@ -2463,19 +2450,17 @@ func _draw_menagerie() -> void:
 	var pets := Menagerie.out(state)
 	if pets.is_empty():
 		return
-	var hc := _hero_canvas()
 	var pu := _u()
 	var w := 32.0 * pu
+	var lay := team_layout()
 	for i in pets.size():
 		var p: Dictionary = pets[i]
 		var key := String(p.get("species", ""))
 		var tex := Pets.frame(key, bob + i * 0.31)
 		if tex == null:
 			continue
-		var lunge := 1.0 if pet_hits.has(String(p["name"])) else 0.0
-		# the first beside the companion on the right, the rest on the hero's free left side (a phone is narrow)
-		var x := _pet_x(i, hc, w)
-		var feet := Vector2(x, _team_ground() - (i % 2) * 2.0 * pu - lunge * size.y * 0.05)
+		var lunge := 1.0 if pet_hits.has(int(p["id"])) else 0.0
+		var feet := Vector2(float(lay.get(i, 0.0)) + w / 2.0, _team_ground() - lunge * size.y * 0.05)
 		var r := Rect2(_snap(feet - Vector2(w / 2.0, (Pets.foot(key) + 1) * pu)), Vector2(w, w))
 		draw_set_transform(Vector2(r.get_center().x, feet.y), 0.0, Vector2(1.0, 0.3))
 		draw_circle(Vector2.ZERO, w * 0.3, Color(0, 0, 0, 0.35 * hero_alpha))
@@ -2484,26 +2469,24 @@ func _draw_menagerie() -> void:
 			var gl := 0.25 + 0.15 * sin(bob * 3.0 + i)
 			for off in [Vector2(-pu, 0), Vector2(pu, 0), Vector2(0, -pu)]:
 				draw_texture_rect(Pets.white(key), Rect2(r.position + off, r.size), false, Color(1.0, 0.85, 0.4, gl * hero_alpha))
-		draw_texture_rect(tex, r, false, Color(1, 1, 1, (0.55 if int(p["hurt"]) > 0 else 1.0) * hero_alpha))
+		draw_texture_rect(tex, r, false, Color(1, 1, 1, hero_alpha))  # hurt pets stay home (Menagerie.out)
 
-## Where menagerie pet i stands: the first at the hero's right, the rest on the free left
-## side, and none on the hero's plate (fable r3: the phone layout puts the plate beside the hero,
-## over the first pet), so a pet the plate would cover moves left of it.
-func _pet_x(i: int, hc: Rect2, w: float) -> float:
-	var plate := _bar_rect(_hero_rect()).grow_individual(4.0, NAME_FS + 6.0, 4.0, NAME_FS + 6.0)
-	var half := w * 0.3   # the drawn baby is about 0.6 of its 32 px frame
-	var rx := hc.end.x - hc.size.x * 0.05
-	var right := _pet_clear(rx, half, w, plate)
-	if right and i == 0:
-		return rx
-	var j := i - 1 if right else i
-	var lx := hc.position.x + hc.size.x * 0.12
-	if not _pet_clear(lx, half, w, plate):
-		lx = plate.position.x - half - 2.0
-	return maxf(half, lx - j * w * 0.7)   # never off the left edge
-
-func _pet_clear(x: float, half: float, w: float, plate: Rect2) -> bool:
-	return not Rect2(x - half, _team_ground() - w, half * 2.0, w).intersects(plate)
+## Where the team stands (Fable pets R2): the left edge x of each 32 px creature, keyed -1 for
+## the class companion and 0.. for menagerie pets, companion first (Pets.row).
+func team_layout() -> Dictionary:
+	var who: Array = []
+	if state != null and state.pet_on and World.pet_stage(state) >= 0:
+		who.append(-1)
+	if state != null and not state.in_town:
+		for i in Menagerie.out(state).size():
+			who.append(i)
+	var pu := _u()
+	var hc := _hero_canvas()
+	var xs := Pets.row(who.size(), hc.get_center().x, hc.size.x, 32.0 * pu, 2.0 * pu, size.x)
+	var out := {}
+	for k in who.size():
+		out[who[k]] = xs[k]
+	return out
 
 var _strip_pics := {}
 ## With companions: a compact strip at the top-left, a portrait, name and HP bar for

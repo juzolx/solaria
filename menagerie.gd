@@ -159,7 +159,7 @@ static func turn(g: GameState) -> void:
 		g.last_hit = "hit"
 		var hit := maxi(1, int(g.get_attack() * power(p) * song * g.party_mult()))
 		var d := g._damage_enemy(hit, ["Physical"])
-		g.events.append({"type": "summon_hit", "dmg": d, "name": String(p["name"])})
+		g.events.append({"type": "summon_hit", "dmg": d, "name": String(p["name"]), "pet": int(p["id"])})
 		PetAbilities.on_pet_turn(g, p, hit)  # 2.1: its trick and signature, by rank
 
 ## A kill: every pet on the run learns from it.

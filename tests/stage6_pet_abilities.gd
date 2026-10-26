@@ -34,6 +34,63 @@ func of_shape(shape: String) -> String:
 				return String(e["id"])
 	return ""
 
+## Fable pets R2: kill signatures pay real gold, the fight's team fits the phone, UI pet
+## pictures land on whole screen pixels.
+func _r2_tests() -> void:
+	# every "kill" signature (Fairy Gold) pays at least the floor's coin on a floor-50 kill
+	for region in PetAbilities.SIGNATURES:
+		var sig: Dictionary = PetAbilities.SIGNATURES[region]
+		if String(sig["when"]) != "kill":
+			continue
+		var g := hero()
+		g.floor_num = 50
+		g.enemy_tier = 0
+		g.enemy_is_boss = false
+		g.enemy_variant = ""
+		var p := Menagerie.make_pet(g, "", "", 5, "egg")
+		var before := g.gold
+		PetAbilities.apply(g, p, String(sig["do"]), float(sig["value"]), 0, String(sig["name"]))
+		check(g.gold - before >= 2 + g.floor_num, "%s pays at least the floor's coin on a kill (%d)" % [sig["name"], g.gold - before])
+	check(String(PetAbilities.SIGNATURES["fairy"]["text"]).contains("twice"), "Fairy Gold says what it does")
+	# the fight: companion + three pets fit the stage of a 430x932 and a 375x667 phone (measured with
+	# tests/_pets_shot.gd: 488x647 and 488x451 design units), no big overlaps, plate clear of them
+	for phone in [[430, 647.0], [375, 451.0]]:
+		var g := hero()
+		g.hidden_class = "beast_tamer"
+		g.hero_class = "Knight"   # a class with a companion
+		g.level = maxi(g.level, World.PET_LEVEL)
+		g.pet_on = true
+		g.floor_num = 5
+		for i in 3:
+			Menagerie.make_pet(g, of_shape("spirit"), "", 2, "egg")
+		var bv := BattleView.new()
+		bv.visible = false
+		root.add_child(bv)
+		bv.size = Vector2(488, float(phone[1]))
+		bv.state = g
+		var lay := bv.team_layout()
+		var w := 32.0 * bv._u()
+		check(lay.size() == 4, "companion and three pets all get a spot (%d)" % lay.size())
+		var xs: Array = lay.values()
+		for i in xs.size():
+			check(float(xs[i]) >= 0.0 and float(xs[i]) + w <= bv.size.x + 0.01, "every pet stands on the stage at %d (x %.0f)" % [phone[0], xs[i]])
+			for j in range(i + 1, xs.size()):
+				var over := w - absf(float(xs[i]) - float(xs[j]))
+				check(over <= w * 0.25 + 0.01, "pets overlap by at most a quarter at %d (%.0f of %.0f)" % [phone[0], over, w])
+		var b := bv._bar_rect(bv._hero_rect())
+		var plate_end := b.position.y + 24.0 + BattleView.NAME_FS
+		var top := bv._team_ground() - 32.0 * bv._u()
+		for x in xs:
+			if float(x) + w > b.position.x and float(x) < b.end.x:
+				check(plate_end <= top + 0.01, "the hero plate stays above the pets at %d (%.0f vs %.0f)" % [phone[0], plate_end, top])
+		bv.queue_free()
+	# UI: a 32 px pet in a PixelPic is a whole number of screen px per art px on both phones
+	for sc in [0.853, 0.744, 1.0, 2.0]:
+		for want in [2.0, 3.0, 5.0]:
+			var px: float = PixelPic.side(32, want, sc) * sc / 32.0
+			check(is_equal_approx(px, roundf(px)) and px >= 1.0, "PixelPic: %.1fx at stretch %.3f is whole screen pixels (%.2f)" % [want, sc, px])
+	check(PixelPic.screen_px(2.0, 0.744) == 2 and PixelPic.screen_px(2.0, 0.853) == 2 and PixelPic.screen_px(3.0, 0.853) == 3, "a 2x slot is 2 screen px on both phones, a 3x card 3 at 430")
+
 func _initialize() -> void:
 	# The table is complete: every family has a passive with 6 ranks and a trick; every region a signature
 	for f in PetAbilities.FAMILIES:
@@ -268,5 +325,6 @@ func _initialize() -> void:
 	for path in GameState.slot_paths(5):
 		if FileAccess.file_exists(path):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	_r2_tests()
 	print("STAGE6 PET ABILITY TESTS DONE, failures: ", fails)
 	quit()

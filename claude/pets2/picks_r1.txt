@@ -1,0 +1,10 @@
+7 eye_of_judgement 0
+7 calamity_5_pet 0
+7 jorogumo 4
+7 throne_warden 3
+7 halo_wisp 0
+7 baku 0
+7 glimmermoth 0
+7 umibozu 0
+7 hobyah 0
+7 selkie 1

@@ -2,326 +2,590 @@
 
 Each script: what it is, then `line: function` so you can jump straight to the right lines.
 
-## achievements_tab.gd (140 lines)
+## achievements_tab.gd (259 lines)
 Town > Guild Hall: your deeds (achievements). Each one's reward (gold and a
-14:setup 40:refresh 69:_row 104:_claim_row 129:_reward_text
+17:setup 66:refresh 98:_row 139:_claim_row 164:_reward_text 177:_looks_shop 197:_shop_row 233:_fill_looks 251:_swatch
 
 ## art_info.gd (5 lines)
 Made by tools/make_art.py - sprite pivots, sizes and color ramps. Don't edit by hand.
 
 
-## bag_tab.gd (275 lines)
+## art_style.gd (91 lines)
+The art bible in numbers: the shared palette, the outline color and the sizes that
+43:unit 52:nearest 71:in_palette 75:is_outline 78:oklab 89:_lin
+
+## auto_dive.gd (192 lines)
+2.1: auto-dive settings, one panel (auto_dive_panel.gd). When Auto heads home,
+25:settings 35:value 38:set_value 43:step 47:filter_in_auto 51:team_down 60:conditions 78:_fired 86:home_reason 96:pause_reason 110:elixir_to_drink 118:tick 172:_said 179:label_for
+
+## auto_dive_panel.gd (89 lines)
+2.1: Auto-dive settings, one panel. When Auto heads home, when it stops,
+11:show_for 19:_btn 30:_stepper 35:_fill
+
+## auto_rules.gd (46 lines)
+0.13+ (Stage 3): Auto rules you set. Autoplay pauses (and tells you why) when one
+14:on 17:toggle 21:check
+
+## bag_tab.gd (397 lines)
 Items > Bag: everything you're carrying. Sort, filter, lock, sell, salvage,
-29:setup 108:_on_resized 112:_tap 122:_popup 136:_act 182:_salvage_all 189:_sorted_items 205:refresh 237:_refresh_details
+36:setup 144:_on_resized 149:_tap 167:_toggle_picking 173:_pick_all 181:_picked_items 190:_bulk 214:_popup 228:_act 274:_salvage_all 281:_sorted_items 297:refresh 350:_refresh_details 393:_dropped_on
 
-## battle_view.gd (1862 lines)
+## battle_view.gd (2406 lines)
 Draws the fight: background, pixel-art hero and monster, health bars,
-195:_ready 204:_gui_input 213:set_cape 217:_sfx 221:toast 224:tap_ring 231:play 481:_update_hero_art 489:_party_anim 517:_pose_hero 523:_pose_enemy 529:_step_pose 543:_later 550:_open_chest 561:_chest_pos 591:_fx 609:_lpc_play 614:_hero_attack 663:_enemy_attack 686:_ability_fx 714:_level_up_fx 755:_bg_tex 764:_weapon_type 768:_shoot 775:_hit_stop 781:_burst 788:_loot_pop 826:_set_dying_alpha 830:_enemy_died 839:_hero_died 851:_show_banner 866:_lane_for 882:_float_kind 891:_float 920:_process 988:_unit 995:_scr 1000:_u 1003:_hu 1007:_snap 1012:_px 1016:_ground 1020:_team_ground 1023:_sprite_size 1027:_hero_canvas 1035:_hero_unit 1044:_party_members 1048:_leader_x 1052:_member_canvas 1060:_member_center 1068:_member_index 1120:_member_plate 1132:_hero_rect 1137:_hand_screen 1143:_hero_poses 1149:_enemy_poses 1155:_enemy_art 1162:_dying_rect 1165:_enemy_rect 1169:_rect_for 1195:_hero_center 1199:_enemy_center 1203:_draw 1702:_rim_color 1706:draw_ellipse_shadow 1714:_bar_rect 1740:_short 1754:_enemy_tex 1761:_make_tex 1772:_pixel_color 1803:_chip_row
+210:_ready 219:_gui_input 228:set_cape 232:_sfx 236:toast 239:tap_ring 246:play 518:_update_hero_art 527:_party_anim 555:_pose_hero 561:_pose_enemy 567:_step_pose 581:_later 588:_open_chest 599:_chest_pos 629:_fx 647:_hero_play 653:_hero_hurt 657:_hero_attack 707:_enemy_attack 726:_ability_fx 754:_level_up_fx 801:_bg_tex 810:_weapon_type 814:_shoot 824:_hit_stop 830:_motion_ok 835:_flash_col 844:_squash 851:squashed 861:_burst 870:_loot_pop 911:_drop_item 929:_white_of 1000:_set_dying_alpha 1004:_enemy_died 1013:_hero_died 1025:_show_banner 1034:_boss_title 1044:busy 1049:skip_intro 1056:_intro_step 1081:_intro_burst 1115:_lane_for 1131:_float_kind 1140:_float 1177:_prune 1185:_process 1266:_unit 1275:_scr 1280:_u 1283:_hu 1287:_snap 1292:_px 1296:_ground 1300:_team_ground 1303:_sprite_size 1307:_hero_canvas 1315:_hero_unit 1318:_party_members 1322:_leader_x 1326:_member_canvas 1334:_member_center 1342:_member_index 1394:_member_plate 1405:_hero_rect 1410:_hand_screen 1416:_hero_poses 1422:_enemy_poses 1430:_enemy_art 1441:_dying_rect 1444:_enemy_rect 1449:_rect_for 1469:_width_cap 1476:_pack_rect 1483:_hero_center 1487:_enemy_center 1493:_draw 2063:_rim_color 2067:draw_ellipse_shadow 2075:_bar_rect 2094:_outlined 2101:_fit_text 2110:_pip 2159:_short 2173:_enemy_tex 2180:_make_tex 2191:_pixel_color 2222:_chip_row 2374:_dissolve
 
-## bestiary_tab.gd (197 lines)
+## bench.gd (102 lines)
+Next update (Juzo): heroes left at home while you dive bring back gold, scrap
+28:rate 34:refresh 47:on_kill 65:has_haul 69:collect
+
+## bestiary_tab.gd (327 lines)
 Codex > Bestiary: every creature, zone by zone. Ones you haven't met are
-18:setup 51:refresh 91:_show 178:_art_key 184:_boss_floor 187:_odds_line 194:_num
+27:setup 72:refresh 120:_show 224:_art_key 230:_boss_floor 233:_odds_line 241:a_slot 245:_num 250:_screen_scale 256:_place_pic 272:_head 286:_ground 307:_strip 320:_element_chips
 
 ## bounty_tab.gd (115 lines)
 Town > Bounty Board: monster contracts for the zone you're in. Each posting
 11:setup 19:refresh 57:_card
 
-## calamity.gd (172 lines)
-Calamities (0.12): the rarest encounter in the game. One per 100-floor
-35:region_index 38:info 42:slain 46:maybe_appear 58:appear 93:fight 98:run 112:knockout 133:on_slain
+## building_bar.gd (75 lines)
+2.1 G1: the strip at the top of every building's page: its level in this town,
+14:setup 34:_build 41:refresh
 
-## character_creator.gd (194 lines)
-Pick your race and look before your first fight. The race changes your
-19:show_for 79:_text_row 96:_swatch_row 114:_pick 129:_randomize 138:_update 170:race_preview 188:_finish
+## buildings.gd (159 lines)
+2.1 G1 (Juzo: "I want the town to be a place where there's building"): every town
+66:id_for_page 75:level 78:built 82:pick 85:mult 88:name_of 91:benefit 95:next_cost 99:cost_text 108:deepest 112:blocked 129:upgrade 150:on_recruit
 
-## class_tab.gd (613 lines)
-Character > Class: your Evolution Tree. Shows the shape of the tree
-15:setup 24:refresh 52:_header 106:_badge 115:_pick_panel 133:class_card 181:_tree 227:_detail 237:revealed 248:_signatures 282:_god_trials 316:_branches 370:_items 394:_hidden_classes 426:_hidden_card 472:_line
-
-## class_tree.gd (1463 lines)
-The Evolution Tree (v0.10, renamed in v0.11).
-413:slug 421:_focus 428:_build 459:_add 488:_final_stat 494:node 498:all_nodes 502:roots 506:children 509:branches 513:by_name 520:rank_of 524:combat_scale 533:util_scale 538:passive 554:_add_bonus 560:tag_power_of 570:bonus_text 600:alignment 609:side_ok 614:path_nodes 626:current 633:title 638:unique_class 644:stat_name 649:pick_tier 658:options 668:lock_reason 680:pick 694:_take 700:_on_new_class 721:trial_won 734:auto_pick 754:open_branches 759:req_value 829:progress 838:progress_text 849:_short 856:branch_ready 859:take_branch 870:_check_branches 882:bonus_sources 898:stat_bonus 911:_main_key 923:stat_text 927:tag_power 935:extra 941:rank_text 952:count 955:at_least 958:_grow_stat 964:grow_action 972:grow_text 977:grow 984:on_fight_start 988:on_turn 997:_note_hp 1001:on_hero_hit 1010:on_skill 1045:on_dodge 1054:on_hit_taken 1067:on_heal 1075:on_potion 1079:on_kill 1171:on_big_hit 1179:_realm_cleared 1190:family 1211:on_floor 1238:on_death 1247:on_death_save 1254:on_camp 1259:on_spare 1266:on_encounter 1282:charm_chance 1285:escape_bonus 1288:scout_bonus 1295:_maybe_item_encounter 1313:_eligible_item 1336:path_info 1347:item_cost 1350:encounter_choice 1373:_give_item 1388:to_save 1391:from_save 1425:god_week 1430:god_trials_now 1437:god_trials_open 1441:god_trial_done 1444:divinity 1447:start_god_trial 1453:god_trial_won
-
-## classes.gd (115 lines)
-The 9 starting classes. What they grow into (the family trees, unique
-80:info 84:build 88:stat_order 97:tag_color 101:bonus_text
-
-## clinic_tab.gd (63 lines)
-Town > Clinic (only once you own a pet or an egg): heal hurt pets with gold,
+## cabin_tab.gd (52 lines)
+Town > Trophy Cabin (2.1 G3): this town's proudest moments on the shelves.
 10:setup 18:refresh
 
-## codex.gd (461 lines)
+## calamity.gd (179 lines)
+Calamities (0.12): the rarest encounter in the game. One per 100-floor
+38:pet_id 41:region_index 44:info 48:slain 52:maybe_appear 64:appear 99:fight 104:run 118:knockout 139:on_slain
+
+## camp.gd (50 lines)
+0.13+ (Stage 3): dungeon towns, small ones. After every boss, one door opens on a
+10:enter 21:courier_amount 25:send_home 38:potion_price 41:buy_potions
+
+## camp_popup.gd (44 lines)
+The Descenders' Camp (camp.gd): buy potions from the quartermaster, or send your gold home.
+11:show_for 38:_update
+
+## character_creator.gd (321 lines)
+Pick your race and look before your first fight. The race changes your
+25:show_for 121:_fit_height 127:_head 130:_text_row 150:_swatch_row 170:_stepper_row 200:_step_values 206:_step 211:_pick 226:_randomize 237:_update 283:_swatch_style 293:race_preview 311:_finish 319:_hair_list
+
+## church.gd (201 lines)
+2.1 G2: cursed loot and the Church. Now and then a Rare, Epic or Legendary
+29:is_cursed 32:was_cursed 36:maybe_curse 47:curse 54:bonus_sources 72:name_tag 80:describe 99:cleanse_chance 103:cleanse_gold 107:cleanse_dust 110:bless_gold 113:bless_dust 116:can_bless 120:cleanse_short 131:bless_short 144:cleanse 167:bless 179:ok_save 184:items_here 193:reapply_power 199:keep_from_filter
+
+## church_tab.gd (117 lines)
+Town > Church (2.1 G2): lift curses from Cursed gear (it keeps its hidden power)
+12:setup 20:_key 23:refresh 58:_row 84:_fill 96:_act
+
+## class_hints.gd (162 lines)
+2.1 G7: gentle, mysterious hints that hidden and God classes EXIST and how one
+54:hints_open 57:gods_open 61:god_riddle 75:pool 97:inn_line 110:on_progress 126:riddles 142:secret_names 154:leaks
+
+## class_tab.gd (593 lines)
+Character > Class: your Evolution Tree. Shows the shape of the tree
+15:setup 24:refresh 49:_header 105:_badge 114:_pick_panel 132:class_card 175:outfit_stage 204:pick_card 244:_tree 290:_detail 300:revealed 311:_signatures 346:_god_classes 367:_hidden_classes 421:hidden_offer_cards 454:_line
+
+## class_tree.gd (1024 lines)
+The Evolution Tree, simplified with Juzo (Oct 20). Two kinds of class only:
+293:slug 301:_focus 308:_build 324:_add 348:_final_stat 354:node 358:all_nodes 362:roots 366:children 371:by_name 381:rank_of 385:combat_scale 394:util_scale 400:passive 416:_add_bonus 422:tag_power_of 432:bonus_text 462:alignment 471:side_ok 476:path_nodes 488:current 495:title 500:unique_class 506:stat_name 511:pick_tier 520:options 530:lock_reason 539:pick 550:_take 556:_on_new_class 577:auto_pick 596:bonus_sources 612:stat_bonus 625:_main_key 637:stat_text 641:tag_power 649:extra 655:rank_text 666:count 669:at_least 672:_grow_stat 678:grow_action 686:grow_text 691:grow 698:on_fight_start 703:on_turn 712:_note_hp 716:on_hero_hit 725:on_skill 760:on_dodge 769:on_hit_taken 782:on_heal 790:on_potion 794:on_kill 885:on_big_hit 893:_realm_cleared 904:family 925:on_floor 950:on_death 959:on_death_save 966:on_camp 971:on_spare 978:on_encounter 994:charm_chance 997:escape_bonus 1000:scout_bonus 1007:to_save 1010:from_save
+
+## classes.gd (132 lines)
+The 13 starting classes. What they grow into (the family trees, unique
+97:info 101:build 105:stat_order 114:tag_color 118:bonus_text
+
+## clinic_tab.gd (80 lines)
+Town > Clinic (only once you own a pet or an egg): choose who comes along, heal hurt pets with gold,
+10:setup 18:refresh
+
+## codex.gd (486 lines)
 Things shared by every hero on this computer: the Bestiary (who you've met
-156:load_codex 167:_from 179:save 189:delete 196:add 200:at_least 205:stat 208:entry 213:seen 216:meet 221:kills 224:record_kill 238:found_item 251:value 312:achievement 319:check 331:titles 345:week_id 351:refresh_bounties 364:_make_bounties 395:bounty_progress 422:bounties_ready 435:check_login 454:unlock_page
+163:load_codex 172:_from 191:save 199:delete 206:add 210:at_least 215:stat 218:entry 223:seen 226:meet 231:kills 234:record_kill 249:found_item 266:found_pet 273:value 334:achievement 341:check 353:titles 370:week_id 376:refresh_bounties 389:_make_bounties 420:bounty_progress 447:bounties_ready 460:check_login 479:unlock_page
 
-## collection_tab.gd (74 lines)
+## collection_tab.gd (76 lines)
 Codex > Collection: your trophy shelf. Every Unique and Signature item in
-11:setup 20:refresh 47:_trophy
+11:setup 20:refresh 49:_trophy
 
-## combat.gd (450 lines)
+## collections.gd (423 lines)
+2.1 G4: collection rewards. Filling in the Codex (each region's Bestiary,
+99:all 133:_need 136:milestone 142:on_track 146:group_of 158:tracks 175:zone_monsters 189:total 208:count 257:_slot_map 271:has 275:next_on 287:check 307:found_class 313:titles 321:colors 326:frames 331:_build_looks 347:track_name 360:need_text 370:reward_text 379:toast_text 387:track_card 411:cards
+
+## combat.gd (518 lines)
 Combat rules added in v0.11:
-43:profile 73:elements_of 86:element_mult 114:before_skill 138:after_skill 156:_combo 168:tick_enemy 202:afflict 211:tick_hero 232:on_enemy_hit 242:on_enemy_death 283:roll_mechanics 298:start_boss 308:boss_turn 352:crush_mult 360:try_stagger 368:enrage_mult 375:enrage_left 381:soak_minions 395:note_damage 403:recap 420:_tips
+43:profile 70:elements_of 83:element_mult 111:before_skill 135:after_skill 153:_combo 165:tick_enemy 210:afflict 226:tick_hero 250:on_enemy_hit 267:on_enemy_death 311:_boss_seed 314:roll_mechanics 329:start_boss 338:boss_turn 383:crush_mult 393:try_stagger 400:winding 404:charging 407:start_windup 416:break_windup 423:monster_turn 436:enrage_mult 443:enrage_left 449:soak_minions 463:note_damage 471:recap 488:_tips
 
-## craft_tab.gd (178 lines)
+## cooldown_ring.gd (30 lines)
+0.13+: drawn over a skill button. A ring around its icon fills as the skill
+10:_init 14:_process 19:_draw
+
+## cosmetics.gd (156 lines)
+0.13+ (Stage 3): name colors and plate frames you earn through deeds (achievements),
+59:colors 63:frames 66:has 75:key 81:shop_price 85:shop_list 97:buy 112:_find 119:need_name 130:name_color 136:frame 143:draw_frame
+
+## craft_tab.gd (272 lines)
 Town > Craft. Laid out so it's always clear what you have and what you need:
-19:setup 102:_recipe_card 117:_craft_set 122:_chip 131:refresh
+27:setup 140:_show_section 150:_fill_wares 187:_recipe_card 202:_craft_set 207:_chip 217:refresh 268:_frame
 
-## credits.gd (6 lines)
-Made by tools/make_credits.py - who made the art (their licenses ask for this). Don't edit by hand.
+## credits_data.gd (35 lines)
+Every third-party source in Solaria, in one place. To credit a new pack, add ONE line to SOURCES.
+33:in_group
 
+## credits_screen.gd (37 lines)
+Menu > Credits: who made Solaria, then every asset source by group (data: credits_data.gd).
+7:show_for 12:_build 23:_entry
 
-## floor_picker.gd (228 lines)
+## dark_grade.gd (104 lines)
+The dark fantasy look: grades monster, pet and background art as it loads.
+21:image 50:texture 62:set_enabled 72:_grade 87:_rim 100:_clear
+
+## death_screen.gd (140 lines)
+Interface pass (approved mockups 18 and 19): what you see when you fall.
+11:regular 75:fit_regular 87:hardcore 114:_head 117:_pair
+
+## debug_log.gd (111 lines)
+R6: a small local log of errors and warnings (last MAX lines), kept on the
+34:start 42:add 53:flush 65:load_file 78:clear 86:reset_memory 94:report
+
+## drag.gd (51 lines)
+Next update (Juzo): drag and drop for everything you equip or move. Payloads
+14:wire 34:_preview
+
+## economy.gd (188 lines)
+Solaria 2.1 (Juzo, decision D3 a): the game has exactly three currencies.
+40:give_dust 49:salvage_dust 55:give_scrap 62:chest_scrap 66:scrap_floor_mult 72:salvage_scrap 76:salvage_base 81:salvage_refund 87:note_upgrade_scrap 91:elite_reward 96:set_piece_dust 100:set_zone_reached 114:bag_craft_scrap 118:restock_gold 122:reroll_dust 127:upgrade_dust 132:cost_text 136:upgrade_short 145:reroll_short
+
+## egg_quests.gd (55 lines)
+0.13+ (Stage 3): egg quests. Every egg asks for a little care while it incubates.
+14:assign 18:_ensure 22:need 25:done 28:text 34:_step 44:on_kill 53:on_rest
+
+## floor_picker.gd (403 lines)
 Travel to any floor you've reached. Pick a zone at the top, then a floor:
-19:show_from_town 23:show_for 86:_zone_block 89:_build 148:_update_cooldowns 162:last_start 167:_allowed 172:_pick_carry 177:_show_carry 186:_show_zone 190:_go 199:curses_popup 204:_fill_curses
+24:show_from_town 28:show_for 114:_zone_block 117:_build 185:_update_cooldowns 199:last_start 204:_allowed 209:_pick_carry 214:_show_carry 230:_show_zone 234:_go 243:curses_popup 248:_fill_curses 278:_fill_presets 297:_use_preset 304:_after_presets 313:_fill_team 373:_fill_supplies
 
-## game_data.gd (939 lines)
+## found_town.gd (61 lines)
+Founding a town (Juzo, Oct 20): name it, and choose Regular or Hardcore. The
+11:show_for 38:_card 52:_go
+
+## game_data.gd (1026 lines)
 All the fixed numbers and content for the game: rarities, gear, enemies,
-142:gamble_fee 144:can_gamble 154:stash_cost 168:active_events 181:event_bonus 249:diminishing 352:set_info 358:make_evo_piece 376:is_living 379:soul_level 537:color_of 550:rarity_chances 554:roll_rarity 569:depth_legendary 573:rarity_odds 579:base_bonus 583:make_item 607:item_name 614:item_type 627:add_legendary_effect 634:make_unique 655:make_signature 679:item_power 686:display_name 700:sell_value 705:scrap_value 708:upgrade_cost 711:can_reroll 714:reroll_cost 717:reroll_chance 722:bag_cost 725:shop_price 728:zone_index 736:realm_in_slot 747:realm_slot 752:realm_of 755:zone_for_floor 759:zone_rank 762:rank_prefix 766:zone_floor 770:sub_index 773:sub_area 776:sub_name 780:sub_start 784:region_of 788:is_region_boss 792:wall_mult 796:boss_kind 804:is_boss_floor 807:boss_for_floor 811:boss_name 819:zone_uniques 827:floor_monsters 834:pick_monster 847:monster_home 863:art_key 871:effect_text 903:xp_to_next 909:xp_for_kill 912:make_set_item 932:bag_craft_materials 935:bag_craft_scrap
+66:enemy_growth 70:enemy_attack_growth 73:_banded 170:gamble_fee 172:can_gamble 185:stash_cost 199:active_events 212:event_bonus 280:diminishing 379:set_info 385:set_name_of 389:piece_id 393:make_evo_piece 411:is_living 414:soul_level 591:color_of 604:rarity_chances 608:roll_rarity 623:depth_legendary 627:rarity_odds 635:gear_score 645:_score_power 658:base_bonus 662:make_item 687:item_name 694:item_type 704:add_legendary_effect 711:make_unique 733:sig_id 737:make_signature 762:item_power 769:display_name 784:sell_value 789:scrap_value 792:upgrade_cost 796:can_reroll 799:reroll_cost 802:reroll_chance 807:bag_cost 810:shop_price 813:zone_index 821:realm_in_slot 832:realm_slot 837:realm_of 840:zone_for_floor 844:zone_rank 847:rank_prefix 851:zone_floor 855:sub_index 858:sub_area 861:sub_name 865:sub_start 869:region_of 873:is_region_boss 877:wall_mult 881:boss_kind 889:is_boss_floor 892:boss_for_floor 896:boss_name 904:zone_uniques 912:floor_monsters 919:pick_monster 932:monster_home 948:art_key 956:effect_text 988:xp_to_next 998:xp_for_kill 1002:make_set_item 1022:bag_craft_scrap
 
-## game_state.gd (4263 lines)
+## game_state.gd (4657 lines)
 Everything that happens in the game: combat, loot, bag, gold, shop,
-245:stat_total 253:class_info 256:_class_mult 260:_buff 268:get_attack 273:get_defense 277:get_max_hp 282:_mastery 289:_elixir 298:stat 302:bonus_stat 309:dim 315:crit_mult 319:heal_mult 323:status_mult 327:haste_chance 333:first_strike_chance 337:luck_odds 341:price 345:sell_price 349:charm_total 353:party_mult 356:race 360:race_info 364:spec_stat 377:unique_stats 389:unique_value 393:_grow_unique 399:_faith 405:top_tag 423:title 427:is_discovered 431:_passive_sources 449:_bonus_sources 467:_mult 474:_flat 487:tag_power 516:set_counts 524:set_bonuses 539:skill_rank 544:active_slot_count 551:passive_slot_count 559:equipped_actives 569:set_signature 574:is_skill_equipped 578:equip_skill 605:unequip_skill 616:gain_stone 640:craft_skill 661:skill_mult 665:_reduce_cd 669:skill_cd 672:skill_ready 675:spend_point 686:auto_spend 711:respec_cost 715:respec 736:_check_spec 750:stat_if_equipped 762:stat_value 771:effect_value 802:effect_total 806:damage_taken 813:unique_chance 816:bag_capacity 820:total_gold 823:bag_full 826:say 830:tip 836:shop_unlocked 839:craft_unlocked 845:build_score 858:_ability_share 866:score_with 879:best_for_slot 891:_refresh_upgrade_cache 901:has_upgrade 905:upgrade_count 912:_new_id 916:_tag 923:new_game 930:choose_class 945:ability_ready 950:use_skill 1065:_wild_card 1093:_auto_skill 1128:auto_order 1143:move_priority 1154:toggle_skill_auto 1161:gain_xp 1191:_fill_empty_slots 1202:tap_attack 1216:_damage_enemy 1251:has_mod 1255:_frozen_crit 1258:spawn_enemy 1363:_setup_fight 1379:_apply_tier 1399:enemy_scale 1407:take_turn 1636:_basic_attack 1688:_rarity 1691:_loot_bonus 1702:_drop_slot 1708:_give_materials 1717:_enemy_defeated 1859:_feed_souls 1881:_roll_evo_piece 1896:compare_pct 1904:_give_signature 1910:_add_gold 1916:_finish_horde 1934:next_floor 1937:_next_floor 2010:_hero_died 2085:_leader_falls 2101:_down_turn 2138:get_up 2147:lose_worn_gear 2158:checkpoint_start 2162:is_bound 2166:_maybe_find_pack 2179:_death_losses 2213:boss_cooldown 2219:go_to_floor 2242:retreat 2245:use_potion 2271:filter_salvages 2284:_give_item 2316:_page 2321:_check_codex 2339:give_reward 2370:find_item 2380:equip 2401:equip_best 2412:unequip 2427:sell 2447:scrap_mult 2450:salvage 2472:upgrade 2492:reroll 2521:_salvage_materials 2526:cycle_auto_salvage 2533:is_upgrade 2537:toggle_lock 2547:salvage_all_count 2555:salvage_all 2580:potion_cost 2583:greater_potion_cost 2586:restock_cost 2589:elixir_cost 2592:shop_cost 2595:buy_potion 2604:next_bag_cost 2607:buy_bag_upgrade 2620:restock_shop 2631:featured_price 2634:buy_featured 2656:buy_greater_potion 2667:buy_elixir 2679:sell_all 2695:paid_restock 2704:buy_shop 2729:craft_potion 2741:dev_grant 2897:material_total 2904:set_block_reason 2914:craft_set_piece 2932:bag_craft_block_reason 2942:craft_bag 2959:craft_gear 2979:save_game 3104:meta 3111:save_paths 3114:slot_paths 3118:delete_own_saves 3121:delete_slot 3125:has_slot 3130:slot_meta 3149:migrate_legacy 3166:_read_save 3178:delete_saves 3185:load_game 3353:_convert_stats 3390:_give_old_legendaries_effects 3401:_convert_old_save 3449:add_to_wardrobe 3464:hero_looks 3484:set_transmog 3496:raid_reward 3512:_maybe_offer_path 3528:_offer_merchant 3538:_maybe_start_event 3566:start_event 3593:engage 3602:_room_cleared 3621:roll_doors 3646:door_pending 3650:_through_door 3681:auto_path 3690:path_info 3704:choose_path 3716:_apply_path 3787:scroll_text 3795:_gold_scale 3800:_make_merchant 3824:goblin_junk 3831:goblin_junk_value 3838:goblin_buy_junk 3851:buy_merchant 3884:use_scroll 3911:_open_box 3939:to_stash 3961:from_stash 3977:save_loadout 3986:wear_loadout 4000:save_build 4010:build_name 4013:build_saved 4018:apply_build 4056:best_set_count 4064:claim_bounty 4086:gamble_chance 4091:gamble_unlocked 4095:gamble 4143:start_special_trial 4178:_finish_trial 4204:start_race_trial 4210:free_hit 4233:_convert_old_skills 4252:set_party
+22:now_unix 280:stat_total 288:class_info 291:_class_mult 295:_buff 303:get_attack 310:get_defense 314:get_max_hp 319:_mastery 326:_elixir 335:stat 339:bonus_stat 346:dim 352:crit_mult 356:heal_mult 360:status_mult 364:haste_chance 370:first_strike_chance 374:luck_odds 378:price 382:sell_price 386:charm_total 390:party_mult 393:race 397:race_info 401:spec_stat 414:unique_stats 426:unique_value 430:_grow_unique 436:_faith 442:top_tag 460:title 464:is_discovered 468:_passive_sources 486:_bonus_sources 507:_mult 514:_flat 527:tag_power 556:set_counts 564:set_bonuses 579:skill_rank 584:active_slot_count 591:passive_slot_count 599:equipped_actives 609:set_signature 614:is_skill_equipped 618:equip_skill 645:unequip_skill 656:gain_stone 680:craft_skill 701:skill_mult 705:_reduce_cd 709:skill_cd 712:skill_ready 715:spend_point 726:auto_spend 751:respec_cost 755:respec 776:_check_spec 790:stat_if_equipped 802:stat_value 811:effect_value 842:effect_total 846:damage_taken 854:unique_chance 857:bag_capacity 861:total_gold 864:bag_full 867:say 871:tip 877:shop_unlocked 880:craft_unlocked 886:build_score 899:_ability_share 907:score_with 920:best_for_slot 933:_refresh_upgrade_cache 943:has_upgrade 947:upgrade_count 954:_new_id 958:_tag 965:new_game 972:choose_class 987:ability_ready 992:use_skill 1108:_wild_card 1136:_auto_skill 1181:auto_order 1196:move_priority 1207:toggle_skill_auto 1214:gain_xp 1246:_fill_empty_slots 1257:tap_attack 1271:_damage_enemy 1306:has_mod 1310:_frozen_crit 1313:spawn_enemy 1431:_setup_fight 1447:_apply_tier 1467:enemy_scale 1475:take_turn 1729:_basic_attack 1784:_rarity 1787:_loot_bonus 1798:_drop_slot 1804:_enemy_defeated 1966:_feed_souls 1988:_roll_evo_piece 2003:compare_pct 2011:_give_signature 2017:_add_gold 2024:_finish_horde 2042:next_floor 2045:_next_floor 2121:_hero_died 2198:_leader_falls 2214:_down_turn 2253:get_up 2262:lose_worn_gear 2273:checkpoint_start 2277:is_bound 2281:_maybe_find_pack 2294:_death_losses 2339:boss_cooldown 2345:go_to_floor 2368:retreat 2371:use_potion 2405:filter_salvages 2410:_give_item 2449:_page 2454:_check_codex 2477:reward_gold 2480:reward_scrap 2483:give_reward 2512:find_item 2522:equip 2545:equip_best 2556:unequip 2571:sell 2591:scrap_mult 2594:salvage 2616:upgrade 2640:reroll 2675:_salvage_dust 2678:cycle_auto_salvage 2682:is_upgrade 2686:toggle_lock 2696:salvage_all_count 2704:salvage_all 2727:potion_cost 2730:greater_potion_cost 2733:restock_cost 2736:elixir_cost 2739:shop_cost 2742:buy_potion 2751:next_bag_cost 2754:buy_bag_upgrade 2767:restock_shop 2784:featured_price 2787:buy_featured 2810:buy_greater_potion 2821:buy_elixir 2843:supply_keys 2846:supply_name 2856:supply_carried 2864:supply_home 2868:move_supply 2886:store_luck_scroll 2894:read_luck_scroll 2903:drink_elixir 2916:row_of 2919:set_row 2924:sell_all 2940:paid_restock 2949:buy_shop 2975:craft_potion 2987:dev_grant 3143:set_block_reason 3155:craft_set_piece 3173:bag_craft_block_reason 3181:craft_bag 3190:craft_gear 3211:save_game 3341:flush_save 3350:meta 3357:save_paths 3360:slot_paths 3363:town_slot_paths 3367:town_heroes 3378:migrate_to_towns 3408:delete_own_saves 3412:delete_slot 3415:has_slot 3419:slot_meta 3436:migrate_legacy 3454:_read_save 3458:delete_saves 3471:load_game 3650:_convert_stats 3687:_give_old_legendaries_effects 3698:_convert_old_save 3746:add_to_wardrobe 3763:hero_looks 3785:set_transmog 3797:raid_reward 3812:_maybe_offer_path 3828:_offer_merchant 3838:_maybe_start_event 3866:start_event 3893:engage 3902:_room_cleared 3921:roll_doors 3948:door_pending 3952:_through_door 3983:auto_path 3994:path_info 4006:choose_path 4018:_apply_path 4091:scroll_text 4099:_gold_scale 4104:_make_merchant 4128:goblin_junk 4135:goblin_junk_value 4142:goblin_buy_junk 4155:buy_merchant 4189:use_scroll 4213:_open_box 4240:to_stash 4264:from_stash 4283:best_set_count 4291:claim_bounty 4313:gamble_chance 4318:gamble_unlocked 4322:gamble 4380:start_special_trial 4418:_finish_trial 4443:_resume_lost_trial 4455:start_race_trial 4461:free_hit 4484:_convert_old_skills 4503:set_party 4520:auto_door 4567:is_easy_fight 4572:_skip_easy_fight 4584:average_gear_score 4599:over_limit 4606:_blocked_over 4618:skill_sell_price 4627:skill_sell_block 4637:sell_skill 4653:_note_find
 
-## gear_tab.gd (218 lines)
+## gear_slots.gd (223 lines)
+2.1: the Ring and Necklace slots (8 gear slots in all, GameData.SLOT_ORDER).
+36:is_jewelry 39:has_look 43:legendary_effects 51:apply_charm 70:drop_unknown 213:pick 217:count
+
+## gear_tab.gd (309 lines)
 Items > Gear: what you're wearing. Tap a slot, then tap an item to wear it.
-19:setup 103:_on_resized 106:_on_card_input 115:_show 127:_loadout 135:_count 142:refresh 197:_rebuild
+26:setup 143:_on_resized 146:_on_card_input 155:_show 169:_ghost 178:_count 185:refresh 257:_rebuild 288:_takes 294:_dropped_on_slot 301:_takes_off 304:_dropped_off
 
-## guide.gd (51 lines)
+## god_classes.gd (156 lines)
+God classes (Juzo, Oct 20): the rank above the highest. They are unique classes,
+91:info 95:progress 101:earned 112:check 127:take 138:bonus_sources 148:scale
+
+## grave.gd (107 lines)
+0.13+ (Stage 3): falling no longer destroys what you carried. It drops where you
+14:on_death 46:due 50:guarding_here 59:make_guard 77:recover 103:goal
+
+## guide.gd (54 lines)
 The guide book: short pages that explain how the game works. Pages unlock
-43:has_page 46:page
+46:has_page 49:page
 
-## guide_book.gd (92 lines)
+## guide_book.gd (97 lines)
 The guide book: a little book that pops up when a new page unlocks.
-16:open_book 21:_show 71:_show_page
+16:open_book 21:_show 76:_show_page
 
-## guide_tab.gd (62 lines)
+## guide_tab.gd (71 lines)
 Codex > Guide: every guide page you've unlocked, to read any time.
-14:setup 40:refresh 56:_show
+14:setup 42:refresh 65:_show
 
 ## guild_tab.gd (200 lines)
 Online > Guild: make or join a guild (up to 20 players), see your members
 12:setup 20:refresh 24:reload 29:_best 32:_load 62:_no_guild 128:_guild_row 148:_my_guild 183:_rankings
 
-## halls.gd (300 lines)
+## halls.gd (322 lines)
 0.13 The Halls Below: traps and door reading.
-30:spot_chance 36:roll_trap 40:roll_room_trap 53:on_engage 64:trigger 85:door_sense 101:team_sense 110:read_door 128:on_doors_shown 152:enter_event_room 179:_done 185:can_interact 189:auto_room 202:interact 277:_monster
+31:spot_chance 37:roll_trap 41:roll_room_trap 54:on_engage 65:trigger 86:door_sense 100:team_sense 109:read_door 132:on_doors_shown 155:enter_event_room 196:_done 202:can_interact 206:auto_room 227:interact 307:_monster
 
-## halls_scene.gd (240 lines)
+## halls_scene.gd (355 lines)
 0.13 The Halls Below: the room you stand in, first-person from the doorway.
-43:tx 48:mood 52:build 84:proj 88:lit 102:quad 108:shadow 114:sprite 131:draw_shell 174:draw_doors 204:scenery 213:draw_scenery 233:vignette
+54:tx 59:mood 63:ambient 68:build 103:proj 107:lit 121:_step 127:quad 146:begin_batch 153:end_batch 160:shadow 166:glow 173:sprite 191:draw_shell 257:is_3d 286:draw_doors 318:scenery 327:draw_scenery 348:vignette
 
-## hero_select.gd (124 lines)
-Your roster: up to 9 heroes. Slots open as any hero reaches deeper floors
-10:show_for 45:describe 55:_card 115:_play
+## hazards.gd (83 lines)
+0.13+ (Stage 3): room hazards. Now and then a fight happens in a room that fights
+29:roll 43:turns_left 50:tick
 
-## hero_tab.gd (368 lines)
+## hero_art.gd (348 lines)
+The PixelLab hero (2.1): layers baked by claude/art_test/pixellab/game/bake.py into art/heroes/.
+33:info 38:available 41:_img 55:body_key 59:style_key 64:outfit_key 76:_ramp 82:_shade 92:_lay 137:_lut 152:frames 207:_lay_weapon 212:_finish 231:anims 247:steps 288:_dye_ramp 296:art_race 303:build_dir 311:hands 316:race_key 323:class_of 327:clear_cache 333:meta_looks 340:attack_anim
+
+## hero_select.gd (122 lines)
+Your roster in this town: up to 9 heroes (Profile.slots_open: all 9 for now).
+10:show_for 47:describe 57:_card 113:_play
+
+## hero_tab.gd (478 lines)
 Character > Hero: who you are, your 8 stats, your special stat, your saved
-32:setup 164:_stat_row 203:_fit_stat_grid 208:_pct 212:gives_text 233:refresh 343:_build_special_rows
+42:setup 207:_stat_row 253:_doll_slot 274:_ghost 280:_refresh_doll 294:_fit_stat_grid 299:_pct 303:gives_text 324:refresh 438:_build_special_rows 465:_fill_titles
 
-## hidden.gd (367 lines)
-Hidden classes: secret classes you unlock by how you play, in 3 tiers.
-105:info 110:count 113:best 116:flag 120:_have 143:progress 153:closeness 161:ready_for_trial 168:holder 174:block_reason 188:check 196:unlock 212:_check_stage 228:stage_progress 240:rumor 247:use 253:title 259:stat_name 262:bonus_sources 278:stat_text 290:gain 301:on_kill 326:on_death 331:on_potion 336:on_craft_potion 341:on_wheel 350:start_trial 355:trial_won 360:companion_power
+## hidden.gd (579 lines)
+Hidden classes (reworked with Juzo, Oct 20): secret classes you earn by doing
+234:info 239:count 242:best 245:flag 249:_have 292:progress 302:closeness 310:ready_for_trial 317:holder 323:block_reason 339:check 348:unlock 365:stage 375:on_level 408:take 417:_take 438:rumor 446:title 452:stat_name 456:stage_bonuses 467:stage_text 477:bonus_sources 490:stat_text 502:gain 513:on_kill 538:on_death 543:on_potion 548:on_craft_potion 553:on_wheel 562:start_trial 565:trial_won 572:companion_power
 
-## inn_tab.gd (86 lines)
+## hold_tip.gd (85 lines)
+Tap-and-hold tooltips. Phones have no hover, so Godot's tooltips never show
+17:_input 36:_process 49:_control_at 57:_show 81:_close
+
+## inn_tab.gd (122 lines)
 Town > Inn: rest to full health (cheap; free while you're new), buy potions,
-25:setup 67:_rest 73:refresh
+27:setup 80:_overheard 84:_rest 90:refresh 107:_recruit 117:_recruit_refresh
 
-## item_grid.gd (63 lines)
-Small square item pictures (the Vault, the Gear page): the item's icon on a
-8:grid 16:fit 22:picture 30:cell
+## item_grid.gd (69 lines)
+Small square item pictures (the Bag, the Vault, the Gear page): the item's icon on a
+10:grid 18:fit 24:picture 32:cell
 
-## item_pool.gd (516 lines)
+## item_pool.gd (525 lines)
 Every hand-made item that can drop. No random affixes: each item has a fixed
-499:pick 504:all_types 510:count
+506:pick 513:all_types 519:count
 
-## item_popup.gd (64 lines)
+## item_popup.gd (72 lines)
 Tap any item to see it side by side with what you're wearing in that slot,
-7:show_item 12:_build 43:_card
+7:show_item 12:_build 48:_card
 
-## item_text.gd (114 lines)
+## item_text.gd (121 lines)
 How items are described everywhere (bag, gear, shop, craft), so it's consistent.
-5:line 10:delta 23:describe 60:compare 80:plain 92:tip 112:is_precious
+5:line 10:delta 23:describe 65:compare 85:plain 99:tip 119:is_precious
 
 ## leaderboard_tab.gd (92 lines)
 Online > Leaders: the deepest Hardcore runs, online and your own.
 11:setup 36:refresh 49:_load
 
-## lineage.gd (462 lines)
+## lineage.gd (468 lines)
 Who your hero is beyond their class: racial power and awakening,
-12:power 16:gain 22:spend_power 31:bonus_sources 42:full_moon 50:next_rank 54:rank_name 58:awaken_block 74:awaken 80:_rank_up 95:update_look 104:roll_keys 123:_give_key 128:_source_matches 149:on_hit 166:on_floor 176:on_faith 181:transform 194:lich_block 208:lich_ritual 217:save_from_death 228:cure_info 231:start_cure 239:on_kill_cure 244:cure_block 255:finish_cure 265:cured 281:rep 287:change_rep 302:race_plural 315:enemy_race 318:on_kill 337:enemy_attack_mult 347:escape_chance 356:escape_block 370:try_escape 395:can_spare 398:spare 423:_move_on 434:to_save 440:from_save
+12:power 16:gain 22:spend_power 31:bonus_sources 42:full_moon 50:next_rank 54:rank_name 58:awaken_block 74:awaken 80:_rank_up 95:update_look 104:roll_keys 123:_give_key 128:_source_matches 149:on_hit 166:on_floor 176:on_faith 181:transform 194:lich_block 208:lich_ritual 217:save_from_death 228:cure_info 231:start_cure 239:on_kill_cure 244:cure_block 255:finish_cure 265:cured 281:rep 287:change_rep 302:race_plural 315:enemy_race 318:on_kill 337:enemy_attack_mult 347:escape_chance 356:escape_block 372:try_escape 397:can_spare 402:spare 423:_move_on 434:to_save 441:from_save
 
-## loot_filter.gd (60 lines)
-Loot filter rules: which new drops get turned into scrap right away.
-12:show_for 42:_toggle_slot 49:_update
+## loading_screen.gd (46 lines)
+Next update (Juzo): a loading screen. It covers the screen while the game
+21:_ready
 
-## lpc.gd (604 lines)
-Hero art built from the LPC (Liberated Pixel Cup) character parts in art/lpc/
-24:manifest 35:available 38:has_item 43:base_ramp 55:_maps 66:ramp6 75:eye_ramp 78:_img 89:_recolor 117:_match 138:build 159:build_walker 164:_layers 196:_compose 242:_silhouette 338:fur_ramp 342:hair_styles 353:crest 394:spec 490:_mat_ramp 496:_part 513:attack_anim 583:monster_spec
+## loot_filter.gd (89 lines)
+2.1: the one Loot filter screen. Every rule for new drops in one place (the rules
+11:show_for 19:_row_button 32:_fill
 
-## mail.gd (196 lines)
+## loot_rules.gd (143 lines)
+2.1: the one loot filter. Every rule for new drops lives here, and the one
+20:defaults 32:rules 48:get_rule 51:set_rule 55:toggle 58:cycle_rarity 64:toggle_slot 69:cycle_action 73:protected 83:decide 95:_matches 110:carry_out 123:summary
+
+## lore.gd (90 lines)
+0.13+ (Stage 3): the story of Solaria, found a page at a time in the dungeon
+28:maybe_find 65:keeper_art 74:talk
+
+## lore_tab.gd (45 lines)
+Codex > Lore: the pages of Solaria's story you've found (lore.gd), in order.
+10:setup 19:refresh
+
+## mail.gd (194 lines)
 The Mailbox: every reward lands here instead of straight in your bag.
-23:_letter 30:post 62:is_empty 66:unread 74:waiting 81:find 88:summary 115:collect 154:collect_all 161:delete 169:delete_empty 182:sync
+23:_letter 30:post 62:is_empty 66:unread 74:waiting 81:find 88:summary 113:collect 152:collect_all 159:delete 167:delete_empty 180:sync
 
 ## mail_tab.gd (129 lines)
 Town > Mailbox: letters with rewards (bounties, deeds, news and gifts).
 11:setup 19:refresh 66:_letter 114:_peek 118:_collect 124:_collect_all
 
-## main.gd (1576 lines)
+## main.gd (1982 lines)
 The main screen: top bar, the fight on the left, and three tab groups on
-110:_ready 141:_fresh_start_check 158:_show_fresh_start 167:_migrate_old_saves 182:show_title 189:back_to_title 200:play_slot 205:new_hero 212:_start 256:_share_skill_book 265:_daily_login 297:_show_creator 318:engage_monster 324:interact_prop 332:pick_door 339:_show_path_choice 393:_choose_path 405:_show_recap 463:show_look_editor 472:_on_hardcore_death 498:_on_tick 506:_manual_turn 520:_build_ui 614:_fit_root 618:_fit_layout 642:_group 650:_build_top_bar 739:_build_fight 840:_build_town 867:_on_building 882:_choose_floor 886:_leave_town 896:toast 915:go_to_town 940:_town_heroes 956:_sync_town 1002:confirm 1017:_show_calamity 1042:_blackout 1071:_show_class_picker 1119:_on_class_chosen 1130:_give_class_outfit 1145:_show_tree_picker 1164:apply_settings 1175:reset_save 1186:_on_battle_tapped 1200:show_tab 1208:_groups 1215:refresh 1258:_handle_events 1317:_play_moments 1331:_popup_open 1337:_pull_messages 1353:_refresh_top 1385:_refresh_fight 1446:_build_nav 1485:_apply_nav 1523:_nav_icon 1533:_refresh_tabs
+126:_ready 182:_fresh_start_check 211:_has_current_heroes 220:_title_popups 232:_maybe_welcome 239:_migrate_towns 245:_migrate_old_saves 260:show_title 267:_show_home_tally 310:dive_again_floor 314:dive_again 319:save_everything 330:_flush_saves 336:_notification 348:_show_save_notices 360:back_to_title 366:play_slot 371:new_hero 378:_start 432:_share_skill_book 442:daily_grid 450:_daily_login 482:_show_creator 505:engage_monster 511:interact_prop 519:pick_door 526:_show_path_choice 580:_choose_path 592:_show_recap 623:show_look_editor 636:_record_hardcore_death 647:_on_hardcore_death 661:_on_tick 683:_manual_turn 700:_build_ui 831:_fit_root 837:_fit_layout 875:_group 883:_build_top_bar 979:_build_fight 1090:_apply_drawer 1098:_build_town 1130:_on_building 1145:_choose_floor 1149:_leave_town 1159:toast 1181:go_to_town 1211:_town_heroes 1229:_sync_town 1289:confirm 1304:_show_calamity 1329:_blackout 1358:_show_class_picker 1371:_on_class_chosen 1382:_give_class_outfit 1397:_show_god_offer 1415:_show_tree_picker 1439:apply_settings 1456:reset_save 1467:_on_battle_tapped 1481:show_tab 1489:_groups 1496:refresh 1542:_coach_pump 1554:_handle_events 1642:_play_moments 1656:_popup_open 1662:_pull_messages 1679:_refresh_top 1727:_refresh_fight 1801:_build_nav 1841:_apply_nav 1890:_nav_icon 1906:_refresh_tabs 1951:_confirm_leave
 
 ## mastery.gd (77 lines)
 Weapon mastery: every kill with a kind of weapon (swords, bows, staves...)
 22:weapon_type 27:kills 30:level_for 37:level 41:bonus 56:text 70:on_kill
 
-## menagerie.gd (248 lines)
+## menagerie.gd (334 lines)
 Owned pets (0.12). Separate from the class companion (World.PETS), which some
-34:is_tamer 37:is_whisperer 41:whisperer_near 50:max_out 53:find 60:out 68:toggle_out 80:make_pet 89:power 97:catch_block 111:can_catch 114:catch_chance 121:try_catch 144:turn 156:on_kill 164:on_wipe 172:on_floor 188:give_egg 195:hatch 215:heal_cost 218:heal 231:rename 239:has_any 243:texture
+33:is_tamer 36:is_whisperer 40:whisperer_near 49:max_out 52:find 59:out 67:toggle_out 83:make_pet 97:power 105:catch_block 119:can_catch 122:catch_chance 129:try_catch 152:turn 166:on_kill 175:on_wipe 183:on_floor 202:give_egg 214:egg_zone 225:egg_name 233:hatch 268:heal_cost 271:heal 284:rename 292:has_any 296:texture 299:species_texture 313:roll_tier 323:release
 
-## merchant_popup.gd (95 lines)
+## merchant_popup.gd (120 lines)
 Snik the goblin trader (or a race's merchant in a realm camp): cheap gear,
-12:show_for 33:rows 79:_fill
+13:show_for 40:rows 86:_fill
 
-## moments.gd (254 lines)
+## milestones.gd (33 lines)
+0.13+ (Stage 3): milestone cutscenes. The first time you reach a big moment, the
+9:_once 17:on_floor 22:on_boss 26:on_item 30:on_home
+
+## moments.gd (270 lines)
 The big moments, full screen: stepping into a realm, a realm boss's
-12:play 19:_build 101:_line 110:_gui_input 114:close 131:evolve 143:_build_evolve 222:_burst 230:_process 240:_draw
+12:play 19:_build 112:_line 121:_gui_input 125:close 142:evolve 154:_build_evolve 234:_burst 244:_process 256:_draw
 
-## monsters.gd (274 lines)
+## monsters.gd (347 lines)
 Everything about the creatures themselves: their lore for the Bestiary,
-176:info 182:all_info 185:tier_name 188:tier_color 192:tier_weights 206:roll_tier 215:roll_mods 221:milestone_bonus 228:next_milestone 235:all_monsters 244:all_bosses 251:has_signature 254:signature_def 258:signature_owner 267:sig_by_art
+214:registry 236:by_id 240:name_of 245:id_of 251:info 260:all_info 263:tier_name 266:tier_color 270:tier_weights 284:roll_tier 293:roll_mods 299:milestone_bonus 306:next_milestone 313:all_monsters 322:all_bosses 329:has_signature 332:signature_def 336:signature_owner 345:sig_by_art
 
-## new_hero_picker.gd (55 lines)
-Making a new hero: Regular or Hardcore first, then race and look.
-5:show_for 27:_card 45:_go
+## onboarding.gd (197 lines)
+2.1 G9: the first-time flow for a brand-new player. One short coach card at a
+34:step 41:active 44:asked 47:finished 50:seen 54:set_on 58:mark 66:should_welcome 75:menu_tip 82:_happened 102:on_start 116:pump 133:holds_page 139:show_welcome 161:coach
 
-## online.gd (381 lines)
+## online.gd (504 lines)
 Online features through Supabase (a free hosted database):
-29:setup 32:configured 35:is_configured 38:user_id 41:has_name 48:_headers 60:_request 86:_friendly 98:_rest 117:ensure_login 144:register_name 165:submit_run 171:top_runs 179:my_guild 186:list_guilds 192:guild_rankings 195:create_guild 209:join_guild 215:leave_guild 220:guild_members 224:update_best 233:week_id 240:day_id 244:raid_boss_for 249:raid_hp 258:raid_damage 269:raid_status 296:raid_attack 301:raid_claim 311:cloud_code 321:pack_local 337:unpack_local 357:cloud_backup 366:cloud_restore
+29:setup 32:configured 35:is_configured 38:user_id 41:has_name 48:_headers 60:_request 86:_friendly 98:_rest 117:ensure_login 144:register_name 165:delete_account 178:submit_run 184:top_runs 192:my_guild 199:list_guilds 205:guild_rankings 208:create_guild 222:join_guild 228:leave_guild 233:guild_members 237:update_best 246:week_id 253:day_id 257:raid_boss_for 262:raid_hp 271:raid_damage 282:raid_status 309:raid_attack 314:raid_claim 324:cloud_code 337:pack_local 360:_key_ok 366:bundle_error 402:bundle_ok 410:unpack_local 469:_hero_label 473:_clear_staging 478:cloud_backup 487:cloud_restore
 
 ## online_config.gd (12 lines)
 Paste your Supabase project's details here to turn on online features.
 
 
-## online_ui.gd (55 lines)
+## online_ui.gd (60 lines)
 Shared pieces for the Online tabs: the "not set up" card and the name picker.
-5:not_setup_card 16:name_card 47:clear 51:error_label
+5:not_setup_card 21:name_card 52:clear 56:error_label
 
-## overlay.gd (50 lines)
+## overlay.gd (57 lines)
 A dimmed full-screen popup with a centered panel. Used for menus,
-11:open 42:_fit_height 48:close
+11:open 46:is_narrow 49:_fit_height 55:close
 
-## party.gd (274 lines)
+## party.gd (287 lines)
 Your party: the hero you're playing plus up to 2 of your other Regular
-39:size 42:living 46:load_members 70:heal_all 74:save_all 78:hp_mult 81:atk_mult 85:pick_target 100:hit_member 128:act 160:_use_a_skill 221:_lowest 231:_heal 244:on_kill 256:auto_spend 260:on_floor 269:on_wipe
+41:size 44:living 48:load_members 72:heal_all 76:save_all 81:flush 85:hp_mult 88:atk_mult 91:row_weight 95:pick_target 111:hit_member 141:act 173:_use_a_skill 234:_lowest 244:_heal 257:on_kill 269:auto_spend 273:on_floor 282:on_wipe
 
-## party_tab.gd (129 lines)
+## party_tab.gd (190 lines)
 Character > Party: bring your other Regular heroes along. They fight with
-11:setup 20:refresh 77:_pic 86:_card_for_leader 98:_member_card
+11:setup 20:refresh 85:_preset_rows 92:_bench_rows 110:_pic 119:_card_for_leader 131:_member_card 164:_synergy_rows 178:_frame 184:_slot
 
-## patch_notes.gd (140 lines)
+## patch_notes.gd (165 lines)
 What changed in each version. Shown on the title screen.
-137:tip_of_the_day
+162:tip_of_the_day
 
-## pet_tab.gd (180 lines)
-Hero > Pets (visible to everyone, so players know pets exist): your class
-13:setup 21:refresh 32:_owned 63:_pet_row 126:_pet_card
+## peoples.gd (44 lines)
+0.13+ (Stage 3): race friendliness you can feel. When you meet one of a race's
+13:on_spawn 24:part_ways
 
-## pets.gd (22 lines)
-Pictures of companions. Each class's companion has 4 stages; the art is in
-8:texture_for 17:portrait
+## pet_abilities.gd (333 lines)
+2.1: what an owned pet can do besides hitting, by its rank. All data, no
+77:is_calamity 81:family 88:home 102:signature_of 106:_rank 109:passive_value 112:_step 115:has_trick 118:has_signature 125:_num 128:_fill 131:passive_text 135:trick_text 138:family_trick_text 144:family_passive_range 150:signature_text 153:region_signature_text 159:lines 181:bonus_sources 208:regen_share 221:pet_shield 231:_fight_start 240:on_pet_turn 268:on_kill 276:apply
 
-## portals.gd (236 lines)
-2.1 F3: one portal system (rifts, realm gates, trials): rules, cards, leaving, resume.
-42:inside 45:kind 53:hold_text 62:no_run_text 66:open_block 83:offer 92:title 98:card 111:choose 132:danger_text 151:_rift_prop 158:rift_depth_here 162:offer_rift 172:leave 181:on_fall 188:lose_trial 195:_end_trial 203:leave_for_scroll 211:scroll_note 225:resume
+## pet_book_tab.gd (136 lines)
+Codex > Pets (next update): every monster that could be your pet, by area.
+12:setup 21:refresh 60:_cell 99:_lines 108:_show 127:_abilities
 
-## profile.gd (142 lines)
+## pet_tab.gd (229 lines)
+Character > Pets (visible to everyone, so players know pets exist): your class
+13:setup 21:refresh 32:_owned 70:_pet_row 145:_ability_lines 158:_pet_card 215:_frame 223:_slot
+
+## pets.gd (98 lines)
+Pictures of companions and owned pets.
+17:texture_for 27:clear_cache 30:portrait 37:art 44:idle 60:portrait_frame 68:companion_key 73:frame 78:foot 87:white 95:egg
+
+## portals.gd (360 lines)
+2.1 (F3): one portal system. Every place that takes you out of the normal run
+42:inside 45:kind 53:hold_text 62:no_run_text 66:open_block 83:offer 92:title 100:card 117:choose 146:danger_text 165:_rift_prop 172:_portal_prop 188:maybe_door 198:read_door 206:trial_offer 222:gate_trial 226:start_trial 240:offer_trial 251:auto_wants 263:auto_pick 271:auto_door_score 275:rift_depth_here 279:offer_rift 289:leave 298:on_fall 305:lose_trial 315:_end_trial 323:leave_for_scroll 331:scroll_note 345:resume
+
+## presets.gd (352 lines)
+2.1: one presets system. A preset bundles your stat spread, skills, worn gear,
+13:ensure 17:get_preset 21:is_saved 24:name_of 27:rename 36:save 63:clear 70:apply 96:_apply_stats 109:_apply_skills 130:_apply_gear 157:_apply_party 179:_apply_supplies 200:summary 229:migrate 251:_first_empty 264:teams 269:team_saved 272:save_team 276:clear_team 282:team_plan 303:team_label 313:apply_team 337:apply_pending_team 350:team_leader_gone
+
+## presets_screen.gd (155 lines)
+2.1: the one Presets screen. Each preset holds your stats, skills, worn gear,
+13:show_for 27:_fill 54:_fill_teams 83:_use_team 102:_save_team 111:_use 118:_save 127:_clear 133:_rename 149:_changed
+
+## profile.gd (335 lines)
 Things shared by all your heroes: settings, which hero you played last,
-40:load_profile 50:_from 78:save 91:fresh_start_due 95:reset_progress 110:slots_open 117:stash_capacity 121:take_settings_from 129:record_hc_run 140:delete
+62:load_profile 73:_from 119:_store_town 126:_load_town 140:_bind 144:_init 148:switch_town 158:town_name 162:town_hardcore 166:found_town 171:rename_town 179:town_founded 182:save 194:fresh_start_due 198:reset_progress 221:slots_open 226:earned_slots 234:slot_lock_note 241:stash_capacity 245:take_settings_from 253:record_hc_run 264:delete 270:build_towns 304:fill_town_modes 322:free_slot 329:recruit_note
 
 ## race_tab.gd (237 lines)
 Character > Race: your racial power and awakening, your transformation
 11:setup 20:refresh 36:_power_card 93:_awakening 137:_need 142:_form 180:_reputation 210:_realms
 
-## races.gd (352 lines)
+## races.gd (405 lines)
 The 12 races, their racial power and awakening, the 4 earned
-227:info 231:skins 234:ranks 237:power_info 241:power_bonus 251:rep_level 257:rep_index 264:start_rep 274:key_text 281:source_text 296:bonus_text 323:gear_for 326:make_race_gear 334:gear_by_art 341:def_race 349:can_wear
+221:current 226:retire_look 238:retire_rep 245:info 249:skins 252:ranks 255:power_info 259:power_bonus 269:rep_level 275:rep_index 282:start_rep 292:key_text 299:source_text 314:bonus_text 341:gear_for 344:make_race_gear 352:gear_by_art 360:def_race 368:can_wear 398:hair_styles
 
 ## raid_tab.gd (163 lines)
 Online > Raid: this week's guild raid boss. Everyone in the guild gets 3
 12:setup 20:refresh 24:reload 29:_load 64:_show 146:_num 154:_time_left
 
-## realms.gd (878 lines)
+## realms.gd (855 lines)
 Floors 251-500: the realms of the races. The World Tree's roots (floors
-161:cosmetic_by_art 164:info 167:realm_name 171:id_for_zone 175:zone_for_id 179:zone_race 184:is_people 201:here 204:misses 207:scrap_mult 210:lifesteal_mult 213:damage_mult 217:on_turn 237:hides_tier 240:roll_illusion 372:is_realm_start 377:portal_options 396:_bias 410:lock_reason 420:fill_order 436:offer_portals 448:enter 468:path_info 512:path_title 527:start_encounter 562:_rival_here 570:encounter_choice 604:_ambush 631:start_realm_event 641:realm_event 706:week_mult 710:realm_of_week 714:loot_bonus 720:offer_camp 724:camp 739:_make_camp_merchant 756:new_quest 766:quest_kill 791:secret 799:secrets_found 807:on_floor 822:maybe_spirit 833:on_spirit_kill 840:completion 865:note_seen
+159:cosmetic_by_art 162:info 165:realm_name 169:id_for_zone 173:zone_for_id 177:zone_race 182:is_people 199:here 202:misses 205:scrap_mult 208:lifesteal_mult 211:damage_mult 215:on_turn 235:hides_tier 238:roll_illusion 370:is_realm_start 375:portal_options 394:_bias 408:lock_reason 418:fill_order 434:offer_portals 443:enter 463:path_info 488:path_title 501:start_encounter 536:_rival_here 544:encounter_choice 578:_ambush 605:start_realm_event 615:realm_event 680:week_mult 684:realm_of_week 688:loot_bonus 694:offer_camp 698:camp 713:_make_camp_merchant 730:new_quest 740:quest_kill 765:secret 773:secrets_found 781:on_floor 798:maybe_spirit 810:on_spirit_kill 817:completion 842:note_seen
 
-## room_view.gd (261 lines)
+## rewards_tab.gd (100 lines)
+2.1 G4: Codex > Rewards. Every collection milestone (collections.gd), what it
+11:setup 20:refresh 46:_row 69:_track_card 95:_wrap_card
+
+## rifts.gd (114 lines)
+Rifts, one kind of portal (portals.gd has the shared rules). Very rarely a door
+22:maybe_door 28:roll_depth 31:depth 35:enter 50:resume 58:_next 76:on_kill
+
+## room3d.gd (673 lines)
+0.13+: the room you stand in as a real 3D scene, rendered small into a
+59:_init 67:_ready 70:_process 92:texture 96:fit 106:_aim 119:rebuild 161:vine_tex 186:moss_tex 203:web_tex 229:_tex 239:_mat 257:prop 261:_zpath 271:_zart 275:_wall_mat 278:_box 290:_check_seen 297:_sprite 312:_flat 337:_light 353:_torch 365:_light_pool 369:_particles 397:_environment 416:_shell 465:_pillars 473:_vines_on_walls 480:_vines_hanging 487:_moss_patches 493:_cobwebs 500:_hanging_roots 516:_rubble 521:_zone_props 543:_signature 582:_region_particles 600:_overgrown_hall 618:_collapsed_chamber 634:_mushroom_grotto 645:_forgotten_shrine 667:_root_choked
+
+## room_view.gd (354 lines)
 0.13 The Halls Below: the room you're standing in, first-person from the doorway
-17:setup 23:_process 41:_gui_input 64:_draw 111:_prop_z 114:_prop_x 202:_step_motes 214:_mote_vel
+18:setup 24:_process 44:_gui_input 67:_draw 115:_prop_z 119:_prop_x 260:_step_motes 275:_mote_vel
 
-## settings_menu.gd (258 lines)
+## run_log.gd (26 lines)
+0.13+: run history. Every dive ends in the log: home safe or fallen, how deep,
+8:add 17:lines
+
+## save_io.gd (280 lines)
+R4 save safety (2.1): every save file goes through here.
+51:now_ms 55:now_unix 62:tmp_path 66:backup_path 70:day_path 73:corrupt_path 76:all_paths 82:delete_all 89:exists 96:fallback_paths 105:made_by_save_io 112:backup_count 125:write 160:_age 166:_move 174:_truncate_half 187:read 192:load_file 228:_label 231:_notice 239:_parse 262:migrate 278:should_defer
+
+## save_migrate.gd (499 lines)
+One-time move of Solaria 2.0 saves (Profile.save_epoch 12) into 2.1 (epoch 13).
+40:due 47:_has_old_town_heroes 56:hero_paths 72:run 111:_codex_written 118:_profile_written 123:_backup_all 145:migrate_hero 200:_migrate_class 245:class_id 257:_migrate_wardrobe 295:_walk_items 307:migrate_item 349:unique_def 360:set_id_of 371:_set_of_piece 378:_set_piece_def 393:_new_art 414:monster_id 440:migrate_codex 483:item_def_of
+
+## settings_menu.gd (364 lines)
 The Menu: sound and music volume, fullscreen, reset save, and Dev Mode.
-17:show_for 177:_slider 195:_toggle_a11y 211:_cloud_backup 218:_restore_popup 229:_cloud_restore 239:_update
+21:show_for 235:_slider 255:_show_debug_info 268:_toggle_a11y 290:_delete_account 294:_cloud_backup 301:_restore_popup 312:_cloud_restore 322:_update 352:_style_toggles
 
-## sfx.gd (175 lines)
+## sfx.gd (227 lines)
 Sound effects and music. Loads the recorded sounds from res://sounds/ and
-25:_ready 87:set_volumes 94:_music_db 97:play 108:update_music 119:play_music 141:_synth
+35:_ready 110:set_volumes 119:_music_db 122:play 135:update_music 150:play_music 172:_synth 207:_amb_db 211:play_ambience
 
-## shop_tab.gd (300 lines)
-Town > Shop: Grimble's Wares. A featured deal, gear on the shelves as
-34:setup 145:_supply_card 170:_gear_card 210:_rebuild_shelf 220:_refresh_wanderer 232:refresh
+## share_card.gd (330 lines)
+2.1 G8: the share card. A portrait picture (1080 x 1350, the shape social apps
+27:facts 70:_pet 81:_top_trophies 91:file_name 105:pixel_font 113:_label 129:_box 141:build 254:_chip 262:can_render 267:render 286:save 297:share 310:_preview
 
-## signatures.gd (259 lines)
-Signature skills: every class on the Evolution Tree (levels 15, 35, 60 and
-100:id_of 103:is_signature 106:node_of 110:info 120:_element 129:_tags 137:_f 140:_build 250:owned 257:rank
+## shop_tab.gd (315 lines)
+Town > Shop: Marta's Goods. A featured deal, gear on the shelves as
+34:setup 150:_supply_card 175:_gear_card 219:_rebuild_shelf 229:_refresh_wanderer 241:refresh 311:_frame
+
+## signatures.gd (293 lines)
+Signature skills: every class on the Evolution Tree (levels 15, 35, 75 and
+103:auto_name 134:id_of 137:is_signature 140:node_of 144:info 154:_element 163:_tags 171:_f 174:_build 284:owned 291:rank
 
 ## skill_data.gd (211 lines)
 Every skill in the game. Skills come from ability stones that monsters drop.
 150:info 155:skill_name 158:is_active 161:all_of 169:roll_stone 188:craft_cost 195:rank_mult 199:describe
 
-## skill_icons.gd (43 lines)
+## skill_icons.gd (76 lines)
 Skill icons: one frame of the matching effect (art/fx) for each skill tag.
-10:for_tag
+13:_plate 43:for_tag
 
-## skills_tab.gd (339 lines)
+## skills_tab.gd (406 lines)
 Character > Skills: the Skill Book. Every skill you've found from ability
-24:setup 81:_slot_button 111:_passes 125:refresh 179:_show_detail 208:_toggle_equip 219:_craft_popup 250:auto_battle_popup 255:_fill_auto
+26:setup 98:_slot_button 148:_passes 162:refresh 208:_card 245:_show_detail 280:_toggle_equip 291:_craft_popup 322:auto_battle_popup 327:_fill_auto 401:_face
 
-## sprites.gd (578 lines)
+## smith.gd (53 lines)
+0.13+ (Juzo's notes): Hilde Ironbraid, the town's dwarf smith, runs a real shop.
+13:restock 34:buy
+
+## snik.gd (91 lines)
+0.13+ (Stage 3): Snik the goblin trader gets a personality and haggling. He warms
+12:friendship 20:friendship_name 24:greeting 36:haggle_chance 39:can_haggle 43:haggle 63:thanks 82:curio
+
+## sprite_light.gd (59 lines)
+Monsters in fights and rooms: the art keeps its own drawn shades (no wash, no tint, no
+12:lit 35:shade 57:_open
+
+## sprites.gd (619 lines)
 Builds the hero and monster pictures from the PNGs in art/ (made by
-67:skins 70:hair_colors 73:eye_colors 77:swatches 85:_key 88:_ckey 91:_add_ramp 98:ramp_from 118:_img 133:_recolor 146:_layer 154:_stack 177:_silhouette 190:gear_look 230:race_look 264:_char_map 275:_gear_map 289:hero 369:_hero_lpc 386:hero_back 412:consumable_icon 421:item_icon 446:portrait 468:enemy_key 483:enemy 486:enemy_by_key 530:pose_image 558:poses_for
+77:skins 80:hair_colors 83:eye_colors 87:swatches 95:_key 98:_ckey 101:_add_ramp 108:ramp_from 128:_img 143:_recolor 156:_layer 164:_stack 187:_silhouette 200:gear_look 240:race_look 274:_char_map 285:_gear_map 299:hero 382:_hero_pl_cached 397:_hero_pl 419:chunky 449:hero_back_of 462:hero_back 470:consumable_icon 479:item_icon 506:portrait 530:enemy_by_key 549:clear_monster_cache 576:pose_image 599:poses_for
 
-## stash_tab.gd (158 lines)
+## stash_tab.gd (175 lines)
 Town > Vault: a chest shared by all your Regular heroes, shown as a grid of
-21:setup 67:_on_resized 70:_pick 76:_move 92:_upgrade 105:_picked_item 117:refresh
+21:setup 67:_on_resized 70:_pick 76:_move 92:_upgrade 105:_picked_item 117:refresh 166:_vault_takes 169:_bag_takes 172:_drop_move
 
-## stats_tab.gd (62 lines)
+## stats_tab.gd (67 lines)
 Codex > Stats: lifetime numbers for all your heroes together.
 10:setup 19:_n 27:refresh
 
-## title_screen.gd (297 lines)
+## store.gd (105 lines)
+Stage 4: real-money purchases through Apple's App Store (StoreKit), SWITCHED OFF.
+28:available 31:_api 35:request_prices 41:buy 50:restore 59:poll 67:handle 89:grant 103:owns
+
+## store_popup.gd (66 lines)
+Stage 4: the real-money store (Menu > Supporter store). Only reachable when
+10:show_for 29:_process 38:_update
+
+## supplies_popup.gd (67 lines)
+Next update (Juzo): what you carried down. Drink an elixir or read a Return
+8:show_for
+
+## synergies.gd (92 lines)
+0.13+ (Stage 3): team synergies and the Team Strike. Who you bring matters: certain
+29:classes 36:_count 40:active 58:has 61:damage_mult 64:skill_mult 67:reward_mult 70:crit_bonus 74:strike_left 81:team_strike
+
+## title_screen.gd (307 lines)
 The first thing you see: an animated dungeon scene, Continue / New hero /
-24:show_for 49:_bg 53:_pick_monster 60:_new_mote 65:_fit 70:_process 89:_draw 139:_build 180:_fill_menu 219:_hero_line 234:_free_slot 240:_locked_text 246:_fill_side 291:refresh_menu 294:close_and
+24:show_for 49:_bg 53:_pick_monster 60:_new_mote 65:_fit 70:_process 89:_draw 139:_build 189:_fill_menu 228:_hero_line 243:_fill_side 291:refresh_menu 294:close_and
 
-## town.gd (414 lines)
+## town.gd (462 lines)
 The town: the safe hub you return to between dives. No fighting happens here.
-47:look 55:blocked 73:floor_clear 77:use_return 90:enter 129:carry_amount 132:leave 149:local_goods 163:rest_cost 166:rest 188:refresh_board 206:_monsters_here 218:_taken_targets 224:_new_contract 263:taken_count 270:ready_count 277:take 289:drop 294:reroll_cost 298:reroll 310:on_kill 332:reward_text 347:_pay 358:claim 371:reward_item 386:deed_reward 398:claim_deed
+49:look 58:blocked 75:floor_clear 79:use_return 91:enter 138:carry_amount 141:leave 160:start_dive 167:_home_tally 185:local_goods 199:rest_cost 202:rest 225:refresh_board 243:_monsters_here 255:_taken_targets 261:_new_contract 297:max_taken 300:taken_count 307:ready_count 314:take 326:drop 331:reroll_cost 335:reroll 347:on_kill 369:reward_text 382:_pay 393:claim 406:reward_item 421:deed_reward 435:claim_deed 453:dive_finds
 
-## town_view.gd (527 lines)
-The town map: a top-down picture of the town (art/town/town_<season>.png, built by
-49:_spots 57:set_pets 77:_ready 115:_season_tex 120:set_look 131:map_size 136:_layout 162:to_view 165:to_map 168:_spot_at 184:_scroll 190:_gui_input 221:_notification 226:_process 240:_make_folk 255:set_heroes 270:_step_folk 381:_step_weather 394:_new_part 473:_plate_rect 489:_font_size
+## town_events.gd (61 lines)
+0.13+ (Stage 3): the town has its own life. Sometimes when you get home something
+26:on_home 39:is_on 43:price_mult 46:xp_mult 49:gold_mult 52:wanderer_mult 56:note
 
-## ui.gd (314 lines)
+## town_folk.gd (111 lines)
+Town walkers from the PixelLab heroes (HeroArt): the two front idle frames, flipped for left /
+32:walker 47:hero 52:townsfolk 59:half 106:_lum 109:clear_cache
+
+## town_map.gd (210 lines)
+Town map overlay (approved mockup 10; Juzo via town dev 2: the iso town is "a little
+49:icon 63:_ready 72:_iso 76:_quad 80:_block 91:_draw 154:_gui_input 176:open_for
+
+## town_select.gd (85 lines)
+Next update (Juzo): your towns. A save is a town holding a roster of heroes,
+10:show_for 19:_card 69:_go
+
+## town_view.gd (1175 lines)
+The town map: a picture of the town that you tap. Each building opens its page. The look
+83:_spots 91:set_pets 112:_ready 219:_shadow 228:_light_texture 239:_chevron 250:_bubble 263:refresh_levels 302:blocked_walk 310:_reaches 325:_season_tex 332:_iso_tex 342:_live_occluders 357:set_mode 362:set_look 373:map_size 378:_layout 408:_layout_iso 441:clamp_view 451:snap_origin 455:_device_scale 461:_spot_rect 469:_zoom_to 479:to_view 482:to_map 485:_spot_at 501:_scroll 511:_gui_input 547:_iso_input 583:_notification 590:_process 611:_make_folk 616:_build_next 636:set_heroes 648:_cell_px 653:_place_on_grid 662:_grid_path 685:_pick_goal 708:_arrive 719:_try_chat 736:_step_iso_walker 773:_step_folk 873:_cover 991:_pet_tex 1007:_step_weather 1020:_new_part 1108:_plate_rect 1124:plate_anchor 1132:_plate_shown 1143:_font_size
+
+## traveler_popup.gd (49 lines)
+Next update: talking to a traveler in the dungeon (travelers.gd). Their face,
+9:show_for 41:_choose
+
+## travelers.gd (151 lines)
+Next update (Juzo): people in the dungeon. Now and then a door opens on a
+32:pick 35:info 39:price 42:cost_text 52:can_pay 63:choose 126:auto_choose 146:portrait
+
+## trophies.gd (76 lines)
+2.1 G3: the Trophy Cabin. Each town remembers its proudest moments: the first
+21:has 25:record 34:on_boss 37:on_calamity 40:on_god 43:on_find 54:on_floor 60:all 70:slots 74:shown
+
+## ui.gd (408 lines)
 Shared colors and building blocks, so every screen looks and feels the same.
-31:short 38:hex 41:style 50:label 57:rich 66:vbox 71:hbox 76:spacer 81:panel 87:heading 92:button 106:primary 115:bar 124:pill 135:have_need 140:wrap 147:card 158:section 173:chip 185:tip 196:show_tip 226:big_button 250:make_theme
+70:short 77:hex 80:style 90:label 97:rich 106:vbox 111:hbox 116:spacer 121:panel 127:heading 133:button 147:primary 161:danger 169:role_color 175:bar 184:pill 195:have_need 200:wrap 207:card 221:section 236:chip 248:tip 259:show_tip 289:big_button 316:game_font 330:make_theme 402:fade_in
+
+## ui_icons.gd (121 lines)
+Interface pass (claude/research/ui-research.md): icons made from the game's
+20:glyph 40:gear 54:stat 61:ghost 78:plinth 105:big
+
+## ui_skin.gd (134 lines)
+Next update (Juzo): the dark fantasy look for menus, tabs and town pages,
+18:_key 24:frame 59:bevel 90:backdrop 130:_px
+
+## variants.gd (69 lines)
+0.13+ (Stage 3): monster variants. Now and then a monster turns up changed: gilded,
+21:maybe 29:make 40:tex
+
+## wanderers.gd (88 lines)
+0.13+ (Stage 3): rare wanderers. Now and then one of the old roaming things of
+24:maybe 32:make 56:turns_left 62:wander_off 72:reward
 
 ## wardrobe.gd (68 lines)
 Transmog: show any look you've found instead of the item you're wearing.
 11:show_for 61:_dot 66:_update
 
-## wheel_tab.gd (390 lines)
-Town > Wheel: Fortune's Wheel. Bet an item: win and it comes back one
-73:setup 137:_on_left_resized 140:_pick 160:refresh 179:_update 206:_spin 257:wheel_cap 260:_heat_now 263:_toggle_mode 274:_load_rarity 288:_slate_items 296:_update_high 324:_spin_time 327:_spin_all
+## whats_new.gd (86 lines)
+2.1 G9: "What's new" after an update. Shown once per version to players who
+34:due 43:summary 48:show_for
 
-## world.gd (450 lines)
+## wheel_tab.gd (559 lines)
+Town > Tavern: Fortune's Wheel. Put an item on it: win and it comes back one
+87:setup 187:_on_left_resized 190:_pick 216:_phone 219:refresh 243:_update 282:_spin 336:wheel_cap 339:_heat_now 342:_toggle_mode 353:_load_rarity 367:_slate_items 375:_update_high 403:_spin_time 406:_spin_all 475:_toggle_leg 484:_update_leg 497:_spin_leg 523:show_odds
+
+## wheel_tables.gd (247 lines)
+Fortune's Wheel tables: the ONE place the Wheel's odds live.
+54:normal_rows 62:deepest_floor 65:legendary_unlocked 69:on_floor 76:lock_text 82:fortune_parts 97:fortune 103:tier_mult 112:weights_for 118:weights 123:legendary_rows 135:top_pct 142:_sum 149:roll_index 159:pct_text 167:_commas 177:spin_cost 182:spin_legendary 209:bag_room_needed 217:prize_amount 234:deliver
+
+## world.gd (562 lines)
 The dungeon around the fights (v0.11):
-44:hazard_at 56:hazard 61:hazard_tag_power 74:dark_miss 81:hazard_turn 102:on_floor 118:is_milestone 122:champion_here 125:make_champion 133:champion_reward 158:start_event 181:bet_amount 185:choose 247:curses_unlocked 250:has_curse 253:toggle_curse 260:curse_loot 266:curse_gold 287:pet_info 290:pet_stage 295:pet_name 303:pet_species 308:check_pet 324:pet_turn 366:pet_guard 372:pet_first 380:next_goal 442:achievement_power 445:achievement_bonus
+44:hazard_at 55:hazard 60:hazard_tag_power 73:dark_miss 80:hazard_turn 101:on_floor 117:is_milestone 121:champion_here 124:make_champion 132:champion_reward 163:start_event 206:bundle_price 209:song_price 213:prisoner_reward 225:bet_amount 229:choose 337:curses_unlocked 340:has_curse 343:toggle_curse 350:curse_loot 356:curse_gold 377:pet_info 380:pet_stage 385:pet_name 393:pet_species 398:check_pet 414:pet_turn 456:pet_guard 462:pet_first 474:first_dive_goal 485:next_goal 554:achievement_power 557:achievement_bonus

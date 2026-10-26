@@ -16,13 +16,13 @@ func _initialize() -> void:
 		[{"body": "fem", "skin": 9, "hair": "Long", "hair_color": 8, "race": "Elf", "face": "sleepy"}, {"Class": {"cls": "Conjurer", "tier": 0}, "Weapon": {"type": "staff", "glow": false}}]]
 	for r in heroes.size():
 		var bk := Sprites.hero_back(heroes[r][0], heroes[r][1])
-		var an: Dictionary = bk["lpc"]
+		var an: Dictionary = bk["anims"]
 		var i := 0
 		for nm in ["combat_idle", "slash", "hurt"]:
 			for im in an[nm]["img"]:
 				sheet.blend_rect(im, Rect2i(0, 0, 96, 96), Vector2i(i * 96, r * 96))
 				i += 1
-		var fr: Dictionary = Sprites.hero(heroes[r][0], heroes[r][1])["lpc"]
+		var fr: Dictionary = Sprites.hero(heroes[r][0], heroes[r][1])["anims"]
 		for im in fr["combat_idle"]["img"]:
 			sheet.blend_rect(im, Rect2i(0, 0, 96, 96), Vector2i(i * 96, r * 96))
 			i += 1

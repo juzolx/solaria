@@ -5,7 +5,8 @@ extends SceneTree
 ## the boss stage room, plates that stay put while the hero lunges, the boss chip column and the
 ## menagerie pet beside the hero plate.
 const TestHero := preload("res://tests/test_hero.gd")
-const KEYS := ["kobold", "umibozu", "barghest+pack", "boss_grendel", "boss_charybdis", "calamity_2", "calamity_5"]
+const KEYS := ["kobold", "umibozu", "barghest+pack", "garmr+pack", "boss_grendel", "boss_charybdis",
+	"calamity_0", "calamity_1", "calamity_2", "calamity_3", "calamity_4", "calamity_5", "calamity_6", "calamity_7", "calamity_8", "calamity_9"]
 const SIZES := [Vector2i(430, 932), Vector2i(375, 667)]
 var fails := 0
 func check(c: bool, m: String) -> void:
@@ -41,7 +42,8 @@ func _initialize() -> void:
 	for wsz in SIZES:
 		root.size = wsz
 		# headless never applies the stretch: give the fight the phone's (504 design px wide)
-		BattleView.test_scale = minf(wsz.x / 504.0, wsz.y / 896.0)
+		if DisplayServer.get_name() == "headless":
+			BattleView.test_scale = minf(wsz.x / 504.0, wsz.y / 896.0)
 		for i in 6:  # the stretch and main's fit settle over a few frames
 			await process_frame
 		for arg in KEYS:
@@ -81,6 +83,8 @@ func _check_fight(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 		return
 	var sc: float = bv._scr()
 	var unit: int = bv._unit()
+	if arg == "kobold":
+		print("%s: stretch %.3f, stage %s" % [tag, sc, bv.size])
 	check(unit == (3 if wsz.y > 800 else 2), "%s: pixel unit %d" % [tag, unit])
 	var er: Rect2 = bv._enemy_rect(st.enemy_is_boss)
 	var ui := er.size.x / (art["size"] as Vector2).x * sc
@@ -90,7 +94,17 @@ func _check_fight(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 		check(roundf(ui) <= bv._hero_unit(), "%s: boss pixel %d over the hero's %d" % [tag, roundf(ui), bv._hero_unit()])
 		if not st.enemy_is_boss and st.enemy_calamity == 0:
 			check(roundf(ui) == unit, "%s: tall common pixel %d, not the unit %d" % [tag, roundf(ui), unit])
-		check(er.end.y <= bv._team_ground() + 0.5, "%s: feet %.0f under the team line %.0f" % [tag, er.end.y, bv._team_ground()])
+		if st.enemy_calamity > 0 and wsz.y < 800:
+			# fable r3 item 2: all ten Calamities keep the hero's 2x on an SE (a taller one fails here)
+			check(roundf(ui) == unit, "%s: Calamity pixel %d on the SE, not %d" % [tag, roundf(ui), unit])
+		if st.horde_pack:
+			# a tall pack on the boss stage: the mates stay under the top bar and its name, on screen
+			for side in [-1.0, 1.0]:
+				var pr: Rect2 = bv._pack_rect(er, art, side)
+				check(pr.position.y >= bv._boss_bar().end.y + bv.BOSS_NAME - 0.5, "%s: pack-mate top %.0f under the boss bar" % [tag, pr.position.y])
+				check(pr.end.y <= bv._team_ground() + 0.5, "%s: pack-mate feet %.0f under the team line" % [tag, pr.end.y])
+		var feet_y := er.position.y + (float(art["foot"]) + 1.0) * er.size.y / (art["size"] as Vector2).y   # the lowest solid row
+		check(feet_y <= bv._team_ground() + 0.5, "%s: feet %.0f under the team line %.0f" % [tag, feet_y, bv._team_ground()])
 		check(er.position.y >= bv._boss_bar().end.y + bv.BOSS_NAME - 0.5, "%s: top %.0f over the boss bar and name" % [tag, er.position.y])
 		check(bv._boss_chip_y(0) >= bv._boss_bar().end.y + bv.BOSS_NAME, "%s: status chips over the boss name" % tag)
 	else:
@@ -109,11 +123,10 @@ func _check_fight(bv, st: GameState, arg: String, wsz: Vector2i) -> void:
 			var pr: Rect2 = bv._pack_rect(er, art, -1.0)
 			var pu := pr.size.x / (art["size"] as Vector2).x * sc
 			check(absf(pu - (unit - 1)) < 0.01, "%s: pack-mate pixel %.2f, not %d" % [tag, pu, unit - 1])
-	# no menagerie pet on the hero's plate (its drawn body: about 0.6 of the 32 px frame)
-	var hc: Rect2 = bv._hero_canvas()
+	# no pet (companion or menagerie, placed by team_layout) under the hero's plate
 	var w: float = 32.0 * bv._u()
 	var hp: Rect2 = bv._bar_rect(bv._hero_rect())
-	for i in 3:
-		var x: float = bv._pet_x(i, hc, w)
-		var body := Rect2(x - w * 0.3, bv._team_ground() - w, w * 0.6, w)
-		check(not body.intersects(hp) and body.position.x >= 0.0, "%s: menagerie pet %d at %s, hero plate %s" % [tag, i, body, hp])
+	var lay: Dictionary = bv.team_layout()
+	for k in lay:
+		var body := Rect2(float(lay[k]) + w * 0.2, bv._team_ground() - w, w * 0.6, w)
+		check(not body.intersects(hp), "%s: pet %s at %s under the hero plate %s" % [tag, k, body, hp])

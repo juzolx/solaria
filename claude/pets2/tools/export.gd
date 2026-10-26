@@ -12,7 +12,10 @@ func _init() -> void:
 		kind[c[1]] = c[2]
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
 	var n := 0
-	for l in FileAccess.get_file_as_string(ROOT + "picks.txt").strip_edges().split("\n"):
+	# an optional arg names another picks file (picks_r1.txt: only the Fable R1 redraws);
+	# a full re-export undoes outline.gd, so run that again after one
+	var args := OS.get_cmdline_user_args()
+	for l in FileAccess.get_file_as_string(ROOT + (args[0] if args.size() > 0 else "picks.txt")).strip_edges().split("\n"):
 		var p := l.strip_edges().split(" ")
 		var src := ""
 		if p[0] == "s":
@@ -43,7 +46,7 @@ func _idle(src: Image, floats: bool) -> Image:
 	var w := src.get_width(); var h := src.get_height()
 	var f1 := Image.create(w, h, false, Image.FORMAT_RGBA8)
 	if floats:
-		f1.blit_rect(src, Rect2i(0, 0, w, h - 1), Vector2i(0, 1))
+		f1.blit_rect(src, Rect2i(0, 1, w, h - 1), Vector2i(0, 0))  # bob UP from the ground line (Fable pets R2)
 	else:
 		var used := src.get_used_rect()
 		var cut := used.position.y + int(used.size.y * 0.55)

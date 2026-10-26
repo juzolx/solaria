@@ -230,7 +230,7 @@ func _hero_line(meta: Dictionary) -> Control:
 	var pic := TextureRect.new()
 	pic.texture = Sprites.portrait(meta.get("appearance", {}), HeroArt.meta_looks(meta))
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(64, 64)
+	pic.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT)  # 1:1, whole pixels
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	row.add_child(pic)
