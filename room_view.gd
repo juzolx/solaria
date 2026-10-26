@@ -215,7 +215,7 @@ func _draw_team() -> void:
 	# companions first so the leader stands in front
 	for j in range(xs.size() - 1, -1, -1):
 		var g: GameState = state if j == 0 else members[j - 1].hero
-		var art := Sprites.hero_back(g.appearance, g.hero_looks())
+		var art := Sprites.hero_back_of(g)  # rebuilt at most twice a second, not every frame
 		# the fights' one scale (ArtStyle.SCREEN_PX screen pixels per art pixel), companions one step smaller
 		var scr := get_global_transform_with_canvas().get_scale().x
 		scr = scr if scr > 0.01 else 1.0

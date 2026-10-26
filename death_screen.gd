@@ -11,8 +11,16 @@ const KEEP := ["The Bank, the Vault and the Mailbox", "Your levels and XP", "Bou
 static func regular(r: Dictionary, on_ok: Callable, on_never: Callable) -> PanelContainer:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", UiSkin.frame(Color(UI.PANEL, 0.97), Color("#a22633"), 14))
+	var outer := UI.vbox(8)
+	p.add_child(outer)
+	# The story scrolls; OK stays in sight (a phone's fight view is shorter than the card, QA sweep)
+	var scroll := ScrollContainer.new()
+	scroll.name = "Story"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	outer.add_child(scroll)
 	var v := UI.vbox(6)
-	p.add_child(v)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(v)
 	var plate := PanelContainer.new()
 	plate.add_theme_stylebox_override("panel", UiSkin.bevel(UiSkin.SLATE, UI.GOLD_DULL, 6))
 	plate.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -51,13 +59,29 @@ static func regular(r: Dictionary, on_ok: Callable, on_never: Callable) -> Panel
 		var t := UI.rich(UI.FONT_CAPTION)
 		t.text = "[color=%s]Tip:[/color] %s" % [UI.hex(UI.GOLD), tip_text]
 		v.add_child(t)
+	var row := UI.hbox(8)
+	row.name = "Buttons"
+	outer.add_child(row)
 	var ok := UI.primary("OK", on_ok)
-	ok.custom_minimum_size = Vector2(0, UI.TAP)
-	v.add_child(ok)
-	var never := UI.button("Don't show these again", on_never)
-	never.custom_minimum_size = Vector2(0, UI.TAP)
-	v.add_child(never)
+	var never := UI.button("Don't show again", on_never)
+	for b in [ok, never]:
+		b.custom_minimum_size = Vector2(0, UI.TAP)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(b)
 	return p
+
+## Fits the fall card into max_h: the story scrolls, the buttons always show. Call once
+## the card is in the tree (its width set), so wrapped text has its real height.
+static func fit_regular(p: PanelContainer, max_h: float) -> void:
+	var scroll := p.find_child("Story", true, false) as ScrollContainer
+	var row := p.find_child("Buttons", true, false) as Control
+	if scroll == null or row == null or scroll.get_child_count() == 0:
+		return
+	var story := (scroll.get_child(0) as Control).get_combined_minimum_size().y
+	var frame := p.get_combined_minimum_size().y - scroll.get_combined_minimum_size().y - row.get_combined_minimum_size().y - 8.0
+	var room := max_h - frame - row.get_combined_minimum_size().y - 8.0
+	scroll.custom_minimum_size.y = clampf(story, minf(80.0, story), maxf(80.0, room))
+	p.reset_size()
 
 ## The Hardcore farewell, filled into an open Overlay's content box.
 static func hardcore(content: VBoxContainer, hero: String, level: int, race: String, title: String, floor_num: int,
