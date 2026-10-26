@@ -102,3 +102,5 @@ Every rating Juzo gives goes here, so all sessions learn what he thinks is reall
 - Oct 25: monster zone-light tint on the 13 grey monsters: Juzo "likes the color changes".
 
 - Oct 26: fights: Juzo prefers the old Surtr look (boss across from the hero, "facing off", clearly standing) over the round-5 2x boss that fills the stage. Merge of monsters r5 held; asking whether it applies to all fights.
+
+- Oct 26: dungeon grounding fix (mossy Hushwood rooms, door frames no longer drawn over props): Juzo likes it, "didn't overlap the same anymore".
