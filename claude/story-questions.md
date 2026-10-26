@@ -43,3 +43,5 @@ store description. Mechanics stay; only names and text change (unless Juzo asks)
 - Lore (Juzo, Oct 24): all heroes stay at the Inn; the town has no generic homes, only real places. The Inn is the hub.
 
 - Story (Juzo, Oct 24): goddess name still open (no idea yet). Floor 1,000 = ASCENSION: the hero restarts with permanent buffs; only a God-class hero can ascend. (Fits the later "ascended hero town" update.)
+
+- Pets (Juzo, Oct 25): only one copy of each pet species can be equipped at a time (ends Fairy Gold stacking).
