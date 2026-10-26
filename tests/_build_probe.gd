@@ -13,9 +13,9 @@ func _initialize() -> void:
 			if race in FORMS:  # a transformation: a bitten human
 				app = {"body": ["masc", "fem"][bi], "race": "Human", "form": race, "skin": Races.skins("Human")[0], "hair_color": 1}
 			var looks := {"Class": {"cls": ROWS[r][0], "tier": 0}, "Weapon": {"type": ROWS[r][1], "glow": false}}
-			var back: Dictionary = Sprites.hero_back(app, looks)["lpc"]
+			var back: Dictionary = Sprites.hero_back(app, looks)["anims"]
 			var fr: Array = back["combat_idle"]["img"] + back["slash"]["img"] + back["hurt"]["img"]
-			var front: Array = Sprites.hero(app, looks)["lpc"]["combat_idle"]["img"]
+			var front: Array = Sprites.hero(app, looks)["anims"]["combat_idle"]["img"]
 			var row := [fr[0], fr[3], fr[5], fr[6], front[0]]
 			for i in row.size():
 				sheet.blend_rect(row[i], Rect2i(0, 0, 96, 96), Vector2i((bi * 5 + i) * 96, r * 96))

@@ -1463,15 +1463,6 @@ func _apply_tier(tier: int) -> void:
 		events.append({"type": "rare_monster", "tier": tier, "name": enemy_name, "mods": enemy_mods.duplicate()})
 		say("[color=%s]%s %s appears![/color] %s" % [Monsters.tier_color(tier), Monsters.tier_name(tier), enemy_name, ", ".join(enemy_mods)])
 
-## The size the monster is drawn at (rarer = bigger).
-func enemy_scale() -> float:
-	var s := float(Monsters.TIERS[clampi(enemy_tier, 0, 5)]["scale"])
-	if has_mod("Giant"):
-		s *= 1.12
-	if enemy_calamity > 0:
-		s *= 1.35
-	return s
-
 func take_turn() -> void:
 	if run_over or in_town:
 		return
@@ -1811,7 +1802,7 @@ func _enemy_defeated() -> void:
 	var species := enemy_species
 	var zone_i := GameData.zone_index(floor_num)
 	events.append({"type": "enemy_dead", "shape": enemy_shape, "color": enemy_color, "boss": was_boss, "name": enemy_name,
-		"art": enemy_art, "tier": tier, "scale": enemy_scale()})
+		"art": enemy_art, "tier": tier})
 	if not was_boss:
 		Combat.on_enemy_death(self)
 	if enemy_boss_kind == "trial":
@@ -1850,12 +1841,7 @@ func _enemy_defeated() -> void:
 	EggQuests.on_kill(self, tier, was_boss)
 	if was_boss:
 		Milestones.on_boss(self, Monsters.name_of(species))
-	var gold_gain := (2 + floor_num) * (10 if was_boss else 1)
-	if enemy_variant == "Gilded":
-		gold_gain = int(gold_gain * Variants.GOLD_MULT)
-	gold_gain = int(gold_gain * float(t["gold"]) * (1.0 + (effect_total("gold_find") + bonus_pct + World.curse_gold(self)) / 100.0) * GameData.event_bonus("gold"))
-	if curse_turns > 0:
-		gold_gain *= 2
+	var gold_gain := kill_gold(bonus_pct)
 	if was_goblin:
 		gold_gain = (2 + floor_num) * GameData.GOBLIN_GOLD
 	_add_gold(gold_gain)
@@ -2013,6 +1999,19 @@ func _give_signature(monster: String) -> void:
 	say("[color=#ff6b9d]*** SIGNATURE DROP! *** The %s dropped %s![/color]" % [Monsters.name_of(monster), item["name"]])
 	events.append({"type": "signature", "name": item["name"], "monster": Monsters.name_of(monster)})
 	_give_item(item)
+
+## What killing the monster in front of you pays in gold (goblins aside): floor coin, x10
+## for a boss, Gilded, its rank, gold find, curse and events. Pet gold (Pickpocket, Fairy
+## Gold) takes a share of this, so it always matches the real drop (Fable pets R2).
+func kill_gold(bonus_pct := 0.0) -> int:
+	var g := (2 + floor_num) * (10 if enemy_is_boss else 1)
+	if enemy_variant == "Gilded":
+		g = int(g * Variants.GOLD_MULT)
+	var t: Dictionary = Monsters.TIERS[clampi(enemy_tier, 0, Monsters.TIERS.size() - 1)]
+	g = int(g * float(t["gold"]) * (1.0 + (effect_total("gold_find") + bonus_pct + World.curse_gold(self)) / 100.0) * GameData.event_bonus("gold"))
+	if curse_turns > 0:
+		g *= 2
+	return g
 
 func _add_gold(amount: int) -> void:
 	amount = int(amount * TownEvents.gold_mult(self) * (Synergies.reward_mult(self) if not in_town else 1.0))

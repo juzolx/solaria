@@ -60,7 +60,7 @@ const SIGNATURES := {
 	"ember_halls": {"name": "Ember Breath", "when": "start", "do": "burn", "value": 1.0, "text": "On its first turn each fight, breathes fire: the monster burns for {v}x its hit for 3 turns"},
 	"the_shadow_deep": {"name": "Shadow Fang", "when": "start", "do": "strike", "value": 3.0, "text": "On its first turn each fight, strikes from the dark for {v}x its hit"},
 	"elf": {"name": "Hush of the Wood", "when": "low", "do": "shield", "value": 20, "text": "Once a fight, when you drop below 35% health, the wood hides you: a shield of {v}% of your max HP"},
-	"fairy": {"name": "Fairy Gold", "when": "kill", "do": "gold", "value": 1, "text": "Every kill shakes loose extra gold ({v}x the floor's coin)"},
+	"fairy": {"name": "Fairy Gold", "when": "kill", "do": "gold", "value": 100, "text": "Every kill drops its gold twice"},
 	"dwarf": {"name": "Ironroot Wall", "when": "start", "do": "shield", "value": 10, "text": "On its first turn each fight, raises a shield of {v}% of your max HP"},
 	"angel": {"name": "Gilded Grace", "when": "low", "do": "heal", "value": 25, "text": "Once a fight, when you drop below 35% health, a light heals {v}% of your max HP"},
 	"demon": {"name": "Hellfire", "when": "start", "do": "burn", "value": 1.5, "text": "On its first turn each fight, calls hellfire: the monster burns for {v}x its hit for 3 turns"},
@@ -284,7 +284,7 @@ static func apply(g: GameState, p: Dictionary, what: String, value: float, hit: 
 		"strike":
 			g.last_hit = "hit"
 			var d := g._damage_enemy(maxi(1, int(hit * value)), ["Physical"])
-			g.events.append({"type": "summon_hit", "dmg": d, "name": String(p["name"])})
+			g.events.append({"type": "summon_hit", "dmg": d, "name": String(p["name"]), "pet": int(p["id"])})
 		"shield":
 			var add := mini(maxi(1, int(maxhp * value / 100.0)), int(maxhp * SHIELD_CAP) - g.shield_hp)
 			if add <= 0:
@@ -320,9 +320,8 @@ static func apply(g: GameState, p: Dictionary, what: String, value: float, hit: 
 			else:
 				g.enemy_poison_turns = maxi(g.enemy_poison_turns, 2)
 		"gold":
-			# a share of what the kill pays (GameState: floor coin x10 for a boss x the rank's gold)
-			var base := (2 + g.floor_num) * (10 if g.enemy_is_boss else 1) * float(Monsters.TIERS[clampi(g.enemy_tier, 0, Monsters.TIERS.size() - 1)]["gold"])
-			var gold := maxi(1, int(base * value / 100.0))
+			# value % of what this kill pays (GameState.kill_gold: the real drop, multipliers and all)
+			var gold := maxi(1, int(g.kill_gold() * value / 100.0))
 			g._add_gold(gold)
 			g.say("[color=#fbbf24]%s's %s: +%d gold.[/color]" % [p["name"], label, gold])
 		_:

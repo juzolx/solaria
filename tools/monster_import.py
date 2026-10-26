@@ -27,6 +27,7 @@ LIFT = {"mare": 0.52, "wendigo": 0.5, "calamity_2": 0.5}
 # ...and the whole picture (outline included) must average at least this luma (0-255): fable r1
 # found 20 near-black monsters (47-54) vanishing into halls that average 38-94
 MIN_Y = 60.0
+MIN_Y_COMMON = 68.0  # fable r2: commons have no boss glow to help them, and 27 sat exactly at 60
 MAX_COLORS = 24  # ArtStyle.NATIVE_COLORS
 PICKS = os.path.join(ROOT, "tools", "monsters_native", "picks.txt")
 
@@ -74,8 +75,9 @@ def convert(src, key=""):
                     break
     for x, y in add:
         op[x, y] = OUTLINE + (255,)
-    lift(out, LIFT.get(key, MIN_L))
-    reduce(out)
+    reduce(out)  # first, so the lift below sees the final colours
+    big = key.startswith(("boss_", "calamity_"))
+    lift(out, LIFT.get(key, MIN_L), MIN_Y if big else MIN_Y_COMMON)
     # Grown at the border? pad again so the outline never touches the canvas edge
     bb = out.getbbox()
     out = out.crop(bb)
@@ -84,7 +86,7 @@ def convert(src, key=""):
     return final
 
 
-def lift(im, target=MIN_L):
+def lift(im, target=MIN_L, min_y=MIN_Y):
     """Brightens a dark monster (a gamma on its colours, darkest tones lifted most) until its
     average lightness reaches target (MIN_L unless LIFT says more) and its luma MIN_Y. Same number of colours;
     outline and glow stay put."""
@@ -100,7 +102,7 @@ def lift(im, target=MIN_L):
     def ok(g):
         cs = [tuple(int(255 * (v / 255) ** g) for v in c) for c in body]
         luma = (y_line + sum(0.299 * r + 0.587 * gr + 0.114 * b for r, gr, b in cs)) / n_all
-        return sum(oklab(c)[0] for c in cs) / len(cs) >= target and luma >= MIN_Y
+        return sum(oklab(c)[0] for c in cs) / len(cs) >= target and luma >= min_y
 
     if ok(1.0):
         return

@@ -15,8 +15,8 @@ var plate: PanelContainer
 var backdrop: TextureRect
 static var _grounds := {}
 static var _heads := {}
-const PLATE := 200  # design px: room for a 79 px common at 2 screen px per art pixel on a 430 pt phone
-const ICON := 28    # list icon: art pixels from the top of the monster, shown 1:1 on screen
+const PLATE := 296  # design px tall: a 121-row boss at 2 screen px per art pixel on a 430 pt phone
+const ICON := 32    # list icon: ICON art pixels around the upper body, shown 1:1 (ICON screen pixels)
 var pic_size := Vector2.ZERO
 var text: RichTextLabel
 var strip: VBoxContainer  # 2.1 G4: this region's Bestiary progress and its next reward
@@ -52,12 +52,13 @@ func setup(m) -> void:
 	detail.add_child(top)
 	# 0.13+: an illustrated plate: the monster lit in its home region's colors on a glowing ground
 	plate = PanelContainer.new()
+	plate.size_flags_horizontal = Control.SIZE_EXPAND_FILL  # the whole column wide (fable r2: room for 2x bosses)
 	top.add_child(plate)
 	backdrop = TextureRect.new()
-	backdrop.custom_minimum_size = Vector2(PLATE, PLATE)
+	backdrop.custom_minimum_size = Vector2(0, PLATE)
 	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	backdrop.stretch_mode = TextureRect.STRETCH_SCALE
-	backdrop.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	backdrop.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR  # a soft glow, no pixel grid (fable r2: the grain striped)
 	plate.add_child(backdrop)
 	pic = TextureRect.new()
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -99,9 +100,9 @@ func refresh() -> void:
 			if met and bool(codex.bestiary[n].get("sig", false)):
 				label += "  *"
 			var i := list.add_item(label)
-			var ia := Sprites.enemy_by_key(_art_key(n, GameData.monster_home(n)))
-			if ia.has("tex"):
-				list.set_item_icon(i, _head(ia, met))
+			var head := _head(_art_key(n, GameData.monster_home(n)), met)
+			if head != null:
+				list.set_item_icon(i, head)
 				if not met:
 					list.set_item_icon_modulate(i, Color(0.5, 0.48, 0.6))  # a shape until you meet it (UX pass: brighter, so the outline reads on a phone)
 			list.set_item_custom_fg_color(i, UI.TEXT if met else UI.DIM)
@@ -259,6 +260,8 @@ func _place_pic() -> void:
 	var sc := _screen_scale()
 	var room := (backdrop.size - Vector2(12, 12)) * sc
 	var k := maxf(1.0, floorf(minf(room.x / pic_size.x, room.y / pic_size.y)))
+	# Commons never outsize the bosses (2x on a phone): one scale for the whole Bestiary
+	k = minf(k, float(maxi(1, ArtStyle.unit(sc) - 1)))
 	var sz := pic_size * k / sc
 	var pos := Vector2((backdrop.size.x - sz.x) * 0.5, backdrop.size.y - 8.0 - sz.y)
 	# snap the top-left corner onto the screen's pixel grid
@@ -267,19 +270,41 @@ func _place_pic() -> void:
 	pic.position = pos
 	pic.size = sz
 
-## A square from the top of the monster (its head), ICON art pixels a side, for the list.
-## Cached per monster; unmet ones get their shape.
-func _head(ia: Dictionary, met: bool) -> Texture2D:
-	var src: Texture2D = ia["tex"] if met else ia["white"]
-	var key := "%d|%s" % [src.get_rid().get_id(), met]
-	if _heads.has(key):
-		return _heads[key]
-	var img := src.get_image()
+## The list icon (fable r2): a met monster's upper body (its head is about a quarter of the
+## way down), ICON art pixels square at 1:1; an unmet one's whole shape fitted into ICON
+## pixels (the shape is the tease).
+## Made from the plain picture (no grade, no texture readback), cached by art key.
+static func _head(key: String, met: bool) -> Texture2D:
+	var ck := "%s|%s" % [key, met]
+	if _heads.has(ck):
+		return _heads[ck]
+	var img := Sprites._img("enemies/%s.png" % key)
+	if img == null:
+		_heads[ck] = null
+		return null
 	var used := img.get_used_rect()
-	var side := mini(ICON, mini(used.size.x, used.size.y))
-	var x0 := used.position.x + (used.size.x - side) / 2
-	var tex := ImageTexture.create_from_image(img.get_region(Rect2i(x0, used.position.y, side, side)))
-	_heads[key] = tex
+	var out: Image
+	if met:
+		var lo := img.get_width()
+		var hi := -1
+		var band := used.position.y + int(used.size.y * 0.35)
+		for y in range(used.position.y + int(used.size.y * 0.1), band):
+			for x in range(used.position.x, used.end.x):
+				if img.get_pixel(x, y).a8 > 0:
+					lo = mini(lo, x)
+					hi = maxi(hi, x)
+		var cx := (lo + hi) / 2 if hi >= 0 else used.get_center().x
+		var x0 := clampi(cx - ICON / 2, 0, maxi(0, img.get_width() - ICON))
+		var y0 := clampi(used.position.y + int(used.size.y * 0.25) - ICON / 2, 0, maxi(0, img.get_height() - ICON))
+		out = img.get_region(Rect2i(x0, y0, ICON, ICON))
+	else:
+		var shape := Sprites._silhouette(img.get_region(used))
+		var k := minf(float(ICON) / shape.get_width(), float(ICON) / shape.get_height())
+		shape.resize(maxi(1, int(shape.get_width() * k)), maxi(1, int(shape.get_height() * k)), Image.INTERPOLATE_NEAREST)
+		out = Image.create(ICON, ICON, false, Image.FORMAT_RGBA8)
+		out.blit_rect(shape, Rect2i(Vector2i.ZERO, shape.get_size()), Vector2i((ICON - shape.get_width()) / 2, ICON - shape.get_height()))
+	var tex := ImageTexture.create_from_image(out)
+	_heads[ck] = tex
 	return tex
 
 ## The plate's backdrop for a region: dark, with its mood light glowing up from the ground.
@@ -296,8 +321,6 @@ static func _ground(zi: int) -> Texture2D:
 			var d := Vector2(x - 27.5, (y - 46.0) * 2.2).length() / 30.0
 			var c := Color(0.03, 0.03, 0.05).lerp(amb.darkened(0.6), g * 0.7)
 			c = c.lerp(light.darkened(0.25), clampf(1.0 - d, 0.0, 1.0) * 0.55)
-			if (x * 7 + y * 13) % 11 == 0 and y < 30:
-				c = c.lightened(0.06)  # a little stone grain above the ground
 			img.set_pixel(x, y, c)
 	var tex := ImageTexture.create_from_image(img)
 	_grounds[zi] = tex

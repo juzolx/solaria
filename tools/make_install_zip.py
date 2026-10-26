@@ -19,4 +19,4 @@ with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
     for f in changed:
         z.write(f, f)
 print(len(changed), "files,", os.path.getsize(out), "bytes ->", out)
-print(" ".join(f for f in changed if not f.startswith("art/lpc/f/"))[:3000])
+print(" ".join(changed)[:3000])

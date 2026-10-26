@@ -84,6 +84,54 @@ func _phone_width(key: String, w: int) -> void:
 	var share := 0.96 if key.begins_with("calamity_") else (0.92 if key.begins_with("boss_") else 0.56)
 	check(w * 3 <= int(504.0 * share * 0.853), "%s is %d px wide: over %d it draws below 3x on a phone" % [key, w, int(504.0 * share * 0.853) / 3])
 
+## Fable r2: monsters must not sink into their dark halls (38-94 mean luma): the whole picture,
+## outline included, averages at least 68 (commons) or 60 (bosses and Calamities, which glow).
+func _luma_floor(key: String, img: Image) -> void:
+	var total := 0.0
+	var n := 0
+	for y in img.get_height():
+		for x in img.get_width():
+			var c := img.get_pixel(x, y)
+			if c.a8 == 0:
+				continue
+			total += 0.299 * c.r8 + 0.587 * c.g8 + 0.114 * c.b8
+			n += 1
+	var floor_y := 59.5 if key.begins_with("boss_") or key.begins_with("calamity_") else 67.5
+	check(n > 0 and total / n >= floor_y, "%s averages luma %.1f (at least %.0f, monster_import.py lifts it)" % [key, total / maxi(1, n), floor_y + 0.5])
+
+## Fable pets R2: every 32 px pet still has a dark silhouette (half its edge pixels near-black by
+## their brightest channel, so pale pets read on pale halls) and no idle frame ends below the
+## still (a bob goes up from the ground). Fix with claude/pets2/tools/outline.gd / idle_fix.gd.
+func _pet32_rules() -> void:
+	var dir := "res://art/pets/32/"
+	for f in _pngs(dir):
+		if f.ends_with("_idle.png"):
+			continue
+		var img := _load(dir + f)
+		var edge := 0
+		var dark := 0
+		for y in img.get_height():
+			for x in img.get_width():
+				if img.get_pixel(x, y).a <= 0.5:
+					continue
+				var open := false
+				for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+					var n: Vector2i = Vector2i(x, y) + d
+					if n.x < 0 or n.y < 0 or n.x >= img.get_width() or n.y >= img.get_height() or img.get_pixelv(n).a <= 0.5:
+						open = true
+						break
+				if open:
+					edge += 1
+					var c := img.get_pixel(x, y)
+					if maxf(c.r, maxf(c.g, c.b)) * 255.0 < 70.0:
+						dark += 1
+		check(edge > 0 and dark >= edge * 0.5, "pet %s has a dark outline (%d of %d edge pixels)" % [f, dark, edge])
+		var strip_path: String = dir + String(f).get_basename() + "_idle.png"
+		if FileAccess.file_exists(strip_path):
+			var strip := _load(strip_path)
+			for fi in 2:
+				check(strip.get_region(Rect2i(fi * 32, 0, 32, 32)).get_used_rect().end.y <= img.get_used_rect().end.y, "pet %s idle frame %d stays above its ground row" % [f, fi])
+
 func _initialize() -> void:
 	check(not ArtStyle.in_palette(ArtStyle.OUTLINE), "the outline color is not a palette color")
 	check(ArtStyle.in_palette(Color(ArtStyle.PALETTE[3])), "palette colors are in the palette")
@@ -100,6 +148,7 @@ func _initialize() -> void:
 			if d == "res://art/enemies/" and int(native_info.get(f.get_basename(), {}).get("hd", 2)) == 1:
 				_native_rules(d + f, img)
 				_phone_width(f.get_basename(), img.get_width())
+				_luma_floor(f.get_basename(), img)
 				continue
 			check(img.get_size() == ArtStyle.MONSTER_SIZE or img.get_size() == ArtStyle.TALL_SIZE, "%s%s is %s (68x68 or 68x132)" % [d, f, img.get_size()])
 			var rough := 0
@@ -205,12 +254,8 @@ func _initialize() -> void:
 	var before := hero_img.get_data()
 	check(Sprites.chunky(hero_img, 1).get_data() == before, "pixel size 1 leaves the hero's pixels alone")
 	check(hero_img.get_data() == before, "chunky never changes its source image")
-	var spec := {"body": "male"}
-	var spec2 := Sprites._px_spec(spec)
-	check(not spec.has("px") or Sprites.HERO_PIXEL <= 1, "_px_spec doesn't change the caller's spec")
-	check((spec2.get("px", 1) == Sprites.HERO_PIXEL) or Sprites.HERO_PIXEL <= 1, "_px_spec adds the pixel size to its copy")
 
-	# 2.1 heroes (art/heroes, baked from the PixelLab hero): every layer on the same 9 frames of 96x96,
+	# 2.1 heroes (art/heroes, baked from the PixelLab hero): every layer on the same 9 frames of 96x96 (weapons 128),
 	# hard alpha, the feet on one row, every class on both bodies, the 37 styles, 10 faces, 7 weapons
 	check(HeroArt.available(), "the 2.1 hero art is baked (art/heroes/heroes.json)")
 	var hi := HeroArt.info()
@@ -227,7 +272,9 @@ func _initialize() -> void:
 	for b in ["m", "f"]:
 		for f in _pngs("res://art/heroes/%s/" % b):
 			var img := _load("res://art/heroes/%s/%s" % [b, f])
-			check(img.get_height() == HeroArt.CELL and img.get_width() % HeroArt.CELL == 0, "art/heroes/%s/%s is whole 96x96 cells" % [b, f])
+			# weapons swing past the body, so their cells are the whole padded frame (128); the rest are 96
+			var n := HeroArt.FRAME if f.begins_with("weapon_") else HeroArt.CELL
+			check(img.get_height() == n and img.get_width() % n == 0, "art/heroes/%s/%s is whole %dx%d cells" % [b, f, n, n])
 			if f.ends_with("_idx.png"):
 				continue
 			var soft := 0
@@ -244,9 +291,9 @@ func _initialize() -> void:
 	# The hero builds from the layers, battle and portrait, recoloured, for any class/tier/weapon
 	var hb := Sprites.hero_back({"body": "fem", "skin": 6, "hair": "Braid", "hair_color": 8, "race": "Orc", "face": "grim"},
 		{"Class": {"cls": "Knight", "tier": 75}, "Weapon": {"type": "spear", "glow": false}})
-	check(hb.get("pl", false) and (hb["lpc"]["combat_idle"]["tex"] as Array).size() == 2 and (hb["lpc"]["slash"]["tex"] as Array).size() == 4 and (hb["lpc"]["hurt"]["tex"] as Array).size() == 1, "battle frames: idle 2, attack 4, hit 1")
+	check(hb.get("pl", false) and (hb["anims"]["combat_idle"]["tex"] as Array).size() == 2 and (hb["anims"]["slash"]["tex"] as Array).size() == 4 and (hb["anims"]["hurt"]["tex"] as Array).size() == 1, "battle frames: idle 2, attack 4, hit 1")
 	var hf := Sprites.hero({"body": "masc", "hair": "Afro", "face": "laughing"}, {"Class": {"cls": "Bard", "tier": 0}})
-	check(hf.get("pl", false) and (hf["lpc"]["combat_idle"]["tex"] as Array).size() == 2, "portrait frames: idle 2")
+	check(hf.get("pl", false) and (hf["anims"]["combat_idle"]["tex"] as Array).size() == 2, "portrait frames: idle 2")
 	var plain := HeroArt.frames({"body": "masc", "skin": 1, "hair_color": 1}, "Mage", 0, "", false)["img"][7] as Image
 	var tinted := HeroArt.frames({"body": "masc", "skin": 6, "hair_color": 8}, "Mage", 0, "", false)["img"][7] as Image
 	check(plain.get_data() != tinted.get_data(), "skin and hair colours recolour the hero")
@@ -278,6 +325,7 @@ func _initialize() -> void:
 	check(fay.size.y < man.size.y * 0.85 and fay.end.y < man.end.y, "a fairy is tiny and floats")
 	# ONE scale: battle draws every art pixel at the same whole number of screen pixels
 	check(ArtStyle.unit(1.0) == 3 and ArtStyle.unit(2.0) == 6 and ArtStyle.unit(1.0 / 3.0) == 1, "one integer battle scale (3 pt per art pixel)")
+	_pet32_rules()
 	print("ART RULES DONE, failures: ", fails)
 	quit()
 
