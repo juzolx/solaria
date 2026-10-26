@@ -4,8 +4,8 @@
 #   tools/check.sh shots    ...plus every screen at phone size (shots/tour)
 #   tools/check.sh perf     ...plus a 60 s Auto-play frame-time report (shots/perf)
 #   tools/check.sh parse    parse check only
-#   tools/check.sh halls [tag]  the dungeon rooms and room events of all 10 zones at 430x932 and 375x667 into
-#                           shots/halls/<tag>{,_se} and shots/room_events/<tag>{,_se} (needs a window), then
+#   tools/check.sh halls [tag]  the dungeon rooms, room events and fights of all 10 zones at 430x932 and 375x667 into
+#                           shots/{halls,room_events,fights}/<tag>{,_se} (needs a window), then
 #                           one contact sheet per zone into claude/art_test/halls/<tag>/ (tools/halls_sheets.py)
 #   tools/check.sh sim      balance simulator only (quick: ~1 min), writes claude/balance-report.md. Not part of the normal check.
 #                           Full run: godot --headless --path . -s tools/balance_sim.gd -- [heroes] [hours]
@@ -36,7 +36,7 @@ if [ "$1" = "halls" ]; then
   for res in 430x932 375x667; do
     suf=""; [ $res = 375x667 ] && suf="_se"
     for z in 0 1 2 3 4 5 6 7 8 9; do
-      for script in _halls_zone_shot _room_events_shot; do
+      for script in _halls_zone_shot _room_events_shot _fight_room_shot; do
         for try in 1 2 3; do
           out=$(timeout 300 "$G" --path . --resolution $res --position 3000,3000 -s tests/$script.gd -- $z $tag$suf 2>&1)
           echo "$out" | grep -q "SHOTS DONE" && break

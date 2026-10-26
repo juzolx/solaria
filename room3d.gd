@@ -39,6 +39,10 @@ const TRAP_SIZE := 64.0 * PX   # the trap ring and the glyph: 64 art px
 ## battle_view), the widest 2x ones within |x| < 1.4. In a room where a fight can happen no standing
 ## prop's foot meets it, so a monster never overlaps one.
 const FIGHT_CLEAR := Rect2(-1.4, 3.2, 2.8, 2.3)
+const PALE_FLAME := {"fff4a3": "ffffff", "fee761": "d0dcc8", "feae34": "c0cbdc", "f77622": "c0cbdc", "d77643": "8b9bb4",
+	"e43b44": "8b9bb4", "ff0044": "8b9bb4", "be4a2f": "5a6988"}
+const GLOW_W := HallsScene.DOOR_W * 1.4   # a door's foot glow, world units wide
+const FAR_TORCH_BASE := 3.0   # a far-wall torch's art base on a tall view: over the side labels ("?" at 19 px)
 const FIGHT_EVENTS := ["", "chest", "gate"]   # fight rooms (and ambushes), mimics, champions
 ## The face-off monster's box on screen (Juzo: monsters never overlap props): big monsters'
 ## solid pixels span 0.21..0.79 of the width down to 0.71 of the height at 430.
@@ -136,7 +140,7 @@ func _process(delta: float) -> void:
 			_far_mesh[zone] = baked.duplicate()
 			_far_csg = null
 	if pool_mat:
-		pool_mat.albedo_texture = _tex("res://art/halls/z2_pool_%d.png" % (int(clock * 2.0) % 2))
+		pool_mat.albedo_texture = pool_tex(int(clock * 2.0) % 2)
 
 func texture() -> Texture2D:
 	return vp.get_texture()
@@ -559,6 +563,35 @@ func _trap_quad(col: Color, y: float, s: float) -> MeshInstance3D:
 	root3.add_child(mi)
 	return mi
 
+## The Flooded Depths pool's frame f, its water lifted off the floor's colours (the #4fb0c6 rim
+## and #c0cbdc glints stay).
+static func pool_tex(f: int) -> Texture2D:
+	return recoloured("res://art/halls/z2_pool_%d.png" % f, {"253a5e": "3a4466", "172038": "253a5e"})
+
+## A texture with some palette colours swapped (hex -> hex). Cached.
+static func recoloured(path: String, swaps: Dictionary) -> Texture2D:
+	var key := "re|%s|%s" % [path, str(swaps)]
+	if not _texcache.has(key):
+		var src := _tex(path)
+		var img := src.get_image() if src else null
+		if img == null:
+			return src
+		img.decompress()
+		img.convert(Image.FORMAT_RGBA8)
+		var swap := {}
+		for k in swaps:
+			swap[Color(String(k)).to_rgba32()] = Color(String(swaps[k]))
+		for y in img.get_height():
+			for x in img.get_width():
+				var c := img.get_pixel(x, y)
+				var k2 := Color(c, 1.0).to_rgba32()
+				if c.a > 0.0 and swap.has(k2):
+					img.set_pixel(x, y, Color(swap[k2], c.a))
+		var tex := ImageTexture.create_from_image(img)
+		tex.resource_name = path.get_file()
+		_texcache[key] = tex
+	return _texcache[key]
+
 ## Shows (on) or hides the trap circle: its art, colour (the view pulses it in two steps),
 ## rim, and spot (x, depth).
 func mark_trap(tex: Texture2D, col: Color, rim: bool, x: float, z: float, on: bool) -> void:
@@ -673,16 +706,42 @@ func _light(pos: Vector3, color: Color, energy: float, reach: float, flickers :=
 
 ## A wall torch (the Hushwood has pale wisps instead). Side-wall torches stand deep
 ## enough (z >= 3.9) that a phone sees them.
-func _torch(pos: Vector3) -> void:
+## Half a door label's widest text (HallsScene.LABEL_MAX_W) at the far wall, in world units
+## (the narrowest view, 480 design px, makes it widest).
+const LABEL_HALF := HallsScene.LABEL_MAX_W / 2.0 * RD / (0.62 * 480.0)
+
+## Where the far wall's two torches (or wisps) hang, clear of the door frames and the labels:
+## on a tall view above the side labels and beside the middle one's text; on a short view
+## (the SE) only in the gap between the doors' frames and labels, if the art is that narrow.
+## Empty: none fit.
+func far_torch_spots() -> Array:
+	var art := _tex("res://art/halls/z5_wisp.png") if zone == 5 else _zart("torch", "res://art/dungeon/torch.png")
+	var half := _half_w(art) * PX
+	var lift := 0.25 if zone == 5 else 0.45   # _torch's art base under its spot
+	var frame_in := HallsScene.DOOR_W / 2.0 + 2.0 * FRAME_TEXEL   # door 1's frame edge
+	var frame_out := HallsScene.DOOR_X[2] - HallsScene.DOOR_W / 2.0 - 2.0 * FRAME_TEXEL
+	var x := maxf(LABEL_HALF, frame_in) + half + 0.02
+	if not small and base_height(art) * PX + FAR_TORCH_BASE <= ROOM_H - 0.05:
+		return [Vector3(-x, FAR_TORCH_BASE + lift, -RD + 0.05), Vector3(x, FAR_TORCH_BASE + lift, -RD + 0.05)]
+	if x + half <= minf(frame_out, HallsScene.DOOR_X[2] - LABEL_HALF) - 0.02:
+		return [Vector3(-x, 2.6, -RD + 0.05), Vector3(x, 2.6, -RD + 0.05)]
+	return []
+
+func _torch(pos: Vector3, energy := 2.2) -> void:
+	# a side-wall torch at a shallow rolled depth would hang outside a phone's view: push it
+	# deeper along its wall until its whole art is seen (the z8 sconce is the widest)
+	var art := _tex("res://art/halls/z5_wisp.png") if zone == 5 else _zart("torch", "res://art/dungeon/torch.png")
+	var half := _half_w(art) * PX
+	pos.z = minf(pos.z, -(absf(pos.x) + half) / SEEN - 0.001)
 	_check_seen(pos, "torch")
 	if zone == 5:
 		var wisp := _sprite(_tex("res://art/halls/z5_wisp.png"), pos - Vector3(0, 0.25, 0), false, true)
 		wisp.position.x = clampf(wisp.position.x, -SEEN * -pos.z, SEEN * -pos.z)
-		_light(pos + Vector3(-signf(pos.x) * 0.3, 0.1, 0.0), accent, 2.4, 4.5)
+		_light(pos + Vector3(-signf(pos.x) * 0.3, 0.1, 0.0), accent, energy + 0.2, 4.5)
 		return
-	_sprite(_zart("torch", "res://art/dungeon/torch.png"), pos - Vector3(0, 0.45, 0), false)
+	_sprite(art, pos - Vector3(0, 0.45, 0), false)
 	var push := Vector3(-signf(pos.x) * 0.3, 0.1, 0.0) if absf(pos.x) > 1.5 else Vector3(0, 0.1, 0.3)
-	_light(pos + push, light_col, 2.2, 4.5)
+	_light(pos + push, light_col, energy, 4.5)
 
 ## A pool of light on the floor (under a hole in the ceiling): the glow sprite in hard steps.
 func _glyph_z() -> float:
@@ -845,7 +904,8 @@ func _door_marks() -> void:
 		gm.material_override = g
 		gm.position = Vector3(x, 0.02, -RD + 0.35)
 		gm.rotation_degrees = Vector3(-90, 0, 0)
-		gm.scale = Vector3(HallsScene.DOOR_W * 1.8, HallsScene.DOOR_W * 1.8 * 0.6, 1.0)
+		# narrower than the doors' spacing (1.9), so a safe and a danger glow never blend between doors
+		gm.scale = Vector3(GLOW_W, GLOW_W * 0.6, 1.0)
 		gm.visible = false
 		root3.add_child(gm)
 		marks.append([fm, gm])
@@ -957,17 +1017,18 @@ func _signature() -> void:
 	match zone:
 		1:   # bone niches: skulls and bones heaped at the wall feet
 			for side in [-1.0, 1.0]:
-				_place(prop("bones"), side, 3.4, 4.6)
-				_place(prop("skull"), side, 3.2, 4.2)
+				_place(prop("bones"), side, 3.2, 3.6)   # small props near, or they're 12-px thumbnails
+				_place(prop("skull"), side, 3.2, 3.6)
 		2:   # a pool of dark water on the floor, its rim rippling, a cold light in it
 			var pz := -rng.randf_range(2.8, 3.6)
 			var ps := -1.0 if rng.randf() < 0.5 else 1.0
 			ps = 1.0     # right, off the shrine glyph on the left
-			pz = -4.9    # behind the hero and the trap ring
-			keepout.append(Rect2(ps * 1.6 - 1.0, -pz - 0.5, 2.0, 1.0))
-			var pool := _flat(_tex("res://art/halls/z2_pool_0.png"), Vector3(ps * 1.6, 0.012, pz), Vector2(64, 32) * PX, Vector3(-90, 0, 0), false, Color.WHITE, true)
+			pz = -4.3    # near enough to read as water (at 4.9 it was a 1-texel dash), right of the monster's box
+			keepout.append(Rect2(ps * 2.0 - 1.0, -pz - 0.5, 2.0, 1.0))
+			# unshaded with a lifted body: shaded, its blues were the floor's own under the blue light
+			var pool := _flat(pool_tex(0), Vector3(ps * 2.0, 0.012, pz), Vector2(64, 32) * PX, Vector3(-90, 0, 0), true, Color.WHITE, true)
 			pool_mat = pool.material_override
-			_light(Vector3(ps * 1.6, 0.3, pz), accent, 1.6, 3.0, false)
+			_light(Vector3(ps * 2.0, 0.5, pz), accent, 2.2, 3.0, false)
 		3:   # glowing seams in the floor
 			for i in 4:
 				var z := -rng.randf_range(2.6, RD - 0.4)
@@ -979,8 +1040,8 @@ func _signature() -> void:
 			_light(Vector3(0, HallsScene.DOOR_H + 0.5, -RD + 0.6), accent, 0.7, 2.0, false)
 		5:   # two more wisps on the far wall: the Hushwood has no fire
 			if not far_lit:
-				for side in [-1.0, 1.0]:
-					_torch(Vector3(side * 1.0, 2.6, -RD + 0.05))
+				for p in far_torch_spots():
+					_torch(p, 1.4)
 		6:   # crystal shards at the wall feet
 			for i in 4:
 				_place(_tex("res://art/halls/z6_crystal.png"), -1.0 if i % 2 == 0 else 1.0, 3.3, 4.2, false)
@@ -990,9 +1051,9 @@ func _signature() -> void:
 			var pipe := _tex("res://art/halls/z7_pipe.png")
 			_flat(pipe, Vector3(side7 * (HW - 0.03), 3.0, -RD / 2.0), Vector2(RD, 16.0 * PX), Vector3(0, -90.0 * side7, 0))
 			_flat(pipe, Vector3(side7 * (HW - 0.4), 1.5, -RD + 0.02), Vector2(3.0, 16.0 * PX), Vector3(0, 0, 90))
-		8:   # gilded pillars at the far corners (art/halls/z8_pillar.png repeats upward)
+		8:   # gilded pillars at the far corners (art/halls/z8_pillar.png repeats upward), off door 2's frame (2.67)
 			for side in [-1.0, 1.0]:
-				_flat(_tex("res://art/halls/z8_pillar.png"), Vector3(side * (HW - 0.3), ROOM_H / 2.0, -RD + 0.02), Vector2(16.0 * PX, ROOM_H), Vector3.ZERO)
+				_flat(_tex("res://art/halls/z8_pillar.png"), Vector3(side * (HW - 0.15), ROOM_H / 2.0, -RD + 0.02), Vector2(16.0 * PX, ROOM_H), Vector3.ZERO)
 		9:   # rows of spikes at the wall feet
 			var spikes := _tex("res://art/halls/z9_spikes.png")
 			for side in [-1.0, 1.0]:
@@ -1033,10 +1094,11 @@ func _overgrown_hall() -> void:
 	_torch(Vector3(-HW + 0.08, 2.0, -torch_z.x))
 	_torch(Vector3(HW - 0.08, 2.0, -torch_z.y))
 	if rng.randf() < 0.5:
-		far_lit = true
-		var fx := 1.0 if rng.randf() < 0.5 else 2.2
-		_torch(Vector3(-fx, 2.6, -RD + 0.05))
-		_torch(Vector3(fx, 2.6, -RD + 0.05))
+		rng.randf()   # (the old spot roll: keeps the room's later rolls where they were)
+		# far torches clear of the door frames and labels; lower light, so the wall over the doors isn't blown out
+		for p in far_torch_spots():
+			far_lit = true
+			_torch(p, 1.4)
 	if zone == 1:   # the Catacombs' own statue in a wall niche
 		_place(_zart("statue", "res://art/props/statue_hooded.png"), -1.0 if rng.randf() < 0.5 else 1.0, 3.6, 4.6)
 	if zone == 0:
@@ -1057,8 +1119,8 @@ func _collapsed_chamber() -> void:
 	_torch(Vector3(HW - 0.08, 2.0, -torch_z.y))
 	_place(prop("boulder"), -1.0, 3.4, 4.4)
 	_place(prop("pillar_broken"), -1.0, 3.6, 4.8)
-	_place(prop("bones"), 1.0, 3.3, 4.0)
-	_place(prop("skull"), 0.0, 3.2, 4.2)
+	_place(prop("bones"), 1.0, 3.2, 3.6)   # small props near, or they're 12-px thumbnails
+	_place(prop("skull"), 0.0, 3.2, 3.6)
 	if zone == 0:
 		_vines_on_walls(3)
 
@@ -1082,7 +1144,8 @@ func _forgotten_shrine() -> void:
 	_light(Vector3(GLYPH.x, 0.3, -_glyph_z()), accent, 0.9, 2.6, false)
 	keepout.append(Rect2(GLYPH.x - TRAP_SIZE / 2.0, _glyph_z() - TRAP_SIZE / 2.0, TRAP_SIZE, TRAP_SIZE))   # nothing stands on the glyph
 	for side in [-1.0, 1.0]:
-		var b := _place(prop("brazier"), side, 3.6, 4.6, false)
+		# the Hushwood has no fire: its braziers burn pale like its wisps
+		var b := _place(recoloured("res://art/props/brazier.png", PALE_FLAME) if zone == 5 else prop("brazier"), side, 3.6, 4.6, false)
 		if b:
 			_light(b.position + Vector3(0, 1.2, 0.3), light_col, 1.8, 4.0)
 	# one statue, and only in some shrines, so they don't stand in every room
