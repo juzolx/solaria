@@ -112,6 +112,8 @@ def main(root):
         day_sprites = list(C.LAST_SPRITES)
         bad = C.day_flames(img, [((round(C.at(i, j, z)[0]), round(C.at(i, j, z)[1])), col) for i, j, z, col, r in D.LIGHTS])
         assert not bad, f"day picture {church}_{cabin}: flames still burn at {bad}"   # a new prop must go in FLAMES
+        bad = C.floating()     # (Juzo) no prop whose foot a building hides, none off the ground
+        assert not bad, f"day picture {church}_{cabin}: floating props {bad}"
         C.BOXES.clear()
         lit = render(church, cabin, lit=True)           # dusk: what lights up goes in an overlay
         assert img.width <= 2048 and img.height <= 2048
@@ -179,6 +181,13 @@ def main(root):
     os.makedirs(os.path.join(art, "iso", "up"), exist_ok=True)
     levels = {}
     for lvl in (1, 2, 3):
+        render("holy", "built", lit=False)   # the level props over the base, as town_view draws them
+        D.LEVEL = lvl
+        C.NO_OVERLAYS[:] = []
+        D.LIGHTS.clear()
+        C.compose()
+        bad = [f for f in C.floating() if f[0][0] == "props_up"]
+        assert not bad, f"level {lvl}: floating level props {bad}"
         D.LEVEL = lvl
         D.LIGHTS.clear()
         own = []
@@ -210,8 +219,9 @@ def main(root):
                     q.append(n)
         return seen
     hub = tuple(doors()["market"])
+    lvl_cells = {(e[4], e[5]) for es in levels.values() for e in es}   # a level prop may stand there: never a door's only way in
     for cell in doors().values():
-        main = component(hub, ok)
+        main = component(hub, ok - lvl_cells)
         if cell in main:
             continue
         prev, q = {cell: None}, deque([cell])
@@ -224,7 +234,7 @@ def main(root):
                 break
             for di, dj in ((1, 0), (-1, 0), (0, 1), (0, -1)):
                 n = (c[0] + di, c[1] + dj)
-                if n not in prev and (n in ok or n in stuff):
+                if n not in prev and n not in lvl_cells and (n in ok or n in stuff):
                     prev[n] = c
                     q.append(n)
     ok = component(hub, ok)                   # drop islands (e.g. the church-garden path)
@@ -241,7 +251,7 @@ def main(root):
         if 19 <= c[0] <= 22 and 19 <= c[1] <= 22:
             stops.setdefault(c, well_x)
     from layout import EXTRA_STOPS
-    face = {(35, 6): C.at(34.5, 5.5)[0], (36, 6): C.at(37.5, 5.5)[0]}   # the training ring: the dummy / rack beside each gate cell
+    face = {(35, 6): C.at(35.5, 5.5)[0], (36, 6): C.at(37.5, 5.5)[0]}   # the training ring: the rack / dummy beside each gate cell
     bi, bj = next((i, j) for pid, _, i, j in POINTS if pid == "bounty")
     for c in EXTRA_STOPS:
         if c in ok:

@@ -406,6 +406,7 @@ def shadow(img, sprites):
 
 
 TAG = [""]         # tag put() gives the next sprites (a lot id for buildings)
+PROPS = []         # (sprite, decor entry) for every prop, fence and tree of the last compose (the floating check)
 LAST_SPRITES = []  # the sorted sprites of the last compose (export_town builds walker occluders from them)
 BOXES = {}      # sprite id -> opaque box on the town canvas (tap areas for town.json)
 NO_OVERLAYS = []  # [True] -> leave out walkers and level props (the game draws those itself)
@@ -441,6 +442,96 @@ def day_flames(img, lights):
         if any(flame_lit(*px[i, j][:3]) for j in range(y - 6, y + 7) for i in range(x - 6, x + 7)
                if 0 <= i < img.width and 0 <= j < img.height and not forge(i, j)):
             bad.append((x, y))
+    return bad
+
+
+VIS = {}   # entry -> the share of its pixels still showing, for props the floating check flags
+
+
+def _visible(s, order, solid, a_of):
+    import numpy as np
+    _, x, y, im, _ = s
+    a = a_of(im)
+    py_, px_ = np.nonzero(a)
+    cover = np.zeros(len(px_), bool)
+    for k, s2 in solid:
+        if k <= order[id(s)]:
+            continue
+        _, x2, y2, im2, _ = s2
+        ox, oy = px_ + x - x2, py_ + y - y2
+        ok = (ox >= 0) & (oy >= 0) & (ox < im2.width) & (oy < im2.height)
+        if ok.any():
+            cover[ok] |= a_of(im2)[oy[ok], ox[ok]]
+    return round(1 - cover.mean(), 2) if len(px_) else 0
+
+
+def floating():
+    """The floating check (Juzo: props covered by buildings look like they float): every prop,
+    fence and tree of the last compose whose feet (the bottom 3 rows of its opaque pixels) are
+    mostly drawn over by a later building, wall or tower, or that stands off the ground (on a lot,
+    in the water, on the wall ring or a plateau edge). A tree may stand behind a roof as long as
+    most of its crown shows; the footbridge's rails stand over the water. Returns [(entry, why)]."""
+    import numpy as np
+    order = {id(s): k for k, s in enumerate(LAST_SPRITES)}
+    alpha = {}
+    def a_of(im):
+        if id(im) not in alpha:
+            alpha[id(im)] = np.asarray(im.split()[3]) > 0
+        return alpha[id(im)]
+    solid = [(k, s) for k, s in enumerate(LAST_SPRITES) if s[4] and s[4] not in ("bridge", "outside")]
+    g = {}
+    for kind, x0, y0, x1, y1 in GROUND:
+        for i in range(x0, x1 + 1):
+            for j in range(y0, y1 + 1):
+                g[(i, j)] = kind
+    blocks = [l[2:6] for l in LOTS if l[0] not in EMPTY] + [h[:4] for h in HOUSES]
+    towers = [(ti, tj, ti + 2, tj + 2) for ti, tj in TOWERS] + [GATEHOUSE]
+    inside = lambda c, r: r[0] <= c[0] <= r[2] and r[1] <= c[1] <= r[3]
+    bad = []
+    for s, e in PROPS:
+        if e[0] == "folk":               # the mockup's figures: the game has its own walkers
+            continue
+        _, x, y, im, _ = s
+        a = a_of(im)
+        rows = np.nonzero(a.any(axis=1))[0]
+        if not len(rows):
+            continue
+        feet = np.zeros_like(a)
+        feet[rows[-1] - 2:rows[-1] + 1] = a[rows[-1] - 2:rows[-1] + 1]
+        fy, fx = np.nonzero(feet)
+        cover = np.zeros(len(fx), bool)
+        by = None
+        for k, s2 in solid:
+            if k <= order[id(s)]:
+                continue
+            _, x2, y2, im2, tag = s2
+            ox, oy = fx + x - x2, fy + y - y2
+            ok = (ox >= 0) & (oy >= 0) & (ox < im2.width) & (oy < im2.height)
+            if not ok.any():
+                continue
+            a2 = a_of(im2)
+            hit = np.zeros(len(fx), bool)
+            hit[ok] = a2[oy[ok], ox[ok]]
+            if hit.any() and by is None:
+                by = tag
+            cover |= hit
+        if cover.mean() >= 0.5:
+            VIS[tuple(e[:4])] = v = _visible(s, order, solid, a_of)
+            if e[0] != "trees" or v < 0.4:
+                bad.append((e, f"feet under {by}"))
+        if e[0] in ("fence", "trees") and not inside((e[2], e[3]), (1, 1, N - 2, N - 2)):
+            continue                     # the forest outside the walls
+        c = (e[2], e[3])
+        z = e[4] if e[0] != "fence" and len(e) > 4 else 0
+        on_plateau = inside(c, (PLATEAU[0], PLATEAU[1], PLATEAU[2], PLATEAU[3]))
+        if e[0] != "fence" and any(inside(c, r) for r in blocks):
+            bad.append((e, "on a building lot"))
+        elif g.get(c) == "water" and not (e[0] == "fence" and g.get((c[0] - 1, c[1])) in ("planks", "bridge")):
+            bad.append((e, "in the water"))
+        elif not inside(c, (1, 1, N - 2, N - 2)) or any(inside(c, r) for r in towers):
+            bad.append((e, "on the wall"))
+        elif on_plateau != (z >= PLATEAU_Z) and e[0] != "fence":
+            bad.append((e, "off the plateau's level"))
     return bad
 
 
@@ -571,6 +662,7 @@ def compose():
         img.alpha_composite(bed, (int(x) - 16, int(y)))
     GROUND_IMG[:] = [img.copy()] if GROUND_IMG else []
     deco = [e for e in deco if e[0] != "bed"]
+    PROPS.clear()
     for e in deco:
         if e[0] == "fence":
             _, kind, i, j, axis = e
@@ -578,6 +670,7 @@ def compose():
             a = at(i, j)
             b = at(i + 1, j) if axis == "i" else at(i, j + 1)
             put(sprites, im, a, anchor, max(a[1], b[1]) + 1)
+            PROPS.append((sprites[-1], e))
             continue
         name, n, i, j = e[:4]
         z = e[4] if len(e) > 4 else 0
@@ -589,10 +682,12 @@ def compose():
         _, px, py, _, _ = sprites[-1]
         b = im.getbbox()
         BOXES[(name, n, i, j)] = (px + b[0], py + b[1], b[2] - b[0], b[3] - b[1])
+        PROPS.append((sprites[-1], e))
     for n, i, j, dx, dy in trees():
         im = sheet("trees", n)
         x, y = at(i + .5, j + .5)
         put(sprites, im, (x + dx, y + dy + 4), bottom(im), y + dy + 6)
+        PROPS.append((sprites[-1], ("trees", n, i, j)))
     sprites.sort(key=lambda s: s[0])
     LAST_SPRITES[:] = sprites
     for _, x, y, im, tag in sprites:
