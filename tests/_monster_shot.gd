@@ -50,6 +50,7 @@ func _initialize() -> void:
 			st.floor_num = int(arg.get_slice("@", 1))
 			main.battle.last_floor = st.floor_num
 		st.spawn_enemy()
+		st.room_props.clear()   # a fight room (the test save may stand in an altar shrine, where no fight happens)
 		# the plain monster: no variant recolour, rarity aura or mods
 		st.enemy_variant = ""
 		st.enemy_tier = tier
