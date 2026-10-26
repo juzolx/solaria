@@ -115,3 +115,4 @@ Every rating Juzo gives goes here, so all sessions learn what he thinks is reall
 - 2026-10-26 Dungeon r5 SE before/after: Juzo approved the new look ("The doors look good"): steel unread door frames, hero clear of the middle door, slight boot crop and hidden title on the shortest SE views.
 - 2026-10-26 Town: Juzo only wanted the one field (by the Blacksmith) removed. The pumpkin/wheat field by the gate STAYS.
 - 2026-10-26 Juzo spotted the hero doll floating above its shadow on the Gear page (and a text line cutting the shadow). Standing check for every picture: does everything stand ON the ground or its shadow? Look at the whole picture, not just the thing that was fixed.
+- 2026-10-26 Same doll: Juzo also flagged the hand (empty-handed grip fist sticking out at the hip) and messy, lopsided armour. Check hands (grip with no weapon, malformed fingers) and outfit symmetry/cleanliness in every hero picture.
