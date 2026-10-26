@@ -44,6 +44,7 @@ func setup(m) -> void:
 	# ---- Merchant ----
 	var merchant := _frame(UiSkin.IRON)   # interface pass (approved mockup 12): the panel frame
 	v.add_child(merchant)
+	merchant.visible = false   # Fable r4 #9: Marta speaks once (the header line); the bar above says "Shop"
 	var mrow := UI.hbox(10)
 	merchant.add_child(mrow)
 	var mcol := UI.vbox(2)
@@ -52,7 +53,7 @@ func setup(m) -> void:
 	mcol.add_child(UI.label(GameData.MERCHANT_NAME, UI.FONT_BODY, UI.GOLD))
 	greeting = UI.rich(UI.FONT_BODY)
 	mcol.add_child(greeting)
-	gold_label = UI.rich(16)
+	gold_label = UI.rich(UI.FONT_BODY)
 	gold_label.custom_minimum_size = Vector2(120, 0)
 	gold_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	mrow.add_child(gold_label)

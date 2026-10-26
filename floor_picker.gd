@@ -82,7 +82,7 @@ func show_for(main_node) -> void:
 		content.add_child(carry_note)
 		carry_head = gold_head
 		# 2.1: quick swap to a saved preset (gear, skills, team, supplies) right before the dive
-		content.add_child(UI.heading("Preset"))
+		# (no heading: with no saved preset it sat over a lone "Presets..." button, Fable r4 #8)
 		preset_box = GridContainer.new()
 		preset_box.columns = 2
 		preset_box.add_theme_constant_override("h_separation", 8)
@@ -105,10 +105,10 @@ func show_for(main_node) -> void:
 		content.add_child(supply_box)
 		_fill_team()
 		_fill_supplies()
-		risk_note = UI.label("", UI.FONT_BODY, Color("#fca5a5"))
-		risk_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		UI.tip(risk_note, "Bound items are always safe. Fall, and the gear plus half that gold wait in your grave on that floor, guarded by your killer; potions, scrolls and elixirs you carry are lost.")
+		risk_note = UI.label("", UI.FONT_BODY, Color("#fca5a5"))   # the count lives in the Dive button now
+		risk_note.visible = false
 		content.add_child(risk_note)
+		UI.tip(dive_button, "Bound items are always safe. Fall, and the gear plus half that gold wait in your grave on that floor, guarded by your killer; potions, scrolls and elixirs you carry are lost.")
 		_show_carry()
 	var sub := UI.rich(UI.FONT_BODY)
 	if from_town:
@@ -266,10 +266,25 @@ func _pick_floor(f: int) -> void:
 	_build()
 	_show_dive()
 
+## Worn and carried gear that isn't bound: what waits in your grave if you fall.
+func _items_at_risk() -> int:
+	var n := 0
+	for s in state.equipped:
+		if not GameState.is_bound(state.equipped[s]):
+			n += 1
+	return n + state.bag.filter(func(it): return not GameState.is_bound(it)).size()
+
 func _show_dive() -> void:
 	if dive_button == null:
 		return
-	dive_button.text = "Dive · floor %d · %d gold at risk" % [dive_floor, Town.carry_amount(state, state.carry_pick)]
+	var gold := Town.carry_amount(state, state.carry_pick)
+	var items := _items_at_risk()
+	var risk: Array = []
+	if gold > 0:
+		risk.append("%s gold" % UI._commas(gold))
+	if items > 0:
+		risk.append("%d item%s" % [items, "" if items == 1 else "s"])
+	dive_button.text = "Dive · floor %d · %s" % [dive_floor, (" + ".join(risk) + " at risk") if not risk.is_empty() else "nothing at risk"]
 	for f in quick_buttons:
 		(quick_buttons[f] as Button).set_pressed_no_signal(int(f) == dive_floor)
 
@@ -367,7 +382,7 @@ func _fill_team() -> void:
 		var tp := TextureRect.new()
 		tp.texture = Sprites.portrait(hg.appearance, hg.hero_looks())
 		tp.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		tp.custom_minimum_size = Vector2(40, 40)
+		tp.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT)   # whole pixels (was squeezed into 40 px; Fable r4 #8)
 		tp.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tp.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		h.add_child(tp)

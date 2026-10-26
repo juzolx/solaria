@@ -85,7 +85,7 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	if not lock_race:
 		_text_row(right, "Race", "race", GameData.RACES, [], 3)
 	right.add_child(race_card)  # what the race does, right under the pick
-	_text_row(right, "Build", "body", Sprites.BODIES, Sprites.BODY_NAMES, 2)
+	_text_row(right, "Body", "body", Sprites.BODIES, Sprites.BODY_NAMES, 2)
 	_swatch_row(right, "Skin", "skin", Sprites.swatches("skin"))
 	_stepper_row(right, "Hair style", "hair")
 	_swatch_row(right, "Hair color", "hair_color", Sprites.swatches("hair"))
@@ -93,6 +93,9 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	_swatch_row(right, "Eyes", "eyes", Sprites.swatches("eyes"))
 	if HeroArt.available():
 		_stepper_row(right, "Face", "face")
+	var pad := Control.new()   # the last row clears the scroll's edge instead of sitting half under it
+	pad.custom_minimum_size = Vector2(0, 24)
+	right.add_child(pad)
 
 	# Done sits under the scroll, always on screen
 	done_button = UI.primary("Done", _finish)
@@ -294,12 +297,12 @@ static func race_preview(race: String) -> String:
 	for id in Realms.IDS:
 		if Realms.info(id)["race"] == race:
 			friends.append(Realms.realm_name(id))
-	var t := "[color=%s]%s[/color]: %s\n[color=%s]Awakens:[/color] %s" % [p["color"], p["name"], p["how"], UI.hex(UI.DIM), " > ".join(names)]
+	var t := "[color=%s]%s[/color]: %s\n[color=%s]Awakens:[/color] %s" % [p["color"], p["name"], p["how"], UI.hex(UI.DIM), " › ".join(names)]
 	if not friends.is_empty():
 		t += "\n[color=%s]Home:[/color] %s (friendly)" % [UI.hex(UI.DIM), ", ".join(friends)]
 	if not foes.is_empty():
 		t += "\n[color=%s]Rivals:[/color] %s (they start hostile)" % [UI.hex(UI.DIM), ", ".join(foes)]
-	return "[font_size=%d]%s[/font_size]" % [UI.FONT_CAPTION, t]
+	return t   # body size: these four lines decide the race pick (Fable r4 #7)
 
 func _finish() -> void:
 	if name_edit:

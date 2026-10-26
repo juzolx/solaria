@@ -289,10 +289,13 @@ func _fill_menu() -> void:
 				p.active_slot = n
 				meta = GameState.slot_meta(n)
 				break
-	var town_l := UI.label("%s  ·  %s  ·  %d / %d heroes" % [p.town_name(p.town), "Hardcore" if p.town_hardcore(p.town) else "Regular", GameState.town_heroes(p.town), p.slots_open()], UI.FONT_BODY, UI.GOLD)
+	var town_l := UI.label("%s · %s" % [p.town_name(p.town), "Hardcore" if p.town_hardcore(p.town) else "Regular"], UI.FONT_BODY, UI.GOLD)
 	town_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	town_l.tooltip_text = "The town you're in. Switch or found another from Towns."
+	UI.tip(town_l, "The town you're in. Switch or found another from Towns.")
 	menu_box.add_child(town_l)
+	var roster_l := UI.label(p.roster_line(), UI.FONT_BODY, UI.DIM)   # Fable r4 #4: the same line as Heroes and the Inn
+	roster_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	menu_box.add_child(roster_l)
 	if not meta.is_empty():
 		var cont := UI.primary("Continue", func(): close_and(func(): m.play_slot(p.active_slot)), UI.GOLD)
 		cont.custom_minimum_size = Vector2(0, UI.TAP)

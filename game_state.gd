@@ -980,7 +980,7 @@ func choose_class(class_name_picked: String) -> void:
 	hero_hp = get_max_hp()
 	say("You are a [color=%s]%s[/color]!" % [info["color"], hero_class])
 	var first: String = info["start"][0]
-	tip("ability", "%s is your first skill: %s Press it when it's ready, or leave Auto on. Monsters drop ability stones with more skills." % [SkillData.skill_name(first), SkillData.info(first)["text"]])
+	tip("ability", "%s is your first skill: %s Tap it when it's ready, or leave Auto on. Monsters drop ability stones with more skills." % [SkillData.skill_name(first), SkillData.info(first)["text"]])
 	_page("abilities")
 	save_game()
 
@@ -2441,7 +2441,7 @@ func _give_item(item: Dictionary) -> void:
 		if r == GameData.LEGENDARY:
 			tip("legendary", "A Legendary! Every Legendary has a special effect. Check it in the Bag or Gear tab.")
 		if has_upgrade(item["slot"]):
-			tip("first_upgrade", "That's an upgrade! Press Equip Best in the Gear tab to put it on.")
+			tip("first_upgrade", "That's an upgrade! Tap Equip Best in Items › Gear to put it on.")
 
 # =====================================================================
 # Codex: achievements and guide pages

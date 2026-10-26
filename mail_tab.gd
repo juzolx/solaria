@@ -30,9 +30,10 @@ func refresh() -> void:
 	head.add_child(title)
 	var waiting := Mail.waiting(g)
 	var all := UI.primary("Collect all (%d)" % waiting, _collect_all, UI.GREEN)
-	all.disabled = waiting == 0
+	all.visible = waiting > 0   # Fable r4: no dead gold button
 	head.add_child(all)
-	var note := UI.label("Rewards from bounties, deeds and gifts arrive here. Mail is always safe: it can't be lost in the dungeon. Gear that doesn't fit in your bag (%d / %d) waits in its letter." % [g.bag.size(), g.bag_capacity()], UI.FONT_BODY, UI.DIM)
+	# Fable r4 #13: one line; the bag sentence only when the bag is full
+	var note := UI.label("Mail is safe: it can't be lost in the dungeon." + (" Gear that doesn't fit in your bag (%d / %d) waits in its letter." % [g.bag.size(), g.bag_capacity()] if g.bag.size() >= g.bag_capacity() else ""), UI.FONT_BODY, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(note)
 	if g.mail.is_empty():
