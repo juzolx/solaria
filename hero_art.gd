@@ -21,7 +21,7 @@ const HIT := [6]
 const PORTRAIT := [7, 8]
 const ATTACK_FPS := 9.0
 const BUILT_MAX := 24  # looks kept built (the class cards build 13 at once)
-const SHEETS_MAX := 64  # decoded layer sheets kept between builds
+const SHEETS_MAX := 24  # decoded layer sheets kept between builds (~10 MB at most)
 ## The 10 faces Juzo picked (the creator's "Face" row).
 const FACES := ["neutral", "smile", "laughing", "determined", "fierce", "grim", "wary", "surprised", "sleepy", "battle_cry"]
 const FACE_NAMES := ["Calm", "Smile", "Laugh", "Determined", "Fierce", "Grim", "Wary", "Surprised", "Sleepy", "Battle cry"]
@@ -364,7 +364,7 @@ static func art_race(app: Dictionary) -> String:
 	var f := str(app.get("form", ""))
 	if f != "" and (info().get("builds", {}).has(f) or info().get("races", {}).has(f)):
 		return f
-	return str(app.get("race", "Human"))
+	return Races.current(str(app.get("race", "Human")))  # an old slot summary may still say Golem
 
 ## The folder of a race's own body build ("goblin_m"), or "" when the race uses the standard body.
 static func build_dir(app: Dictionary) -> String:

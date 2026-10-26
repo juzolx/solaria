@@ -24,6 +24,10 @@ DARK = 0.16  # OKLab lightness below this (near-black) becomes the outline colou
 MIN_L = 0.42  # a monster's average OKLab lightness (outline excluded) is lifted to at least this
 # Monsters that still blend into their own zone's hall at MIN_L get a stronger lift
 LIFT = {"mare": 0.52, "wendigo": 0.5, "calamity_2": 0.5}
+# ...and the whole picture (outline included) must average at least this luma (0-255): fable r1
+# found 20 near-black monsters (47-54) vanishing into halls that average 38-94
+MIN_Y = 60.0
+MAX_COLORS = 24  # ArtStyle.NATIVE_COLORS
 PICKS = os.path.join(ROOT, "tools", "monsters_native", "picks.txt")
 
 
@@ -71,6 +75,7 @@ def convert(src, key=""):
     for x, y in add:
         op[x, y] = OUTLINE + (255,)
     lift(out, LIFT.get(key, MIN_L))
+    reduce(out)
     # Grown at the border? pad again so the outline never touches the canvas edge
     bb = out.getbbox()
     out = out.crop(bb)
@@ -81,7 +86,7 @@ def convert(src, key=""):
 
 def lift(im, target=MIN_L):
     """Brightens a dark monster (a gamma on its colours, darkest tones lifted most) until its
-    average lightness reaches target (MIN_L unless LIFT says more). Same number of colours;
+    average lightness reaches target (MIN_L unless LIFT says more) and its luma MIN_Y. Same number of colours;
     outline and glow stay put."""
     px = im.load()
     body = [px[x, y][:3] for y in range(im.height) for x in range(im.width)
@@ -89,15 +94,20 @@ def lift(im, target=MIN_L):
     if not body:
         return
 
-    def mean_l(g):
-        return sum(oklab(tuple(int(255 * (v / 255) ** g) for v in c))[0] for c in body) / len(body)
+    n_all = sum(1 for y in range(im.height) for x in range(im.width) if px[x, y][3])
+    y_line = (n_all - len(body)) * (0.299 * OUTLINE[0] + 0.587 * OUTLINE[1] + 0.114 * OUTLINE[2])
 
-    if mean_l(1.0) >= target:
+    def ok(g):
+        cs = [tuple(int(255 * (v / 255) ** g) for v in c) for c in body]
+        luma = (y_line + sum(0.299 * r + 0.587 * gr + 0.114 * b for r, gr, b in cs)) / n_all
+        return sum(oklab(c)[0] for c in cs) / len(cs) >= target and luma >= MIN_Y
+
+    if ok(1.0):
         return
     good, bad = 0.4, 1.0  # gamma 0.4 is the strongest lift allowed; 1.0 is too dark
     for _ in range(14):
         mid = (good + bad) / 2
-        if mean_l(mid) >= target:
+        if ok(mid):
             good = mid
         else:
             bad = mid
@@ -106,6 +116,28 @@ def lift(im, target=MIN_L):
             r, g, b, a = px[x, y]
             if a and (r, g, b) != OUTLINE:
                 px[x, y] = tuple(int(255 * (v / 255) ** good) for v in (r, g, b)) + (255,)
+
+
+def reduce(im, n=MAX_COLORS - 1):
+    """Fewer colours for a busy picture (pixen edits come back with 30-70): the body is
+    quantized to n colours (median cut, no dithering); the outline colour stays exact."""
+    px = im.load()
+    body = {px[x, y][:3] for y in range(im.height) for x in range(im.width)
+            if px[x, y][3] and px[x, y][:3] != OUTLINE}
+    if len(body) <= n:
+        return
+    flat = Image.new("RGB", im.size, OUTLINE)
+    fp = flat.load()
+    for y in range(im.height):
+        for x in range(im.width):
+            if px[x, y][3]:
+                fp[x, y] = px[x, y][:3]
+    q = flat.quantize(n, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).convert("RGB").load()
+    for y in range(im.height):
+        for x in range(im.width):
+            if px[x, y][3] and px[x, y][:3] != OUTLINE:
+                c = q[x, y]
+                px[x, y] = (c if c != OUTLINE else tuple(min(255, v + 6) for v in c)) + (255,)
 
 
 def update_info(entries):

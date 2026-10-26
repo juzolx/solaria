@@ -55,7 +55,7 @@ const INFO := {
 
 # The fighting content, in the same format as GameData.ZONES.
 const ZONES := [
-	{"id": "elf", "name": "The Hushwood", "realm": "elf", "color": "#5b8a72", "enemies": [
+	{"id": "elf", "name": "The Hushwood", "realm": "elf", "color": "#d0dcc8", "enemies": [
 		{"id": "hollow_sentinel", "name": "Hollow Sentinel", "shape": "humanoid", "color": "#9fd8c4", "people": true},
 		{"id": "grief_wisp", "name": "Grief Wisp", "shape": "spirit", "color": "#c8f2ee"},
 		{"id": "barkhusk", "name": "Barkhusk", "shape": "brute", "color": "#6b5a4a"},
@@ -73,7 +73,7 @@ const ZONES := [
 		{"id": "crown_of_fallen_leaves", "name": "Crown of Fallen Leaves", "flavor": "Every leaf is a name. She remembers all of them.", "slot": "Helmet", "effect": "regen", "value": 3},
 		{"id": "rootwoven_mantle", "name": "Rootwoven Mantle", "flavor": "Woven from the Tree's last living roots.", "slot": "Chest", "effect": "dodge", "value": 12},
 	]}},
-	{"id": "fairy", "name": "The Glimmer Court", "realm": "fairy", "color": "#d870ac", "enemies": [
+	{"id": "fairy", "name": "The Glimmer Court", "realm": "fairy", "color": "#c27ad8", "enemies": [
 		{"id": "pixie_swarm", "name": "Pixie Swarm", "shape": "spirit", "color": "#ffc6de"},
 		{"id": "thornling", "name": "Thornling", "shape": "humanoid", "color": "#75a743", "people": true},
 		{"id": "mushroom_knight", "name": "Mushroom Knight", "shape": "humanoid", "color": "#e43b44", "people": true},
@@ -91,7 +91,7 @@ const ZONES := [
 		{"id": "gossamer_crown", "name": "Gossamer Crown", "flavor": "Light as a promise. Just as easy to break.", "slot": "Helmet", "effect": "dodge", "value": 12},
 		{"id": "queens_favor", "name": "Queen's Favor", "flavor": "A token from the Queen. It means she owes you. Or you owe her.", "slot": "Off Hand", "effect": "gold_find", "value": 30},
 	]}},
-	{"id": "dwarf", "name": "The Ironroot Deeps", "realm": "dwarf", "color": "#b45309", "enemies": [
+	{"id": "dwarf", "name": "The Ironroot Deeps", "realm": "dwarf", "color": "#c8a060", "enemies": [
 		{"id": "forge_sentry", "name": "Forge Sentry", "shape": "humanoid", "color": "#c0cbdc", "people": true},
 		{"id": "slag_golem", "name": "Slag Golem", "shape": "brute", "color": "#5a4a3e"},
 		{"id": "rune_hound", "name": "Rune Hound", "shape": "beast", "color": "#7fd0f0"},
@@ -109,7 +109,7 @@ const ZONES := [
 		{"id": "the_undermountain_crown", "name": "The Undermountain Crown", "flavor": "Forged from the first gold ever mined.", "slot": "Helmet", "effect": "thorns", "value": 25},
 		{"id": "runewall", "name": "Runewall", "flavor": "Every rune says 'no'. In a different way.", "slot": "Off Hand", "effect": "thorns", "value": 25},
 	]}},
-	{"id": "angel", "name": "The Gilded Spire", "realm": "angel", "color": "#e8b14a", "enemies": [
+	{"id": "angel", "name": "The Gilded Spire", "realm": "angel", "color": "#c8a060", "enemies": [
 		{"id": "choir_sentinel", "name": "Choir Sentinel", "shape": "humanoid", "color": "#fde68a", "people": true},
 		{"id": "halo_wisp", "name": "Halo Wisp", "shape": "spirit", "color": "#fff4a3"},
 		{"id": "gilded_lion", "name": "Gilded Lion", "shape": "beast", "color": "#feae34"},
@@ -127,7 +127,7 @@ const ZONES := [
 		{"id": "wings_of_the_first_light", "name": "Wings of the First Light", "flavor": "Not real wings. Real enough.", "slot": "Chest", "effect": "regen", "value": 3},
 		{"id": "dawnbreaker", "name": "Dawnbreaker", "flavor": "The first sunrise, hammered into a blade.", "slot": "Weapon", "effect": "lifesteal", "value": 12},
 	]}},
-	{"id": "demon", "name": "The Cinder Abyss", "realm": "demon", "color": "#be123c", "enemies": [
+	{"id": "demon", "name": "The Cinder Abyss", "realm": "demon", "color": "#e43b44", "enemies": [
 		{"id": "imp", "name": "Imp", "shape": "humanoid", "color": "#e43b44", "people": true},
 		{"id": "hellmaw", "name": "Hellmaw", "shape": "beast", "color": "#8e2e38"},
 		{"id": "chainwraith", "name": "Chainwraith", "shape": "spirit", "color": "#8b9bb4"},

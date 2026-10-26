@@ -17,18 +17,23 @@ static var allow_3d := true   # off in tests that only want the 2D drawer
 const DOOR_X := [-1.9, 0.0, 1.9]
 const DOOR_W := 1.3
 const DOOR_H := 2.3
-const MOODS := [          # particles and light by zone index
-	{"kind": "fireflies", "dark": 0.35, "light": Color("#ffd27a"), "amb": Color("#8fae8a")},
-	{"kind": "dust", "dark": 0.55, "light": Color("#ffb35c"), "amb": Color("#a89a88")},
-	{"kind": "drips", "dark": 0.45, "light": Color("#a8e6ff"), "amb": Color("#8aa4b4")},
-	{"kind": "embers", "dark": 0.4, "light": Color("#ff7a3d"), "amb": Color("#b88a78")},
-	{"kind": "shadows", "dark": 0.55, "light": Color("#c9a3ff"), "amb": Color("#9a8fb0")},
-	{"kind": "leaves", "dark": 0.4, "light": Color("#b8f5d0"), "amb": Color("#90b49c")},
-	{"kind": "sparkles", "dark": 0.35, "light": Color("#ffb3f0"), "amb": Color("#b49ab8")},
-	{"kind": "sparks", "dark": 0.45, "light": Color("#ffcf6b"), "amb": Color("#ab9c88")},
-	{"kind": "motes", "dark": 0.2, "light": Color("#fff4c2"), "amb": Color("#c4bca4")},
-	{"kind": "embers", "dark": 0.55, "light": Color("#ff4a4a"), "amb": Color("#a87878")},
+## The one colour table for each zone's light (palette colours only; claude/zone-palettes.md):
+## "deep" its Dark, "amb" its Mid (the ambient light), "accent" its one bright colour (shrine glyph,
+## portal light, rim light, the zone's UI colour), "light" its torch. Plus particles and darkness.
+## The 3D room, the 2D room, SpriteLight, the battle view's rim and GameData's zone colour read it.
+const MOODS := [
+	{"kind": "fireflies", "dark": 0.35, "deep": Color("#1f1d24"), "amb": Color("#566a56"), "accent": Color("#75a743"), "light": Color("#feae34")},
+	{"kind": "dust", "dark": 0.55, "deep": Color("#181425"), "amb": Color("#5a6988"), "accent": Color("#fee761"), "light": Color("#feae34")},
+	{"kind": "drips", "dark": 0.45, "deep": Color("#172038"), "amb": Color("#3a4466"), "accent": Color("#4fb0c6"), "light": Color("#4fb0c6")},
+	{"kind": "embers", "dark": 0.4, "deep": Color("#1f1d24"), "amb": Color("#8f563b"), "accent": Color("#e43b44"), "light": Color("#f77622")},
+	{"kind": "shadows", "dark": 0.55, "deep": Color("#181425"), "amb": Color("#3a4466"), "accent": Color("#9a4fc0"), "light": Color("#c27ad8")},
+	{"kind": "leaves", "dark": 0.4, "deep": Color("#1f1d24"), "amb": Color("#566a56"), "accent": Color("#d0dcc8"), "light": Color("#d0dcc8")},
+	{"kind": "sparkles", "dark": 0.35, "deep": Color("#172038"), "amb": Color("#68386c"), "accent": Color("#c27ad8"), "light": Color("#f6757a")},
+	{"kind": "sparks", "dark": 0.45, "deep": Color("#1f1d24"), "amb": Color("#5a3f35"), "accent": Color("#c8a060"), "light": Color("#feae34")},
+	{"kind": "motes", "dark": 0.3, "deep": Color("#1f1d24"), "amb": Color("#6a4a28"), "accent": Color("#c8a060"), "light": Color("#c8a060")},
+	{"kind": "embers", "dark": 0.55, "deep": Color("#2a1a1e"), "amb": Color("#733e39"), "accent": Color("#e43b44"), "light": Color("#f77622")},
 ]
+const TEXELS := 16.0      # texels per world unit on walls, floors and ceilings (same as Room3D)
 
 var focal := 300.0
 var center := Vector2.ZERO
@@ -54,6 +59,11 @@ func tx(path: String) -> Texture2D:
 func mood() -> Dictionary:
 	return MOODS[zone]
 
+## A zone's ambient light: its Mid colour, brightened to one level so dark zones aren't black.
+static func ambient(zi: int) -> Color:
+	var c: Color = MOODS[clampi(zi, 0, MOODS.size() - 1)]["amb"]
+	return c * (0.68 / maxf(0.05, maxf(c.r, maxf(c.g, c.b))))
+
 ## Lays out the room (same floor and room = same room). Rebuilds only when needed.
 func build(st: GameState, sz: Vector2) -> void:
 	var g: bool = not st.room_props.is_empty() and String(st.room_props[0]["kind"]) == "gate" and not st.room_props[0].get("used", false)
@@ -68,14 +78,14 @@ func build(st: GameState, sz: Vector2) -> void:
 	rng.seed = hash("%d-%d" % [st.floor_num, st.room_count])
 	_seed = rng.seed
 	zone = clampi(GameData.zone_index(st.floor_num), 0, 9)
-	amb = MOODS[zone]["amb"]
+	amb = ambient(zone)
 	light = MOODS[zone]["light"]
 	var depth := clampf(st.floor_num / 1000.0, 0.0, 1.0)
 	dark = clampf(float(MOODS[zone]["dark"]) + depth * 0.3, 0.0, 0.85)
 	torches = []
-	var tz := rng.randf_range(3.9, 4.6)
+	var tz := rng.randf_range(3.9, 4.6)   # side-wall torches a phone can see (|x| <= 0.78 z)
 	torches.append(Vector3(-W / 2.0 + 0.05, 0.4, tz))
-	torches.append(Vector3(W / 2.0 - 0.05, 0.4, clampf(tz + rng.randf_range(-0.5, 0.5), 3.8, D - 0.3)))
+	torches.append(Vector3(W / 2.0 - 0.05, 0.4, clampf(tz + rng.randf_range(-0.5, 0.5), 3.9, D - 0.3)))
 	var kinds := ["statue_0", "statue_1", "statue_2", "statue_3", "boulder", "box"]
 	if zone == 1:
 		kinds += ["sarcophagus", "sarcophagus"]
@@ -146,18 +156,27 @@ func end_batch(ci: CanvasItem) -> void:
 			PackedInt32Array(), PackedFloat32Array(), _batch_tex.get_rid())
 	_batch_tex = null
 
+## A dithered drop shadow (art/fx/shadow.png, 2 hard steps) r pixels wide either side.
 func shadow(ci: CanvasItem, at: Vector2, r: float) -> void:
-	ci.draw_set_transform(at, 0.0, Vector2(1.0, 0.3))
-	ci.draw_circle(Vector2.ZERO, r, Color(0, 0, 0, 0.4))
-	ci.draw_set_transform(Vector2.ZERO)
+	var tex := tx("res://art/fx/shadow.png")
+	if tex:
+		ci.draw_texture_rect(tex, Rect2(at - Vector2(r, r * 0.25), Vector2(r * 2.0, r * 0.5)), false)
 
-## A sprite standing on the floor at (x, z), h world units tall. Returns its screen rect.
+## The floor glow (art/fx/glow.png, 3 hard steps) tinted c, centred on at, w pixels wide.
+func glow(ci: CanvasItem, at: Vector2, w: float, c: Color) -> void:
+	var tex := tx("res://art/fx/glow.png")
+	if tex:
+		ci.draw_texture_rect(tex, Rect2(at - Vector2(w / 2.0, w / 4.0), Vector2(w, w / 2.0)), false, c)
+
+## A sprite standing on the floor at (x, z), about h world units tall. Returns its screen rect.
+## Drawn at a whole-number scale of its art (1x, 2x, 3x...), never in between.
 func sprite(ci: CanvasItem, tex: Texture2D, x: float, z: float, h: float, tint := Color.WHITE, bob := 0.0) -> Rect2:
 	if tex == null:
 		return Rect2()
-	var feet := proj(x, FLOOR_Y, z) + Vector2(0, bob)
-	var hpx := focal * h / z
-	var wpx := hpx * tex.get_size().x / tex.get_size().y
+	var feet := (proj(x, FLOOR_Y, z) + Vector2(0, bob)).round()
+	var k := maxi(1, roundi(focal * h / z / tex.get_size().y))
+	var hpx := tex.get_size().y * k
+	var wpx := tex.get_size().x * k
 	var rect := Rect2(feet - Vector2(wpx / 2.0, hpx), Vector2(wpx, hpx))
 	shadow(ci, feet, wpx * 0.35)
 	var lc := lit(x, FLOOR_Y + h * 0.6, z)
@@ -177,6 +196,7 @@ func draw_shell(ci: CanvasItem, sz: Vector2) -> void:
 	var flo := tx("res://art/halls/z%d_floor.png" % zone)
 	var ceil_t := tx("res://art/halls/z%d_ceil.png" % zone)
 	var hw := W / 2.0
+	# Tiled like the 3D room: one tile per (texture width / TEXELS) world units (a 32 px tile per 2 units).
 	# One texture at a time (all floor, then all ceiling, then the walls), each sent as a
 	# single triangle list: a few draw calls for the whole room instead of one per quad.
 	for pass_tex in [flo, ceil_t]:
@@ -190,37 +210,43 @@ func draw_shell(ci: CanvasItem, sz: Vector2) -> void:
 			var x0 := -hw
 			while x0 < hw - 0.001:
 				var x1 := x0 + _step()
+				var rep: float = pass_tex.get_width() / TEXELS
+				var u0 := Vector2(fposmod((x0 + hw) / rep, 1.0), fposmod((z0 - Z_NEAR) / rep, 1.0))
+				var u1 := u0 + Vector2((x1 - x0) / rep, (z1 - z0) / rep)
 				if pass_tex == flo:
-					quad(ci, flo, Vector3(x0, y, z1), Vector3(x1, y, z1), Vector3(x1, y, z0), Vector3(x0, y, z0), Vector2.ZERO, Vector2.ONE)
+					quad(ci, flo, Vector3(x0, y, z1), Vector3(x1, y, z1), Vector3(x1, y, z0), Vector3(x0, y, z0), Vector2(u0.x, u1.y), Vector2(u1.x, u0.y))
 				else:
-					quad(ci, ceil_t, Vector3(x0, y, z0), Vector3(x1, y, z0), Vector3(x1, y, z1), Vector3(x0, y, z1), Vector2.ZERO, Vector2.ONE)
+					quad(ci, ceil_t, Vector3(x0, y, z0), Vector3(x1, y, z0), Vector3(x1, y, z1), Vector3(x0, y, z1), u0, u1)
 				x0 = x1
 			z0 = z1
 		end_batch(ci)
 	if wall:
 		begin_batch(wall)
-		# side walls: one texture per world unit
+		var wrep: float = wall.get_width() / TEXELS
+		# side walls
 		var z0 := Z_NEAR
 		while z0 < D - 0.001:
 			var z1 := minf(z0 + _step(), D)
-			var u0 := fposmod(z0 - Z_NEAR, 1.0)
+			var u0 := fposmod((z0 - Z_NEAR) / wrep, 1.0)
 			var y0 := FLOOR_Y
 			while y0 < CEIL_Y - 0.001:
 				var y1 := minf(y0 + _step(), CEIL_Y)
-				var v0 := fposmod(CEIL_Y - y1, 1.0)
+				var v0 := fposmod((CEIL_Y - y1) / wrep, 1.0)
 				var uv0 := Vector2(u0, v0)
-				var uv1 := Vector2(u0 + (z1 - z0), v0 + (y1 - y0))
+				var uv1 := Vector2(u0 + (z1 - z0) / wrep, v0 + (y1 - y0) / wrep)
 				quad(ci, wall, Vector3(-hw, y1, z0), Vector3(-hw, y1, z1), Vector3(-hw, y0, z1), Vector3(-hw, y0, z0), uv0, uv1)
 				quad(ci, wall, Vector3(hw, y1, z1), Vector3(hw, y1, z0), Vector3(hw, y0, z0), Vector3(hw, y0, z1), uv0, uv1)
 				y0 = y1
 			z0 = z1
 	if wall:
+		var wrep: float = wall.get_width() / TEXELS
 		var yj := FLOOR_Y
 		while yj < CEIL_Y - 0.001:
 			var y1 := minf(yj + 1.0, CEIL_Y)
 			var xj := -hw
 			while xj < hw - 0.001:
-				quad(ci, wall, Vector3(xj, y1, D), Vector3(xj + 1.0, y1, D), Vector3(xj + 1.0, yj, D), Vector3(xj, yj, D), Vector2(0, 1.0 - (y1 - yj)), Vector2.ONE)
+				var fu := Vector2(fposmod((xj + hw) / wrep, 1.0), fposmod((CEIL_Y - y1) / wrep, 1.0))
+				quad(ci, wall, Vector3(xj, y1, D), Vector3(xj + 1.0, y1, D), Vector3(xj + 1.0, yj, D), Vector3(xj, yj, D), fu, fu + Vector2(1.0, y1 - yj) / wrep)
 				xj += 1.0
 			yj = y1
 		end_batch(ci)
@@ -249,7 +275,7 @@ func _draw_3d(ci: CanvasItem, sz: Vector2) -> bool:
 	if _r3_key != key:
 		_r3_key = key
 		r3.fit(sz)
-		r3.rebuild.call_deferred(zone, _seed, {"light": light, "amb": amb, "kind": mood()["kind"], "dark": dark, "gate": gate})
+		r3.rebuild.call_deferred(zone, _seed, {"light": light, "amb": amb, "accent": mood()["accent"], "kind": mood()["kind"], "dark": dark, "gate": gate})
 		return false
 	r3.fit(sz)
 	ci.draw_texture_rect(r3.texture(), Rect2(Vector2.ZERO, sz), false)
@@ -259,14 +285,16 @@ func _draw_3d(ci: CanvasItem, sz: Vector2) -> bool:
 ## become tap targets in `hit` ("d0".."d2").
 func draw_doors(ci: CanvasItem, st: GameState, hit: Dictionary, font: Font) -> void:
 	var open := st != null and st.door_pending()
-	var dt := tx("res://art/halls/door.png")
+	var dt := tx("res://art/halls/z%d_door.png" % zone)
+	if dt == null:
+		dt = tx("res://art/halls/door.png")
 	for i in 3:
 		var x: float = DOOR_X[i]
 		var tl := proj(x - DOOR_W / 2.0, FLOOR_Y + DOOR_H, D)
 		var br := proj(x + DOOR_W / 2.0, FLOOR_Y, D)
 		var rect := Rect2(tl, br - tl)
 		if gate and i == 1 and not is_3d():
-			ci.draw_texture_rect(tx("res://art/halls/portal.png"), rect, false)
+			ci.draw_texture_rect(tx("res://art/halls/portal_1.png" if int(t * 4.0) % 2 else "res://art/halls/portal.png"), rect, false)
 		elif dt and not is_3d():
 			ci.draw_texture_rect(dt, rect, false, lit(x, FLOOR_Y + 1.0, D - 0.3))
 		if not open:
@@ -276,14 +304,12 @@ func draw_doors(ci: CanvasItem, st: GameState, hit: Dictionary, font: Font) -> v
 		var col := Color(String(rd["color"])) if String(rd["color"]) != "" else Color(1.0, 0.85, 0.45)
 		var pulse := 0.45 + 0.35 * sin(t * 3.0 + i)
 		if String(rd["color"]) != "":
-			ci.draw_set_transform(Vector2(rect.get_center().x, rect.end.y), 0.0, Vector2(1.0, 0.3))
-			ci.draw_circle(Vector2.ZERO, rect.size.x * 0.9, Color(col, 0.22 + 0.1 * sin(t * 2.0 + i)))
-			ci.draw_set_transform(Vector2.ZERO)
+			glow(ci, Vector2(rect.get_center().x, rect.end.y), rect.size.x * 1.8, Color(col, 0.6 + 0.2 * sin(t * 2.0 + i)))
 		ci.draw_rect(rect.grow(2), Color(col, pulse), false, 2.0)
 		hit["d%d" % i] = rect.grow(12)
 		var lab := String(rd["label"])
 		if lab != "":
-			var fs := 18 if lab == "?" else 11
+			var fs := 18 if lab == "?" else 16
 			var at := Vector2(rect.position.x - 30, rect.position.y - 6)
 			ci.draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x + 60, fs, 4, Color(0, 0, 0, 0.9))
 			ci.draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x + 60, fs, col.lightened(0.3))
@@ -314,8 +340,7 @@ func draw_scenery(ci: CanvasItem, th: Dictionary) -> bool:
 			if tt:
 				ci.draw_texture_rect(tt, Rect2(at - Vector2(hpx / 2.0, hpx / 2.0), Vector2(hpx, hpx)), false)
 			var flick := 1.0 + 0.08 * sin(t * 11.0 + p.z)
-			for k in 4:
-				ci.draw_circle(at, (hpx * (0.35 + k * 0.22)) * flick, Color(light, 0.07))
+			glow(ci, at, hpx * 1.6 * flick, Color(light, 0.35))
 			return true
 	return false
 

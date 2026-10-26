@@ -32,7 +32,7 @@ const RANK_TEXT := [
 ## The trick's chance/value: [Epic, Legendary and up].
 const FAMILIES := {
 	"beast": {"name": "Beast",
-		"passive": {"name": "Keen Eye", "key": "crit", "values": [1, 2, 3, 3, 4, 5], "text": "+{v}% crit chance"},
+		"passive": {"name": "Keen Eye", "key": "crit", "values": [1, 2, 3, 3.5, 4, 5], "text": "+{v}% crit chance"},
 		"trick": {"name": "Pounce", "do": "strike", "chance": [15, 22], "value": [1.0, 1.5], "text": "{c}% chance each turn to pounce again for {v}x its hit"}},
 	"brute": {"name": "Brute",
 		"passive": {"name": "Thick Hide", "key": "hp", "values": [2, 3, 4, 5, 6, 7], "text": "+{v}% max HP"},
@@ -41,28 +41,28 @@ const FAMILIES := {
 		"passive": {"name": "Soft Glow", "key": "regen", "values": [0.2, 0.3, 0.4, 0.5, 0.6, 0.7], "text": "you heal {v}% of your max HP every turn"},
 		"trick": {"name": "Mend", "do": "heal", "chance": [15, 20], "value": [4, 6], "text": "{c}% chance each turn, when you're below half health, to heal you for {v}% of your max HP"}},
 	"serpent": {"name": "Serpent",
-		"passive": {"name": "Leech", "key": "lifesteal", "values": [1, 1, 2, 2, 3, 3], "text": "+{v}% lifesteal"},
+		"passive": {"name": "Leech", "key": "lifesteal", "values": [1, 1.5, 2, 2.5, 3, 4], "text": "+{v}% lifesteal"},
 		"trick": {"name": "Venom", "do": "poison", "chance": [15, 22], "value": [0.5, 0.8], "text": "{c}% chance each turn to poison the monster for {v}x its hit every turn"}},
 	"humanoid": {"name": "Folk",
 		"passive": {"name": "Sticky Fingers", "key": "gold_find", "values": [3, 5, 7, 8, 10, 12], "text": "+{v}% gold"},
-		"trick": {"name": "Pickpocket", "do": "gold", "chance": [15, 22], "value": [0.5, 1.0], "text": "{c}% chance each turn to steal a little gold ({v}x the floor's coin), once a fight"}},
+		"trick": {"name": "Pickpocket", "do": "gold", "chance": [15, 22], "value": [25, 40], "text": "{c}% chance each turn to steal {v}% of the monster's gold on top, once a fight"}},
 	"calamity": {"name": "Calamity",
 		"passive": {"name": "Dread", "key": "def", "values": [6, 6, 6, 6, 6, 6], "text": "+{v}% Defense"},
 		"trick": {"name": "Ruin", "do": "strike", "chance": [20, 25], "value": [2.0, 2.0], "text": "{c}% chance each turn to strike again for {v}x its hit"}},
 }
 
 ## Mythic signatures by region id (claude/stable-ids.md). when: "start" (the
-## pet's first turn of every fight; the texts say so), "low" (once a fight, when you drop low) or "kill".
+## pet's first turn of every fight; the texts say so), "low" (once a fight, when you drop below LOW_HP) or "kill".
 const SIGNATURES := {
 	"mossy_hollows": {"name": "Bramble Snare", "when": "start", "do": "stun", "value": 1, "text": "On its first turn each fight, roots hold the monster still for a turn"},
 	"sunken_catacombs": {"name": "Grave Chill", "when": "start", "do": "weaken", "value": 25, "text": "On its first turn each fight, chills the monster: it hits {v}% softer for 3 turns"},
-	"flooded_depths": {"name": "Undertow", "when": "low", "do": "heal", "value": 15, "text": "Once a fight, when you drop low, the tide pulls you back: heals {v}% of your max HP"},
+	"flooded_depths": {"name": "Undertow", "when": "low", "do": "heal", "value": 15, "text": "Once a fight, when you drop below 35% health, the tide pulls you back: heals {v}% of your max HP"},
 	"ember_halls": {"name": "Ember Breath", "when": "start", "do": "burn", "value": 1.0, "text": "On its first turn each fight, breathes fire: the monster burns for {v}x its hit for 3 turns"},
 	"the_shadow_deep": {"name": "Shadow Fang", "when": "start", "do": "strike", "value": 3.0, "text": "On its first turn each fight, strikes from the dark for {v}x its hit"},
-	"elf": {"name": "Hush of the Wood", "when": "low", "do": "shield", "value": 20, "text": "Once a fight, when you drop low, the wood hides you: a shield of {v}% of your max HP"},
+	"elf": {"name": "Hush of the Wood", "when": "low", "do": "shield", "value": 20, "text": "Once a fight, when you drop below 35% health, the wood hides you: a shield of {v}% of your max HP"},
 	"fairy": {"name": "Fairy Gold", "when": "kill", "do": "gold", "value": 1, "text": "Every kill shakes loose extra gold ({v}x the floor's coin)"},
 	"dwarf": {"name": "Ironroot Wall", "when": "start", "do": "shield", "value": 10, "text": "On its first turn each fight, raises a shield of {v}% of your max HP"},
-	"angel": {"name": "Gilded Grace", "when": "low", "do": "heal", "value": 25, "text": "Once a fight, when you drop low, a light heals {v}% of your max HP"},
+	"angel": {"name": "Gilded Grace", "when": "low", "do": "heal", "value": 25, "text": "Once a fight, when you drop below 35% health, a light heals {v}% of your max HP"},
 	"demon": {"name": "Hellfire", "when": "start", "do": "burn", "value": 1.5, "text": "On its first turn each fight, calls hellfire: the monster burns for {v}x its hit for 3 turns"},
 	"calamity": {"name": "Echo of the End", "when": "start", "do": "strike", "value": 4.0, "text": "On its first turn each fight, strikes with its parent's fury for {v}x its hit"},
 	"": {"name": "Wild Heart", "when": "start", "do": "strike", "value": 2.0, "text": "On its first turn each fight, lunges wildly for {v}x its hit"},
@@ -203,6 +203,20 @@ static func bonus_sources(g: GameState) -> Array:
 	g.set_meta("pet_bonus", [key, out])
 	return out
 
+## How much regen (% of max HP a turn) this pet really adds once the team cap is applied,
+## or -1 if it isn't a Spirit out on the run. The Pet tab says so when the cap cut it.
+static func regen_share(g: GameState, p: Dictionary) -> float:
+	var regen := 0.0
+	for q in Menagerie.out(g):
+		var sp := String(q["species"])
+		if String(FAMILIES[family(sp)]["passive"]["key"]) != "regen":
+			continue
+		var v := maxf(0.0, minf(passive_value(sp, _rank(q)), REGEN_CAP - regen))
+		regen += v
+		if int(q["id"]) == int(p["id"]):
+			return v
+	return -1.0
+
 ## How much of your shield came from pets (auto play still casts its own shield over it).
 static func pet_shield(g: GameState) -> int:
 	return mini(g.shield_hp, int(g.get_meta("pet_shield", 0)))
@@ -289,15 +303,26 @@ static func apply(g: GameState, p: Dictionary, what: String, value: float, hit: 
 			g.enemy_weaken = minf(g.enemy_weaken, m) if g.enemy_weaken_turns > 0 else m
 			g.enemy_weaken_turns = maxi(g.enemy_weaken_turns, 3)
 		"burn":
-			g.burn_dmg = maxi(g.burn_dmg if g.burn_turns > 0 else 0, maxi(1, int(hit * value)))
-			if g.burn_tag != "Blood" or g.burn_turns <= 0:
-				g.burn_tag = "Fire"  # a Blood skill's bleed keeps its tag
-			g.burn_turns = GameData.BURN_TURNS
+			# a pet's weaker burn never keeps the hero's stronger one going: it only tops it up to 2 turns
+			var bd := maxi(1, int(hit * value))
+			if g.burn_turns <= 0 or bd >= g.burn_dmg:
+				if g.burn_tag != "Blood" or g.burn_turns <= 0:
+					g.burn_tag = "Fire"  # a Blood skill's bleed keeps its tag
+				g.burn_dmg = bd
+				g.burn_turns = GameData.BURN_TURNS
+			else:
+				g.burn_turns = maxi(g.burn_turns, 2)
 		"poison":
-			g.enemy_poison_dmg = maxi(g.enemy_poison_dmg, maxi(1, int(hit * value)))  # pets don't stack it
-			g.enemy_poison_turns = Combat.POISON_TURNS
+			var pd := maxi(1, int(hit * value))  # pets don't stack it
+			if g.enemy_poison_turns <= 0 or pd >= g.enemy_poison_dmg:
+				g.enemy_poison_dmg = pd
+				g.enemy_poison_turns = Combat.POISON_TURNS
+			else:
+				g.enemy_poison_turns = maxi(g.enemy_poison_turns, 2)
 		"gold":
-			var gold := maxi(1, int((2 + g.floor_num) * value))
+			# a share of what the kill pays (GameState: floor coin x10 for a boss x the rank's gold)
+			var base := (2 + g.floor_num) * (10 if g.enemy_is_boss else 1) * float(Monsters.TIERS[clampi(g.enemy_tier, 0, Monsters.TIERS.size() - 1)]["gold"])
+			var gold := maxi(1, int(base * value / 100.0))
 			g._add_gold(gold)
 			g.say("[color=#fbbf24]%s's %s: +%d gold.[/color]" % [p["name"], label, gold])
 		_:

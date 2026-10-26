@@ -11,7 +11,7 @@ func play(race: String, cls: String, turns: int) -> int:
 	g.appearance["race"] = race
 	g.new_game()
 	g.choose_class(cls)
-	var main_stat: String = Classes.CLASSES[cls]["stats"][0]
+	var main_stat: String = Classes.stat_order(cls)[0]
 	for turn in turns:
 		g.take_turn()
 		g.messages.clear()
