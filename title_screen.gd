@@ -51,7 +51,7 @@ func _bg(zi: int) -> Texture2D:
 	return DarkGrade.texture(path, DarkGrade.SCENE, false)
 
 func _pick_monster() -> void:
-	var z: Dictionary = GameData.ZONES[bg_keys[bg_index]]
+	var z: Dictionary = GameData.ZONES[bg_keys[bg_index % bg_keys.size()]]  # bg_index keeps counting up while the title sits open
 	var arts: Array = []
 	for e in z["enemies"]:
 		arts.append(e.get("art", e["id"]))

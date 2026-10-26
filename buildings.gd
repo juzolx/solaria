@@ -140,9 +140,9 @@ static func upgrade(g: GameState, p: Profile, id: String) -> bool:
 		g.say("[color=#e8b14a]The %s is built![/color] %s" % [name_of(id), benefit(id, 1)])
 	else:
 		g.say("[color=#e8b14a]The %s is now level %d.[/color] %s" % [name_of(id), level(id), benefit(id, level(id))])
+	g.save_game(true)  # the payment first, unthrottled: never a building kept with its cost refunded
 	if p != null:
 		p.save()
-	g.save_game()
 	return true
 
 ## A genuinely new hero joins this town (main._start): a well-built Inn sends them off

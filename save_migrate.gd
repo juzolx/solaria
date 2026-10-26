@@ -189,9 +189,11 @@ static func migrate_hero(d: Dictionary, codex: Codex = null) -> void:
 	# Wardrobe keys and transmog
 	_migrate_wardrobe(d)
 	# Retired races (Golem -> Dwarf): the hero keeps stats, level and gear
-	var look: Dictionary = d.get("appearance", {})
-	if look.has("race"):
-		look["race"] = Races.current(String(look["race"]))
+	# (also its skin, its standing with that race and the slot summary the menus show)
+	Races.retire_look(d.get("appearance", {}))
+	if d.get("meta") is Dictionary:
+		Races.retire_look((d["meta"] as Dictionary).get("appearance", {}))
+	Races.retire_rep(lin.get("rep", {}))
 	# Class route
 	_migrate_class(d, lin, codex)
 

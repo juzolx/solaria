@@ -4,7 +4,7 @@ extends RefCounted
 ## transformations, and how the races feel about you (reputation).
 ##
 ## Racial power: every race has a meter (Divine Power, Demonic Energy...).
-## It grows from playing your race's way, and from stat points (0.1 each,
+## It grows from playing your race's way, and from stat points (POWER_POINT each,
 ## like a special stat). Each point of it gives a small bonus.
 ##
 ## Awakening: each race climbs its own ranks (3 to 5 of them). A rank needs
@@ -220,6 +220,27 @@ const SPARE_AT := 0.25   # a monster under 25% HP can be spared (befriended)
 ## The race a saved name stands for today (a retired race -> the one its heroes became).
 static func current(race: String) -> String:
 	return String(RETIRED.get(race, race))
+
+## A saved look of a retired race becomes its new race, with a skin that race can pick
+## (Golem stone skins 10-11 aren't Dwarf skins). Changes app in place; true if it changed.
+static func retire_look(app: Dictionary) -> bool:
+	var old := String(app.get("race", "Human"))
+	if not RETIRED.has(old):
+		return false
+	var now := current(old)
+	app["race"] = now
+	var ok := skins(now)
+	if not int(app.get("skin", 1)) in ok:
+		app["skin"] = int(ok[ok.size() / 2])
+	return true
+
+## Standing kept under a retired race's name moves to its new race (the better of the two).
+static func retire_rep(rep: Dictionary) -> void:
+	for old in RETIRED:
+		if rep.has(old):
+			var now := String(RETIRED[old])
+			rep[now] = maxf(float(rep.get(now, rep[old])), float(rep[old]))
+			rep.erase(old)
 
 static func info(race: String) -> Dictionary:
 	return INFO.get(race, INFO["Human"])
