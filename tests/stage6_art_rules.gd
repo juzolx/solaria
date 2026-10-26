@@ -84,6 +84,39 @@ func _phone_width(key: String, w: int) -> void:
 	var share := 0.96 if key.begins_with("calamity_") else (0.92 if key.begins_with("boss_") else 0.56)
 	check(w * 3 <= int(504.0 * share * 0.853), "%s is %d px wide: over %d it draws below 3x on a phone" % [key, w, int(504.0 * share * 0.853) / 3])
 
+## Fable pets R2: every 32 px pet still has a dark silhouette (half its edge pixels near-black by
+## their brightest channel, so pale pets read on pale halls) and no idle frame ends below the
+## still (a bob goes up from the ground). Fix with claude/pets2/tools/outline.gd / idle_fix.gd.
+func _pet32_rules() -> void:
+	var dir := "res://art/pets/32/"
+	for f in _pngs(dir):
+		if f.ends_with("_idle.png"):
+			continue
+		var img := _load(dir + f)
+		var edge := 0
+		var dark := 0
+		for y in img.get_height():
+			for x in img.get_width():
+				if img.get_pixel(x, y).a <= 0.5:
+					continue
+				var open := false
+				for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+					var n: Vector2i = Vector2i(x, y) + d
+					if n.x < 0 or n.y < 0 or n.x >= img.get_width() or n.y >= img.get_height() or img.get_pixelv(n).a <= 0.5:
+						open = true
+						break
+				if open:
+					edge += 1
+					var c := img.get_pixel(x, y)
+					if maxf(c.r, maxf(c.g, c.b)) * 255.0 < 70.0:
+						dark += 1
+		check(edge > 0 and dark >= edge * 0.5, "pet %s has a dark outline (%d of %d edge pixels)" % [f, dark, edge])
+		var strip_path: String = dir + String(f).get_basename() + "_idle.png"
+		if FileAccess.file_exists(strip_path):
+			var strip := _load(strip_path)
+			for fi in 2:
+				check(strip.get_region(Rect2i(fi * 32, 0, 32, 32)).get_used_rect().end.y <= img.get_used_rect().end.y, "pet %s idle frame %d stays above its ground row" % [f, fi])
+
 func _initialize() -> void:
 	check(not ArtStyle.in_palette(ArtStyle.OUTLINE), "the outline color is not a palette color")
 	check(ArtStyle.in_palette(Color(ArtStyle.PALETTE[3])), "palette colors are in the palette")
@@ -277,6 +310,7 @@ func _initialize() -> void:
 	check(fay.size.y < man.size.y * 0.85 and fay.end.y < man.end.y, "a fairy is tiny and floats")
 	# ONE scale: battle draws every art pixel at the same whole number of screen pixels
 	check(ArtStyle.unit(1.0) == 3 and ArtStyle.unit(2.0) == 6 and ArtStyle.unit(1.0 / 3.0) == 1, "one integer battle scale (3 pt per art pixel)")
+	_pet32_rules()
 	print("ART RULES DONE, failures: ", fails)
 	quit()
 
