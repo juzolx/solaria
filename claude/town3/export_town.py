@@ -6,7 +6,7 @@ import hashlib
 import json
 import os
 import sys
-from PIL import Image
+from PIL import Image, ImageChops
 import compose as C
 import decor as D
 from layout import N, GROUND, LOTS, HOUSES, MARKET, POINTS, PLATEAU, PLATEAU_Z, TOWERS, GATEHOUSE, RAISED
@@ -15,7 +15,7 @@ from walk import grid, doors
 STATES = [("lot", "lot"), ("holy", "lot"), ("lot", "built"), ("holy", "built"), ("ruin", "lot"), ("ruin", "built")]
 
 
-def render(church, cabin):
+def render(church, cabin, lit=True):
     D.LEVEL, D.HARDCORE = 3, church == "ruin"
     C.HARDCORE.clear()
     if church == "ruin":
@@ -26,28 +26,35 @@ def render(church, cabin):
     if cabin == "lot":
         C.EMPTY.add("cabin")
     C.NO_OVERLAYS[:] = [True]
+    C.LIT[:] = [lit]
     D.LIGHTS.clear()
     return C.compose().convert("RGB")
 
 
-def occluder_list(art, sprites):
+def occluder_list(art, sprites, lit_sprites):
     """Everything tall enough to hide a walker (buildings, towers, wall runs, trees, stalls,
-    lamps): [texture, x, y, sort_y, tag]. town_view redraws the ones in front of a walker
-    over it, so nobody walks across a roof. Textures are shared by content hash."""
+    lamps): [texture, x, y, sort_y, tag, look, lit texture]. town_view redraws the ones in front
+    of a walker over it, so nobody walks across a roof. `sprites` are the day picture's, and a
+    sprite whose windows or flame light up at dusk also gets its lit texture (else "").
+    Textures are shared by content hash."""
     os.makedirs(os.path.join(art, "iso", "occ"), exist_ok=True)
     out = []
-    for key, x, y, im, tag in sprites:
+    def save(im):
+        name = hashlib.md5(im.tobytes()).hexdigest()[:10]
+        path = os.path.join(art, "iso", "occ", name + ".png")
+        if not os.path.exists(path):
+            im.save(path)
+        return name
+    for (key, x, y, im, tag), lit in zip(sprites, lit_sprites):
         if tag in ("plateau", "bridge", "outside") or im.height < 28:
             continue
         b = im.getbbox()
         if b is None or b[3] - b[1] < 26:
             continue
         crop = im.crop(b)
-        name = hashlib.md5(crop.tobytes()).hexdigest()[:10]
-        path = os.path.join(art, "iso", "occ", name + ".png")
-        if not os.path.exists(path):
-            crop.save(path)
-        out.append([name, x + b[0], y + b[1], round(key), tag])
+        name = save(crop)
+        lcrop = lit[3].crop(b)
+        out.append([name, x + b[0], y + b[1], round(key), tag, "", save(lcrop) if lcrop.tobytes() != crop.tobytes() else ""])
     return out
 
 
@@ -98,20 +105,29 @@ def main(root):
     art = os.path.join(root, "art", "town")
     os.makedirs(os.path.join(art, "iso"), exist_ok=True)
     boxes = {}
+    lit_pos = {}
     for church, cabin in STATES:
         C.BOXES.clear()
-        img = render(church, cabin)
+        img = render(church, cabin, lit=False)          # the base picture is the day: glass, torches out
+        day_sprites = list(C.LAST_SPRITES)
+        C.BOXES.clear()
+        lit = render(church, cabin, lit=True)           # dusk: what lights up goes in an overlay
         assert img.width <= 2048 and img.height <= 2048
         img.save(os.path.join(art, "iso", f"town_{church}_{cabin}.png"), optimize=True)
+        on = ImageChops.difference(img, lit).convert("L").point(lambda v: 255 if v else 0)
+        over = Image.composite(lit.convert("RGBA"), Image.new("RGBA", lit.size, (0, 0, 0, 0)), on)   # clear pixels stay empty (a small file)
+        over.crop(on.getbbox()).save(os.path.join(art, "iso", f"town_{church}_{cabin}_lit.png"), optimize=True)
+        lit_at = list(on.getbbox()[:2])
         boxes.update({k: v for k, v in C.BOXES.items() if isinstance(k, str)})
         if church == "holy" and cabin == "built":
             lights = [[round(C.at(i, j, z)[0]), round(C.at(i, j, z)[1]), list(col), r] for i, j, z, col, r in D.LIGHTS]
             prop_boxes = {k: v for k, v in C.BOXES.items() if not isinstance(k, str)}
-            occluders = occluder_list(art, C.LAST_SPRITES)
+            occluders = occluder_list(art, day_sprites, C.LAST_SPRITES)
             deco = D.decor()
         if church == "ruin" and cabin == "built":     # both Church looks; town_view picks by mode
-            ruin = [o + ["ruin"] for o in occluder_list(art, C.LAST_SPRITES) if o[4] == "church"]
-            occluders = [o + ["holy"] if o[4] == "church" else o for o in occluders] + ruin
+            ruin = [o[:5] + ["ruin"] + o[6:] for o in occluder_list(art, day_sprites, C.LAST_SPRITES) if o[4] == "church"]
+            occluders = [o[:5] + ["holy"] + o[6:] if o[4] == "church" else o for o in occluders] + ruin
+        lit_pos[f"{church}_{cabin}"] = lit_at
     spots = []
     pages = {"gate": None}
     for lid, label, x0, y0, x1, y1, door, _ in LOTS:
@@ -136,8 +152,9 @@ def main(root):
     # name plates that don't sit at the top of their tap area: the Market's by the well (not on the
     # Inn's doorstep), the Dungeon's above the portal, the Bounty Board's over the board; the
     # Mailbox gets none (its badge is on the Mail button)
-    wx, wy = C.at(20.5, 20.5)
-    spots[-1]["plate"] = [round(wx), round(wy - 60)]   # just above the well's roof, not on it
+    spots[-1]["plate"] = None   # no plate: the whole square is its tap, and a plate there sits on the stall-goers
+    for sid, xy in (("stash", (851, 690)), ("clinic", (628, 652))):   # plates on the roofs, clear of the stall-goers' heads
+        next(sp for sp in spots if sp["id"] == sid)["plate"] = list(xy)
     gate = next(sp for sp in spots if sp["id"] == "gate")
     gate["plate"] = [gate["rect"][0] + gate["rect"][2] // 2, gate["rect"][1] - 6]
     point_prop = {"bounty": ("props48", 6), "mail": ("props48", 8)}
@@ -220,7 +237,7 @@ def main(root):
         if 19 <= c[0] <= 22 and 19 <= c[1] <= 22:
             stops.setdefault(c, well_x)
     from layout import EXTRA_STOPS
-    face = {(35, 6): C.at(35.5, 3.5)[0], (36, 6): C.at(35.5, 3.5)[0]}   # the training ring
+    face = {(35, 6): C.at(34.5, 5.5)[0], (36, 6): C.at(37.5, 5.5)[0]}   # the training ring: the dummy / rack beside each gate cell
     bi, bj = next((i, j) for pid, _, i, j in POINTS if pid == "bounty")
     for c in EXTRA_STOPS:
         if c in ok:
@@ -229,6 +246,8 @@ def main(root):
     data = {
         "iso": True, "size": [C.W, C.H], "cell": [32, 16], "origin": [C.OX, C.OY], "grid": N,
         "art": "res://art/town/iso/town_%s_%s.png",
+        "art_lit": "res://art/town/iso/town_%s_%s_lit.png",    # dusk: lit windows and flames, drawn at lit_pos
+        "lit_pos": lit_pos,
         "spots": spots,
         "lights": lights,
         "walk": sorted([list(c) for c in ok]),

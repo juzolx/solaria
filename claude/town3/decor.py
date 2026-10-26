@@ -96,7 +96,7 @@ def decor():
         LIGHTS.append((i + .5, j + .5, 40, (255, 160, 80), 44))
     d += [(P32, 24, 14, 8), (P32, 23, 16, 8), (P32, 24, 24, 8), (P32, 23, 26, 8), (P32, 44, 13, 8)]
     # Bounty Board beside the dungeon stairs (heroes read it before descending); Mailbox by the Inn
-    d += [(P48, 6, 22, 8), (P48, 8, 12, 14)]
+    d += [(P48, 6, 17, 8), (P48, 8, 12, 14)]   # the board west of the stair foot, clear of the Tavern
     # street lamps along the main street and lanes
     d += [lamp(17, 11), lamp(22, 25), lamp(22, 31), *([] if HARDCORE else [lamp(8, 12)]), lamp(8, 26), lamp(31, 22), lamp(13, 9)]
     # the Inn's yard (everyone lives at the Inn): benches, barrels, lantern, cart
@@ -156,6 +156,8 @@ def decor():
         d += [(P32, 54, 11, 4), (P32, 11, 11, 3), (TREE, 12, 10, 5), (TREE, 13, 10, 3), (P32, 3, 11, 2),
               (P32, 14, 2, 4), (P32, 14, 11, 5), (P32, 15, 2, 6)]
     d += [(P48, 12, 6, 4)] + ([(P48, 13, 10, 3), (P32, 54, 11, 2)] if HARDCORE else [])
+    if HARDCORE:   # three big pieces among the headstones, for scale: a sarcophagus, an obelisk, a mausoleum on the wall
+        d += [(P48, 16, 1, 4), (P48, 17, 3, 1), (P48, 18, 8, 1)]
     if HARDCORE:
         d += [(P32, 6, 3, 17), (P32, 63, 4, 18), (P32, 60, 5, 17), (P32, 9, 2, 18), (TREE, 7, 5, 9)]
     d += [e for e in fence("iron" if HARDCORE else "wood", 1, 1, 12, 7) if not (e[4] == "i" and e[3] == 7 and e[2] in (6, 7))]
