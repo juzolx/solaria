@@ -149,9 +149,10 @@ GROUND_IMG = []   # the ground before any sprite: dusk light pools only land whe
 
 
 def outside(img, tiles):
-    """Dusk ground outside the walls over the whole picture (so a panned phone view never shows
-    void): darker and foggier each cell out, and the road from the sealed gate running off."""
-    fog = Image.new("RGB", (32, 17), (22, 24, 38))
+    """Daylight country outside the walls over the whole picture (so a panned phone view never
+    shows void): grass a little darker than the lawns inside, light fog only far out, and the road
+    from the sealed gate running off as a rutted dirt track. Dusk comes from the look shader."""
+    fog = Image.new("RGB", (32, 17), (150, 160, 170))
     memo = {}
     for s in range(-40, 2 * N + 60):
         for i in range(-50, N + 50):
@@ -163,19 +164,25 @@ def outside(img, tiles):
                 continue
             ring = max(-i, -j, i - N + 1, j - N + 1)
             road = 18 <= i <= 21 and j >= N
-            k = ("cobble" if road else "grass", (i * 5 + j * 3) % 2, min(ring, 12))
+            k = ("dirt" if road else "grass", (i * 5 + j * 3) % 2, min(ring, 14))
             if k not in memo:
                 t = tiles[k[0]][k[1]]
-                rgb = ImageEnhance.Color(t.convert("RGB")).enhance(0.5)
-                rgb = ImageEnhance.Brightness(rgb).enhance(max(0.2, (0.75, 0.5, 0.36)[k[2] - 1] if k[2] <= 3 else 0.36 - 0.03 * (k[2] - 3)))
-                rgb = Image.blend(rgb, fog, min(0.65, 0.06 * k[2]))
+                rgb = ImageEnhance.Color(t.convert("RGB")).enhance(0.9)
+                rgb = ImageEnhance.Brightness(rgb).enhance(max(0.72, 0.85 - 0.01 * k[2]))
+                if k[2] >= 10:
+                    rgb = Image.blend(rgb, fog, min(0.22, 0.05 * (k[2] - 9)))
                 memo[k] = Image.merge("RGBA", (*rgb.split(), t.getchannel("A")))
             img.alpha_composite(memo[k], (x - 16, y))
+    d = ImageDraw.Draw(img)
+    for ci in (19.25, 20.75):                 # two cart ruts down the road
+        a, b = at(ci, N + 0.3), at(ci, N + 9)
+        d.line([a, b], fill=(78, 58, 40, 255), width=1)
+        d.line([(a[0] + 1, a[1]), (b[0] + 1, b[1])], fill=(150, 120, 86, 255), width=1)
 
 
 def outside_trees(sprites):
-    """A dark wood outside the walls: thick behind the north walls, sparse and far out in front of
-    the south walls (never hiding them), the gate road kept clear."""
+    """A daylight wood outside the walls: thick behind the north walls, sparse and far out in front
+    of the south walls (never hiding them); the gate road runs ~120 px before the trees close in."""
     r = random.Random(31)
     pool = (2, 3, 10, 11, 0, 1, 4)
     for i in range(-14, N + 14):
@@ -184,15 +191,18 @@ def outside_trees(sprites):
                 continue
             ring = max(-i, -j, i - N + 1, j - N + 1)
             front = i >= N or j >= N
-            if (front and ring < 5) or ring < 2 or (16 <= i <= 23 and j >= N) or r.random() > (0.16 if front else 0.3):
+            road = 16 <= i <= 23 and j >= N and (ring <= 7 or 18 <= i <= 21)
+            if (front and ring < 5) or ring < 2 or road or r.random() > (0.16 if front else 0.3):
                 continue
             x, y = at(i + .5, j + .5)
             if not (-40 < x < W + 40 and -20 < y < H + 60):
                 continue
             n = r.choice(pool)
             im = load(f"trees/t{n}.png")
-            rgb = ImageEnhance.Brightness(im.convert("RGB")).enhance(max(0.3, 0.6 - 0.03 * ring))
-            im = Image.merge("RGBA", (*Image.blend(rgb, Image.new("RGB", im.size, (22, 24, 38)), min(0.5, 0.05 * ring)).split(), im.getchannel("A")))
+            rgb = ImageEnhance.Brightness(im.convert("RGB")).enhance(max(0.7, 0.88 - 0.012 * ring))
+            if ring >= 9:
+                rgb = Image.blend(rgb, Image.new("RGB", im.size, (150, 160, 170)), min(0.2, 0.04 * (ring - 8)))
+            im = Image.merge("RGBA", (*rgb.split(), im.getchannel("A")))
             bb = im.getbbox()
             put(sprites, im, (x + r.randint(-6, 6), y + 4), ((bb[0] + bb[2]) // 2, bb[3] - 1))
 
