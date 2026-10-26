@@ -2,8 +2,8 @@
 
   python3 tools/halls_sheets.py <tag>
 
-Reads shots/halls/<tag>{,_se} and shots/room_events/<tag>{,_se} and writes
-claude/art_test/halls/<tag>/z<zone>.png (rooms, then events, at 430 and on the SE),
+Reads shots/halls/<tag>{,_se}, shots/room_events/<tag>{,_se} and shots/fights/<tag>{,_se} and writes
+claude/art_test/halls/<tag>/z<zone>.png (rooms, events, then fights, at 430 and on the SE),
 each picture cropped to the room view.
 """
 import glob, os, sys
@@ -40,6 +40,9 @@ for z in range(10):
         for part in range(0, len(events), 9):
             chunk = events[part:part + 9]
             rows.append(("events at %s: %s" % (size, " ".join(os.path.basename(f)[6:-4] for f in chunk)), row(chunk, se, 0.5)))
+        fights = sorted(glob.glob(os.path.join(ROOT, "shots", "fights", tag + suf, "z%d_*.png" % z)))
+        if fights:
+            rows.append(("fights at %s: %s" % (size, ", ".join(os.path.basename(f)[3:-4] for f in fights)), row(fights, se, 0.75)))
     if not rows:
         continue
     w = max(r.width for _, r in rows)
