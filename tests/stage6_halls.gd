@@ -124,6 +124,17 @@ func _initialize() -> void:
 				for j in range(i + 1, r.standing.size()):
 					check(not Room3D.stacks(a, r.standing[j]), "z%d %s: %s (%.2f, %.2f) and %s (%.2f, %.2f) stack" % [z, r.kind, a[4], a[0], a[1], r.standing[j][4], r.standing[j][0], r.standing[j][1]])
 			rooms_with_props += 1 if r.standing.size() >= 2 else 0
+			# Juzo: a fight room's props never meet the face-off monster's box (0.20..0.80 w, above 0.72 h),
+			# checked on the drawn rect at the room's own layout (the 430 phone or the SE)
+			if r.event in Room3D.FIGHT_EVENTS:
+				var lay := Vector2(504, 443) if r.small else Vector2(504, 615)
+				var cy := lay.y * (0.28 if r.small else 0.40)
+				var fo := 0.62 * lay.x
+				for a in r.standing:
+					var ax: float = a[0]
+					var az: float = a[1]
+					var pr := Rect2(lay.x / 2.0 + fo * (ax - float(a[2])) / az, cy + fo * (-HallsScene.FLOOR_Y - float(a[3])) / az, fo * 2.0 * float(a[2]) / az, fo * float(a[3]) / az)
+					check(not HallsScene.meets_monster(pr, lay), "z%d %s (%s, %s): %s at (%.2f, %.2f) meets the monster's box" % [z, r.kind, r.event, "SE" if r.small else "430", a[4], ax, az])
 			# the fight's floor stays clear where a fight can happen (monsters never overlap props)
 			if String(EVENTS[s % EVENTS.size()]) in Room3D.FIGHT_EVENTS:
 				for sp in r.standing_props():
@@ -248,6 +259,23 @@ func _initialize() -> void:
 		var rv2 := RoomView.new()
 		rv2.state = hero
 		rv2.size = vsz
+		# the 2D decor (Low graphics) of fight rooms keeps off the monster's box too
+		var keep_props: Array = hero.room_props
+		var keep_room: int = hero.room_count
+		hero.room_props = []
+		var decor_seen := 0
+		for rc in 60:
+			hero.room_count = 100 + rc
+			rv2.scene.key = ""
+			rv2.scene.build(hero, vsz, vs)
+			for dc in rv2.scene.decor:
+				decor_seen += 1
+				var drc := rv2.scene.sprite_rect(rv2.scene.tx("res://art/dungeon/%s.png" % String(dc["art"])), float(dc["x"]), float(dc["z"]), float(dc["h"]), vs)
+				check(not HallsScene.meets_monster(drc, vsz), "%dx%d room %d: 2D %s at (%.2f, %.2f) meets the monster's box" % [int(vsz.x), int(vsz.y), rc, dc["art"], dc["x"], dc["z"]])
+		check(decor_seen >= 8, "%dx%d: fight rooms still have some 2D decor (%d in 60)" % [int(vsz.x), int(vsz.y), decor_seen])
+		hero.room_props = keep_props
+		hero.room_count = keep_room
+		rv2.scene.key = ""
 		rv2.scene.build(hero, vsz, vs)
 		var sc := rv2.scene
 		var head2 := rv2.leader_head_y(vs)
@@ -310,6 +338,24 @@ func _initialize() -> void:
 			var baked := Image.load_from_file(ProjectSettings.globalize_path(src.get_basename() + "_deep.png"))
 			var live := Room3D.tile_image(src, z)
 			check(baked != null and live != null and baked.get_data() == live.get_data(), "z%d %s_deep.png is stale: re-run tools/hall_tiles_deep.gd" % [z, part])
+	# the shared fx the room draws load as their files (a stale import showed the Shadow spell's
+	# purple sheet as every prop's contact shadow)
+	for fx in ["res://art/fx/shadow.png", "res://art/fx/glow.png"]:
+		var disk := Image.load_from_file(ProjectSettings.globalize_path(fx))
+		var tex: Texture2D = load(fx)
+		var live := tex.get_image() if tex else null
+		if disk and live:
+			disk.convert(Image.FORMAT_RGBA8)
+			live.convert(Image.FORMAT_RGBA8)
+		var same := disk != null and live != null and disk.get_size() == live.get_size()
+		if same:   # alpha everywhere, colour where it shows (the import rewrites hidden pixels' colour)
+			for py in disk.get_height():
+				for px in disk.get_width():
+					var dc := disk.get_pixel(px, py)
+					var lc := live.get_pixel(px, py)
+					if absf(dc.a - lc.a) > 0.01 or (dc.a > 0.0 and Vector3(dc.r - lc.r, dc.g - lc.g, dc.b - lc.b).length() > 0.02):
+						same = false
+		check(same, "%s's import is stale: reimport (godot --headless --editor --quit)" % fx)
 	check(names.size() >= 25, "rooms have their own names per zone (%d)" % names.size())
 	print("STAGE6 HALLS TESTS DONE, failures: ", fails)
 	quit()

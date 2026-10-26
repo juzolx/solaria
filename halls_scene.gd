@@ -113,7 +113,11 @@ func build(st: GameState, sz: Vector2, scr := 1.0) -> void:
 	decor = []
 	for i in rng.randi_range(1, 3):
 		var side := -1.0 if i % 2 == 0 else 1.0
-		decor.append({"art": kinds[rng.randi() % kinds.size()], "x": side * rng.randf_range(2.0, 2.4), "z": rng.randf_range(3.4, D - 0.5), "h": 1.1})
+		var dc := {"art": kinds[rng.randi() % kinds.size()], "x": side * rng.randf_range(2.0, 2.4), "z": rng.randf_range(3.4, D - 0.5), "h": 1.1}
+		# a fight room's decor never meets the face-off monster (the rolls above stay, so rooms keep their look)
+		if ev in Room3D.FIGHT_EVENTS and meets_monster(sprite_rect(tx("res://art/dungeon/%s.png" % String(dc["art"])), float(dc["x"]), float(dc["z"]), 1.1, scr), sz):
+			continue
+		decor.append(dc)
 
 # =====================================================================
 # Projection and light
@@ -430,6 +434,11 @@ func door_label(st: GameState, i: int) -> String:
 		return ""
 	return String(Halls.read_door(st, i)["label"])
 
+## Whether a drawn rect meets the face-off monster's box (Room3D.MONSTER_BOX) in a view of size sz.
+static func meets_monster(rect: Rect2, sz: Vector2) -> bool:
+	var b := Room3D.MONSTER_BOX
+	return rect.size != Vector2.ZERO and rect.intersects(Rect2(b.position * sz, b.size * sz))
+
 ## Scenery and torches as depth-sorted entries ({"z", "kind": "decor"/"torch"}).
 func scenery() -> Array:
 	var out: Array = []
@@ -464,6 +473,8 @@ func draw_scenery(ci: CanvasItem, th: Dictionary) -> bool:
 ## checker dither inside it (hard pixels, no soft gradient over the art).
 ## Baked once per size into a 3-cell-wide strip, drawn as two texture rects (the right one mirrored).
 func vignette(ci: CanvasItem, sz: Vector2) -> void:
+	if sz.x < 1.0 or sz.y < 1.0:  # first draw before layout
+		return
 	var scr := screen_scale(ci)
 	var u := float(ArtStyle.unit(scr)) / scr
 	var edge := Color("#0e0812")
