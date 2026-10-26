@@ -100,7 +100,8 @@ func refresh() -> void:
 	list.same_column_width = stacked
 	(get_child(1) as Control).size_flags_vertical = Control.SIZE_EXPAND_FILL   # the plate and its text
 	# ...and the plate as tall as the tallest boss (121 rows) at 2 screen px: 326 design on an SE
-	backdrop.custom_minimum_size.y = maxf(PLATE, ceilf(TALLEST * 2.0 / _screen_scale()) + 2.0)
+	# (+10: the 8 px padding under the feet, fable r5: the tallest overhung the plate's top)
+	backdrop.custom_minimum_size.y = maxf(PLATE, ceilf(TALLEST * 2.0 / _screen_scale()) + 10.0)
 	list.clear()
 	keys.clear()
 	# Icons are a head crop shown 1:1 on screen (fable r1: whole 76 px monsters squeezed to 22 px were blobs)
@@ -341,7 +342,10 @@ func _num(n: int) -> String:
 
 ## Screen pixels per design pixel (the window's stretch factor).
 func _screen_scale() -> float:
-	var sc := PixelPic.stretch(self) if is_inside_tree() else 1.0   # the window's stretch, not the canvas
+	# the window's stretch, not the canvas; main's until this tab is in the tree (fable r5: the
+	# first refresh read 1.0 and kept the wide list's "[Boss]" tag on an SE)
+	var at: Node = self if is_inside_tree() else main
+	var sc := PixelPic.stretch(at) if at is CanvasItem and at.is_inside_tree() else 1.0
 	return sc if sc > 0.01 else 1.0
 
 ## Puts the monster on the plate at a whole number of screen pixels per art pixel
@@ -351,6 +355,7 @@ func _place_pic() -> void:
 		return
 	var sc := _screen_scale()
 	var room := backdrop.size * sc   # the picture may reach the plate's padding (fable r4)
+	room.y -= 8.0 * sc   # ...but not over its top (the feet stand 8 px up, below)
 	var k := maxf(1.0, floorf(minf(room.x / pic_size.x, room.y / pic_size.y)))
 	# Commons never outsize the bosses (2x on a phone): one scale for the whole Bestiary
 	k = minf(k, float(maxi(2, ArtStyle.unit(sc) - 1)))
