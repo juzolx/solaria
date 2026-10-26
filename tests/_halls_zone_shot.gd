@@ -33,6 +33,8 @@ func _initialize() -> void:
 				c.queue_free()
 		st.floor_num = zone * GameData.ZONE_FLOORS + 12
 		st.room_count = rc
+		st.room_props = []   # a plain room: no event left in the save (a rift stood in the middle door)
+		st.room_trap = {}
 		st.exploring = true
 		st.in_town = false
 		main._room_ready = true

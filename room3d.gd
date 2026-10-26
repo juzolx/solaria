@@ -40,6 +40,12 @@ const TRAP_SIZE := 64.0 * PX   # the trap ring and the glyph: 64 art px
 ## prop's foot meets it, so a monster never overlaps one.
 const FIGHT_CLEAR := Rect2(-1.4, 3.2, 2.8, 2.3)
 const FIGHT_EVENTS := ["", "chest", "gate"]   # fight rooms (and ambushes), mimics, champions
+## The face-off monster's box on screen (Juzo: monsters never overlap props): big monsters'
+## solid pixels span 0.21..0.79 of the width down to 0.71 of the height at 430.
+const MONSTER_BOX := Rect2(0.20, 0.0, 0.60, 0.72)
+## Each layout's horizon (share of the height) and height / width: the 430 phone, the SE.
+const LAYOUT_TALL := Vector2(0.40, 615.0 / 504.0)
+const LAYOUT_SMALL := Vector2(0.28, 443.0 / 504.0)
 const FRAME_TEXEL := 0.062   # world units per door-frame texel: about one viewport pixel at the far wall
 const GAP_Z := -4.3        # the Collapsed chamber's hole in the ceiling (deep enough to be on screen)
 const MAX_PARTICLES := 24
@@ -201,7 +207,7 @@ func rebuild(zone_i: int, seed_value: int, mood: Dictionary) -> void:
 	if event == "camp":
 		keepout.append(Rect2(-HW, 1.5, HW - 0.4, 2.4))
 	if event in FIGHT_EVENTS:
-		keepout.append(FIGHT_CLEAR)   # the camp's tents, fire and pack (2D) on the near left
+		keepout.append(FIGHT_CLEAR)   # the monster's floor in the middle
 	flicker.clear()
 	portal = null
 	pool_mat = null
@@ -464,7 +470,17 @@ func spot_ok(x: float, z: float, half: float, h: float) -> bool:
 	for s in standing:
 		if stacks([x, z, half, h], s):
 			return false
+	if event in FIGHT_EVENTS and not monster_clear(x, z, half, h, LAYOUT_SMALL if small else LAYOUT_TALL):
+		return false
 	return true
+
+## A prop [x, depth, half width, height] stays off the face-off monster's box (MONSTER_BOX) in a
+## layout (horizon share, height / width): wholly beside it, or its top below it.
+static func monster_clear(x: float, z: float, half: float, h: float, layout: Vector2) -> bool:
+	var f := 0.62   # focal, in widths
+	if absf(x) - half >= (0.5 - MONSTER_BOX.position.x) / f * z:
+		return true
+	return layout.x + f / layout.y * (-HallsScene.FLOOR_Y - h) / z >= MONSTER_BOX.end.y
 
 ## A standing prop is clear of every doorway at the far wall (by 0.1), or its top stays below
 ## the doors' feet on screen.
@@ -509,6 +525,8 @@ func _place(tex: Texture2D, side: float, zlo: float, zhi: float, shaded := true)
 		if (-HallsScene.FLOOR_Y - h) / z < -HallsScene.FLOOR_Y / RD:
 			# tall enough to reach the doors: only beside the outer doors' edge (plus 0.1)
 			xlo = maxf(xlo, (HallsScene.DOOR_X[2] + HallsScene.DOOR_W / 2.0 + 0.1) * z / RD + half + 0.001)
+		if event in FIGHT_EVENTS:   # beside the monster's box
+			xlo = maxf(xlo, (0.5 - MONSTER_BOX.position.x) / 0.62 * z + half + 0.001)
 		var xhi := minf(SEEN * z, HW - 0.05) - half
 		if xhi < xlo:
 			continue
