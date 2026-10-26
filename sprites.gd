@@ -20,8 +20,7 @@ const OUTLINE_ALPHA := 201     # layer outlines: drawn on empty space, only dark
 # ---------- Character creator choices ----------
 const BODIES := ["masc", "fem"]
 const BODY_NAMES := ["Build A", "Build B"]
-const USE_LPC := true  # heroes from the LPC parts (lpc.gd); false = the older drawn heroes
-## Hero pixel size (decision D4, open). 1 = LPC heroes keep their fine 1x pixels (today).
+## Hero pixel size (decision D4, open). 1 = heroes keep their fine 1x pixels (today).
 ## 2 = heroes are snapped to the monsters' 2x art grid (every hero pixel a 2x2 block) and the
 ## battle draws them at the monsters' unit, so one screen has one pixel size.
 const HERO_PIXEL := 1
@@ -29,7 +28,7 @@ const HERO_PIXEL := 1
 # head, 4 rows under the feet), cols 12-83
 const PORTRAIT_CROP := Rect2i(12, 20, 72, 72)
 const PORTRAIT := 72  # its size: show portraits at 72, 144 or 216 to keep pixels crisp
-const HAIR_STYLES := Lpc.HAIR_ORDER  # 37 styles; the 13 older names are kept so saves look the same
+const HAIR_STYLES := Races.HAIR_ORDER  # 37 styles; the 13 older names are kept so saves look the same
 
 const TYPE_MATERIAL := {
 	"sword": "steel", "dagger": "steel", "axe": "steel", "mace": "iron", "spear": "steel", "bow": "wood", "staff": "wood",
@@ -202,11 +201,15 @@ static func _stack(dst: Image, src: Image, at: Vector2i) -> void:
 				dst.set_pixel(X, Y, Color(c.r, c.g, c.b, 1.0))
 
 static func _silhouette(src: Image) -> Image:
-	var img := src.duplicate() as Image
-	for y in img.get_height():
-		for x in img.get_width():
-			if img.get_pixel(x, y).a > 0.01:
-				img.set_pixel(x, y, Color.WHITE)
+	# One masked blit instead of a get/set_pixel per pixel (fable r2: 18k calls per Calamity pose)
+	var mask := src.duplicate() as Image
+	if mask.is_compressed():
+		mask.decompress()
+	mask.convert(Image.FORMAT_RGBA8)
+	var white := Image.create(mask.get_width(), mask.get_height(), false, Image.FORMAT_RGBA8)
+	white.fill(Color.WHITE)
+	var img := Image.create(mask.get_width(), mask.get_height(), false, Image.FORMAT_RGBA8)
+	img.blit_rect_mask(white, mask, Rect2i(Vector2i.ZERO, mask.get_size()), Vector2i.ZERO)
 	return img
 
 # =====================================================================
@@ -319,10 +322,6 @@ static func hero(app: Dictionary, looks: Dictionary) -> Dictionary:
 	var key := str(app) + str(looks)
 	if _cache.has(key):
 		return _cache[key]
-	if USE_LPC and Lpc.available():
-		var lp := _hero_lpc(app, looks)
-		_cache[key] = lp
-		return lp
 	var body: String = app.get("body", "masc")
 	if not body in BODIES:
 		body = "masc"
@@ -421,7 +420,7 @@ static func _hero_pl_cached(app: Dictionary, looks: Dictionary, back: bool) -> D
 	return pl
 
 ## The PixelLab hero (hero_art.gd): class outfit, hair, face and the weapon type, on the fixed frames.
-## Laid out like the LPC hero (a 96x96 cell on the hero canvas), so battle and menus treat it the same.
+## A 96x96 cell on the hero canvas, so battle and menus treat every hero the same.
 ## back: seen from behind (battle); else the front portrait.
 static func _hero_pl(app: Dictionary, looks: Dictionary, back: bool) -> Dictionary:
 	var ct := HeroArt.class_of(looks)
@@ -436,36 +435,12 @@ static func _hero_pl(app: Dictionary, looks: Dictionary, back: bool) -> Dictiona
 	var still: Image = anims["combat_idle"]["img"][0]
 	var canvas := Image.create(CANVAS, CANVAS, false, Image.FORMAT_RGBA8)
 	var s := still.get_width()
-	canvas.blend_rect(still, Rect2i(0, 0, s, s), BODY_OFFSET - Vector2i((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2))
+	canvas.blend_rect(still, Rect2i(0, 0, s, s), BODY_OFFSET - Vector2i((s - HeroArt.CORE) / 2, (s - HeroArt.CORE) / 2))
 	var hand: Array = HeroArt.hands(app)[0 if back else HeroArt.PORTRAIT[0]]
 	return {"body_img": canvas, "body": ImageTexture.create_from_image(canvas), "body_white": ImageTexture.create_from_image(_silhouette(canvas)),
 		"weapon": null, "weapon_white": null, "weapon_type": wt, "pivot": Vector2.ZERO, "glow": glow,
-		"hand": Vector2(BODY_OFFSET) - Vector2((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2) + Vector2(float(hand[0]), float(hand[1])),
-		"lpc": anims, "pl": true}
-
-## The LPC hero: animation frames plus a still picture laid out like the old
-## hero canvas (the 64x64 character at BODY_OFFSET), so menus and portraits work.
-static func _hero_lpc(app: Dictionary, looks: Dictionary) -> Dictionary:
-	var built := Lpc.build(_px_spec(Lpc.spec(app, looks)))
-	var canvas := Image.create(CANVAS, CANVAS, false, Image.FORMAT_RGBA8)
-	var still: Image = built["still"]
-	var s := still.get_width()
-	canvas.blend_rect(still, Rect2i(0, 0, s, s), BODY_OFFSET - Vector2i((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2))
-	var glow := Color(0, 0, 0, 0)
-	var wt := ""
-	if looks.has("Weapon"):
-		wt = looks["Weapon"].get("type", "")
-		if looks["Weapon"].get("glow", false):
-			glow = looks["Weapon"]["trim"]
-	return {"body_img": canvas, "body": ImageTexture.create_from_image(canvas), "body_white": ImageTexture.create_from_image(_silhouette(canvas)),
-		"weapon": null, "weapon_white": null, "weapon_type": wt, "pivot": Vector2.ZERO, "glow": glow,
-		"hand": Vector2(BODY_OFFSET) + Vector2(44, 38), "lpc": built["anims"]}
-
-static func _px_spec(sp: Dictionary) -> Dictionary:
-	if HERO_PIXEL > 1:
-		sp = sp.duplicate()  # never change the caller's spec (it may be a shared constant or cached)
-		sp["px"] = HERO_PIXEL
-	return sp
+		"hand": Vector2(BODY_OFFSET) - Vector2((s - HeroArt.CORE) / 2, (s - HeroArt.CORE) / 2) + Vector2(float(hand[0]), float(hand[1])),
+		"anims": anims, "pl": true}
 
 ## The picture snapped to a px-sized pixel grid (same size, every px x px block one color:
 ## the most common solid color in it, or clear when most of it is clear). For HERO_PIXEL.
@@ -515,27 +490,7 @@ static func hero_back_of(g: GameState) -> Dictionary:
 static func hero_back(app: Dictionary, looks: Dictionary) -> Dictionary:
 	if HeroArt.available():
 		return _hero_pl_cached(app, looks, true)
-	var key := "back" + str(app) + str(looks)
-	if _cache.has(key):
-		return _cache[key]
-	if not (USE_LPC and Lpc.available()):
-		return hero(app, looks)
-	var sp := Lpc.spec(app, looks)
-	sp["dir"] = "up"
-	var built := Lpc.build(_px_spec(sp))
-	var canvas := Image.create(CANVAS, CANVAS, false, Image.FORMAT_RGBA8)
-	var still: Image = built["still"]
-	var s := still.get_width()
-	canvas.blend_rect(still, Rect2i(0, 0, s, s), BODY_OFFSET - Vector2i((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2))
-	var front := hero(app, looks)
-	var out := front.duplicate()
-	out["body_img"] = canvas
-	out["body"] = ImageTexture.create_from_image(canvas)
-	out["body_white"] = ImageTexture.create_from_image(_silhouette(canvas))
-	out["lpc"] = built["anims"]
-	out["hand"] = Vector2(BODY_OFFSET) + Vector2(32, 34)
-	_cache[key] = out
-	return out
+	return hero(app, looks)
 
 ## A small picture of an item on its own (for item cards and the collection).
 ## Icons for things that aren't gear: potions, elixirs, scrolls, the mystery box,
@@ -583,12 +538,12 @@ static func portrait_frames(app: Dictionary, looks := {}) -> Array:
 	var out := [portrait(app, looks)]
 	var h := hero(app, looks)
 	if h.get("pl", false):
-		var imgs: Array = h["lpc"]["combat_idle"]["img"]
+		var imgs: Array = h["anims"]["combat_idle"]["img"]
 		if imgs.size() > 1:
 			var img: Image = imgs[1]
 			var canvas := Image.create(CANVAS, CANVAS, false, Image.FORMAT_RGBA8)
 			var s := img.get_width()
-			canvas.blend_rect(img, Rect2i(0, 0, s, s), BODY_OFFSET - Vector2i((s - Lpc.CORE) / 2, (s - Lpc.CORE) / 2))
+			canvas.blend_rect(img, Rect2i(0, 0, s, s), BODY_OFFSET - Vector2i((s - HeroArt.CORE) / 2, (s - HeroArt.CORE) / 2))
 			out.append(ImageTexture.create_from_image(canvas.get_region(Rect2i(PORTRAIT_CROP).intersection(Rect2i(Vector2i.ZERO, canvas.get_size())))))
 	_cache[key] = out
 	return out
@@ -631,7 +586,7 @@ static func enemy_by_key(key: String) -> Dictionary:
 		# pass (fable r1), only the rim light, so they stay brighter than the hall behind them
 		var native: bool = int(ArtInfo.DATA["enemies"].get(key, {}).get("hd", 2)) == 1
 		var graded := DarkGrade.image(img, DarkGrade.NATIVE, true, DarkGrade.SPRITE) if native else DarkGrade.image(img)
-		out = {"tex": ImageTexture.create_from_image(graded), "white": ImageTexture.create_from_image(_silhouette(img)),
+		out = {"tex": ImageTexture.create_from_image(graded), "img": graded, "white": ImageTexture.create_from_image(_silhouette(img)),
 			"size": Vector2(img.get_size()), "foot": float(used.end.y - 1 if used.size.y > 0 else img.get_height() - 1)}
 	_cache["e_" + key] = out
 	return out
@@ -694,6 +649,7 @@ static func poses_for(key: String, src: Image, facing: int, hand_row := -1) -> D
 	var top := used.position.y
 	var bottom := used.end.y
 	var waist := top + int((bottom - top) * 0.62)
+	var white_src := _silhouette(src)  # once; each pose shifts its rows like the picture's
 	var out := {}
 	for p in POSES:
 		var d: Dictionary = POSES[p]
@@ -703,7 +659,7 @@ static func poses_for(key: String, src: Image, facing: int, hand_row := -1) -> D
 		var hdx := 0
 		if hand_row >= top and hand_row < waist:
 			hdx = int(round(lean * float(waist - hand_row) / maxf(1.0, waist - top))) * facing
-		out[p] = {"tex": ImageTexture.create_from_image(img), "white": ImageTexture.create_from_image(_silhouette(img)),
+		out[p] = {"tex": ImageTexture.create_from_image(img), "white": ImageTexture.create_from_image(pose_image(white_src, waist, top, lean, squash, facing)),
 			"dx": hdx, "dy": squash if hand_row < waist else 0}
 	_cache["pose_" + key] = out
 	return out

@@ -28,17 +28,18 @@ const PEOPLE := [
 
 static var _cache := {}
 
-## {"s": [2 front idle textures], "walk": [idle, step, idle, step]} for one look (cached).
+## {"s": [2 front idle textures], "walk": [idle, step, idle, step], "foot": feet row} for one look (cached).
 static func walker(app: Dictionary, cls: String, tier: int, weapon: String) -> Dictionary:
 	var key := "%s|%s|%d|%s" % [str(app), cls, tier, weapon]
 	if _cache.has(key):
 		return _cache[key]
-	var out := {"s": [], "walk": []}
+	var out := {"s": [], "walk": [], "foot": FOOT}
 	if HeroArt.available():
 		var front := HeroArt.frames(app, cls, tier, weapon, false)
 		for i in HeroArt.PORTRAIT:
 			out["s"].append(ImageTexture.create_from_image(half(front["img"][i])))
 		var st: Array = HeroArt.steps(front["img"][HeroArt.PORTRAIT[0]])
+		out["foot"] = FOOT + (out["s"][0].get_width() - CELL) / 2   # a frame padded round the body cell
 		out["walk"] = [out["s"][0], ImageTexture.create_from_image(half(st[0])), out["s"][0], ImageTexture.create_from_image(half(st[1]))]
 	_cache[key] = out
 	return out
@@ -55,37 +56,56 @@ static func townsfolk(i: int) -> Dictionary:
 
 ## Halves a frame by 2x2 blocks: blocks on the silhouette's edge keep their darkest pixel (the
 ## outline stays closed), inside blocks keep their most common colour (ties go to the darker).
+## Works on the raw bytes (about 10x faster than get_pixel / set_pixel on a phone).
 static func half(src: Image) -> Image:
-	var w := src.get_width() / 2
-	var h := src.get_height() / 2
-	var out := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	var im := src
+	if im.get_format() != Image.FORMAT_RGBA8:
+		im = src.duplicate() as Image
+		im.convert(Image.FORMAT_RGBA8)
+	var sw := im.get_width()
+	var w := sw / 2
+	var h := im.get_height() / 2
+	var a := im.get_data()
+	var b := PackedByteArray()
+	b.resize(w * h * 4)
+	var cols := PackedInt32Array()
+	cols.resize(4)
 	for y in h:
 		for x in w:
-			var cols: Array = []
-			for d in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)]:
-				var c := src.get_pixel(x * 2 + d.x, y * 2 + d.y)
-				if c.a > 0.5:
-					cols.append(c)
-			if cols.is_empty():
+			var n := 0
+			for d in 4:
+				var i := (((y * 2 + (d >> 1)) * sw) + x * 2 + (d & 1)) * 4
+				if a[i + 3] > 127:
+					cols[n] = i
+					n += 1
+			if n == 0:
 				continue
-			var pick: Color = cols[0]
-			if cols.size() < 4:
-				for c in cols:
-					if c.get_luminance() < pick.get_luminance():
-						pick = c
+			var pick := cols[0]
+			if n < 4:
+				for k in range(1, n):
+					if _lum(a, cols[k]) < _lum(a, pick):
+						pick = cols[k]
 			else:
 				var best := 0
-				for c in cols:
-					var n := 0
-					for o in cols:
-						if o.is_equal_approx(c):
-							n += 1
-					if n > best or (n == best and c.get_luminance() < pick.get_luminance()):
-						best = n
+				for k in 4:
+					var c := cols[k]
+					var same := 0
+					for m in 4:
+						var o := cols[m]
+						if a[c] == a[o] and a[c + 1] == a[o + 1] and a[c + 2] == a[o + 2]:
+							same += 1
+					if same > best or (same == best and _lum(a, c) < _lum(a, pick)):
+						best = same
 						pick = c
-			pick.a = 1.0
-			out.set_pixel(x, y, pick)
-	return out
+			var j := (y * w + x) * 4
+			b[j] = a[pick]
+			b[j + 1] = a[pick + 1]
+			b[j + 2] = a[pick + 2]
+			b[j + 3] = 255
+	return Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, b)
+
+static func _lum(a: PackedByteArray, i: int) -> int:
+	return a[i] * 299 + a[i + 1] * 587 + a[i + 2] * 114
 
 static func clear_cache() -> void:
 	_cache.clear()

@@ -15,6 +15,7 @@ const CELL := 96
 const PAD := 16
 const FRAME := CELL + 2 * PAD
 const FOOT := 80  # the feet row inside a body cell
+const CORE := 64   # the character's own frame inside the cell (portraits and the hero canvas centre on it)
 const IDLE := [0, 1]
 const ATTACK := [2, 3, 4, 5]
 const HIT := [6]
@@ -311,7 +312,7 @@ static func _outline(data: PackedByteArray, cells: Vector2i, c: Color) -> void:
 				if src[i + 7] != 0 or src[i - 1] != 0 or src[i + dw * 4 + 3] != 0 or src[i - dw * 4 + 3] != 0:
 					data[i] = c.r8; data[i + 1] = c.g8; data[i + 2] = c.b8; data[i + 3] = c.a8
 
-## The frames as the battle's animation table (same shape as Lpc.build()["anims"]): every attack name
+## The frames as the battle's animation table (Sprites.hero()["anims"]): every attack name
 ## plays the one swing, "hurt" is the hit frame. "foot": the feet row inside a frame.
 static func anims(fr: Dictionary, back: bool) -> Dictionary:
 	var pick := func(ids: Array, fps: float) -> Dictionary:
@@ -326,7 +327,9 @@ static func anims(fr: Dictionary, back: bool) -> Dictionary:
 		"hurt": pick.call(HIT, 3.0)}
 
 ## Two walk steps made from a finished frame (the town walkers): the leg band (bottom 22% of the body)
-## is split at its middle and one side lifted, left then right. No drawn walk cycle needed.
+## is split at its middle and one side lifted and swung 2 px forward (the frame faces right), left
+## then right; the body above the legs rises 2 px on a step (1 map px once the town halves it), so
+## the walker bobs instead of shortening a leg. No drawn walk cycle needed.
 static func steps(im: Image) -> Array:
 	var bb := im.get_used_rect()
 	if bb.size.y < 8:
@@ -340,15 +343,29 @@ static func steps(im: Image) -> Array:
 				sx += x; n += 1
 	var cx := sx / maxi(n, 1)
 	var lift := maxi(2, roundi(bb.size.y * 0.06))
+	const BOB := 2
+	const FWD := 2
+	var clear := Color(0, 0, 0, 0)
 	var out := []
 	for side in [0, 1]:
-		var st := im.duplicate() as Image
+		var st := Image.create(im.get_width(), im.get_height(), false, im.get_format())
+		# the body rises; the hips stretch down over the gap so nothing opens up
+		for y in range(maxi(0, bb.position.y - BOB), top):
+			for x in range(bb.position.x, bb.end.x):
+				st.set_pixel(x, y, im.get_pixel(x, mini(y + BOB, bb.end.y - 1)))
 		var xa := bb.position.x if side == 0 else cx
 		var xb := cx if side == 0 else bb.end.x
 		for y in range(top, bb.end.y):
-			for x in range(xa, xb):
-				var sy := y + lift
-				st.set_pixel(x, y, im.get_pixel(x, sy) if sy < bb.end.y else Color(0, 0, 0, 0))
+			for x in range(bb.position.x, bb.end.x):
+				if x >= xa and x < xb:
+					continue
+				st.set_pixel(x, y, im.get_pixel(x, y))   # the planted leg as it is
+		for y in range(top, bb.end.y):                  # the lifted leg, swung forward
+			for x in range(xa, mini(xb + FWD, im.get_width())):
+				var s := Vector2i(x - FWD, y + lift)
+				var c := im.get_pixel(s.x, s.y) if s.x >= xa and s.x < xb and s.y < bb.end.y else clear
+				if c.a > 0.0 or (x < xb and st.get_pixel(x, y).a == 0.0):
+					st.set_pixel(x, y, c)
 		out.append(st)
 	return out
 
@@ -408,3 +425,13 @@ static func meta_looks(meta: Dictionary) -> Dictionary:
 	if not looks.has("Class") and str(meta.get("class", "")) != "":
 		looks["Class"] = {"cls": str(meta["class"]), "tier": 0}
 	return looks
+
+## Which attack animation a weapon uses.
+static func attack_anim(weapon_type: String) -> String:
+	match weapon_type:
+		"bow":
+			return "shoot"
+		"spear", "staff":
+			return "thrust"
+		_:
+			return "slash"

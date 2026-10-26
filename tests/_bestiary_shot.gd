@@ -20,10 +20,11 @@ func _initialize() -> void:
 	for i in ids.size() - 3:
 		cx.entry(ids[i])["kills"] = 12
 	cx.entry("grendel")["kills"] = 1
+	cx.entry("charybdis")["kills"] = 1
 	main.state._check_codex()
 	main.show_tab(3, 0)
 	var dir := TestHero.shots_dir("monsters/bestiary")
-	for id in ["kobold", "grendel", ids[ids.size() - 2]]:
+	for id in ["kobold", "grendel", "charybdis", ids[ids.size() - 2]]:
 		main.bestiary_tab.selected = id
 		main.bestiary_tab.shown = ""
 		main.refresh()

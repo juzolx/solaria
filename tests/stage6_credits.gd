@@ -31,7 +31,8 @@ func _initialize() -> void:
 		blob += JSON.stringify(s)
 	check(blob.contains("Godot") and blob.contains("MIT"), "Godot's MIT notice is listed")
 	check(not blob.contains("BDragon"), "the non-commercial FX pack is not credited as used")
-	check(Credits.TEXT.contains("Redshrike"), "LPC part list is present")
+	check(not blob.contains("LPC"), "no LPC parts are credited (none ship)")
+	check(not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path("res://art/lpc")), "no LPC art ships")
 	# the screen opens
 	TestHero.make(5)
 	TitleScreen.pending = {"play": 1}

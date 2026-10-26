@@ -51,10 +51,23 @@ def occluder_list(art, sprites):
     return out
 
 
+def cut(r, q):
+    """Rect r ([x, y, w, h]) minus its cheapest edge so it no longer overlaps q."""
+    cuts = []
+    if q[1] > r[1]:
+        cuts.append((r[2] * (r[1] + r[3] - q[1]), [r[0], r[1], r[2], q[1] - r[1]]))
+    if q[0] > r[0]:
+        cuts.append((r[3] * (r[0] + r[2] - q[0]), [r[0], r[1], q[0] - r[0], r[3]]))
+    if q[0] + q[2] < r[0] + r[2]:
+        cuts.append((r[3] * (q[0] + q[2] - r[0]), [q[0] + q[2], r[1], r[0] + r[2] - q[0] - q[2], r[3]]))
+    if q[1] + q[3] < r[1] + r[3]:
+        cuts.append((r[2] * (q[1] + q[3] - r[1]), [r[0], q[1] + q[3], r[2], r[1] + r[3] - q[1] - q[3]]))
+    return min(cuts)[1] if cuts else r
+
+
 def trim_taps(spots):
     """Buildings' tap areas never overlap: where two do, the one drawn in front keeps the overlap and
-    the one behind gives up its cheapest edge. (The Market is the square under everything, and the
-    small points, Bounty Board and Mailbox, win taps inside a building's area by being smaller.)"""
+    the one behind gives up its cheapest edge. (The Market is the square under everything.)"""
     def front(sp):
         x0, y0, x1, y1 = sp["cells"]
         return C.at(x1 + 1, y1 + 1)[1]
@@ -66,17 +79,15 @@ def trim_taps(spots):
             oy = min(r[1] + r[3], q[1] + q[3]) - max(r[1], q[1])
             if ox <= 0 or oy <= 0:
                 continue
-            cuts = []
-            if q[1] > r[1]:
-                cuts.append((r[2] * (r[1] + r[3] - q[1]), [r[0], r[1], r[2], q[1] - r[1]]))
-            if q[0] > r[0]:
-                cuts.append((r[3] * (r[0] + r[2] - q[0]), [r[0], r[1], q[0] - r[0], r[3]]))
-            if q[0] + q[2] < r[0] + r[2]:
-                cuts.append((r[3] * (q[0] + q[2] - r[0]), [q[0] + q[2], r[1], r[0] + r[2] - q[0] - q[2], r[3]]))
-            if q[1] + q[3] < r[1] + r[3]:
-                cuts.append((r[2] * (q[1] + q[3] - r[1]), [r[0], q[1] + q[3], r[2], r[1] + r[3] - q[1] - q[3]]))
-            if cuts:
-                b["rect"] = min(cuts)[1]
+            b["rect"] = cut(r, q)
+    # a point (Bounty Board, Mailbox) stands in front of everything: buildings give up their
+    # cheapest edge to it too, so a tap on the board or the box is never ambiguous
+    for p in [sp for sp in spots if sp["kind"] == "point"]:
+        for b in taps:
+            r, q = b["rect"], p["rect"]
+            if min(r[0] + r[2], q[0] + q[2]) <= max(r[0], q[0]) or min(r[1] + r[3], q[1] + q[3]) <= max(r[1], q[1]):
+                continue
+            b["rect"] = cut(r, q)
 
 
 def px_cell(i, j, z=0):
@@ -126,7 +137,7 @@ def main(root):
     # Inn's doorstep), the Dungeon's above the portal, the Bounty Board's over the board; the
     # Mailbox gets none (its badge is on the Mail button)
     wx, wy = C.at(20.5, 20.5)
-    spots[-1]["plate"] = [round(wx), round(wy - 34)]
+    spots[-1]["plate"] = [round(wx), round(wy - 60)]   # just above the well's roof, not on it
     gate = next(sp for sp in spots if sp["id"] == "gate")
     gate["plate"] = [gate["rect"][0] + gate["rect"][2] // 2, gate["rect"][1] - 6]
     point_prop = {"bounty": ("props48", 6), "mail": ("props48", 8)}
@@ -151,13 +162,13 @@ def main(root):
         D.LIGHTS.clear()
         own = []
         for e, owner in zip(D.level_props(own), own):
-            _, n, i, j = e
+            _, n, i, j = e[:4]
             im = Image.open(os.path.join(C.ROOT, "art", "props_up", f"p{n}.png")).convert("RGBA")
             im.save(os.path.join(art, "iso", "up", f"up{n}.png"))
             b = im.getbbox()
             x, y = C.at(i + .5, j + .5)
             pos = [round(x - (b[0] + b[2]) // 2), round(y + 3 - (b[3] - 1))]
-            levels.setdefault(owner, []).append([f"up{n}", pos[0], pos[1], lvl])
+            levels.setdefault(owner, []).append([f"up{n}", pos[0], pos[1], lvl, i, j])   # + the street cell it stands on
     ok = grid()
     # props standing on the street are not walked through; their neighbours become stops
     big = {("props48", n) for n in range(16)} | {("props_up", n) for n in range(16)} | {("props32", 12)}
@@ -197,16 +208,23 @@ def main(root):
                     q.append(n)
     ok = component(hub, ok)                   # drop islands (e.g. the church-garden path)
     stop_props = {("props48", n) for n in (0, 1, 2, 3, 4, 5, 6, 8)}
-    stops = set()
+    stops = {}                                # stop cell -> x of what people face there
     for e in deco:
         if e[0] != "fence" and (e[0], e[1]) in stop_props:
             for di, dj in ((1, 0), (0, 1), (-1, 0), (0, -1)):
                 c = (e[2] + di, e[3] + dj)
                 if c in ok:
-                    stops.add(c)
-    stops |= {c for c in ok if 19 <= c[0] <= 22 and 19 <= c[1] <= 22}      # round the well
+                    stops.setdefault(c, round(C.at(e[2] + .5, e[3] + .5)[0]))
+    well_x = round(C.at(20.5, 20.5)[0])
+    for c in ok:                              # round the well
+        if 19 <= c[0] <= 22 and 19 <= c[1] <= 22:
+            stops.setdefault(c, well_x)
     from layout import EXTRA_STOPS
-    stops |= {c for c in EXTRA_STOPS if c in ok}
+    face = {(35, 6): C.at(35.5, 3.5)[0], (36, 6): C.at(35.5, 3.5)[0]}   # the training ring
+    bi, bj = next((i, j) for pid, _, i, j in POINTS if pid == "bounty")
+    for c in EXTRA_STOPS:
+        if c in ok:
+            stops[c] = round(face.get(c, C.at(bi + .5, bj + .5)[0]))
     pen = C.at(30, 30), C.at(38, 35)
     data = {
         "iso": True, "size": [C.W, C.H], "cell": [32, 16], "origin": [C.OX, C.OY], "grid": N,
@@ -214,7 +232,7 @@ def main(root):
         "spots": spots,
         "lights": lights,
         "walk": sorted([list(c) for c in ok]),
-        "stops": sorted([list(c) for c in stops]),
+        "stops": sorted([[c[0], c[1], x] for c, x in stops.items()]),   # [i, j, x people turn to face]
         "inn_doors": inn_doors,     # walkers come and go here most (everyone lives at the Inn)
         "raised": [[i, j, z] for (i, j), z in sorted(RAISED.items())],   # the hope path: walkers climb the stairs (px above the ground)
         "occluders": occluders,
