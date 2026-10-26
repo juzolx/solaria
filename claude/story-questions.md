@@ -45,3 +45,5 @@ store description. Mechanics stay; only names and text change (unless Juzo asks)
 - Story (Juzo, Oct 24): goddess name still open (no idea yet). Floor 1,000 = ASCENSION: the hero restarts with permanent buffs; only a God-class hero can ascend. (Fits the later "ascended hero town" update.)
 
 - Pets (Juzo, Oct 25): only one copy of each pet species can be equipped at a time (ends Fairy Gold stacking).
+
+- Goddess name (Juzo, Oct 25): not decided; something that flows with Solaria, e.g. "Solaris". Use Solaris as the working name until he picks.
