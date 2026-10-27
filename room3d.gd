@@ -45,8 +45,9 @@ const GLOW_W := HallsScene.DOOR_W * 1.4   # a door's foot glow, world units wide
 const FAR_TORCH_BASE := 3.0   # a far-wall torch's art base on a tall view: over the side labels ("?" at 19 px)
 const FIGHT_EVENTS := ["", "chest", "gate"]   # fight rooms (and ambushes), mimics, champions
 ## The face-off monster's box on screen (Juzo: monsters never overlap props): big monsters'
-## solid pixels span 0.21..0.79 of the width down to 0.71 of the height at 430.
-const MONSTER_BOX := Rect2(0.20, 0.0, 0.60, 0.72)
+## solid pixels span 0.18..0.82 of the width (six Calamities, on the true 488-wide 430 stage)
+## down to 0.71 of the height, plus about 5 px a side (monsters dev).
+const MONSTER_BOX := Rect2(0.17, 0.0, 0.66, 0.72)
 ## Each layout's horizon (share of the height) and height / width: the 430 phone, the SE.
 const LAYOUT_TALL := Vector2(0.40, 615.0 / 504.0)
 const LAYOUT_SMALL := Vector2(0.28, 443.0 / 504.0)
@@ -238,6 +239,8 @@ func rebuild(zone_i: int, seed_value: int, mood: Dictionary) -> void:
 		_cobwebs()
 	_signature()
 	_zone_props()
+	if event in FIGHT_EVENTS:
+		_fight_fill()
 	_region_particles()
 	_trap_marks()
 	built_key = String(mood.get("key", ""))
@@ -1011,6 +1014,25 @@ func _zone_props() -> void:
 			_place(prop("skeleton"), 1.0, 3.4, 4.6)
 		"Root-choked passage", "Mushroom grotto":
 			_place(prop("boulder"), side, 3.4, 4.6)
+
+## A fight room keeps its props beside the monster's wide box, where only narrow ones fit
+## (a crate or boulder is too wide anywhere between the box and the side walls): top it up
+## with the zone's dressing and urns, bones and skulls, one each side, until two props stand
+## (Juzo: the rooms still look full).
+func _fight_fill() -> void:
+	var pool: Array = DRESS.get(zone, ["urn", "barrel"]) + ["urn", "bones", "skull"]
+	var side := -1.0 if rng.randf() < 0.5 else 1.0
+	for i in 10:
+		if standing.size() >= 2:
+			return
+		_place(prop(pool[i % pool.size()]), side, 3.2, 4.2)
+		side = -side
+	# then small things nearer, under a deeper prop's base (the band beside the box takes one prop a side)
+	for i in 6:
+		if standing.size() >= 2:
+			return
+		_place(prop(["skull", "bones"][i % 2]), side, 2.6, 3.1)
+		side = -side
 
 ## One cheap dressing per zone, its approved motif (claude/zone-palettes.md).
 func _signature() -> void:
