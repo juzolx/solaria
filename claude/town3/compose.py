@@ -520,12 +520,28 @@ def place_walls(sprites):
     OXR, OYR = 20, 60                      # pixel of the run's vertex (0, 0) on its canvas
     gx0, gy0, gx1, gy1 = GATEHOUSE
     pick = lambda s, side: 3 if s == 19 else (s * 7 + side) % 3
+    # the front wall meets the gatehouse flush (Juzo: "broken walls"): the last run west of it ends
+    # on its west face; the first east of it starts one cell inside, drawn before the gatehouse so
+    # the tower hides the join (the tower art stops short of its lot edge; starting on the face
+    # left a gap, and drawn after the gatehouse the run stood in front of the tower). A run
+    # overlapping its neighbour shows one more buttress, no seam.
+    front = [s for s in range(3, N - 3, 4) if s + 3 < gx0 or s > gx1]
+    if max(s for s in front if s < gx0) + 3 < gx0 - 1:
+        front.append(gx0 - 4)
+    front.append(gx1)
+    gate_key = at(gx1 + 1, gy1 + 1)[1] + SPRITES.get("gatehouse", {}).get("sort", 0)
+    WALL_RUNS.clear()
     for s in range(3, N - 3, 4):
-        for j in (0, N - 1):               # along i
-            if j == N - 1 and s + 3 >= gx0 + 1 and s <= gx1 - 1:
-                continue
+        for j in (0,):                     # along i, the back wall
             put(sprites, runs[pick(s, j)], at(s, j), (OXR, OYR), at(s + 4, j + 1)[1] - 1)
+            WALL_RUNS.append(("i", j, s))
+    for s in sorted(front):                # along i, the front wall either side of the gatehouse
+        j = N - 1
+        put(sprites, runs[pick(s, j)], at(s, j), (OXR, OYR), gate_key - 1 if s == gx1 else at(s + 4, j + 1)[1] - 1)
+        WALL_RUNS.append(("i", j, s))
+    for s in range(3, N - 3, 4):
         for i in (0, N - 1):               # along j
+            WALL_RUNS.append(("j", i, s))
             m = mirs[pick(s, i + 1)]
             put(sprites, m, at(i + 1, s), (m.width - OXR, OYR), at(i + 1, s + 4)[1] - 1)
     for k, (tx, ty) in enumerate(TOWERS):
@@ -548,12 +564,92 @@ def shadow(img, sprites):
 
 
 TAG = [""]         # tag put() gives the next sprites (a lot id for buildings)
+WALL_RUNS = []     # (axis, the wall's row or column, first cell) of each 4-cell run of the last compose
+
+
+def building_clash():
+    """(Juzo: the Clinic's deck hung over the town wall) for the last compose: a building drawn over
+    a building or a front wall run that stands in front of it, and a building whose base comes
+    within 8 px of a front wall's top, so it seems to sit on the battlements. Returns [(lot, why)]."""
+    import numpy as np
+    order, solid, a_of = _cover_setup()
+    lots = {l[0]: l[2:6] for l in LOTS if l[0] not in EMPTY}
+    sp = LAST_SPRITES
+    front_runs = []
+    for k, s in enumerate(sp):
+        _, x, y, im, tag = s
+        if tag == "" and id(s) not in {id(p) for p, _ in PROPS}:
+            front_runs.append(k)
+    bad = []
+    for k, s in enumerate(sp):
+        _, x, y, im, tag = s
+        if tag not in lots:
+            continue
+        a = a_of(im)
+        x0, y0, x1, y1 = lots[tag]
+        for k2, s2 in enumerate(sp[:k]):
+            _, x2, y2, im2, tag2 = s2
+            if tag2 in lots:
+                bx0, by0, bx1, by1 = lots[tag2]
+                if not (x1 < bx0 or y1 < by0):    # only one wholly in front of it counts
+                    continue
+            elif k2 not in front_runs:
+                continue
+            elif y2 + im2.height <= y + im.height:   # a wall run counts when its foot is in front
+                continue
+            X0, Y0 = max(x, x2), max(y, y2)
+            X1, Y1 = min(x + im.width, x2 + im2.width), min(y + im.height, y2 + im2.height)
+            if X1 > X0 and Y1 > Y0:
+                n = int((a[Y0 - y:Y1 - y, X0 - x:X1 - x] & a_of(im2)[Y0 - y2:Y1 - y2, X0 - x2:X1 - x2]).sum())
+                if n >= 4:
+                    bad.append((tag, f"drawn over {tag2 or 'the wall'} in front of it ({n} px)"))
+        # the base right on a front wall's top
+        cols = a.any(axis=0)
+        for cx in np.nonzero(cols)[0]:
+            by = int(np.nonzero(a[:, cx])[0][-1]) + y
+            gx = cx + x
+            for k2 in front_runs:
+                _, x2, y2, im2, _ = sp[k2]
+                if not (x2 <= gx < x2 + im2.width):
+                    continue
+                col = a_of(im2)[:, gx - x2]
+                top = np.nonzero(col)[0]
+                if len(top) and 0 <= top[0] + y2 - by <= 8 and y2 + im2.height > y + im.height:
+                    bad.append((tag, f"base sits on the wall top at x {gx}"))
+                    break
+            else:
+                continue
+            break
+    return bad
+
+
+def wall_gaps():
+    """The wall circuit check (Juzo: "broken walls"): along each side every cell from corner tower
+    to corner tower is wall, a tower or the gatehouse, and no run starts or ends inside the
+    gatehouse. Returns [(side, cell, why)]."""
+    gx0, gy0, gx1, gy1 = GATEHOUSE
+    bad = []
+    for axis, line in (("i", 0), ("i", N - 1), ("j", 0), ("j", N - 1)):
+        cover = set()
+        for a, l, s in WALL_RUNS:
+            if (a, l) == (axis, line):
+                cover |= set(range(s, s + 4))
+                if axis == "i" and line == N - 1 and (gx0 <= s < gx1 or gx0 < s + 3 <= gx1):   # one cell tucked under a tower is the join
+                    bad.append((f"{axis}{line}", s, "a run ends inside the gatehouse"))
+        for tx, ty in TOWERS:
+            k, t = (tx, ty) if axis == "i" else (ty, tx)
+            if t <= line <= t + 2:
+                cover |= set(range(k, k + 3))
+        if axis == "i" and line == N - 1:
+            cover |= set(range(gx0, gx1 + 1))
+        bad += [(f"{axis}{line}", c, "gap") for c in range(N) if c not in cover]
+    return bad
 PROPS = []         # (sprite, decor entry) for every prop, fence and tree of the last compose (the floating check)
 LAST_SPRITES = []  # the sorted sprites of the last compose (export_town builds walker occluders from them)
 BOXES = {}      # sprite id -> opaque box on the town canvas (tap areas for town.json)
 NO_OVERLAYS = []  # [True] -> leave out walkers and level props (the game draws those itself)
 LIT = [True]      # False -> the day picture: windows are glass, torches and lamps unlit (the forge still burns)
-FLAMES = {("props32", 12), ("props32", 11), ("props_up", 4), ("props_up", 5), ("props48", 10)}   # torches, candles, braziers, lanterns, lamps
+FLAMES = {("props32", 12), ("props32", 11), ("props_up", 4), ("props_up", 5), ("props_up", 16), ("props48", 10)}   # torches, candles, braziers, lanterns, lamps
 _DAY = {}
 
 
@@ -670,6 +766,7 @@ def floating():
     most of its crown shows; the footbridge's rails stand over the water. Returns [(entry, why)]."""
     order, solid, a_of = _cover_setup()
     props = PROPS + OUTSIDE_SPRITES
+    mine_ids = {id(s2) for s2, _ in props}
     g = {}
     for kind, x0, y0, x1, y1 in GROUND:
         for i in range(x0, x1 + 1):
@@ -679,9 +776,93 @@ def floating():
     towers = [(ti, tj, ti + 2, tj + 2) for ti, tj in TOWERS] + [GATEHOUSE]
     inside = lambda c, r: r[0] <= c[0] <= r[2] and r[1] <= c[1] <= r[3]
     bad = []
+    import numpy as np
+    sprites = LAST_SPRITES
+    building = lambda tag: tag not in ("", "bridge", "outside", "plateau") and not tag.startswith("tower")
+    def overlap(s, k_from, k_to, keep, rows=None):
+        """Opaque pixels of sprite s shared with the sprites k_from..k_to that `keep` accepts:
+        (count, first tag). rows=(a, b) limits s to that share of its height."""
+        _, x, y, im, _ = s
+        a = a_of(im)
+        if rows:
+            a = a.copy()
+            h = a.shape[0]
+            a[:int(h * rows[0])] = False
+        fy, fx = np.nonzero(a)
+        hit = np.zeros(len(fx), bool)
+        by = None
+        for k2 in range(max(0, k_from), min(len(sprites), k_to)):
+            s2 = sprites[k2]
+            if s2 is s or not keep(s2):
+                continue
+            _, x2, y2, im2, tag2 = s2
+            ox, oy = fx + x - x2, fy + y - y2
+            ok = (ox >= 0) & (oy >= 0) & (ox < im2.width) & (oy < im2.height)
+            if not ok.any():
+                continue
+            h2 = np.zeros(len(fx), bool)
+            h2[ok] = a_of(im2)[oy[ok], ox[ok]]
+            if h2.any() and by is None:
+                by = names.get(id(s2)) or tag2 or "the wall"
+            hit |= h2
+        return int(hit.sum()), by
+    names = {id(s2): f"{e2[0]} {e2[1]} at {e2[2]},{e2[3]}" for s2, e2 in props}
+    folk_ids = {id(s2) for s2, e2 in props if e2[0] == "folk"}   # the mockup's figures (the game has its own)
+    up_ids = {id(s2) for s2, e2 in PROPS if e2[0] == "props_up"}
+    stall_ids = {id(s2) for s2, e2 in PROPS if e2[0] == "props48" and e2[1] in STALLS}
     for s, e in props:
         if e[0] == "folk":               # the mockup's figures: the game has its own walkers
             continue
+        k = order.get(id(s))
+        if k is not None and e[0] == "props_up" and (e[2], e[3]) not in _braziers():   # (braziers are in the base)
+            # town_view draws the level props over the flat base picture, so anything the composer
+            # sorts in front of one (Juzo: the Shop's level props over the purple stall) would be
+            # drawn over in the game
+            # a building is behind a prop on its street side whatever the composer's sort key says
+            # (a big sprite sorts by its front corner); only one it really stands in front of counts
+            lot = {l[0]: l[2:6] for l in LOTS}
+            ahead = lambda s2: (id(s2) not in up_ids and id(s2) not in folk_ids and not (s2[4] in lot and (e[2] > lot[s2[4]][2] or e[3] > lot[s2[4]][3])))
+            n, by = overlap(s, k + 1, len(sprites), ahead)
+            if n >= 8:
+                bad.append((e, f"in the game drawn over {by} in front of it ({n} px)"))
+        if k is not None and e[0] != "fence":
+            # the foot half on a building's plinth, half off it (Juzo: the Shop's crates on its edge)
+            _, x, y, im, _ = s
+            a = a_of(im)
+            rows_ = np.nonzero(a.any(axis=1))[0]
+            if len(rows_):
+                b = rows_[-1]
+                foot = np.zeros_like(a)
+                foot[b - 1:b + 1] = a[b - 1:b + 1]
+                fy, fx = np.nonzero(foot)
+                on = np.zeros(len(fx), bool)
+                for k2 in range(k):
+                    _, x2, y2, im2, tag2 = sprites[k2]
+                    if not building(tag2) or id(sprites[k2]) in mine_ids:
+                        continue
+                    ox, oy = fx + x - x2, fy + y - y2
+                    ok = (ox >= 0) & (oy >= 0) & (ox < im2.width) & (oy < im2.height)
+                    if ok.any():
+                        h2 = np.zeros(len(fx), bool)
+                        h2[ok] = a_of(im2)[oy[ok], ox[ok]]
+                        on |= h2
+                share = on.mean() if len(on) else 0
+                if 0.2 <= share <= 0.8:
+                    bad.append((e, f"foot on a building's base edge ({share:.0%})"))
+        if k is not None and id(s) in stall_ids:
+            # a stall never overlaps a building, in front or behind (its lower half)
+            n, by = overlap(s, 0, len(sprites), lambda s2: building(s2[4]) and id(s2) not in mine_ids, rows=(0.5, 1))
+            if n >= 10:
+                bad.append((e, f"stall overlaps {by} ({n} px)"))
+            # nor straight behind another stall without a gap (the purple stall stood on the blue one's
+            # roof like a second storey): a stall in front within 40 px across starts 10 px below its foot
+            _, x, y, im, _ = s
+            for s2, e2 in PROPS:
+                if id(s2) in stall_ids and s2 is not s:
+                    _, x2, y2, im2, _ = s2
+                    dx, dy = (x2 + im2.width / 2) - (x + im.width / 2), (y2 + im2.height) - (y + im.height)
+                    if abs(dx) < 40 and 0 < dy < im2.height + 10:
+                        bad.append((e, f"stall stacked behind {e2[0]} {e2[1]} at {e2[2]},{e2[3]}"))
         cover, by = _feet_cover(s, order, solid, a_of)
         if cover >= 0.5:
             VIS[tuple(e[:4])] = v = _visible(s, order, solid, a_of)
@@ -702,6 +883,14 @@ def floating():
         elif on_plateau != (z >= PLATEAU_Z) and e[0] != "fence":
             bad.append((e, "off the plateau's level"))
     return bad
+
+
+STALLS = (0, 1, 2, 3, 4)   # props48: the market stalls
+
+
+def _braziers():
+    import decor
+    return decor.BRAZIERS
 
 
 FORGE = (255, 120, 50)   # the forge light's colour (decor.py): it burns by day

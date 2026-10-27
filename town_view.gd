@@ -53,7 +53,7 @@ var hidden_spots := {}  # building id -> true while it isn't in town yet (the Cl
 var pen_pets: Array = []  # your pets wandering the Clinic's pen: {"tex", "x", "y", "to", "wait", "flip", "t"}
 var iso := false        # the isometric town (town.json "iso")
 var hardcore := false   # Hardcore town: the Church is a ruin, the graveyard full
-var zoom := 2.0         # iso: 2x or 3x (pinch / wheel)
+var zoom := 2.0         # iso: 2x or 3x, or out to the whole town (pinch / wheel, zoom_steps)
 var pan_v := Vector2.INF  # iso: map offset in view pixels (INF = not placed yet: start on the market)
 var walk := {}          # iso: Vector2i cell -> true where people can walk
 var walk_doors: Array = []  # iso: door cells people walk between
@@ -132,12 +132,46 @@ func set_pets(texs: Array, key: String) -> void:
 
 ## Somewhere for a pet to go: the middle of a free pen cell (town.json "pen_cells": not the kennel
 ## or the hay) with a little jitter; anywhere in the pen on the old top-down town.
-func _pen_spot() -> Vector2:
+func _pen_spot(me = null) -> Vector2:
 	var cells: Array = data.get("pen_cells", []) if iso else []
 	if cells.is_empty() or not (cells[0] is Array):
 		return Vector2(randf_range(PEN.position.x + 16, PEN.end.x - 16), randf_range(PEN.position.y + 24, PEN.end.y - 8))
-	var c: Array = cells[randi() % cells.size()]
-	return _cell_px(Vector2i(int(c[0]), int(c[1]))) + Vector2(randf_range(-6, 6), randf_range(-3, 3))
+	# (Juzo: the pets stood on each other) a cell no other pet stands on or is heading for
+	var spots: Array = []
+	for c in cells:
+		spots.append(_cell_px(Vector2i(int(c[0]), int(c[1]))))
+	var free := free_spots(spots, pen_pets, me, PET_GAP)
+	var pick: Vector2 = free[randi() % free.size()] if not free.is_empty() else spots[randi() % spots.size()]
+	return pick + Vector2(randf_range(-3, 3), randf_range(-2, 2))
+
+const PET_GAP := 14.0   # map px between two pets' feet (a pet is ~20 px wide)
+const WALK_GAP := 7.0   # map px between two walkers' feet
+
+## The spots no pet but `me` stands on or walks to (within `gap`).
+static func free_spots(spots: Array, pets: Array, me, gap: float) -> Array:
+	var out: Array = []
+	for s in spots:
+		var ok := true
+		for p in pets:
+			if p == me:
+				continue
+			var to: Vector2 = p.get("to", Vector2.ZERO)
+			if Vector2(float(p["x"]), float(p["y"])).distance_to(s) < gap or (to != Vector2.ZERO and to.distance_to(s) < gap):
+				ok = false
+				break
+		if ok:
+			out.append(s)
+	return out
+
+## Someone other than `me` standing (not walking, not inside) within `gap` of p.
+static func crowded(p: Vector2, people: Array, me, gap: float) -> bool:
+	for o in people:
+		if o == me or float(o.get("inside", 0.0)) > 0.0 or float(o.get("fade", 0.0)) >= 1.0:
+			continue
+		var standing := float(o.get("wait", 0.0)) > 0.0 or (o.get("path", []) as Array).is_empty()
+		if standing and Vector2(float(o["x"]), float(o["y"])).distance_to(p) < gap:
+			return true
+	return false
 
 ## Juzo: a town that never looks crowded on a phone. Townsfolk, all walkers (your heroes walk first,
 ## you at the head), and pets shown in town (the pen), at most.
@@ -565,7 +599,7 @@ func _layout_iso(ms: Vector2) -> void:
 	# a whole number of device pixels per map pixel (the phone's canvas scale is 2.56 or 1.49,
 	# so a plain 2x would land between device pixels and shimmer)
 	var cs := _device_scale()
-	scale_f = maxf(1.0, roundf(zoom * cs)) / cs
+	scale_f = scale_for(zoom, cs, fit_zoom())
 	var shown := ms * scale_f
 	if not placed:                 # keep centring on the market until the player pans or zooms
 		var m := _spot_rect("market")
@@ -621,20 +655,59 @@ func _spot_rect(id: String) -> Rect2:
 			return Rect2(r[0], r[1], r[2], r[3])
 	return Rect2()
 
-## Iso: pinch or wheel between 2x and 3x, keeping the point under the fingers still.
+## Iso: pinch or wheel through zoom_steps (the whole town, 1x, 2x, 3x), keeping the point under
+## the fingers still.
 ## The pan that keeps map point `m` under screen point `at` at zoom `z`, using the scale the map
 ## is really drawn at (whole device pixels), not the nominal zoom.
-static func zoom_pan(at: Vector2, m: Vector2, z: float, cs: float) -> Vector2:
-	return at - m * (maxf(1.0, roundf(z * cs)) / cs)
+static func zoom_pan(at: Vector2, m: Vector2, z: float, cs: float, fit := 0.0) -> Vector2:
+	return at - m * scale_for(z, cs, fit)
+
+## (Juzo: "zoom out more so we can see all of the town") the map px a whole walled town needs:
+## the wall diamond, the corner towers' tops and the gatehouse below it.
+static func town_box(o: Vector2, n: float) -> Rect2:
+	return Rect2(o.x - n * 16.0 - 24.0, o.y - 100.0, n * 32.0 + 48.0, n * 16.0 + 150.0)
+
+## The zoom (design px per map px) at which the whole town fits this view.
+func fit_zoom() -> float:
+	var o: Array = data.get("origin", [map_size().x / 2.0, 0])
+	var b := town_box(Vector2(float(o[0]), float(o[1])), float(data.get("grid", 40)))
+	return minf(size.x / b.size.x, size.y / b.size.y) if size.x > 0.0 and size.y > 0.0 else 2.0
+
+## The scale the map is drawn at for zoom z: whole device pixels per map pixel, except at the
+## farthest step (z at the fit) when the town needs less than one: then exactly the fit, drawn
+## with nearest filtering (a whole-pixel step that still fits wins when there is one).
+static func scale_for(z: float, cs: float, fit: float) -> float:
+	if fit > 0.0 and z <= fit + 0.001:
+		return floorf(fit * cs) / cs if fit * cs >= 1.0 else fit
+	return maxf(1.0, roundf(z * cs)) / cs
+
+## The zoom steps a pinch or the wheel moves through: the whole town, 1x when it shows more
+## than the fit, 2x and 3x.
+static func zoom_steps(fit: float) -> Array:
+	var out: Array = [minf(fit, 2.0)]
+	if fit < 0.85:
+		out.append(1.0)
+	if out[-1] < 2.0:
+		out.append(2.0)
+	out.append(3.0)
+	return out
+
+func _zoom_step(dir: int, at: Vector2) -> void:
+	var steps := zoom_steps(fit_zoom())
+	var k := 0
+	for i in steps.size():
+		if absf(float(steps[i]) - zoom) < absf(float(steps[k]) - zoom):
+			k = i
+	_zoom_to(float(steps[clampi(k + dir, 0, steps.size() - 1)]), at)
 
 func _zoom_to(z: float, at: Vector2) -> void:
-	z = clampf(z, 2.0, 3.0)
+	z = clampf(z, minf(fit_zoom(), 2.0), 3.0)
 	if z == zoom:
 		return
 	var m := to_map(at)
 	placed = true
 	zoom = z
-	pan_v = zoom_pan(at, m, z, _device_scale())
+	pan_v = zoom_pan(at, m, z, _device_scale(), fit_zoom())
 	_layout()
 	zoomed.emit(z)
 
@@ -730,15 +803,15 @@ func _iso_input(e: InputEvent) -> bool:
 		if pinch_from == 0.0:
 			pinch_from = d
 		elif d / pinch_from > 1.25 or d / pinch_from < 0.8:
-			_zoom_to(3.0 if d > pinch_from else 2.0, (a + b) / 2.0)
+			_zoom_step(1 if d > pinch_from else -1, (a + b) / 2.0)
 			pinch_from = d
 		dragging = true
 		return true
 	if e is InputEventMagnifyGesture:
-		_zoom_to(3.0 if e.factor > 1.0 else 2.0, e.position)
+		_zoom_step(1 if e.factor > 1.0 else -1, e.position)
 		return true
 	if e is InputEventMouseButton and e.pressed and (e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN):
-		_zoom_to(3.0 if e.button_index == MOUSE_BUTTON_WHEEL_UP else 2.0, e.position)
+		_zoom_step(1 if e.button_index == MOUSE_BUTTON_WHEEL_UP else -1, e.position)
 		return true
 	if e is InputEventMouseMotion and press != "!" and (e.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0 and touches.size() < 2:
 		if dragging or e.position.distance_to(drag_from) > 8.0:
@@ -934,6 +1007,9 @@ func _arrive(f: Dictionary) -> void:
 		door_used.emit(walk_door_ids[k] if k >= 0 else "inn", Vector2(float(f["x"]), float(f["y"])))
 	elif stop_face.has(f.get("cell")):        # at a stall, the well or a board: turn to face it
 		f["flip"] = float(stop_face[f["cell"]]) < float(f["x"])
+	if float(f.get("inside", 0.0)) <= 0.0 and crowded(Vector2(float(f["x"]), float(f["y"])), folk, f, WALK_GAP):
+		f["x"] = float(f["x"]) + (6.0 if randf() < 0.5 else -6.0)   # someone already stands here: beside them
+		f["y"] = float(f["y"]) + 3.0
 	f["wait"] = randf_range(1.5, 4.0)
 	f["goal_door"] = false
 
@@ -989,6 +1065,9 @@ func _step_iso_walker(f: Dictionary, delta: float) -> void:
 		return
 	var to := _cell_px(path[0])
 	var at := Vector2(float(f["x"]), float(f["y"]))
+	if at.distance_to(to) > 1.0 and crowded(to, folk, f, WALK_GAP):   # someone stands there: wait a moment
+		f["wait"] = randf_range(0.3, 0.7)
+		return
 	var stp := WALK_SPEED * delta
 	if absf(to.x - at.x) > 0.5:
 		f["flip"] = to.x < at.x
@@ -1012,7 +1091,7 @@ func _step_folk(delta: float) -> void:
 		if float(p["wait"]) > 0.0:
 			p["wait"] = float(p["wait"]) - delta
 			if float(p["wait"]) <= 0.0:
-				p["to"] = _pen_spot()
+				p["to"] = _pen_spot(p)
 			continue
 		var at := Vector2(float(p["x"]), float(p["y"]))
 		var to: Vector2 = p["to"]
@@ -1445,6 +1524,8 @@ func _plate_shown(s: Dictionary) -> bool:
 		return true
 	if (s.has("plate") and s["plate"] == null) or size.x < 16.0 or size.y < 16.0:
 		return false   # no plate (the Mailbox: its badge is on the Mail button), or not laid out yet
+	if scale_f < 1.0 and String(s["id"]) != hover and String(s["id"]) != press:
+		return false   # zoomed out to the whole town: the plates would cover the buildings (taps still work)
 	# at least 30% of the building on screen, so a plate never hangs over the dark at the edge
 	var r: Array = s["rect"]
 	var vr := Rect2(to_view(Vector2(float(r[0]), float(r[1]))), Vector2(float(r[2]), float(r[3])) * scale_f)

@@ -36,24 +36,48 @@ def occluder_list(art, sprites, lit_sprites):
     lamps): [texture, x, y, sort_y, tag, look, lit texture]. town_view redraws the ones in front
     of a walker over it, so nobody walks across a roof. `sprites` are the day picture's, and a
     sprite whose windows or flame light up at dusk also gets its lit texture (else "").
-    Textures are shared by content hash."""
+    Textures are shared by content hash. Each texture keeps only the pixels the sprite really shows
+    in the picture: town_view redraws the whole texture, so a pixel that a stall or lamp in front
+    covers would otherwise paint the building over that stall (Juzo: the Shop's plinth hid the
+    purple stall)."""
+    import numpy as np
     os.makedirs(os.path.join(art, "iso", "occ"), exist_ok=True)
     out = []
+    W, H = C.W, C.H
+    owner = np.full((H, W), -1, np.int32)        # the sprite on top at each pixel
+    for k, (key, x, y, im, tag) in enumerate(sprites):
+        a = np.asarray(im.split()[3]) > 127
+        x0, y0 = max(0, x), max(0, y)
+        x1, y1 = min(W, x + im.width), min(H, y + im.height)
+        if x1 <= x0 or y1 <= y0:
+            continue
+        sub = a[y0 - y:y1 - y, x0 - x:x1 - x]
+        owner[y0:y1, x0:x1][sub] = k
+    def shown(k, x, y, im):
+        """The sprite with the pixels a later sprite covers cleared."""
+        a = np.asarray(im).copy()
+        ys, xs = np.nonzero(a[:, :, 3])
+        gy, gx = ys + y, xs + x
+        ok = (gy >= 0) & (gx >= 0) & (gy < H) & (gx < W)
+        hid = np.zeros(len(xs), bool)
+        hid[ok] = (owner[gy[ok], gx[ok]] != k) & (owner[gy[ok], gx[ok]] > k)
+        a[ys[hid], xs[hid], 3] = 0
+        return Image.fromarray(a)
     def save(im):
         name = hashlib.md5(im.tobytes()).hexdigest()[:10]
         path = os.path.join(art, "iso", "occ", name + ".png")
         if not os.path.exists(path):
             im.save(path)
         return name
-    for (key, x, y, im, tag), lit in zip(sprites, lit_sprites):
+    for k, ((key, x, y, im, tag), lit) in enumerate(zip(sprites, lit_sprites)):
         if tag in ("plateau", "bridge", "outside") or im.height < 28:
             continue
         b = im.getbbox()
         if b is None or b[3] - b[1] < 26:
             continue
-        crop = im.crop(b)
+        crop = shown(k, x, y, im.convert("RGBA")).crop(b)
         name = save(crop)
-        lcrop = lit[3].crop(b)
+        lcrop = shown(k, x, y, lit[3].convert("RGBA")).crop(b)
         out.append([name, x + b[0], y + b[1], round(key), tag, "", save(lcrop) if lcrop.tobytes() != crop.tobytes() else ""])
     return out
 
@@ -183,6 +207,8 @@ def main(root):
         assert not bad, f"day picture {church}_{cabin}: flames still burn at {bad}"   # a new prop must go in FLAMES
         bad = C.floating()     # (Juzo) no prop whose foot a building hides, none off the ground
         assert not bad, f"day picture {church}_{cabin}: floating props {bad}"
+        bad = C.wall_gaps() + C.building_clash()   # (Juzo) a closed wall circuit; no building over the wall
+        assert not bad, f"day picture {church}_{cabin}: walls and buildings {bad}"
         C.BOXES.clear()
         lit = render(church, cabin, lit=True)           # dusk: what lights up goes in an overlay
         assert img.width <= 2048 and img.height <= 2048
@@ -279,8 +305,9 @@ def main(root):
             levels.setdefault(owner, []).append([name, pos[0], pos[1], lvl, i, j])   # + the street cell it stands on
     ok = grid()
     # props standing on the street are not walked through; their neighbours become stops
-    big = {("props48", n) for n in range(16)} | {("props_up", n) for n in range(16)} | {("props32", 12)}
+    big = {("props48", n) for n in range(16)} | {("props_up", n) for n in range(17)} | {("props32", 12)}
     stuff = {(e[2], e[3]) for e in deco if e[0] != "fence" and (e[0], e[1]) in big}
+    stuff |= {(e[2], e[3]) for e in deco if e[0] == "fence"}   # (Juzo) nobody walks along a fence rail
     ok -= stuff
     for lid, cell in doors().items():
         ok.add(cell)
@@ -348,8 +375,10 @@ def main(root):
         "raised": [[i, j, z] for (i, j), z in sorted(RAISED.items())],   # the hope path: walkers climb the stairs (px above the ground)
         "occluders": occluders,
         "levels": levels,
-        "pen": [C.at(28, 35)[0], C.at(28, 29)[1], C.at(32, 29)[0] - C.at(28, 35)[0], C.at(32, 35)[1] - C.at(28, 29)[1]],
-        "pen_cells": [[i, j] for i in range(28, 32) for j in range(30, 35)   # the pen's free cells: pets never walk through the kennel or the hay
+        "pen": [C.at(28, 34)[0], C.at(28, 29)[1], C.at(32, 29)[0] - C.at(28, 34)[0], C.at(32, 34)[1] - C.at(28, 29)[1]],
+        # the pen's free cells: not the kennel or the hay, and none right behind the front rails
+        # (Juzo: pets stood on the fence), so i 28-30 and j 29-32
+        "pen_cells": [[i, j] for i in range(28, 31) for j in range(29, 33)
                       if not any(e[0] != "fence" and (e[2], e[3]) == (i, j) for e in deco)],
         "graves": [px_cell(i + .5, j + .5) for i in range(2, 12) for j in range(2, 7) if (i, j) != (6, 4)],
         "smoke": [round(boxes["smith"][0] + boxes["smith"][2] * 0.62), round(boxes["smith"][1] + 8)],

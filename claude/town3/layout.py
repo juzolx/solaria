@@ -32,7 +32,7 @@ GROUND = [
     ("planks", 7, 27, 8, 28),     # wooden footbridge on the west lane
     ("dirt", 6, 30, 6, 33),       # forge apron: the Blacksmith's yard by the west lane, just inside the gate
     ("square", 9, 16, 12, 19),    # a small paved plaza where the Blacksmith stood (Juzo moved it by the gate)
-    ("pen", 28, 29, 31, 34),      # pet pen (fenced), beside the Clinic
+    ("pen", 28, 29, 31, 33),      # pet pen (fenced), beside the Clinic, a row short of the wall lane
     ("field", 13, 29, 17, 33),    # vegetable plots right behind the tall gatehouse (only low things there)
     ("yard", 13, 25, 17, 25),
     ("yard", 22, 25, 26, 25),

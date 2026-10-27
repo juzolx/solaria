@@ -20,7 +20,11 @@
   "flip": true
  },
  "clinic": {
-  "file": "clinic.png"
+  "file": "clinic.png",
+  "nudge": [
+   0,
+   -6
+  ]
  },
  "church": {
   "file": "church.png",
