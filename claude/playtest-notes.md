@@ -9,3 +9,4 @@ These go into the final big update after 2.1.
 - Town, Shop: a purple-awning market stall is hidden under the Shop's stone base; crates/barrels on the base's west edge look like they float. Sent to town dev (with a stronger check: building bases occlude, plinth props must stand fully on the plinth).
 - Town: let the player zoom out far enough to see the whole town (Juzo). Sent to town dev.
 - Town, gatehouse: curtain walls don't meet the gate towers (gap on the west, offset on the east); field runs up to the wall line. Sent to town dev with a wall-continuity check.
+- Town, Clinic: deck overhangs the town wall; a cart hidden under the deck; town pets stacked on each other and the fence; lamp post half hidden by a planter. Sent to town dev.
