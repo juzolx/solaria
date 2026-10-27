@@ -8,3 +8,4 @@ These go into the final big update after 2.1.
 - P1: PC wide window: the UI grows wider than the window and drifts right ("the game keeps moving the screen further"; half the screen hidden: top bar, Hero tab gear doll, right column). Sent to interface dev. Workaround: make the window taller than it is wide (phone layout).
 - Town, Shop: a purple-awning market stall is hidden under the Shop's stone base; crates/barrels on the base's west edge look like they float. Sent to town dev (with a stronger check: building bases occlude, plinth props must stand fully on the plinth).
 - Town: let the player zoom out far enough to see the whole town (Juzo). Sent to town dev.
+- Town, gatehouse: curtain walls don't meet the gate towers (gap on the west, offset on the east); field runs up to the wall line. Sent to town dev with a wall-continuity check.
