@@ -206,7 +206,8 @@ func _prop_rects(bv, st: GameState) -> Array:
 	for dc in halls.decor:
 		var tex: Texture2D = load("res://art/dungeon/%s.png" % String(dc["art"]))
 		if tex:
-			out.append([halls.sprite_rect(tex, float(dc["x"]), float(dc["z"]), float(dc["h"]), scr), "2D " + String(dc["art"])])
+			# its solid pixels (the art's transparent margin is not the statue)
+			out.append([halls.solid_rect(tex, halls.sprite_rect(tex, float(dc["x"]), float(dc["z"]), float(dc["h"]), scr)), "2D " + String(dc["art"])])
 	_props[k] = out
 	return out
 
