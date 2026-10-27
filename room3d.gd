@@ -239,6 +239,8 @@ func rebuild(zone_i: int, seed_value: int, mood: Dictionary) -> void:
 		_cobwebs()
 	_signature()
 	_zone_props()
+	if event in FIGHT_EVENTS:
+		_fight_fill()
 	_region_particles()
 	_trap_marks()
 	built_key = String(mood.get("key", ""))
@@ -1012,6 +1014,25 @@ func _zone_props() -> void:
 			_place(prop("skeleton"), 1.0, 3.4, 4.6)
 		"Root-choked passage", "Mushroom grotto":
 			_place(prop("boulder"), side, 3.4, 4.6)
+
+## A fight room keeps its props beside the monster's wide box, where only narrow ones fit
+## (a crate or boulder is too wide anywhere between the box and the side walls): top it up
+## with the zone's dressing and urns, bones and skulls, one each side, until two props stand
+## (Juzo: the rooms still look full).
+func _fight_fill() -> void:
+	var pool: Array = DRESS.get(zone, ["urn", "barrel"]) + ["urn", "bones", "skull"]
+	var side := -1.0 if rng.randf() < 0.5 else 1.0
+	for i in 10:
+		if standing.size() >= 2:
+			return
+		_place(prop(pool[i % pool.size()]), side, 3.2, 4.2)
+		side = -side
+	# then small things nearer, under a deeper prop's base (the band beside the box takes one prop a side)
+	for i in 6:
+		if standing.size() >= 2:
+			return
+		_place(prop(["skull", "bones"][i % 2]), side, 2.6, 3.1)
+		side = -side
 
 ## One cheap dressing per zone, its approved motif (claude/zone-palettes.md).
 func _signature() -> void:
