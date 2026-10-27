@@ -98,8 +98,8 @@ func _show(gid: int, d: Dictionary) -> void:
 		var left := int(d["attacks_left"])
 		var preview := Online.raid_damage(main.state)
 		var atk := UI.primary("Attack!  (%d left today)" % left, func(): pass, UI.RED)
-		atk.disabled = left <= 0 or main.state.hero_class == ""
 		atk.tooltip_text = "One attack is %d turns of fighting. Yours hits for about %s." % [Online.RAID_TURNS, _num(preview)]
+		UI.why(atk, "No attacks left today. They come back tomorrow." if left <= 0 else ("Pick a class first: Hero › Class." if main.state.hero_class == "" else ""))
 		atk.pressed.connect(func():
 			atk.disabled = true
 			var dmg := Online.raid_damage(main.state)

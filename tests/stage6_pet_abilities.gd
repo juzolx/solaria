@@ -300,7 +300,7 @@ func _r4_tests() -> void:
 	tab.state = og
 	var row := tab._pet_row(hurt_rare)
 	var rb := _find_button(row, "Resting")
-	check(rb != null and rb.disabled, "a hurt pet's Resting button is off")
+	check(rb != null and (rb.disabled or UI.blocked(rb)), "a hurt pet's Resting button is off")   # interface r5: UI.why keeps it tappable for its reason, never its action
 	row.free()
 	tab.free()
 	# 8: the Pet tab uses the game's tap size

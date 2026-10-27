@@ -33,8 +33,9 @@ const MOODS := [
 	{"kind": "motes", "dark": 0.3, "deep": Color("#1f1d24"), "amb": Color("#6a4a28"), "accent": Color("#c8a060"), "light": Color("#c8a060")},
 	{"kind": "embers", "dark": 0.55, "deep": Color("#2a1a1e"), "amb": Color("#733e39"), "accent": Color("#e43b44"), "light": Color("#f77622")},
 ]
-const UNREAD_FRAME := Color("#c0cbdc")   # an unread door's frame when the accent is the light's colour
+const UNREAD_FRAME := Color("#c0cbdc")   # an unread door's frame when the accent won't do (unread_frame)
 const DOOR_LABEL_W := 120.0   # a door label's box, centred on its door
+const LABEL_MAX_W := 92.0     # a door label's widest text: door centres are 104+ design px apart
 const TEXELS := 16.0      # texels per world unit on walls, floors and ceilings (same as Room3D)
 
 var focal := 300.0
@@ -398,11 +399,9 @@ func draw_doors(ci: CanvasItem, st: GameState, hit: Dictionary, font: Font) -> v
 		var sensed := String(rd["color"]) != ""
 		# every door you can pick glows at its foot (in the zone's accent until a reader senses more),
 		# so the main tap target never sinks into a dark far wall
-		var col := ArtStyle.nearest(Color(String(rd["color"]))) if sensed else Color(mood()["accent"])
-		if not sensed and ArtStyle.oklab(col).distance_to(ArtStyle.oklab(Color(mood()["light"]))) < 0.12:
-			col = UNREAD_FRAME   # an accent like the zone's light would vanish on its lit doors
+		var col := ArtStyle.nearest(Color(String(rd["color"]))) if sensed else unread_frame(zone)
 		var pulse := 0.6 + 0.3 * sin(t * 3.0 + i)
-		var glow_a := 0.6 + 0.2 * sin(t * 2.0 + i) if sensed else 0.55
+		var glow_a := 0.7 + 0.15 * sin(t * 2.0 + i) if sensed else 0.65   # narrower glows, a touch stronger
 		var glow_c := col if sensed else col.lightened(0.35)
 		if not sensed and ArtStyle.oklab(col).distance_to(ArtStyle.oklab(Color(mood()["deep"]))) < 0.12:
 			glow_c = UNREAD_FRAME   # red on a red-black floor would not show
@@ -410,22 +409,50 @@ func draw_doors(ci: CanvasItem, st: GameState, hit: Dictionary, font: Font) -> v
 			# in the room itself, so props standing in front of a door cover its frame and glow
 			r3.mark_door(i, col, pulse, glow_a, glow_c)
 		else:
-			glow(ci, Vector2(rect.get_center().x, rect.end.y), rect.size.x * 1.8, Color(glow_c, glow_a))
+			glow(ci, Vector2(rect.get_center().x, rect.end.y), rect.size.x * Room3D.GLOW_W / DOOR_W, Color(glow_c, glow_a))
 			# a 1 px outline-black frame under the coloured one, so a red frame reads on a red door
 			ci.draw_rect(rect.grow(4.5), Color("#0e0812"), false, 1.0)
 			ci.draw_rect(rect.grow(3), Color(col, pulse), false, 3.0)
 		hit["d%d" % i] = rect.grow(12)
 		var lab := door_label(st, i)
 		if lab != "":
-			var fs := 18 if lab == "?" else 16
+			var fit := fit_label(font, lab, screen_scale(ci))
+			lab = fit[0]
+			var fs: int = fit[1]
 			var at := door_label_at(rect, i, fs)
 			ci.draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, DOOR_LABEL_W, fs, 4, Color(0, 0, 0, 0.9))
 			ci.draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, DOOR_LABEL_W, fs, col.lightened(0.3))
 
+## An unread door's frame in zone z: the zone's accent, unless it looks like a reader's colour
+## (danger, safe, a fight: then a red frame in the Ember Halls would say "Claws") or like the
+## zone's light (it would vanish on the lit doors). Then UNREAD_FRAME.
+const READ_COLORS := [Color("#e43b44"), Color("#63c74d"), Color("#feae34")]
+static func unread_frame(z: int) -> Color:
+	var acc := Color(MOODS[z]["accent"])
+	var near := ArtStyle.oklab(acc).distance_to(ArtStyle.oklab(Color(MOODS[z]["light"]))) < 0.12
+	for c in READ_COLORS:
+		near = near or ArtStyle.oklab(acc).distance_to(ArtStyle.oklab(c)) < 0.15
+	return UNREAD_FRAME if near else acc
+
+## A door label's text and size: 14 screen px (16 for "?") on every phone, so the SE's are no
+## smaller than the 430's (16 design px there was 12 screen px), at most 20 design px, and
+## no wider than LABEL_MAX_W (smaller first, to 13 screen px; a long trap read becomes "Trap!").
+static func fit_label(font: Font, lab: String, scr: float) -> Array:
+	var fs := mini(20, int(ceilf((16.0 if lab == "?" else 14.0) / maxf(scr, 0.01))))
+	var w := func(t: String, f: int) -> float: return font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, f).x
+	var least := int(ceilf(13.0 / maxf(scr, 0.01)))   # never under 13 screen px
+	while fs > least and w.call(lab, fs) > LABEL_MAX_W:
+		fs -= 1
+	if w.call(lab, fs) > LABEL_MAX_W and lab.begins_with("Trap: "):
+		lab = "Trap!"   # the door's tap text still names the room
+		fs = mini(20, int(ceilf(14.0 / maxf(scr, 0.01))))
+	return [lab, fs]
+
 ## Where door i's label goes (baseline left): clear of the frame round the door (15 px up, its
-## descenders over the frame's top ring), the middle one a line higher so neighbours never touch.
+## descenders over the frame's top ring), the middle one a line higher so neighbours never touch;
+## on a short view all on one line (each no wider than LABEL_MAX_W, so neighbours never touch).
 func door_label_at(rect: Rect2, i: int, fs: int) -> Vector2:
-	return Vector2(rect.get_center().x - DOOR_LABEL_W / 2.0, rect.position.y - 15 - (fs if i == 1 else 0))
+	return Vector2(rect.get_center().x - DOOR_LABEL_W / 2.0, rect.position.y - 15 - (fs if i == 1 and not small else 0))
 
 ## What door i says over it ("" for nothing): the gate's middle door carries the gate's own
 ## name ("Champion", drawn by the room view), so a read there would make two labels.

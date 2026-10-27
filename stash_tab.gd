@@ -32,7 +32,7 @@ func setup(m) -> void:
 	head.add_child(title)
 	upgrade_button = UI.button("", _upgrade)
 	head.add_child(upgrade_button)
-	var note := UI.label("Shared by the heroes of this town. Tap an item to look at it, then move it, or drag it across.", UI.FONT_BODY, UI.DIM)
+	var note := UI.label("Shared by the heroes of this town. Tap an item to look at it, then move it.", UI.FONT_BODY, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(note)
 	var scroll := ScrollContainer.new()

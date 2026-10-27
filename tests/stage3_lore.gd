@@ -36,6 +36,18 @@ func _initialize() -> void:
 		if Lore.talk(g, 2).contains("floor 33"):
 			mentions = true
 	check(mentions, "the keepers know about your grave")
+	# Fable r4 #9: two keepers never say the same sentence on one visit
+	g.best_floor = 40
+	var twice := 0
+	for trip in 40:
+		g.codex.stats["home_trips"] = trip
+		var said := {}
+		for page in Lore.KEEPERS:
+			var line: String = Lore.talk(g, page).get_slice(": \"", 1)
+			if said.has(line):
+				twice += 1
+			said[line] = true
+	check(twice == 0, "no line said by two keepers in one visit (%d)" % twice)
 	var d := Codex.new()
 	d.path = ""
 	d._from({"lore": [0, 1, 2]})

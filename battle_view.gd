@@ -1060,7 +1060,7 @@ func _show_banner() -> void:
 	var zone := GameData.zone_for_floor(state.floor_num)
 	banner_text = "FLOOR %d" % state.floor_num
 	banner_color = Color("#fbbf24")
-	banner_sub = "%s  -  %s" % [zone["name"], GameData.sub_name(state.floor_num)]
+	banner_sub = "%s · %s" % [zone["name"], GameData.sub_name(state.floor_num)]
 	banner_alpha = 1.8
 
 ## What kind of boss this is, for its entrance card.
@@ -1137,11 +1137,11 @@ func _draw_intro(font: Font, w: float, h: float) -> void:
 	var a := k * s
 	var y := h - bh + 20.0
 	draw_string_outline(font, Vector2(slide, y), intro_title, HORIZONTAL_ALIGNMENT_CENTER, w, 14, 4, Color(0, 0, 0, a))
-	draw_string(font, Vector2(slide, y), intro_title, HORIZONTAL_ALIGNMENT_CENTER, w, 14, Color(intro_color, a))
+	draw_string(font, Vector2(slide, y), intro_title, HORIZONTAL_ALIGNMENT_CENTER, w, UI.FONT_CAPTION, Color(intro_color, a))
 	var lw := w * 0.5 * s
 	draw_rect(Rect2(w / 2.0 - lw / 2.0, y + 6.0, lw, 2.0), Color(intro_color, 0.8 * a))
 	draw_string_outline(font, Vector2(-slide, y + 34.0), intro_name, HORIZONTAL_ALIGNMENT_CENTER, w, 28, 7, Color(0, 0, 0, a))
-	draw_string(font, Vector2(-slide, y + 34.0), intro_name, HORIZONTAL_ALIGNMENT_CENTER, w, 28, Color(1, 0.96, 0.88, a))
+	draw_string(font, Vector2(-slide, y + 34.0), intro_name, HORIZONTAL_ALIGNMENT_CENTER, w, UI.FONT_TITLE, Color(1, 0.96, 0.88, a))
 
 ## Where a new floating text goes: [position, lane]. Texts near each other take
 ## the next free lane, fanning out sideways (big sprites leave little room above).
@@ -1767,11 +1767,11 @@ func _draw() -> void:
 		if not halls.is_3d():
 			_draw_mood(w, h, _ground())
 	if not _boss_stage():  # the boss bar takes the title's place on the boss stage
-		_outlined(font, Vector2(12, 26), _fit_text(font, "%s  -  %s" % [zone["name"], GameData.sub_name(state.floor_num)], SCENE_FS, size.x - 24.0), HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS, Color(1, 1, 1, 0.7))
+		_outlined(font, Vector2(12, 26), _fit_text(font, "%s · %s" % [zone["name"], GameData.sub_name(state.floor_num)], SCENE_FS, size.x - 24.0), HORIZONTAL_ALIGNMENT_LEFT, -1, SCENE_FS, Color(1, 1, 1, 0.7))
 	elif _tall_common():
 		# a tall common keeps the zone's name: small and dim over its plate (which starts at 14)
 		# (fable r4: 59% of SE fights lost it); bosses keep the clean bar
-		_outlined(font, Vector2(0, 12), _fit_text(font, "%s  -  %s" % [zone["name"], GameData.sub_name(state.floor_num)], 13, size.x - 24.0), HORIZONTAL_ALIGNMENT_CENTER, size.x, 13, Color(1, 1, 1, 0.55))
+		_outlined(font, Vector2(0, 12), _fit_text(font, "%s · %s" % [zone["name"], GameData.sub_name(state.floor_num)], UI.FONT_CAPTION, size.x - 24.0), HORIZONTAL_ALIGNMENT_CENTER, size.x, UI.FONT_CAPTION, Color(1, 1, 1, 0.55))
 	_draw_status(font)
 
 	# Shake as "trauma": strength grows faster than linearly (small taps barely move the
@@ -2383,7 +2383,7 @@ func _bar_rect(r: Rect2) -> Rect2:
 
 ## In-scene text sizes (design px; x0.85 on a 430 pt phone): names and numbers 18 (~15 pt).
 const NAME_FS := 18
-const SCENE_FS := 18
+const SCENE_FS := UI.FONT_BODY   # status chips and the room line (Fable r4 #15: was 18, off the scale)
 
 ## Text with a dark outline and a soft drop shadow: readable on any background.
 func _outlined(font: Font, pos: Vector2, text: String, align: HorizontalAlignment, width: float, fs: int, col: Color) -> void:

@@ -24,7 +24,11 @@ const REDRAW_HZ := 30.0     # only the flicker and the 2 Hz pulses move here
 var _redraw_in := 0.0
 var _trap_mesh: ArrayMesh = null
 var _trap_at := ""
-const LABEL_FS := 16       # prop names, the hint line and the floor title (same font as the fights)
+const LABEL_FS := 16       # prop names, the hint line and the floor title at 430 (label_fs() sizes them per phone)
+const FLOOR_GAP := 40.0    # design px of floor between the leader's hair and the doors' feet on a short view
+var _mid_name := ""        # the middle prop's name this frame: the hint line carries it
+var _tall_key := ""
+var _tall := 0.0
 
 func setup(m) -> void:
 	main = m
@@ -94,6 +98,7 @@ func _draw() -> void:
 	if state == null or scene.key == "":
 		return
 	hit.clear()
+	_mid_name = ""
 	var font := UI.game_font()
 	scene.draw_shell(self, size)
 	scene.draw_doors(self, state, hit, font)
@@ -133,11 +138,21 @@ func _draw() -> void:
 			msg += "  (Auto in a moment)"
 	elif doors_open and not state.room_props.is_empty() and String(state.room_props[0]["kind"]) == "merchant":
 		msg = "Tap Snik to trade, or pick a door"
-	draw_string_outline(font, Vector2(0, size.y - 14), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, LABEL_FS, 5, Color(0, 0, 0, 0.9))
-	draw_string(font, Vector2(0, size.y - 14), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, LABEL_FS, Color("#fee761"))
-	var title := "%s  -  Floor %d" % [GameData.zone_for_floor(state.floor_num)["name"], state.floor_num]
-	draw_string_outline(font, Vector2(10, 24), title, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FS, 5, Color(0, 0, 0, 0.9))
-	draw_string(font, Vector2(10, 24), title, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FS, Color(1, 1, 1, 0.8))
+	# the thing in the middle is named here, not over the middle door (Fable dungeon round 5)
+	if _mid_name != "" and not msg.to_lower().contains(_mid_name.to_lower()):
+		msg = "%s - %s" % [_mid_name, msg.substr(0, 1).to_lower() + msg.substr(1)]
+	var fs := label_fs()
+	# under the leader's boots (his feet stand 12+ px up), not through them
+	draw_string_outline(font, Vector2(0, size.y - 4), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, fs, 5, Color(0, 0, 0, 0.9))
+	draw_string(font, Vector2(0, size.y - 4), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, fs, Color("#fee761"))
+	if not scene.small:   # a short view's top row belongs to the door labels (the bar above shows the floor)
+		var title := "%s  -  Floor %d" % [GameData.zone_for_floor(state.floor_num)["name"], state.floor_num]
+		draw_string_outline(font, Vector2(10, 24), title, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 5, Color(0, 0, 0, 0.9))
+		draw_string(font, Vector2(10, 24), title, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.8))
+
+## Text size for the room's own words: 14 screen px on every phone (16 design px was 12 on the SE).
+func label_fs() -> int:
+	return mini(20, int(ceilf(14.0 / maxf(HallsScene.screen_scale(self), 0.01))))
 
 ## A prop's y (0 far .. 1 near, as rolled by Halls) to depth: never nearer than 2.2 (near props
 ## dwarf the hero), and in the middle (x near 0.5) deep enough that its base shows above his hair.
@@ -207,12 +222,16 @@ func _draw_prop(i: int, font: Font) -> void:
 	if tile == "mimic":
 		lab = "Mimic!"
 		lc = Color("#e43b44")
-	var lw := maxf(160.0, font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FS).x + 16.0)
-	var at := Vector2(rect.get_center().x - lw / 2.0, rect.end.y + 16)
 	if absf(rect.get_center().x - size.x / 2.0) < 70.0:
-		at.y = rect.position.y - 6   # in the middle the hero stands below the prop: label it above
-	draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, lw, LABEL_FS, 5, Color(0, 0, 0, 0.9))
-	draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, lw, LABEL_FS, lc)
+		# in the middle the hero stands below it and the middle door above it: the hint line names it
+		if tile != "mimic":   # the mimic's hint already shouts
+			_mid_name = lab
+		return
+	var fs := label_fs()
+	var lw := maxf(160.0, font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 16.0)
+	var at := Vector2(rect.get_center().x - lw / 2.0, rect.end.y + 16)
+	draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, lw, fs, 5, Color(0, 0, 0, 0.9))
+	draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, lw, fs, lc)
 
 ## A trap you've spotted (hidden ones stay hidden): its rune circle on the floor (art/traps/<kind>.png,
 ## its own sigil in the middle), in the colour of what it does (Halls.TRAPS "color"). It doesn't turn
@@ -295,13 +314,14 @@ func _draw_team() -> void:
 			continue
 		var n: int = (an["tex"] as Array).size()
 		var fi := int(t * float(an["fps"]) + j) % n
-		var sz: float = float(an["size"]) * float(unit if j == 0 else maxi(1, unit - 1)) / scr
+		# companions one step smaller, but never under 2x (on the SE 1x stood half the leader's size)
+		var sz: float = float(an["size"]) * float(unit if j == 0 else clampi(unit - 1, mini(unit, 2), unit)) / scr
 		var feet := team_feet(j, float(xs[j]))
 		scene.shadow(self, feet, sz * 0.18)
 		var a := 0.4 if (j == 0 and state.leader_down) or (j > 0 and members[j - 1].knocked_out) else 1.0
 		# 2.1 heroes stand on their frame's foot row (older art on ~0.9 of theirs)
 		var foot := float(an["foot"]) / float(an["size"]) if an.has("foot") else 0.9
-		draw_texture_rect(an["tex"][fi], Rect2(feet - Vector2(sz / 2.0, sz * foot), Vector2(sz, sz)), false, Color(0.85, 0.82, 0.8, a))
+		draw_texture_rect(an["tex"][fi], Rect2(feet - Vector2(sz / 2.0, sz * foot), Vector2(sz, sz)), false, Color(team_tint(), a))
 		if j == 0:
 			# pets use the leader's own pixel size (one art px = sz / cell)
 			var k := sz / float(an["size"])
@@ -310,11 +330,46 @@ func _draw_team() -> void:
 			_draw_pet(feet, k, spots)
 			_draw_menagerie_room(feet, k, spots, pets)
 
+## The team's tint: the old warm grey taking a third of the zone light's hue at his spot (same
+## brightness), so he stands in the Cinder Abyss's red and the Shadow Deep's violet like the props.
+func team_tint() -> Color:
+	var lc := scene.lit(0.0, HallsScene.FLOOR_Y + 1.0, 1.4)
+	var m := maxf(lc.r, maxf(lc.g, lc.b))
+	var hue := Color(lc.r / m, lc.g / m, lc.b / m) * 0.9 if m > 0.001 else Color(0.85, 0.82, 0.8)
+	return Color(0.85, 0.82, 0.8).lerp(Color(hue, 1.0), 0.35)
+
 ## Where member j (0 = the leader) stands, xf across the view. A short screen puts the team
 ## lower, so the floor between them and the doors stays (Fable round 3, the SE).
-func team_feet(j: int, xf: float) -> Vector2:
+func team_feet(j: int, xf: float, scr := -1.0) -> Vector2:
 	var up := (12.0 if j == 0 else 30.0) if scene.small else (26.0 if j == 0 else 44.0)
-	return Vector2(size.x * xf, size.y - up)
+	var y := size.y - up
+	if scene.small:
+		# the SE's room view can be 345 design px tall: keep 40 px of floor between the hair and the
+		# doors' feet, the team sinking (boots cropped) rather than the doors rising into the top row
+		if scr <= 0.0:
+			scr = HallsScene.screen_scale(self)
+		var lead := size.y - 12.0
+		var need := scene.proj(0.0, HallsScene.FLOOR_Y, HallsScene.D).y + FLOOR_GAP + _leader_tall(scr if scr > 0.01 else 1.0)
+		y += maxf(0.0, need - lead)
+	return Vector2(size.x * xf, y)
+
+## The leader's feet to the top of his hair (design px) at screen scale scr. Cached per art and scale.
+func _leader_tall(scr: float) -> float:
+	var art := Sprites.hero_back_of(state)
+	var an: Dictionary = (art.get("anims", {}) as Dictionary).get("combat_idle", {})
+	if an.is_empty():
+		return 0.0
+	var k := "%d|%.3f" % [(an["tex"][0] as Texture2D).get_rid().get_id(), scr]
+	if _tall_key != k:
+		_tall_key = k
+		var sz: float = float(an["size"]) * float(ArtStyle.unit(scr)) / scr
+		var foot := float(an["foot"]) / float(an["size"]) if an.has("foot") else 0.9
+		var top := float(an["top"]) if an.has("top") else 0.0  # HeroArt.anims: the head's top row, no GPU read-back
+		if not an.has("top"):
+			var img: Image = (an["tex"][0] as Texture2D).get_image()
+			top = float(img.get_used_rect().position.y) if img else 0.0
+		_tall = sz * foot - top * sz / float(an["size"])
+	return _tall
 
 ## Half the leader's drawn art width (design px) at screen scale scr: the hair a floor decal must clear.
 func leader_half_w(scr: float) -> float:
@@ -337,13 +392,7 @@ func leader_head_y(scr: float) -> float:
 	var an: Dictionary = (art.get("anims", {}) as Dictionary).get("combat_idle", {})
 	if an.is_empty():
 		return size.y
-	var sz: float = float(an["size"]) * float(ArtStyle.unit(scr)) / scr
-	var foot := float(an["foot"]) / float(an["size"]) if an.has("foot") else 0.9
-	var top := float(an["top"]) if an.has("top") else 0.0  # HeroArt.anims: the head's top row
-	if not an.has("top"):
-		var img: Image = (an["tex"][0] as Texture2D).get_image()
-		top = float(img.get_used_rect().position.y) if img else 0.0
-	return team_feet(0, 0.5).y - sz * foot + top * sz / float(an["size"])
+	return team_feet(0, 0.5, scr).y - _leader_tall(scr)
 
 ## Your companion trots at the leader's heels (true size: k units per art pixel, feet on the floor).
 func _draw_pet(leader_feet: Vector2, k: float, xs: Array) -> void:

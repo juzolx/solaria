@@ -81,7 +81,7 @@ const OTHER := [
 const GROUPS := [
 	["Bestiary", "Defeat every kind of monster in a region (bosses too)."],
 	["Items", "Fill the Collection: Uniques, Signatures and whole sets."],
-	["Pets", "Own pets of every kind (Codex › Pets)."],
+	["Pets", "Own pets of every kind (Codex › Pets)."],
 	["Classes", "Secret classes and God classes found by any of your heroes."],
 	["Trophies", "Trophies in this town's cabin."],
 ]

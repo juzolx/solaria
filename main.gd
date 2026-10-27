@@ -131,6 +131,7 @@ var fallen_shown := false
 
 func _ready() -> void:
 	DebugLog.start()  # R6: local error log for "Copy debug info" (never sent anywhere)
+	UI.adopt_default_theme()   # Fable r4 #2: one theme for every Control, also those outside ui_root (coach, toast, moments)
 	# Let the layout stretch when the window is resized (and on phones later)
 	get_tree().root.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
 	get_tree().root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
@@ -722,6 +723,13 @@ func _build_ui() -> void:
 		root.add_theme_constant_override("margin_" + side, 10)
 	add_child(root)
 	ui_root = root
+	# Fable r4 #1: the layer tap-tips appear on (UI.show_tip returned at once while it was null)
+	if UI.tip_layer == null or not is_instance_valid(UI.tip_layer):
+		var tl := CanvasLayer.new()
+		tl.layer = 40
+		tl.name = "TipLayer"
+		add_child(tl)
+		UI.tip_layer = tl
 	_fit_root()
 	get_viewport().size_changed.connect(_fit_root)
 
@@ -1009,7 +1017,7 @@ func _build_top_bar(parent: Control) -> void:
 	scrap_label = s[1]
 	dust_label = d[1]
 	potion_label = p2[1]
-	(g[0] as Control).tooltip_text = "Gold: from enemies and selling. Spend it in Town › Shop."
+	(g[0] as Control).tooltip_text = "Gold: from enemies and selling. Spend it in Town › Shop."
 	(s[0] as Control).tooltip_text = "Scrap: from salvaging and chests. Use it to upgrade, reroll and craft."
 	(d[0] as Control).tooltip_text = "Dust: from bosses, rare monsters and maxed skills. Crafts skills and Set items, and pays for the best upgrades."
 	(p2[0] as Control).tooltip_text = "Potions heal 40% HP."
@@ -1501,7 +1509,7 @@ func _show_god_offer(id: String) -> void:
 			_play_moments.call_deferred()
 		o.close()
 		refresh()))
-	o.content.add_child(UI.wrap("It's for good: the God class replaces your class. Not now? It waits in Hero › Class.", UI.FONT_BODY, UI.DIM))
+	o.content.add_child(UI.wrap("It's for good: the God class replaces your class. Not now? It waits in Hero › Class.", UI.FONT_BODY, UI.DIM))
 
 ## Levels 15, 35 and 75: choose where your Evolution Tree goes.
 func _show_tree_picker() -> void:
@@ -1822,13 +1830,13 @@ func _refresh_top() -> void:
 	# Fable r1 #18: one line, "◆ 9000 · bank 0" (what you carry first; the gear found is in the tip)
 	gold_label.text = ("%s · bank %s" % [UI.short(state.gold), UI.short(state.bank)]) if two else "%s gold" % UI.short(state.gold)
 	gold_label.add_theme_color_override("font_color", UI.TEXT)
-	gold_label.get_parent().tooltip_text = ("At risk if you fall: %d gold you carry and %d piece%s of gear found this dive (plus what you wear).\nBank: %d (always safe). Head home from the Town tab to keep it all." % [state.gold, finds, "" if finds == 1 else "s", state.bank]) if two else "Gold: from enemies and selling. Spend it in Town."
+	gold_label.get_parent().tooltip_text = ("At risk if you fall: %d gold you carry and %d piece%s of gear found this dive (plus what you wear).\nBank: %d (always safe). Head home from Town to keep it all." % [state.gold, finds, "" if finds == 1 else "s", state.bank]) if two else "Gold: from enemies and selling. Spend it in Town."
 	scrap_label.text = "Scrap  %d" % state.scrap
 	dust_label.text = "Dust  %d" % state.dust
 	potion_label.text = "Potions  %d" % state.potions
 
 func _refresh_fight() -> void:
-	potion_button.text = "Potion (%d)" % state.potions
+	potion_button.text = "Potion ×%d" % state.potions
 	potion_button.disabled = state.potions <= 0 or state.hero_hp >= state.get_max_hp() or state.leader_down
 	auto_potion_button.text = "Auto-heal %s" % ("ON" if state.auto_potion else "OFF")
 	speed_button.text = "Speed %dx" % state.speed
@@ -1853,13 +1861,15 @@ func _refresh_fight() -> void:
 		b.visible = id != "" or i == 0
 		if id == "" or not id in acts:
 			b.text = "No skill equipped"
-			b.disabled = true
+			UI.why(b, "Put a skill in a slot: Hero › Skills.")
 			continue
 		var sk := SkillData.info(id)
 		var cd := int(state.skill_cds.get(id, 0))
-		b.text = ("%s!" % sk["name"]) if cd <= 0 else "%s (%d)" % [sk["name"], cd]
-		b.disabled = cd > 0
-		b.tooltip_text = sk["text"]
+		b.text = ("%s!" % sk["name"]) if cd <= 0 else String(sk["name"])   # the turns left are in the ring
+		# Fable r5 #4: a recharging skill says when it's back (the ring already looks dim)
+		UI.why(b, "" if cd <= 0 else "%s is back in %d turn%s." % [sk["name"], cd, "" if cd == 1 else "s"], false)
+		if cd <= 0:
+			b.tooltip_text = sk["text"]
 		var c := Color(Classes.tag_color(sk["tags"][0]))
 		b.icon = SkillIcons.for_tag(String(sk["tags"][0]))
 		b.add_theme_constant_override("icon_max_width", 32)   # native size: crisp pixels
@@ -1873,24 +1883,28 @@ func _refresh_fight() -> void:
 		for ch in b.get_children():
 			if ch is CooldownRing:
 				ch.frac = clampf(float(cd) / maxf(1.0, float(sk.get("cd", 1))), 0.0, 1.0)
+				ch.turns = cd
 				ch.color = c.lightened(0.3)
 				ch.visible = true
 	auto_ability_button.text = "Auto" if state.autoplay else "Manual"
 	attack_button.visible = not state.autoplay and not state.in_town
 	attack_button.disabled = not state.path_offer.is_empty() or state.enemy_hp <= 0
 	var goal := World.next_goal(state)
-	goal_label.text = "Next: " + String(goal.get("text", ""))
-	goal_label.tooltip_text = goal_label.text
+	goal_label.text = String(goal.get("text", ""))   # the gold line and its bar already say "next" (Fable r4 #3)
+	goal_label.tooltip_text = World.goal_tip(goal)   # Fable r5 #3: the why, not the line again
+	var gfs := goal_label.get_theme_font_size("font_size")
+	if goal_label.size.x > 0.0 and goal_label.get_theme_font("font").get_string_size(goal_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, gfs).x > goal_label.size.x:
+		goal_label.tooltip_text = goal_label.text + ("\n" + goal_label.tooltip_text if goal_label.tooltip_text != "" else "")
 	goal_label.add_theme_color_override("font_color", goal.get("color", UI.GOLD))
 	var gp := float(goal.get("pct", -1.0))
 	goal_bar.visible = gp >= 0.0
 	goal_bar.value = gp * 100.0
 	goal_bar.max_value = 100.0
 	var why := Lineage.escape_block(state)
-	escape_button.disabled = why != "" or not state.path_offer.is_empty()
-	escape_button.text = ("Run (%d%%)" % int(Lineage.escape_chance(state))) if why == "" else "Run"
-	if why != "":
-		escape_button.tooltip_text = why
+	if why == "" and not state.path_offer.is_empty():
+		why = "Pick a path first."
+	UI.why(escape_button, why)   # Fable r5 #4: "You can't run from a boss" on a tap
+	escape_button.text = ("Run · %d%%" % int(Lineage.escape_chance(state))) if why == "" else "Run"
 	spare_button.visible = Lineage.can_spare(state)
 	catch_button.visible = Menagerie.can_catch(state) and state.path_offer.is_empty()
 	if catch_button.visible:
@@ -1949,12 +1963,21 @@ func _build_nav(parent: Control) -> void:
 func _draw_badge(b: Button) -> void:
 	if int(b.get_meta("badge", 0)) <= 0:
 		return
+	# Fable r4 #12: the stud carries the count ("9+" over nine) at caption size, 20 px tall on the
+	# 2x grid (2 px soot rim, cut corners, one light pixel), centred on the icon's top-right corner
+	var n := int(b.get_meta("badge", 0))
+	var s := str(n) if n <= 9 else "9+"
+	var f := UI.game_font()
+	var tw := f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, UI.FONT_CAPTION).x
+	var w := maxf(20.0, 2.0 * ceilf((tw + 8.0) / 2.0))
+	var h := 20.0
 	var iw := float(b.icon.get_width()) if b.icon else 32.0
-	var o := Vector2(roundf(b.size.x / 2.0 + iw / 2.0 - 6.0), 0.0)
-	b.draw_rect(Rect2(o + Vector2(2, 0), Vector2(8, 12)), UiSkin.SOOT)
-	b.draw_rect(Rect2(o + Vector2(0, 2), Vector2(12, 8)), UiSkin.SOOT)
-	b.draw_rect(Rect2(o + Vector2(2, 2), Vector2(8, 8)), UI.RED)
+	var o := Vector2(roundf(b.size.x / 2.0 + iw / 2.0 - w / 2.0), 0.0)
+	b.draw_rect(Rect2(o + Vector2(2, 0), Vector2(w - 4, h)), UiSkin.SOOT)
+	b.draw_rect(Rect2(o + Vector2(0, 2), Vector2(w, h - 4)), UiSkin.SOOT)
+	b.draw_rect(Rect2(o + Vector2(2, 2), Vector2(w - 4, h - 4)), UI.RED)
 	b.draw_rect(Rect2(o + Vector2(4, 4), Vector2(2, 2)), UI.RED.lightened(0.5))
+	b.draw_string(f, Vector2(roundf(o.x + (w - tw) / 2.0), o.y + 15.0), s, HORIZONTAL_ALIGNMENT_LEFT, -1, UI.FONT_CAPTION, UI.TEXT)
 
 func _apply_nav() -> void:
 	if nav_bar == null:

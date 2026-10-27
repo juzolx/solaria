@@ -4,8 +4,8 @@
 #   tools/check.sh shots    ...plus every screen at phone size (shots/tour)
 #   tools/check.sh perf     ...plus a 60 s Auto-play frame-time report (shots/perf)
 #   tools/check.sh parse    parse check only
-#   tools/check.sh halls [tag]  the dungeon rooms and room events of all 10 zones at 430x932 and 375x667 into
-#                           shots/halls/<tag>{,_se} and shots/room_events/<tag>{,_se} (needs a window), then
+#   tools/check.sh halls [tag]  the dungeon rooms, room events and fights of all 10 zones at 430x932 and 375x667 into
+#                           shots/{halls,room_events,fights}/<tag>{,_se} (needs a window), then
 #                           one contact sheet per zone into claude/art_test/halls/<tag>/ (tools/halls_sheets.py)
 #   tools/check.sh sim      balance simulator only (quick: ~1 min), writes claude/balance-report.md. Not part of the normal check.
 #                           Full run: godot --headless --path . -s tools/balance_sim.gd -- [heroes] [hours]
@@ -24,7 +24,19 @@ style=$( {
   grep -nE '(UI\.(label|wrap|rich)|[^a-z_]_line)\(.*, (1[0-46-9]|2[1-9]|3[1-9]|[5-9][0-9])(, |\))|font_size", (1[0-46-9]|2[1-9]|3[1-9])\)|font_size=[0-9]+\]' *.gd | grep -vE 'font_size=(15|20|30|40)\]'
   grep -nE '%[ds]g[" )]' *.gd
   grep -nE 'UI\.(label|heading|chip|button|primary)\(.*to_upper\(\)\s*[,)]|UI\.(label|heading|chip)\("[A-Z]{3,} [A-Z]{3,}' *.gd
+  # Fable r4 #15: the fight's scene words sit on the scale too
+  grep -nE 'SCENE_FS := (1[0-46-9]|2[1-9])' *.gd
+  # Fable r4 #19: a phone game says Tap, not Press / hover / drag (story lines like "they press on" are fine)
+  awk '{l=$0; sub(/^[ \t]*#.*/,"",l); sub(/[ \t]#[^"]*$/,"",l); if (l ~ /"[^"]*(Press|press|Hover|hover|Drag|drag) [^"]*"/ && l !~ /Oxen could not drag|press (on|their|%[ds]|.*into your hands)/) print FILENAME":"FNR": "$0}' *.gd
+  # Fable r5 #6: the phone has no "Gear tab": paths read "Items › Gear" (old patch notes aside)
+  grep -nE '"[^"]*\b(Gear|Bag|Hero|Items|Town|Codex|Skills|Party) tab\b' *.gd | grep -vE '^patch_notes.gd|^[^:]+:[0-9]+:[[:space:]]*#'
+  grep -n "title screen" *_tab.gd
+  # Fable r5 #10: a path's › sits between no-break spaces (UI.PATH_SEP), so it never ends a line
+  awk '{l=$0; sub(/^[ \t]*#.*/,"",l); if (l ~ /"[^"]* › [^"]*"/ && l !~ /" › "\.join/) print FILENAME":"FNR": "$0}' *.gd
 } )
+# Fable r5 #4: grey buttons whose reason is hover-only (use UI.why); a review list, not a fail
+mute=$(grep -nA2 "\.disabled = " *.gd | grep "tooltip_text = " | grep -v "^ui.gd")
+[ -n "$mute" ] && { echo "review (disabled + tooltip, consider UI.why):"; echo "$mute" | head -10; }
 if [ -n "$style" ]; then echo "STYLE:"; echo "$style" | head -20; fail=1; else echo "style: ok"; fi
 [ "$1" = "parse" ] && exit 0
 if [ "$1" = "halls" ]; then
@@ -32,9 +44,9 @@ if [ "$1" = "halls" ]; then
   for res in 430x932 375x667; do
     suf=""; [ $res = 375x667 ] && suf="_se"
     for z in 0 1 2 3 4 5 6 7 8 9; do
-      for script in _halls_zone_shot _room_events_shot; do
+      for script in _halls_zone_shot _room_events_shot _fight_room_shot; do
         for try in 1 2 3; do
-          out=$(timeout 300 "$G" --path . --resolution $res --position 3000,3000 -s tests/$script.gd -- $z $tag$suf 2>&1)
+          out=$(timeout 300 "$G" --path . --audio-driver Dummy --resolution $res --position 3000,3000 -s tests/$script.gd -- $z $tag$suf 2>&1)
           echo "$out" | grep -q "SHOTS DONE" && break
         done
         echo "$out" | grep -q "SHOTS DONE" || { echo "halls: zone $z $script at $res FAILED"; echo "$out" | grep -E "SCRIPT ERROR|Thorin" -A1 | head -4; fail=1; }
@@ -70,7 +82,7 @@ if [ "$1" = "shots" ]; then
   # small text (TOUR FAIL lines) and any engine error fail the check
   for sz in "430x932" "375x667 se"; do
     read -r res arg <<< "$sz"
-    out=$(eval "timeout 400 $wrap \"$G\" --path . --resolution $res -s tests/ui_tour.gd -- $arg" 2>&1)
+    out=$(eval "timeout 400 $wrap \"$G\" --path . --audio-driver Dummy --resolution $res -s tests/ui_tour.gd -- $arg" 2>&1)
     if echo "$out" | grep -q "TOUR DONE"; then echo "$out" | grep "TOUR DONE" | sed "s/^/shots $res: /"; else echo "shots $res: FAILED"; echo "$out" | grep -E "SCRIPT ERROR|Refusing" -A1 | head; fail=1; fi
     echo "$out" | grep -E "TOUR FAIL" && fail=1   # (no head: its exit status is 0 even with no lines)
     echo "$out" | grep -E "^(ERROR|SCRIPT ERROR|USER ERROR):" -A1 | grep -v "^--" | sort -u | head -10 | sed "s/^/shots $res: /" | grep . && fail=1
@@ -78,7 +90,7 @@ if [ "$1" = "shots" ]; then
 fi
 if [ "$1" = "perf" ]; then
   # 60 s of Auto play at phone size; compare with earlier runs saved in shots/perf
-  out=$(timeout 200 "$G" --path . --resolution 430x932 -s tests/perf_run.gd -- 60 2>&1)
+  out=$(timeout 200 "$G" --path . --audio-driver Dummy --resolution 430x932 -s tests/perf_run.gd -- 60 2>&1)
   echo "$out" | grep -E "^PERF" || { echo "perf: FAILED"; echo "$out" | grep -E "SCRIPT ERROR|Refusing" -A1 | head; fail=1; }
 fi
 [ $fail = 0 ] && echo "ALL GOOD" || echo "SOMETHING FAILED"

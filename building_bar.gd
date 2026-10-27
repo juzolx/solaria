@@ -19,7 +19,8 @@ func setup(m) -> void:
 	var h := UI.hbox(8)
 	add_child(h)
 	title = UI.label("", UI.FONT_BODY, UI.GOLD)
-	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	title.clip_text = true
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	h.add_child(title)
@@ -70,8 +71,11 @@ func _details() -> void:
 func refresh(page: int) -> void:
 	var g: GameState = main.state
 	id = Buildings.id_for_page(page)
-	visible = id != ""
-	if id == "":
+	visible = true
+	if id == "":   # not a building: the page's name, no Upgrade
+		title.text = String(main.TOWN_PAGES[page]) if page >= 0 and page < main.TOWN_PAGES.size() else ""
+		build.visible = false
+		shown = ""
 		return
 	var lvl := Buildings.level(id)
 	var key := "%s|%d|%d|%d|%d|%d" % [id, lvl, g.gold, g.scrap, g.dust, Buildings.deepest(g, main.profile)]
@@ -80,10 +84,11 @@ func refresh(page: int) -> void:
 	shown = key
 	var ready := Buildings.blocked(g, main.profile, id) == ""
 	if lvl == 0:  # an empty lot (Church, Trophy Cabin): build it first
-		title.text = "%s · not built" % Buildings.name_of(id)
+		title.text = ("%s\nnot built" if Buildings.name_of(id).length() > 10 else "%s · not built") % Buildings.name_of(id)
 		build.text = "Build ›"
 	else:
-		title.text = "%s · Lv %d / %d" % [Buildings.name_of(id), lvl, Economy.BUILDING_MAX]
+		var nm := Buildings.name_of(id)
+		title.text = ("%s\nLv %d / %d" if nm.length() > 10 else "%s · Lv %d / %d") % [nm, lvl, Economy.BUILDING_MAX]
 		build.text = "Upgrade ›"
 	build.visible = lvl < Economy.BUILDING_MAX
 	build.add_theme_color_override("font_color", UI.GOLD if ready else UI.TEXT)   # gold = you can afford it now

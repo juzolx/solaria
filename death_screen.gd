@@ -32,10 +32,7 @@ static func regular(r: Dictionary, on_ok: Callable, on_never: Callable) -> Panel
 		(" You wake at the checkpoint on floor %d." % int(r["woke"])) if r.has("woke") else ""], UI.FONT_BODY, UI.TEXT)
 	who.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(who)
-	# What you keep / what you lose
-	v.add_child(_head("You keep"))
-	for k in KEEP:
-		v.add_child(_pair(k, "kept", UI.GREEN))
+	# Fable r5 #5: what you lose first (the news), then what you keep (the comfort)
 	var lost := String(r.get("lost", ""))
 	if r.has("woke"):
 		v.add_child(_head("You lose"))
@@ -44,6 +41,9 @@ static func regular(r: Dictionary, on_ok: Callable, on_never: Callable) -> Panel
 		if lost.contains("guarded by your killer"):
 			var back := UI.wrap("Beat %s on floor %d to get it all back." % [String(r.get("enemy", "it")), int(r.get("floor", 0))], UI.FONT_BODY, UI.GOLD)
 			v.add_child(back)
+	v.add_child(_head("You keep"))
+	for k in KEEP:
+		v.add_child(_pair(k, "kept", UI.GREEN))
 	# What hurt, in one line, and the tips
 	var taken: Dictionary = r.get("taken", {})
 	var total := maxf(1.0, float(r.get("total", 0)))
@@ -62,7 +62,7 @@ static func regular(r: Dictionary, on_ok: Callable, on_never: Callable) -> Panel
 	var keep := UI.button("Show this card after every fall", func(): pass)
 	keep.name = "ShowAgain"
 	keep.custom_minimum_size = Vector2(0, UI.TAP)
-	keep.tooltip_text = "Also in Menu › Settings › Game"
+	keep.tooltip_text = "Also in Menu › Settings › Game"
 	keep.set_meta("on", true)
 	UI.toggle_look(keep, true)
 	keep.pressed.connect(func():
@@ -70,7 +70,7 @@ static func regular(r: Dictionary, on_ok: Callable, on_never: Callable) -> Panel
 		keep.set_meta("on", on)
 		UI.toggle_look(keep, on)
 		on_never.call(on))
-	outer.add_child(keep)
+	v.add_child(keep)   # Fable r5 #5: a setting, not an action: it scrolls with the card; only OK stays put
 	var row := UI.hbox(8)
 	row.name = "Buttons"
 	outer.add_child(row)

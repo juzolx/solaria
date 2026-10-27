@@ -24,6 +24,24 @@ func check_floors(label: String, node: Node) -> void:
 			continue
 		if ch is Control:
 			var c := ch as Control
+			if c is TextureRect and c.has_meta("hero_pic") and c.is_visible_in_tree():
+				_check_seat(label, c as TextureRect)
+			# Fable r5 #4: a grey button whose reason only shows on hover says nothing on a phone (use UI.why)
+			if c is Button and c.is_visible_in_tree() and (c as Button).disabled and c.tooltip_text != "":
+				fail("MUTE BUTTON: %s \"%s\" hides \"%s\" in a hover tooltip [%s]" % [label, String(c.get("text")).left(24).replace("\n", " "), c.tooltip_text.left(30), _path(c)])
+			# Fable r5 #2: a list squeezed under one row while it has more to show
+			if c is ScrollContainer and c.is_visible_in_tree() and c.get_child_count() > 0 and c.size.y > 0.0 and c.size.y < ItemGrid.CELL:
+				var inner := c.get_child(0) as Control
+				if inner and inner.get_combined_minimum_size().y > c.size.y + 1.0:
+					fail("SQUEEZED LIST: %s list is %.0f px tall (one row is %d) [%s]" % [label, c.size.y, ItemGrid.CELL, _path(c)])
+			# Fable r5 #9: a chip strip that wraps one chip onto a row of its own
+			if c is HFlowContainer and c.is_visible_in_tree() and c.get_child_count() >= 3 and c.get_child_count() <= 8 and c.get_children().all(func(k): return k is Button):
+				var ys := {}
+				for k in c.get_children():
+					if k is Control and (k as Control).visible:
+						ys[(k as Control).position.y] = int(ys.get((k as Control).position.y, 0)) + 1
+				if ys.size() > 1 and int(ys[ys.keys().max()]) == 1:
+					fail("ORPHAN CHIP: %s strip leaves one chip on its last row [%s]" % [label, _path(c)])
 			if c is Button and c.is_visible_in_tree() and c.size.y > 0.0 and c.size.y < UI.BUTTON_H - 1.0 and not c.has_meta("tour_small_ok"):
 				fail("SHORT BUTTON: %s \"%s\" is %.0f px (floor %d) [%s]" % [label, String(c.get("text")).left(24).replace("\n", " "), c.size.y, UI.BUTTON_H, _path(c)])
 			if (c is Label or c is Button) and c.is_visible_in_tree() and String(c.get("text")) != "":
@@ -37,11 +55,129 @@ func check_floors(label: String, node: Node) -> void:
 						if font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > c.size.x + 2.0:
 							fail("CLIPPED TEXT: %s \"%s\" is cut at %.0f px [%s]" % [label, line.left(24), c.size.x, _path(c)])
 							break
+				# Fable r4 #14: a Button whose text runs past its face with no "..."
+				if c is Button and (c as Button).clip_text and (c as Button).text_overrun_behavior == TextServer.OVERRUN_NO_TRIMMING and c.size.x > 0.0:
+					var sb := c.get_theme_stylebox("normal")
+					var room := c.size.x - (sb.get_margin(SIDE_LEFT) + sb.get_margin(SIDE_RIGHT) if sb else 0.0)
+					var bi: Texture2D = (c as Button).icon
+					if bi and (c as Button).icon_alignment != HORIZONTAL_ALIGNMENT_CENTER:   # a centred icon sits above the words
+						room -= bi.get_width() + c.get_theme_constant("h_separation")
+					for line in (c as Button).text.split("\n"):
+						if c.get_theme_font("font").get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > room + 2.0:
+							fail("CLIPPED TEXT: %s button \"%s\" is cut at %.0f px [%s]" % [label, line.left(24), room, _path(c)])
+							break
+				# Fable r4 #2: every word in Pixelify (a Control outside the themed tree fell back to Godot's sans)
+				if not _pixel(c.get_theme_font("font")):
+					fail("WRONG FONT: %s \"%s\" [%s]" % [label, String(c.get("text")).left(24).replace("\n", " "), _path(c)])
 			elif c is RichTextLabel and c.is_visible_in_tree() and (c as RichTextLabel).text != "":
 				var rs := c.get_theme_font_size("normal_font_size")
 				if rs < UI.MIN_FONT:
 					fail("SMALL FONT: %s rich text is %d px (floor %d) [%s]" % [label, rs, UI.MIN_FONT, _path(c)])
+				if not _pixel(c.get_theme_font("normal_font")):
+					fail("WRONG FONT: %s rich text [%s]" % [label, _path(c)])
 		check_floors(label, ch)
+
+## Juzo (r5 follow-up): a hero on a plinth stands in its shadow. The boots' bottom edge (the last
+## opaque row of the portrait in its middle columns, measured, not assumed) must sit on the shadow's
+## centre line within 1 screen px, and the whole shadow must show: on screen, inside every clipping
+## parent, and under no text.
+func _check_seat(label: String, pl: TextureRect) -> void:
+	var pic := pl.get_meta("hero_pic") as TextureRect
+	if pic == null or not is_instance_valid(pic) or pic.texture == null:
+		return
+	var img := pic.texture.get_image()
+	var low := -1
+	for y in img.get_height():
+		for x in range(img.get_width() / 2 - 12, img.get_width() / 2 + 12):
+			if img.get_pixel(x, y).a > 0.5:
+				low = y
+	var k := pic.get_global_rect().size.y / float(img.get_height())
+	var boots := pic.get_global_rect().position.y + (low + 1) * k
+	var shadow := pl.get_global_rect()
+	var mid := shadow.position.y + shadow.size.y / 2.0
+	var px := 1.0 / maxf(0.01, root.get_final_transform().get_scale().y)   # one screen px in design px
+	if absf(boots - mid) > px + 0.01:
+		fail("FLOATING HERO: %s boots end at %.0f, the shadow's centre is %.0f [%s]" % [label, boots, mid, _path(pic)])
+	# (a list scrolled past the hero is fine; the bug is a hero in view whose shadow is cut)
+	var seen := _shown_rect(pic)
+	if seen.size.y < pic.get_global_rect().size.y - 0.5:
+		return
+	if _shown_rect(pl).size.y < shadow.size.y - 0.5 or _shown_rect(pl).size.x < shadow.size.x - 0.5:
+		fail("CUT SHADOW: %s the hero shows but their shadow is cut [%s]" % [label, _path(pl)])
+		return
+	for t in root.find_children("*", "Control", true, false):
+		var tc := t as Control
+		if tc == pic or tc == pl or not tc.is_visible_in_tree() or not (tc is Label or tc is RichTextLabel or tc is Button):
+			continue
+		if String(tc.get("text")).strip_edges() == "":
+			continue
+		var tr := _shown_rect(tc)   # text scrolled out of sight under a pinned stage doesn't count
+		if tc.is_ancestor_of(pl) or tr.size.x <= 0.0 or tr.size.y <= 0.0:
+			continue
+		if tr.intersects(shadow.grow(-1.0)) and tc.get_parent() != pl.get_parent():
+			fail("CUT SHADOW: %s \"%s\" sits on the hero's shadow [%s]" % [label, String(tc.get("text")).left(24).replace("\n", " "), _path(tc)])
+			return
+
+## The part of c on screen: its rect cut by the screen and every clipping parent.
+func _shown_rect(c: Control) -> Rect2:
+	var r := c.get_global_rect().intersection(root.get_visible_rect())
+	var p := c.get_parent()
+	while p is Control:
+		if (p as Control).clip_contents:
+			r = r.intersection((p as Control).get_global_rect())
+		p = p.get_parent()
+	return r
+
+func _pixel(f: Font) -> bool:
+	if f == null:
+		return false
+	if f == UI.game_font():
+		return true
+	var base: Font = (f as FontVariation).base_font if f is FontVariation else f
+	return base != null and base.resource_path.contains("Pixelify")
+
+## Fable r4 #1: tap a control the way a finger does and fail when no tip appears (UI.force_touch
+## lets the PC's mouse click count as a tap); the tip is then shot and font-checked like any screen.
+func touch_check(where: String, c: Control) -> void:
+	if c == null:
+		fail("NO TIP: %s has nothing with a tap-tip" % where)
+		return
+	UI.force_touch = true
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = true
+	ev.position = c.size / 2.0
+	c.gui_input.emit(ev)
+	await create_timer(0.3).timeout
+	var tl := UI.tip_layer
+	if tl == null or tl.get_child_count() == 0:
+		fail("NO TIP: a tap on %s (%s) showed nothing" % [where, _path(c)])
+		return
+	var p := tl.get_child(tl.get_child_count() - 1) as Control
+	# Fable r5 #3: a tip that only repeats the words you tapped teaches that taps do nothing
+	var said := ""
+	for k in p.find_children("*", "RichTextLabel", true, false):
+		said = (k as RichTextLabel).get_parsed_text()
+	if c.get("text") != null and said.strip_edges() == String(c.get("text")).strip_edges():
+		fail("ECHO TIP: tapping %s only repeats \"%s\"" % [where, said.left(30)])
+	if not root.get_visible_rect().encloses(p.get_global_rect()):
+		fail("TIP OFF SCREEN: %s at %s" % [where, p.get_global_rect()])
+	await shot("tip_" + where)
+	if is_instance_valid(p):
+		p.queue_free()
+	await process_frame
+
+## The first visible non-button with a tap-tip on screen (whose tip holds `has`).
+func _find_tip(n: Node, has := "") -> Control:
+	for ch in n.get_children():
+		if ch is CanvasItem and not (ch as CanvasItem).visible:
+			continue
+		if ch is Control and not (ch is BaseButton) and (ch as Control).is_visible_in_tree() and (ch as Control).tooltip_text != "" and (ch as Control).gui_input.get_connections().size() > 0 and (ch as Control).tooltip_text.contains(has):
+			return ch
+		var r := _find_tip(ch, has)
+		if r != null:
+			return r
+	return null
 
 func _path(c: Node) -> String:
 	var bits := []
@@ -115,14 +251,20 @@ func _first_session(main) -> void:
 	await shot("coach")
 	if is_instance_valid(coach):
 		coach.queue_free()
-	CharacterCreator.new().show_for(main, main.state.appearance, func(_a): pass)
+	var cc := CharacterCreator.new()
+	cc.show_for(main, main.state.appearance, func(_a): pass)
 	await shot("creator")
+	cc.scroll.scroll_vertical = 99999   # Fable r4 #7: the rows under the race card (Hair colour, Fur, Eyes, Face)
+	await shot("creator_bottom")
+	# Fable r5 #1: the hero stays in view while you pick the rows at the bottom
+	if not (cc.preview.is_visible_in_tree() and root.get_visible_rect().encloses(cc.preview.get_global_rect())):
+		fail("PREVIEW GONE: the creator's hero scrolled out of view")
 	await close_popups(main)
 	HeroSelect.new().show_for(main, null)
 	await shot("hero_select")
 	await close_popups(main)
-	main.state.last_death = {"floor": main.state.floor_num, "enemy": "A Cave Troll", "woke": 26, "lost": "gold",
-		"taken": {"hit": 60, "fire": 40}, "total": 100, "enemy_left": 0.35, "tips": ["Drink a potion below half health (Auto-potion in Hero › Skills)."]}
+	main.state.last_death = {"floor": main.state.floor_num, "enemy": "A Cave Troll", "woke": 26, "lost": "4,516 gold, 3 items",
+		"taken": {"hit": 60, "fire": 40}, "total": 100, "enemy_left": 0.35, "tips": ["Drink a potion below half health (Auto-potion in Hero › Skills)."]}
 	main._show_recap()
 	await shot("death_card")
 	if is_instance_valid(main.recap_panel):
@@ -163,6 +305,11 @@ func _initialize() -> void:
 		await create_timer(0.2).timeout
 	await close_popups(main)
 	await shot("fight")
+	# Fable r4 #3: the goal line ends where it should (no "..." over the place to go)
+	var gl: Label = main.goal_label
+	if gl.is_visible_in_tree() and gl.get_theme_font("font").get_string_size(gl.text, HORIZONTAL_ALIGNMENT_LEFT, -1, gl.get_theme_font_size("font_size")).x > gl.size.x + 1.0:
+		fail("GOAL CUT: \"%s\" needs more than %.0f px" % [gl.text, gl.size.x])
+	await touch_check("goal_line", gl)
 	await _first_session(main)
 	var group_names := ["character", "items", "town", "codex", "online"]
 	for g in [0, 1, 3, 4]:
@@ -173,6 +320,11 @@ func _initialize() -> void:
 			main.show_tab(g, s)
 			main.refresh()
 			await shot("%s_%s" % [group_names[g], grp.get_tab_title(s)])
+			# Fable r4 #1: a stat tile ("Strength: ...") and a heading (Your party) answer a tap
+			var tap_at := {"character_Hero": ": ", "character_Party": "Take a team"}
+			var tk := "%s_%s" % [group_names[g], grp.get_tab_title(s)]
+			if tap_at.has(tk):
+				await touch_check(tk.to_lower(), _find_tip(grp.get_current_tab_control(), tap_at[tk]))
 			if g == 1 and s == 1 and not main.state.bag.is_empty():
 				ItemPopup.show_item(main, main.state.bag[0])
 				await shot("item_popup")
