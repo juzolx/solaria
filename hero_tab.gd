@@ -6,6 +6,7 @@ extends ScrollContainer
 ## Interface pass: the top is a "stage": name plate, the hero big on a stone
 ## plinth, a paper doll of the six main gear slots (tap = Gear page), XP. Stats
 ## are compact icon + number cells (tap one to read what it does).
+const FitBox := preload("res://fit_box.gd")
 
 var main
 var state: GameState
@@ -25,6 +26,7 @@ var auto_button: Button
 var spend_button: Button
 var rows := {}      # stat -> {"value", "gives", "p1", "p5", "chip"}
 var stat_grid: GridContainer
+var stat_hold: Control   # FitBox around stat_grid
 var special_box: VBoxContainer
 var special_rows := {}  # name -> [value label, text rich, bar, panel]
 var numbers := {}
@@ -71,6 +73,7 @@ func setup(m) -> void:
 	level_label = UI.label("", UI.FONT_BODY, UI.DIM_CONTRAST)
 	level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	level_label.clip_text = true
+	level_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	pv0.add_child(level_label)
 	role_label = UI.wrap("", UI.FONT_BODY, UI.DIM)   # the class blurb lives in the plate's tap-tip now (fewer words)
 	role_label.visible = false
@@ -169,8 +172,12 @@ func setup(m) -> void:
 	stat_grid.columns = 2
 	stat_grid.add_theme_constant_override("h_separation", 6)
 	stat_grid.add_theme_constant_override("v_separation", 6)
-	stat_grid.resized.connect(_fit_stat_grid)
-	v.add_child(stat_grid)
+	# Juzo (wide PC): 4 columns made the grid 784 px wide, which kept the page wide enough for 4
+	# columns, so it never went back to 2 and pushed the screen past the window. The holder's
+	# width (what the page gives) picks the columns now.
+	stat_hold = FitBox.hold(stat_grid)
+	stat_hold.resized.connect(_fit_stat_grid)
+	v.add_child(stat_hold)
 	for st in GameData.STAT_ORDER:
 		stat_grid.add_child(_stat_row(st))
 
@@ -298,7 +305,7 @@ func _refresh_doll() -> void:
 			b.add_theme_stylebox_override(st_name, sb)
 
 func _fit_stat_grid() -> void:
-	var cols := 4 if stat_grid.size.x >= 680.0 else 2
+	var cols := 4 if stat_hold.size.x >= 680.0 else 2
 	if stat_grid.columns != cols:
 		stat_grid.columns = cols
 
@@ -344,6 +351,11 @@ func refresh() -> void:
 	role_label.text = String(cur["role_text"]) if not cur.is_empty() else String(state.class_info().get("blurb", ""))
 	level_label.text = "%s  ·  Lv %d" % [state.title(), state.level]
 	level_label.add_theme_color_override("font_color", UI.TEXT)   # Fable r2 #11: names in bone; the class colour lives in the outfit
+	# Juzo (wide PC): the plate is as wide as its line ("The Undying Fool · Lv 39" was cut at both ends
+	# in a 220 px plate), up to the stage's width; past that the line ends in "…"
+	var lf := level_label.get_theme_font("font")
+	var need := lf.get_string_size(level_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, level_label.get_theme_font_size("font_size")).x + 2.0
+	level_label.custom_minimum_size.x = minf(ceilf(need), maxf(0.0, (level_label.get_parent().get_parent().get_parent() as Control).size.x - 40.0))
 	_refresh_doll()
 	_fill_titles()
 	var al := ClassTree.alignment(state)

@@ -4,6 +4,7 @@ extends VBoxContainer
 ## upgrade and reroll. Locked items can't be sold or salvaged.
 
 const SORTS := ["Newest", "Rarity", "Power", "Slot"]
+const FitBox := preload("res://fit_box.gd")
 
 var main
 var state: GameState
@@ -97,7 +98,7 @@ func setup(m) -> void:
 	sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(sv)
 	grid = ItemGrid.grid()
-	sv.add_child(grid)
+	sv.add_child(FitBox.hold(grid))   # Juzo (wide PC): the columns come from the width, never set it
 	empty_card = UI.panel(UI.INSET, UI.BORDER, 8, 12, 1)
 	empty_card.visible = false
 	sv.add_child(empty_card)
