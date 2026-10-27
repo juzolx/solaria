@@ -1524,7 +1524,8 @@ func _plate_shown(s: Dictionary) -> bool:
 		return true
 	if (s.has("plate") and s["plate"] == null) or size.x < 16.0 or size.y < 16.0:
 		return false   # no plate (the Mailbox: its badge is on the Mail button), or not laid out yet
-	if scale_f < 1.0 and String(s["id"]) != hover and String(s["id"]) != press:
+	var sid := String(s["id"])
+	if scale_f < 1.0 and sid != hover and sid != press:
 		return false   # zoomed out to the whole town: the plates would cover the buildings (taps still work)
 	# at least 30% of the building on screen, so a plate never hangs over the dark at the edge
 	var r: Array = s["rect"]
