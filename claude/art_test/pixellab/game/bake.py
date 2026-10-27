@@ -1044,7 +1044,7 @@ def fit_build_hair(d, b, bcells, info, s):
                 c.paste(big, at)
                 out.append(c)
             if k.startswith("n"):  # seen from behind the hair is the whole head: no scalp through it
-                back_hair(cells[-1], idxs[-1], bcells[k], NAPE.get(d, 0))
+                back_hair(cells[-1], idxs[-1], bcells[k], NAPE.get(d, 0), DOMES.get(d, {}).get(k, set()))
             squeeze_rows(cells[-1], idxs[-1], btop + 10, HAIR_LOW)
         save(f"{d}/hair_{k_}", cells, idxs)
 
@@ -1074,6 +1074,7 @@ BACK_SILHOUETTE = ["orc_m", "orc_f"]  # their skulls from behind by the head's o
 DARK_BRAID = ["orc_f"]  # her braid is drawn in the outline black (braid(dark=True))
 TOPKNOT = ["orc_m"]  # his drawn topknot over the skull goes (it poked through every style: Fable hero R4 item 7)
 BARED = []  # (folder, family, hair pixels taken off its outfit's frames)
+DOMES = {}  # folder -> back frame -> the bald dome's pixels on its outfits (every family)
 
 
 SKULL_R = (8, 11.5)  # a build skull's radius, from the smallest (fairy) to the largest (dwarf, orc) by eye
@@ -1167,22 +1168,27 @@ def bare_heads(out, idxs, cells, skulls, d, fam, by_index=False):
     if d in BACK_SILHOUETTE:  # from behind the body's skull circle reached her robe's collar: its purples read as hair
         skulls = {k: back_skull(c, skulls[k][0])[:3] if k.startswith("n") else skulls[k] for c, k in zip(out, K)}
     hp = set() if by_index else hair_palette(out, idxs, skulls)
-    # the dome's shades: the skin of the portrait's face (a tusk, a pale trim or an orange vest also read as skin)
+    # the dome's 4 tones: the face's own skin (its commonest colour) as the middle, one lighter, two darker,
+    # of its hue only (a cheek's pink drew a line across a goblin's dome, the lightest tone a near-white
+    # blob on the dwarf's: Juzo/lead R4); from the portrait's skin-indexed face, or an own-skin build's bare face
     fp, fq = out[7].load(), idxs[7].load(); fx, fy, fr = skulls["s_idle0"]
-    pal = sorted({(R.lum(fp[x, y][:3]), fp[x, y], fq[x, y][0])
-                  for y in range(round(fy), min(C, round(fy + 0.8 * fr))) for x in range(round(fx - 0.6 * fr), round(fx + 0.6 * fr) + 1)
-                  if fq[x, y][0] and fp[x, y][3] and fp[x, y][:3] not in hp and lum255(fp[x, y]) >= 40})
-    if not pal:  # an own-skin build (the orcs' green is not recoloured, so not indexed): the bare face's shades
-        cnt = {}; fp = cells["s_idle0"].load()
-        for y in range(round(fy), min(C, round(fy + 0.8 * fr))):
-            for x in range(round(fx - 0.6 * fr), round(fx + 0.6 * fr) + 1):
-                if fp[x, y][3] and lum255(fp[x, y]) >= 40 and fp[x, y][:3] not in hp:
-                    cnt[fp[x, y]] = cnt.get(fp[x, y], 0) + 1
-        if cnt:
-            hue = lambda col: colorsys.rgb_to_hsv(*(v / 255 for v in col[:3]))[0]
-            mode = max(cnt, key=cnt.get)  # the skin; a tusk or an eye is another hue or rare
-            pal = sorted((R.lum(col[:3]), col, 0) for col, m in cnt.items()
-                         if m >= 3 and min(abs(hue(col) - hue(mode)), 1 - abs(hue(col) - hue(mode))) <= 0.06)
+    box = [(x, y) for y in range(round(fy), min(C, round(fy + 0.8 * fr))) for x in range(round(fx - 0.6 * fr), round(fx + 0.6 * fr) + 1)]
+    cnt = {}
+    for t in box:
+        if fq[t][0] and fp[t][3] and fp[t][:3] not in hp and lum255(fp[t]) >= 40:
+            cnt[(fp[t], fq[t][0])] = cnt.get((fp[t], fq[t][0]), 0) + 1
+    if not cnt:  # an own-skin build (the orcs' green is not recoloured, so not indexed)
+        bp = cells["s_idle0"].load()
+        for t in box:
+            if bp[t][3] and lum255(bp[t]) >= 40 and bp[t][:3] not in hp:
+                cnt[(bp[t], 0)] = cnt.get((bp[t], 0), 0) + 1
+    pal = []
+    if cnt:  # the face's main skin as the middle; the other three its value moved (the face has few lit tones)
+        (col, ri) = max(cnt, key=cnt.get)
+        h, sat, v = colorsys.rgb_to_hsv(*(t / 255 for t in col[:3]))
+        for dv, ds in ((-0.26, 0.10), (-0.13, 0.05), (0, 0), (0.07, -0.08)):  # dark edge, shadow, skin, light
+            rgb = tuple(round(t * 255) for t in colorsys.hsv_to_rgb(h, max(0, min(1, sat + ds)), max(0, min(1, v + dv))))
+            pal.append((0, rgb + (255,), max(1, min(255, ri + shade(rgb, "skin") - shade(col, "skin"))) if ri else 0))
     near = lambda col: any(sum(abs(col[j] - h[j]) for j in range(3)) <= 18 for h in hp)
     n = 0
     for c, ix, k in zip(out, idxs, K):
@@ -1227,14 +1233,21 @@ def bare_heads(out, idxs, cells, skulls, d, fam, by_index=False):
                     t = (x + dx, y + dy)
                     if t not in hair and xa <= t[0] <= xb and 0 <= t[1] <= low and ishair(*t):
                         hair.add(t); todo.append(t)
+        # a speck the hair walled in (a tie, a dark knot in the middle of the dome) goes with it
+        hair |= {(x, y) for y in range(max(1, int(top)), min(C - 1, round(cy + r))) for x in range(max(1, round(cx - r)), min(C - 1, round(cx + r) + 1))
+                 if (x, y) not in hair and (x - cx) ** 2 + (y - cy) ** 2 <= (r - 2) ** 2
+                 and sum((x + dx, y + dy) in hair for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))) >= 3}
         dome = set()
         if pal:
             for y in range(max(0, int(top)), min(C, round(cy + r) + 1)):
                 for x in range(max(0, round(cx - r)), min(C, round(cx + r) + 1)):
                     if inside(x, y) and p[x, y][3] and (x, y) in hair and not (front and y > cy - 0.2 * r):
-                        light = 0.6 - 0.25 * (x - cx) / r - 0.35 * (y - cy) / r
-                        _, col, ri = pal[max(0, min(len(pal) - 1, round(light * (len(pal) - 1))))]
+                        # a round ramp from a light spot up and to the left, darker toward the edge
+                        t = math.hypot(x - (cx - 0.35 * r), y - (cy - 0.45 * r)) / (1.45 * r)
+                        _, col, ri = pal[3 if t < 0.36 else 2 if t < 0.7 else 1 if t < 0.88 else 0]
                         p[x, y] = col; q[x, y] = (ri, 0, 0); dome.add((x, y))
+        if not front:  # the hair layers cover it from behind (back_hair): it shows only when Bald
+            DOMES.setdefault(d, {}).setdefault(k, set()).update(dome)
         gone = hair - dome
         src = c.copy(); sp = src.load(); sq = ix.copy().load()
         for (x, y) in sorted(gone):
@@ -1412,10 +1425,13 @@ def side_braid(c, ix, src, sq, cx, cy, r, low):
 NAPE = {"orc_m": 4}  # rows of strands the back hair reaches down the neck (his sat on the skull like a cap)
 
 
-def back_hair(c, ix, body, nape):
+def back_hair(c, ix, body, nape, dome=()):
     """A back-view hair cell over a build head: every head pixel between the hair's left and right edge on a
     row (a gap in spiky or tied hair showed the dwarf's pale dome) takes the hair's darkest shade, and nape
-    rows of strands (every other column one row shorter) hang below it, over the head and neck only."""
+    rows of strands (every other column one row shorter) hang below it, over the head and neck only. dome:
+    the bald dome the build's outfits carry from behind; every pixel of it the style misses takes the
+    nearest hair pixel on its row (or column), so no skin shows through a style (lead R4: her short hair
+    sat on a pale patch with the braids gone)."""
     p, q, bp = c.load(), ix.load(), body.load()
     hair = [(x, y) for y in range(C) for x in range(C) if p[x, y][3]]
     if len(hair) < 12:
@@ -1435,6 +1451,15 @@ def back_hair(c, ix, body, nape):
         for x in range(lo, hi + 1):
             if not p[x, y][3] and bp[x, y][3]:
                 p[x, y] = col; q[x, y] = idx
+    if dome:
+        have = [(x, y) for y in range(C) for x in range(C) if p[x, y][3] and lum255(p[x, y]) >= 40]  # not its outline
+        have = have or [(x, y) for y in range(C) for x in range(C) if p[x, y][3]]
+        for (x, y) in sorted(dome):
+            if p[x, y][3]:
+                continue
+            row = [t for t in have if t[1] == y]
+            t = min(row, key=lambda u: abs(u[0] - x)) if row else min(have, key=lambda u: abs(u[0] - x) + abs(u[1] - y))
+            p[x, y] = p[t]; q[x, y] = q[t]
     if nape:
         bottom = max(rows)
         lo, hi = rows[bottom]

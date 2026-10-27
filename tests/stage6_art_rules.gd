@@ -688,6 +688,37 @@ func _initialize() -> void:
 								n += 1
 								break
 				check(n == 0, "%s Bald %s: %d hair-coloured px under the head" % [d, "back" if back else "portrait", n])
+		# from behind a style covers the outfits' bald dome: no dome skin above the hairline (lead R4: her short
+		# hair sat on a pale patch, the braids gone); the dome's tones are read off the Bald back
+		for body: String in bd["bodies"]:
+			var d := "%s_%s" % [bd["key"], body]
+			var app := {"body": "masc" if body == "m" else "fem", "race": race, "skin": Races.skins(race)[0], "hair": "Bald", "hair_color": 1}
+			var bald: Image = HeroArt.frames(app, "Warrior", 0, "", true)["img"][0]
+			var ur := bald.get_used_rect()  # the skull's middle columns (not a goblin's ears, a fairy's wings)
+			var cx := ur.get_center().x
+			var top := ur.position.y
+			while top < ur.end.y and range(cx - 3, cx + 4).all(func(x: int) -> bool: return bald.get_pixel(x, top).a8 == 0):
+				top += 1
+			var skin := {}
+			var head := []
+			for y in range(top, top + 12):
+				for x in range(cx - 6, cx + 7):
+					var q := bald.get_pixel(x, y)
+					if q.a8 > 0 and q.get_luminance() > 0.15:
+						head.append(Vector2i(x, y))
+						if y >= top + 3 and y < top + 9:
+							skin[q.to_html(false)] = true
+			for st in ["Short", "Braid"]:
+				app["hair"] = st
+				var im: Image = HeroArt.frames(app, "Warrior", 0, "", true)["img"][0]
+				var n := 0
+				for t: Vector2i in head:
+					n += 1 if skin.has(im.get_pixel(t.x, t.y).to_html(false)) else 0
+				var at := []
+				for t: Vector2i in head:
+					if skin.has(im.get_pixel(t.x, t.y).to_html(false)):
+						at.append(t - Vector2i(cx, top))
+				check(n == 0, "%s %s back: %d px of bald dome skin above the hairline %s" % [d, st, n, str(at.slice(0, 4))])
 	# (f2) the crown sits on (into) every style's hair, battle idle and portrait (R4 item 8)
 	for d: String in hi.get("crown_lift", {}):
 		if not FileAccess.file_exists("res://art/heroes/%s/look_crown.png" % d):
