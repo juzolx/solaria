@@ -26,12 +26,19 @@ func room(kind: String) -> GameState:
 	g.choose_path("door_m")
 	return g
 
+## A chest room whose chest is still closed (a spotted mimic, a rare roll, opens the doors as you walk in).
+func chest_room() -> GameState:
+	var g := room("treasure")
+	while not g.exploring:
+		g = room("treasure")
+	return g
+
 func _initialize() -> void:
 	# A fight room starts the fight right away
 	var f := room("fight")
 	check(not f.exploring and f.room_kind == "fight" and f.enemy_hp > 0 and f.room_props.is_empty(), "a fight room starts the fight")
 	# A chest room: one chest, tap it, then the doors
-	var c := room("treasure")
+	var c := chest_room()
 	c.room_props[0]["mimic"] = false
 	c.room_props[0]["spotted"] = false
 	check(c.exploring and c.room_props.size() == 1 and String(c.room_props[0]["kind"]) == "chest", "a treasure room holds one chest")
@@ -41,7 +48,7 @@ func _initialize() -> void:
 	check(c.gold > g0 and c.bag.size() > bag0 and c.door_pending(), "the chest pays and the doors open")
 	check(Halls.interact(c, 0) == "", "opened once only")
 	# A mimic fights; beating it opens the doors
-	var m := room("treasure")
+	var m := chest_room()
 	m.room_props[0]["mimic"] = true
 	m.room_props[0]["spotted"] = false
 	Halls.interact(m, 0)
@@ -53,7 +60,7 @@ func _initialize() -> void:
 	var leaked := 0
 	for s in 60:
 		seed(1000 + s)
-		var mm := room("treasure")
+		var mm := chest_room()
 		mm.room_props[0]["mimic"] = true
 		mm.room_props[0]["spotted"] = false
 		Halls.interact(mm, 0)
