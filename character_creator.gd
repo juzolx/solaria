@@ -33,20 +33,24 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	body.add_theme_constant_override("separation", 14)
 	content.add_child(body)
 
-	# The stage: your hero at 3x (whole pixels) on the plinth, the name and the dice beside them
+	# The stage: your hero at 3x (whole pixels) on the plinth, the name and the dice beside them.
+	# Fable r5 #1: on phones the stage is pinned over the scroll at 2x, so the hero stays in
+	# view while you pick skin, hair and face; the name goes into the scroll.
 	var left := UI.vbox(10)
 	left.custom_minimum_size = Vector2(0 if body.vertical else 380, 0)
-	body.add_child(left)
+	if body.vertical:
+		top.add_child(left)
+	else:
+		body.add_child(left)
 	var stage := UI.hbox(10)
 	left.add_child(stage)
-	var side := Sprites.PORTRAIT * 3
+	var side := Sprites.PORTRAIT * (2 if body.vertical else 3)
 	var ph := Control.new()
 	ph.custom_minimum_size = Vector2(side, side + 8)
 	stage.add_child(ph)
 	var pl := TextureRect.new()
 	pl.texture = UiIcons.plinth(64)
 	pl.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pl.position = Vector2(roundf((side - pl.texture.get_width()) / 2.0), side + 8 - pl.texture.get_height())
 	ph.add_child(pl)
 	preview = TextureRect.new()
 	preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -55,21 +59,30 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	ph.add_child(preview)
+	UI.seat_hero(preview, pl, side / Sprites.PORTRAIT, side / 2.0, (Sprites.PORTRAIT_FOOT + 1) * (side / Sprites.PORTRAIT))   # boots in the shadow
 	var sv := UI.vbox(8)
 	sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sv.alignment = BoxContainer.ALIGNMENT_CENTER
 	stage.add_child(sv)
+	var name_box: VBoxContainer = sv
+	if body.vertical and ask_name:
+		name_box = UI.vbox(8)
+		body.add_child(name_box)
 	if ask_name:
-		sv.add_child(_head("Name"))
+		name_box.add_child(_head("Name"))
 		name_edit = LineEdit.new()
 		name_edit.max_length = 16
 		name_edit.text = NAMES.pick_random()
 		name_edit.placeholder_text = "Your hero's name"
 		name_edit.custom_minimum_size = Vector2(0, UI.TAP)
-		sv.add_child(name_edit)
+		var nr: BoxContainer = UI.hbox(8) if body.vertical else name_box
+		if body.vertical:
+			name_box.add_child(nr)
+			name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nr.add_child(name_edit)
 		var nb := UI.button("New name", func(): name_edit.text = NAMES.pick_random())
 		nb.custom_minimum_size = Vector2(0, UI.TAP)
-		sv.add_child(nb)
+		nr.add_child(nb)
 	var rnd := UI.button("Random look", _randomize)
 	rnd.custom_minimum_size = Vector2(0, UI.TAP)
 	sv.add_child(rnd)
@@ -85,7 +98,7 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	if not lock_race:
 		_text_row(right, "Race", "race", GameData.RACES, [], 3)
 	right.add_child(race_card)  # what the race does, right under the pick
-	_text_row(right, "Build", "body", Sprites.BODIES, Sprites.BODY_NAMES, 2)
+	_text_row(right, "Body", "body", Sprites.BODIES, Sprites.BODY_NAMES, 2)
 	_swatch_row(right, "Skin", "skin", Sprites.swatches("skin"))
 	_stepper_row(right, "Hair style", "hair")
 	_swatch_row(right, "Hair color", "hair_color", Sprites.swatches("hair"))
@@ -93,6 +106,9 @@ func show_for(parent: Node, start: Dictionary, done: Callable, title := "Create 
 	_swatch_row(right, "Eyes", "eyes", Sprites.swatches("eyes"))
 	if HeroArt.available():
 		_stepper_row(right, "Face", "face")
+	var pad := Control.new()   # the last row clears the scroll's edge instead of sitting half under it
+	pad.custom_minimum_size = Vector2(0, 24)
+	right.add_child(pad)
 
 	# Done sits under the scroll, always on screen
 	done_button = UI.primary("Done", _finish)
@@ -295,12 +311,12 @@ static func race_preview(race: String) -> String:
 	for id in Realms.IDS:
 		if Realms.info(id)["race"] == race:
 			friends.append(Realms.realm_name(id))
-	var t := "[color=%s]%s[/color]: %s\n[color=%s]Awakens:[/color] %s" % [p["color"], p["name"], p["how"], UI.hex(UI.DIM), " > ".join(names)]
+	var t := "[color=%s]%s[/color]: %s\n[color=%s]Awakens:[/color] %s" % [p["color"], p["name"], p["how"], UI.hex(UI.DIM), " › ".join(names)]
 	if not friends.is_empty():
 		t += "\n[color=%s]Home:[/color] %s (friendly)" % [UI.hex(UI.DIM), ", ".join(friends)]
 	if not foes.is_empty():
 		t += "\n[color=%s]Rivals:[/color] %s (they start hostile)" % [UI.hex(UI.DIM), ", ".join(foes)]
-	return "[font_size=%d]%s[/font_size]" % [UI.FONT_CAPTION, t]
+	return t   # body size: these four lines decide the race pick (Fable r4 #7)
 
 func _finish() -> void:
 	if name_edit:

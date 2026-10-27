@@ -18,9 +18,9 @@ const STEPS := [
 	{"id": "fight", "text": "You won a fight! Each floor has a few. Keep going down."},
 	{"id": "loot", "text": "Loot! It's in your bag, but it's only safe once you get it [b]home[/b]."},
 	{"id": "home", "text": "Tap [b]Town[/b] to walk home after this floor. What you bring home is safe."},
-	{"id": "safe", "text": "Home safe! Your gold went to the Bank. Put on better gear in the Gear tab."},
+	{"id": "safe", "text": "Home safe! Your gold went to the Bank. Put on better gear in Items › Gear."},
 	{"id": "death", "text": "You fell. Your bag, the gold on you and the gear you wore stay where you fell. Win there to get it back. The Bank is always safe.", "covers": ["death", "grave"]},
-	{"id": "more", "text": "That's the basics! New things open as you go deeper, one tip at a time. [b]Codex › Guide[/b] explains everything."},
+	{"id": "more", "text": "That's the basics! New things open as you go deeper, one tip at a time. [b]Codex › Guide[/b] explains everything."},
 ]
 
 ## Steps that show over menus (the title screen and the hero maker); the rest show in play.

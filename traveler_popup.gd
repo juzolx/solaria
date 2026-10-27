@@ -33,9 +33,7 @@ func show_for(main_node, p: Dictionary) -> void:
 		var cost := Travelers.cost_text(st, o)
 		var b := UI.primary(String(o["text"]) + (("  (%s)" % cost) if cost != "" else ""), _choose.bind(n), UI.GOLD if n == 0 else UI.BORDER)
 		b.custom_minimum_size = Vector2(0, UI.TAP)
-		b.disabled = not Travelers.can_pay(st, o)
-		if b.disabled:
-			b.tooltip_text = "You can't pay for that"
+		UI.why(b, "" if Travelers.can_pay(st, o) else "You can't pay for that.")
 		content.add_child(b)
 
 func _choose(n: int) -> void:

@@ -22,7 +22,6 @@ func refresh() -> void:
 		return
 	shown = key
 	OnlineUI.clear(box)
-	box.add_child(UI.heading("Trophy Cabin"))
 	if not Buildings.built("cabin"):
 		box.add_child(UI.wrap("An empty lot. Build the cabin (above) and %s gets a place to hang its trophies. They are already being counted: %d so far." % [p.town_name(p.town), Trophies.data.size()], UI.FONT_BODY, UI.DIM))
 		return

@@ -112,3 +112,8 @@ Every rating Juzo gives goes here, so all sessions learn what he thinks is reall
 - Oct 26: small monsters to the side so they stay visible is good, but they must not overlap room items (props).
 - Oct 26: face-off: Juzo picked option 2 (one whole size up where it fits; Surtr 2x at 430 between the doors, 1x on the SE).
 - Oct 26: REPLACES the side spot: every monster stays centred between the doors ("guarding"); small ones get bigger so they never disappear behind the hero. Juzo does not like the side placement.
+- 2026-10-26 Dungeon r5 SE before/after: Juzo approved the new look ("The doors look good"): steel unread door frames, hero clear of the middle door, slight boot crop and hidden title on the shortest SE views.
+- 2026-10-26 Town: Juzo only wanted the one field (by the Blacksmith) removed. The pumpkin/wheat field by the gate STAYS.
+- 2026-10-26 Juzo spotted the hero doll floating above its shadow on the Gear page (and a text line cutting the shadow). Standing check for every picture: does everything stand ON the ground or its shadow? Look at the whole picture, not just the thing that was fixed.
+- 2026-10-26 Same doll: Juzo also flagged the hand (empty-handed grip fist sticking out at the hip) and messy, lopsided armour. Check hands (grip with no weapon, malformed fingers) and outfit symmetry/cleanliness in every hero picture.
+- 2026-10-26 Juzo: the doll's head and neck don't mesh with the armour (head looks pasted on, no neck, hard seam at the chin). Always check how layers JOIN (head/neck/armour, hands/weapon, hair/head), not just each layer alone.

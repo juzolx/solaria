@@ -19,7 +19,7 @@ const OUTLINE_ALPHA := 201     # layer outlines: drawn on empty space, only dark
 
 # ---------- Character creator choices ----------
 const BODIES := ["masc", "fem"]
-const BODY_NAMES := ["Build A", "Build B"]
+const BODY_NAMES := ["Body A", "Body B"]
 ## Hero pixel size (decision D4, open). 1 = heroes keep their fine 1x pixels (today).
 ## 2 = heroes are snapped to the monsters' 2x art grid (every hero pixel a 2x2 block) and the
 ## battle draws them at the monsters' unit, so one screen has one pixel size.

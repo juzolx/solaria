@@ -12,7 +12,7 @@ const TIPS := [
 	"Pets are a real find. Look after the eggs you get.",
 	"A shimmer in the air might be a rift. Its depth tells you how far down it goes.",
 	"Travelers in the dungeon have things to offer, if you can pay.",
-	"Drag gear onto your hero to wear it.",
+	"Tap a gear slot on your hero to change what you wear.",
 	"Each town keeps its own heroes, stash and skill book.",
 ]
 

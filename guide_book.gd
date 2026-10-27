@@ -10,6 +10,7 @@ var page_id := ""
 var text: RichTextLabel
 var title_label: Label
 var list: VBoxContainer
+var chips: HFlowContainer   # phones: the topics as chips over the page
 var popped := false
 
 ## Opens the book on a page ("" = the first page you have).
@@ -29,15 +30,21 @@ func _show(main_node, id: String, as_popup: bool) -> void:
 	body.vertical = narrow
 	body.add_theme_constant_override("separation", 10 if narrow else 14)
 	content.add_child(body)
-	var left := UI.panel(UI.INSET, UI.BORDER, 8, 8, 1)
-	left.custom_minimum_size = Vector2(0, 150) if narrow else Vector2(210, 300)
-	body.add_child(left)
-	var ls := ScrollContainer.new()
-	ls.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	left.add_child(ls)
-	list = UI.vbox(4)
-	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	ls.add_child(list)
+	if narrow:
+		chips = HFlowContainer.new()
+		chips.add_theme_constant_override("h_separation", 6)
+		chips.add_theme_constant_override("v_separation", 6)
+		body.add_child(chips)
+	else:
+		var left := UI.panel(UI.INSET, UI.BORDER, 8, 8, 1)
+		left.custom_minimum_size = Vector2(210, 300)
+		body.add_child(left)
+		var ls := ScrollContainer.new()
+		ls.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		left.add_child(ls)
+		list = UI.vbox(4)
+		list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ls.add_child(list)
 	var page_panel := UI.panel(Color("#1b1712"), Color("#c28569"), 8, 18, 2)
 	page_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_child(page_panel)
@@ -49,19 +56,23 @@ func _show(main_node, id: String, as_popup: bool) -> void:
 	text.custom_minimum_size = Vector2(0 if narrow else 380, 0)
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pv.add_child(text)
-	var row := UI.hbox(8)
-	content.add_child(row)
+	var row := foot   # under the scroll: never scrolls away under a second Close
+	if bottom_close:
+		bottom_close.queue_free()
+		bottom_close = null
+	foot.visible = true
 	if as_popup:
 		var skip := UI.button("Skip the guide", func():
 			codex.at_least("guide_skip", 1)
 			codex.guide_queue.clear()
 			codex.save()
 			close())
-		skip.tooltip_text = "Stop showing new pages. You can still read them in Codex › Guide."
+		skip.tooltip_text = "Stop showing new pages. You can still read them in Codex › Guide."
 		row.add_child(skip)
 	row.add_child(UI.spacer())
 	var ok := UI.primary("Got it", close, UI.GOLD)
 	ok.custom_minimum_size = Vector2(140, UI.TAP)   # Fable r2 #8
+	ok.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(ok)
 	if id == "":
 		for p in Guide.PAGES:
@@ -77,8 +88,27 @@ func _show_page(id: String) -> void:
 	page_id = id
 	if m.sfx:
 		m.sfx.play("page")
-	OnlineUI.clear(list)
+	if chips:
+		OnlineUI.clear(chips)
+		var missing := 0
+		for p in Guide.PAGES:
+			if not codex.guide.has(p["id"]):
+				missing += 1
+				continue
+			var cb := UI.button(String(p["title"]), _show_page.bind(p["id"]))
+			cb.custom_minimum_size = Vector2(0, UI.BUTTON_H)
+			cb.focus_mode = Control.FOCUS_NONE
+			UI.chip_look(cb, p["id"] == id)
+			chips.add_child(cb)
+		if missing > 0:
+			var lc := UI.chip("+%d locked" % missing, UI.DIM, UI.FONT_BODY)
+			UI.tip(lc, "More pages unlock as you play.")
+			chips.add_child(lc)
+	else:
+		OnlineUI.clear(list)
 	for p in Guide.PAGES:
+		if list == null:
+			break
 		var have := codex.guide.has(p["id"])
 		var b := UI.button(p["title"] if have else "???", _show_page.bind(p["id"]))
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT

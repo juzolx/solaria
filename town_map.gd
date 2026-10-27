@@ -198,7 +198,8 @@ static func open_for(main, hidden_spots: Dictionary, locked_spots: Dictionary, o
 		if hidden_spots.has(id) or id == "gate":
 			continue
 		var empty := String(sp.get("kind", "")) == "lot" and not Buildings.built(id)
-		var b := UI.button(String(sp["label"]).replace(" (lot)", "") + (" · not built" if empty else ""), func(): go.call(id))
+		# Fable r4 #14: the state on its own line, so a long name never cuts "not built"
+		var b := UI.button(String(sp["label"]).replace(" (lot)", "") + ("\nnot built" if empty else ""), func(): go.call(id))
 		b.icon = icon(id, UiSkin.PX * 2)
 		b.add_theme_constant_override("icon_max_width", 0)   # the glyph at its own whole pixels
 		b.clip_text = true

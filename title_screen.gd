@@ -203,7 +203,7 @@ func _draw_scene(vs: Vector2) -> void:
 			var u := 3.0
 			var hs := Vector2(hero_tex.get_size()) * u
 			var floor_y := minf(halls.proj(0.0, HallsScene.FLOOR_Y, 2.1).y, sz.y - 6.0)
-			var feet := float(Sprites.HERO_FOOT - Sprites.PORTRAIT_CROP.position.y) * u
+			var feet := float(Sprites.PORTRAIT_FOOT + 1) * u   # the boots' bottom edge on the shadow's centre line
 			var bob := roundf(sin(t * 2.2) * 0.6) * u
 			var pos := Vector2(roundf(vs.x * 0.5 - hs.x / 2.0 - 40.0), roundf(floor_y - feet + bob))
 			draw_set_transform(Vector2(pos.x + hs.x / 2.0, floor_y), 0.0, Vector2(1.0, 0.25))
@@ -247,6 +247,8 @@ func _build() -> void:
 	title.add_theme_constant_override("outline_size", 10)
 	col.add_child(title)
 	var sub := UI.label("A dungeon of myths and monsters", UI.FONT_BODY, UI.TEXT)
+	sub.add_theme_color_override("font_outline_color", UiSkin.SOOT)   # Fable r5 #17: readable over the door art
+	sub.add_theme_constant_override("outline_size", 6)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(sub)
 	var gap := Control.new()
@@ -289,10 +291,13 @@ func _fill_menu() -> void:
 				p.active_slot = n
 				meta = GameState.slot_meta(n)
 				break
-	var town_l := UI.label("%s  ·  %s  ·  %d / %d heroes" % [p.town_name(p.town), "Hardcore" if p.town_hardcore(p.town) else "Regular", GameState.town_heroes(p.town), p.slots_open()], UI.FONT_BODY, UI.GOLD)
+	var town_l := UI.label("%s · %s" % [p.town_name(p.town), "Hardcore" if p.town_hardcore(p.town) else "Regular"], UI.FONT_BODY, UI.GOLD)
 	town_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	town_l.tooltip_text = "The town you're in. Switch or found another from Towns."
+	UI.tip(town_l, "The town you're in. Switch or found another from Towns.")
 	menu_box.add_child(town_l)
+	var roster_l := UI.label(p.roster_line(), UI.FONT_BODY, UI.DIM)   # Fable r4 #4: the same line as Heroes and the Inn
+	roster_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	menu_box.add_child(roster_l)
 	if not meta.is_empty():
 		var cont := UI.primary("Continue", func(): close_and(func(): m.play_slot(p.active_slot)), UI.GOLD)
 		cont.custom_minimum_size = Vector2(0, UI.TAP)
