@@ -63,6 +63,72 @@ func _steel(im: Image, i: int) -> int:
 				n += 1
 	return n
 
+## Rows of frame i holding the dragon membrane orange (bake.py DRAGON[3..5]).
+func _orange_rows(im: Image, i: int) -> int:
+	var lo := 999
+	var hi_ := -1
+	for y in HeroArt.CELL:
+		for x in HeroArt.CELL:
+			var q := im.get_pixel(i * HeroArt.CELL + x, y)
+			if q.a8 > 0 and q.r8 >= 180 and q.g8 >= 70 and q.g8 <= 180 and q.b8 <= 100:
+				lo = mini(lo, y)
+				hi_ = maxi(hi_, y)
+	return hi_ - lo + 1 if hi_ >= 0 else 0
+
+## Rows between the pauldrons and each fist on frame f with under 2 px at the fist's inner columns (the forearm
+## bake.py forearms() draws): [] when both arms reach their fists.
+func _arm_gaps(im: Image, f: int) -> Array:
+	var c := HeroArt.CELL
+	var cell := im.get_region(Rect2i(f * c, 0, c, c))
+	var r := cell.get_used_rect()
+	var bad := []
+	if r.size.y == 0:
+		return bad
+	var span := func(y: int) -> Vector2i:
+		var lo := c
+		var hi_ := -1
+		for x in c:
+			if cell.get_pixel(x, y).a8 > 0:
+				lo = mini(lo, x)
+				hi_ = maxi(hi_, x)
+		return Vector2i(lo, hi_)
+	var wmax := 0
+	for y in range(r.position.y, r.position.y + int(0.4 * r.size.y)):
+		var sp: Vector2i = span.call(y)
+		wmax = maxi(wmax, sp.y - sp.x + 1)
+	var pb := r.position.y
+	for y in range(r.position.y, r.position.y + int(0.4 * r.size.y)):
+		var sp: Vector2i = span.call(y)
+		if sp.y - sp.x + 1 >= 0.8 * wmax:
+			pb = y
+	var torso: Vector2i = span.call(pb + 1)
+	for side in [-1, 1]:
+		var ft := -1
+		var xi := -1
+		var out_row := func(y: int) -> bool:  # a pixel outside the torso on this side
+			for x in c:
+				if cell.get_pixel(x, y).a8 > 0 and (x < torso.x - 1 if side < 0 else x > torso.y + 1):
+					return true
+			return false
+		for y in range(pb + 1, mini(r.end.y, pb + 16)):
+			if ft < 0 and not (out_row.call(y) and out_row.call(y + 1)):
+				continue  # a fist is 2 rows or more: a 1-row stub (an edit's leftover hilt) is not one
+			for x in c:
+				if cell.get_pixel(x, y).a8 > 0 and (x < torso.x - 1 if side < 0 else x > torso.y + 1):
+					if ft < 0:
+						ft = y
+					if y <= ft + 2:
+						xi = maxi(xi, x) if side < 0 else (x if xi < 0 else mini(xi, x))
+		if ft < 0:
+			continue
+		for y in range(pb + 1, ft):
+			var n := 0
+			for x in [xi, xi + side]:
+				n += 1 if cell.get_pixel(x, y).a8 > 0 else 0
+			if n < 2:
+				bad.append(y)
+	return bad
+
 func _load(path: String) -> Image:
 	var img := Image.load_from_file(ProjectSettings.globalize_path(path))
 	img.convert(Image.FORMAT_RGBA8)
@@ -402,6 +468,12 @@ func _initialize() -> void:
 					for x in range(maxi(0, h.x - 3), mini(fs, h.x + 4)):
 						near = near or cell.get_pixel(x, y).a8 > 0
 				check(near, "%s weapon_%s frame %d: the hand %s holds it" % [b, wt, i, h])
+				if i == 7 and wt in ["sword", "dagger", "axe", "mace"]:  # held, not a dash leaving the hip (R4 item 5)
+					var held := 0
+					for y in range(maxi(0, h.y - 3), mini(fs, h.y + 4)):
+						for x in range(maxi(0, h.x - 3), mini(fs, h.x + 4)):
+							held += 1 if cell.get_pixel(x, y).a8 > 0 else 0
+					check(held >= 8, "%s weapon_%s portrait: %d px within 3 of the hand (8 at least)" % [b, wt, held])
 				# (c) at rest the weapon stays above the floor and inside the portrait crop
 				var low := (HeroArt.FOOT + HeroArt.PAD) if i in [0, 1, 6] else (95 if i >= 7 else fs)
 				check(used.end.y - 1 <= low, "%s weapon_%s frame %d reaches row %d (under %d)" % [b, wt, i, used.end.y - 1, low])
@@ -470,24 +542,15 @@ func _initialize() -> void:
 				var own := "res://art/heroes/%s/race_%s__%s.png" % [d, race.to_lower().replace(" ", "_"), look]
 				var any := "res://art/heroes/%s/look_%s.png" % [d, look]
 				check(FileAccess.file_exists(own) or FileAccess.file_exists(any), "%s %s: the look %s has no art in %s" % [race, rank["name"], look, d])
-	# Unarmed (Juzo, Gear page): the weapon hand is the free hand mirrored, no fist round a missing grip
-	for app: Dictionary in [{"body": "masc"}, {"body": "fem"}, {"body": "masc", "race": "Orc"}, {"body": "fem", "race": "Dwarf"}]:
-		var d := HeroArt.build_dir(app)
-		d = d if d != "" else HeroArt.body_key(app)
-		for back in [true, false]:
-			var fr := HeroArt.frames(app, "Warrior", 0, "", back)
-			var ax: Array = hi["axis"][d]
-			for f in ([0] if back else [7]):  # the frames HeroArt keeps as Images
-				var im: Image = fr["img"][f]
-				var h: Array = hi["hand"][d][f]
-				var a := float(ax[f]) + HeroArt.PAD
-				var odd := 0
-				for y in range(int(h[1]) + HeroArt.PAD - 7, int(h[1]) + HeroArt.PAD + 6):
-					for x in range(int(h[0]) + HeroArt.PAD - 7, int(h[0]) + HeroArt.PAD + 8):
-						var mx := roundi(2.0 * a - x)
-						if absf(x - a) >= 4.0 and mx >= 0 and mx < HeroArt.FRAME and (im.get_pixel(x, y).a8 > 0) != (im.get_pixel(mx, y).a8 > 0):
-							odd += 1
-				check(odd <= 6, "%s unarmed frame %d: %d hand pixels off the free hand's shape" % [d, f, odd])
+	# Forearms (Fable hero R4 item 6: two fists floated beside the hips): on every m/f outfit's portrait, each
+	# row between the pauldrons and a fist has 2 or more px at the fist's two inner columns, on both sides
+	for b in ["m", "f"]:
+		for fn: String in _pngs("res://art/heroes/%s/" % b):
+			if not fn.begins_with("outfit_") or fn.ends_with("_idx.png"):
+				continue
+			var im := _load("res://art/heroes/%s/%s" % [b, fn])
+			var bad := _arm_gaps(im, 7)
+			check(bad.is_empty(), "%s/%s portrait: no forearm on rows %s" % [b, fn, bad])
 	# The front chest balanced (Juzo: a shoulder plate on one side only): plate pixels left and right of the hips' centre
 	for b in ["m", "f"]:
 		for t in ["", "_t15"]:
@@ -530,9 +593,34 @@ func _initialize() -> void:
 			var body := (float(rx.min()) + float(rx.max())) / 2.0
 			check(absf(ncx - body) <= 1.0, "%s portrait %d: neck centre %.1f, shoulders %.1f" % [b, f, ncx, body])
 			check(last + 1 == top, "%s portrait %d: the neck ends on row %d, the collar starts on %d (a gap or an overlap)" % [b, f, last, top])
+			# no empty row from the top of the head to the collar in the middle columns (her chin had one), and
+			# NECK (3) full rows of neck, 7 px or more, over the collar (R4 item 2), in every hair style
+			for fn: String in _pngs("res://art/heroes/%s/" % b):
+				if not fn.begins_with("hair_") or fn.ends_with("_idx.png"):
+					continue
+				var hs := _load("res://art/heroes/%s/%s" % [b, fn])
+				var gap := -1
+				var r0 := hs.get_region(Rect2i(f * c, 0, c, c)).get_used_rect().position.y
+				var started := false  # from the head's top in the middle columns, all 3 filled (a spike, a ponytail
+				for y in range(r0, top):  # or a tuft of bedhead over the crown rises higher, apart from the head)
+					var any := false
+					var all3 := true
+					for x in range(roundi(ncx) - 1, roundi(ncx) + 2):
+						any = any or hs.get_pixel(f * c + x, y).a8 > 0
+						all3 = all3 and hs.get_pixel(f * c + x, y).a8 > 0
+					started = started or all3
+					if started and not any:
+						gap = y
+						break
+				check(gap < 0, "%s/%s portrait %d: an empty row %d between the head and the collar" % [b, fn, f, gap])
+				for y in range(top - 3, top):
+					var n := 0
+					for x in range(roundi(ncx) - 4, roundi(ncx) + 5):
+						n += 1 if hs.get_pixel(f * c + x, y).a8 > 0 else 0
+					check(n >= 7, "%s/%s portrait %d: neck row %d is %d px (7 at least)" % [b, fn, f, y, n])
 	# No orphan islands (Juzo, Gear page: loose specks by her hair): no part of 1-3 px on its own, in the battle
-	# idle and the portrait of every layer of both bodies
-	for b in ["m", "f"]:
+	# idle and the portrait of every layer of every body (R4 item 10: the builds' bald markers)
+	for b in dirs:
 		for fn: String in _pngs("res://art/heroes/%s/" % b):
 			if fn.ends_with("_idx.png"):
 				continue
@@ -542,6 +630,74 @@ func _initialize() -> void:
 				if (f + 1) * n <= im.get_width():
 					var isl := _islands(im, Rect2i(f * n, 0, n, n))
 					check(isl == 0, "%s/%s frame %d: %d loose parts of 1-3 px" % [b, fn, f, isl])
+	# Hair builds (Fable hero R4 items 3, 13): no outfit pixel keeps a hair index (the drawn hair is gone), and
+	# a Bald hero shows no hair-ramp colour under the top of the head, back or front
+	var ramp := HeroArt._ramp(Sprites.hair_colors()[1])
+	for race: String in hi.get("builds", {}):
+		var bd: Dictionary = hi["builds"][race]
+		if not bool(bd.get("hair", false)):
+			continue
+		for body: String in bd["bodies"]:
+			var d := "%s_%s" % [bd["key"], body]
+			for fn: String in _pngs("res://art/heroes/%s/" % d):
+				if fn.begins_with("outfit_") and fn.ends_with("_idx.png"):
+					var ix := _load("res://art/heroes/%s/%s" % [d, fn])
+					var g := 0
+					for y in ix.get_height():
+						for x in ix.get_width():
+							g += 1 if ix.get_pixel(x, y).g8 > 0 else 0
+					check(g == 0, "%s/%s: %d px still hair-indexed" % [d, fn, g])
+			var app := {"body": "masc" if body == "m" else "fem", "race": race, "skin": Races.skins(race)[0], "hair": "Bald", "hair_color": 1}
+			for back in [true, false]:
+				var fr := HeroArt.frames(app, "Warrior", 0, "", back)
+				var im: Image = fr["img"][0 if back else 7]
+				var r := im.get_used_rect()
+				var n := 0
+				var ow := _load("res://art/heroes/%s/outfit_plate.png" % d)  # its own belt can be the ramp's brown
+				var fi := 0 if back else 7
+				for y in range(r.position.y + int(r.size.y * 0.35), r.end.y):
+					for x in range(r.position.x, r.end.x):
+						var q := im.get_pixel(x, y)
+						var ox := x - HeroArt.PAD
+						var oy := y - HeroArt.PAD
+						if ox >= 0 and oy >= 0 and ox < HeroArt.CELL and oy < HeroArt.CELL and ow.get_pixel(fi * HeroArt.CELL + ox, oy).is_equal_approx(q):
+							continue
+						for rc in ramp:
+							if q.a8 > 0 and absf(q.r - rc.r) + absf(q.g - rc.g) + absf(q.b - rc.b) < 0.02:
+								n += 1
+								break
+				check(n == 0, "%s Bald %s: %d hair-coloured px under the head" % [d, "back" if back else "portrait", n])
+	# (f2) the crown sits on (into) every style's hair, battle idle and portrait (R4 item 8)
+	for d: String in hi.get("crown_lift", {}):
+		if not FileAccess.file_exists("res://art/heroes/%s/look_crown.png" % d):
+			continue
+		var cr := _load("res://art/heroes/%s/look_crown.png" % d)
+		for st: String in hi["styles"].values():
+			if not FileAccess.file_exists("res://art/heroes/%s/hair_%s.png" % [d, st]):
+				continue
+			var hs := _load("res://art/heroes/%s/hair_%s.png" % [d, st])
+			for f in [0, 7]:
+				var lift := HeroArt.crown_lift(d, st, f == 7)
+				var hr := hs.get_region(Rect2i(f * HeroArt.CELL, 0, HeroArt.CELL, HeroArt.CELL)).get_used_rect()
+				var crr := cr.get_region(Rect2i(f * HeroArt.CELL, 0, HeroArt.CELL, HeroArt.CELL)).get_used_rect()
+				if hr.size.y < 4 or crr.size.y == 0:
+					continue
+				var top := hr.position.y  # a build's crown stays on its own skull over a style lower than it (buzz,
+				var op := "res://art/heroes/%s/outfit_plate.png" % d  # balding: bake.py crown_lifts skull)
+				if not d in ["m", "f"] and FileAccess.file_exists(op):
+					top = mini(top, _load(op).get_region(Rect2i(f * HeroArt.CELL, 0, HeroArt.CELL, HeroArt.CELL)).get_used_rect().position.y)
+				check(crr.end.y - 1 - lift >= top, "%s crown over hair_%s frame %d: bottom %d, head top %d (floats)" % [d, st, f, crr.end.y - 1 - lift, top])
+	# Dragon wings one size through the swing (R4 item 4): the membrane's rows within 2 of the idle's
+	for b in ["m", "f"]:
+		var path := "res://art/heroes/%s/race_dragonkin__dragon_wings.png" % b
+		if not FileAccess.file_exists(path):
+			continue
+		var im := _load(path)
+		var h0 := _orange_rows(im, 0)
+		check(h0 >= 10, "%s dragon wings: %d membrane rows on the idle" % [b, h0])
+		for i in range(1, 7):
+			var hi_ := _orange_rows(im, i)
+			check(absi(hi_ - h0) <= 2, "%s dragon wings frame %d: %d membrane rows, the idle %d" % [b, i, hi_, h0])
 	# (h) a form without a build of its own keeps the race's build (a Lich dwarf stays a dwarf)
 	check(HeroArt.build_dir({"body": "masc", "race": "Dwarf", "form": "Lich"}).begins_with("dwarf_"), "a Lich dwarf keeps the dwarf build")
 	# The dyed share of the build outfits (the class colour must read on every family)
@@ -556,15 +712,21 @@ func _initialize() -> void:
 			var col := _load("res://art/heroes/%s/outfit_%s.png" % [b, fam])
 			var tot := 0
 			var dyed := 0
-			for y in HeroArt.CELL:
-				for x in HeroArt.CELL:
-					var q := ix.get_pixel(x, y)
-					if col.get_pixel(x, y).a8 == 0 or q.r8 > 0 or q.g8 > 0:
-						continue
-					tot += 1
-					if q.b8 > 0:
-						dyed += 1
-			check(dyed * 100 >= tot * 15, "%s outfit_%s idle0: %d of %d pixels dyed (under 15%%: the tiny fairy plate is mostly metal at 19%%)" % [b, fam, dyed, tot])
+			for f in [0, 7]:  # the back or the front, the better (a goblin_f's dyed hair down her back went for Bald)
+				var t := 0
+				var dd := 0
+				for y in HeroArt.CELL:
+					for x in range(f * HeroArt.CELL, (f + 1) * HeroArt.CELL):
+						var q := ix.get_pixel(x, y)
+						if col.get_pixel(x, y).a8 == 0 or q.r8 > 0 or q.g8 > 0:
+							continue
+						t += 1
+						if q.b8 > 0:
+							dd += 1
+				if tot == 0 or dd * tot > dyed * t:
+					tot = t
+					dyed = dd
+			check(dyed * 100 >= tot * 15, "%s outfit_%s idle0/portrait: %d of %d pixels dyed (under 15%%: the tiny fairy plate is mostly metal at 19%%)" % [b, fam, dyed, tot])
 	# The hero builds from the layers, battle and portrait, recoloured, for any class/tier/weapon
 	var hb := Sprites.hero_back({"body": "fem", "skin": 6, "hair": "Braid", "hair_color": 8, "race": "Orc", "face": "grim"},
 		{"Class": {"cls": "Knight", "tier": 75}, "Weapon": {"type": "spear", "glow": false}})
