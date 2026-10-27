@@ -7,6 +7,7 @@ extends Node2D
 const TURN_SECONDS := 1.0
 
 const PORTRAIT_DESIGN := Vector2(504, 896)  # the phone layout size (see _fit_layout)
+const FitBox := preload("res://fit_box.gd")
 var state := GameState.new()
 var profile: Profile
 var codex: Codex
@@ -125,6 +126,7 @@ var left_panel: VBoxContainer
 var title_label: Label
 var menu_button: Button
 var top_spacers: Array = []
+var ui_box: VBoxContainer   # everything inside the margins (see ui_need)
 var top_bar: PanelContainer
 var online: Online
 var fallen_shown := false
@@ -713,7 +715,6 @@ func _build_ui() -> void:
 	wall.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	wall.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	wall.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	wall.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	wall.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(wall)
 	bg_wall = wall
@@ -733,8 +734,14 @@ func _build_ui() -> void:
 	_fit_root()
 	get_viewport().size_changed.connect(_fit_root)
 
+	# Juzo (wide PC): the interface sits in a holder with no minimum size, so nothing inside can make
+	# it wider or taller than the window (it used to grow and drift right). ui_need() is what it asks for.
+	var hold = FitBox.new()
+	hold.keep_height = false
+	root.add_child(hold)
 	var main_v := UI.vbox(10)
-	root.add_child(main_v)
+	hold.add_child(main_v)
+	ui_box = main_v
 	_build_top_bar(main_v)
 
 	# Side by side on wide screens; fight on top and tabs below on tall (phone) screens
@@ -843,8 +850,16 @@ func _build_ui() -> void:
 	_fit_layout()
 	get_viewport().size_changed.connect(_fit_layout)
 
-## Phone-style tall screens stack the fight above the tabs.
+## The size the interface asks for (its minimum plus the margins). The screen never grows to it:
+## the tours fail when it is bigger than the window (SCREEN TOO WIDE / TALL, ROOT OVERFLOW).
+func ui_need() -> Vector2:
+	var m := Vector2(ui_root.get_theme_constant("margin_left") + ui_root.get_theme_constant("margin_right"),
+			ui_root.get_theme_constant("margin_top") + ui_root.get_theme_constant("margin_bottom"))
+	return ui_box.get_combined_minimum_size() + m
+
 ## Keeps the whole interface exactly as big as the visible screen.
+## (The wall has plain top-left anchors: full-rect anchors under a Node2D made setting its size
+## here warn "consider set_deferred" during _ready.)
 func _fit_root() -> void:
 	if ui_root:
 		ui_root.size = get_viewport().get_visible_rect().size
@@ -904,6 +919,15 @@ func _fit_layout() -> void:
 	gsb.content_margin_left = 8 if tall else 12
 	gsb.content_margin_right = 8 if tall else 12
 	xp_bar.custom_minimum_size.x = 100 if tall else 150
+	_fit_top()
+	# Juzo (wide PC): at the larger text size the fight's button rows may narrow ("…", the tip has
+	# the rest) rather than push the screen past the window. Phones keep whole words: their rows fit.
+	for b in [potion_button, escape_button, catch_button, spare_button, auto_potion_button, speed_button, floors_button, supplies_button]:
+		# only at the larger text size: the default fits whole (a Button with any overrun mode also
+		# stops counting its text in its minimum width, so both switch together)
+		var squeeze := not tall and zoom < 0.9
+		(b as Button).clip_text = squeeze
+		(b as Button).text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS if squeeze else TextServer.OVERRUN_NO_TRIMMING
 	if log_label:
 		# phones: the latest two lines, whole (Fable r2 #3: 38 px cut the second line in half)
 		var fh := log_label.get_theme_font("normal_font").get_height(UI.FONT_BODY)
@@ -946,6 +970,10 @@ func _build_top_bar(parent: Control) -> void:
 	row.add_child(hero)
 	class_label = UI.label("", UI.FONT_BODY, UI.TEXT)
 	class_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	# Juzo (wide PC): a long title ("Thorin · 39  The Undying Fool") ends in "…" (the whole line is
+	# in its tip) instead of pushing the bar past the window
+	class_label.clip_text = true
+	class_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	hero.add_child(class_label)
 	xp_bar = UI.bar(UI.GOLD, 5)
 	xp_bar.custom_minimum_size = Vector2(150, 5)
@@ -1834,6 +1862,33 @@ func _refresh_top() -> void:
 	scrap_label.text = "Scrap  %d" % state.scrap
 	dust_label.text = "Dust  %d" % state.dust
 	potion_label.text = "Potions  %d" % state.potions
+	_fit_top()
+
+## Juzo (wide PC): the top bar never needs more than the window. Every chip shows while it fits;
+## when it doesn't (a long title, a big bank, larger text), the least needed give way in this
+## order: potions (the Potion button has the count), the game's name, the event, then the title
+## after your name ends in "…" (down to the 140 px the name always keeps), then dust, scrap, best floor.
+func _fit_top() -> void:
+	if top_bar == null or ui_root == null:
+		return
+	if is_tall:
+		class_label.custom_minimum_size.x = 0.0   # phones: the line is short (no title) and clips
+		return
+	var steps: Array = [potion_label.get_parent(), title_label, event_pill, class_label, dust_label.get_parent(), scrap_label.get_parent(), best_label]
+	for c in steps:
+		(c as Control).visible = true
+	var f := class_label.get_theme_font("font")
+	var fs := class_label.get_theme_font_size("font_size")
+	class_label.custom_minimum_size.x = ceilf(f.get_string_size(class_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x) + 1.0
+	var room := get_viewport_rect().size.x - ui_root.get_theme_constant("margin_left") - ui_root.get_theme_constant("margin_right")
+	for c in steps:
+		var over := top_bar.get_combined_minimum_size().x - room
+		if over <= 0.5:
+			break
+		if c == class_label:
+			class_label.custom_minimum_size.x = maxf(0.0, class_label.custom_minimum_size.x - over)
+		else:
+			(c as Control).visible = false
 
 func _refresh_fight() -> void:
 	potion_button.text = "Potion ×%d" % state.potions

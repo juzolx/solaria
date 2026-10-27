@@ -93,7 +93,10 @@ func _header() -> void:
 	var cv := UI.vbox(4)
 	cv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(cv)
-	var top := UI.hbox(8)
+	# Juzo (wide PC): the badges go under a long title instead of making the page wider than its column
+	var top := HFlowContainer.new()
+	top.add_theme_constant_override("h_separation", 8)
+	top.add_theme_constant_override("v_separation", 4)
 	cv.add_child(top)
 	var tl := UI.name_plate(state.title())   # Fable r2 #11: the name in bone, the class colour stays on the frame
 	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL

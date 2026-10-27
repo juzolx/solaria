@@ -41,7 +41,7 @@ func _initialize() -> void:
 		await process_frame
 		main.ui_root.size = phone
 		await process_frame
-		var need: float = main.ui_root.get_combined_minimum_size().y
+		var need: float = main.ui_need().y
 		check(need <= screen_h + 1.0, "%s fits the phone screen (needs %.0f of %.0f px)" % [tg.get_tab_title(s), need, screen_h])
 	# The wheel keeps its win line off the rim, at readable size
 	check(main.wheel_tab.wheel.custom_minimum_size.y <= 180.0 and main.wheel_tab.wheel.size_flags_vertical & Control.SIZE_EXPAND, "the wheel is smaller on phones and grows into spare room")
