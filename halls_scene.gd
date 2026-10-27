@@ -119,16 +119,19 @@ func build(st: GameState, sz: Vector2, scr := 1.0) -> void:
 		# a fight room's decor never meets the face-off monster (the rolls above stay, so rooms keep their look)
 		if ev in Room3D.FIGHT_EVENTS:
 			var dt := tx("res://art/dungeon/%s.png" % String(dc["art"]))
-			var rc := solid_rect(dt, sprite_rect(dt, float(dc["x"]), float(dc["z"]), 1.1, scr))
-			if meets_monster(rc, sz) or rc.position.x < 0.0 or rc.end.x > sz.x:
+			# the whole picture keeps off the box (the monster layout test reads it so); only its solid pixels need be on screen
+			var full := sprite_rect(dt, float(dc["x"]), float(dc["z"]), 1.1, scr)
+			var rc := solid_rect(dt, full)
+			if meets_monster(full, sz) or rc.position.x < 0.0 or rc.end.x > sz.x:
 				# (or half off the screen) move it out to the side, just beside the box, at the first depth where it fits; else none
 				var fits := false
 				for nz in [3.6, 3.9, 4.2]:
 					var nx: float = side * ((0.5 - Room3D.MONSTER_BOX.position.x) / 0.62 * nz + 0.02)
-					var nr := solid_rect(dt, sprite_rect(dt, nx, nz, 1.1, scr))
-					nx += side * (nr.size.x / 2.0 + absf(nr.get_center().x - proj(nx, FLOOR_Y, nz).x)) * nz / focal
-					nr = solid_rect(dt, sprite_rect(dt, nx, nz, 1.1, scr))
-					if not meets_monster(nr, sz) and nr.position.x >= 0.0 and nr.end.x <= sz.x:
+					full = sprite_rect(dt, nx, nz, 1.1, scr)
+					nx += side * (full.size.x / 2.0 + absf(full.get_center().x - proj(nx, FLOOR_Y, nz).x)) * nz / focal
+					full = sprite_rect(dt, nx, nz, 1.1, scr)
+					var nr := solid_rect(dt, full)
+					if not meets_monster(full, sz) and nr.position.x >= 0.0 and nr.end.x <= sz.x:
 						dc["x"] = nx
 						dc["z"] = nz
 						fits = true

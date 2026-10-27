@@ -197,7 +197,9 @@ func _initialize() -> void:
 				if n is Sprite3D and (n as Sprite3D).texture and (n as Sprite3D).billboard != BaseMaterial3D.BILLBOARD_DISABLED:
 					var nz := -(n as Sprite3D).position.z
 					var tn := (n as Sprite3D).texture.resource_path.get_file()
-					check(nz >= 3.2 - 0.001 or tn == "candles.png", "z%d %s: %s stands at z %.2f, nearer than 3.2" % [z, r.kind, tn, nz])
+					# only small things (candles, a skull, bones: under 0.5 tall) may stand nearer than 3.2
+					var small_prop := Room3D.base_height((n as Sprite3D).texture) * (n as Sprite3D).pixel_size < 0.5
+					check(nz >= 3.2 - 0.001 or small_prop, "z%d %s: %s stands at z %.2f, nearer than 3.2" % [z, r.kind, tn, nz])
 				if n is OmniLight3D:
 					lights += 1
 					check(not (n as OmniLight3D).shadow_enabled, "z%d %s: no shadow-casting lights" % [z, r.kind])
@@ -318,8 +320,9 @@ func _initialize() -> void:
 			for dc in rv2.scene.decor:
 				decor_seen += 1
 				var dtx := rv2.scene.tx("res://art/dungeon/%s.png" % String(dc["art"]))
-				var drc := rv2.scene.solid_rect(dtx, rv2.scene.sprite_rect(dtx, float(dc["x"]), float(dc["z"]), float(dc["h"]), vs))
-				check(drc.position.x >= 0.0 and drc.end.x <= vsz.x, "%dx%d room %d: 2D %s runs off the side" % [int(vsz.x), int(vsz.y), rc, dc["art"]])
+				var drc := rv2.scene.sprite_rect(dtx, float(dc["x"]), float(dc["z"]), float(dc["h"]), vs)
+				var dsolid: Rect2 = rv2.scene.solid_rect(dtx, drc)
+				check(dsolid.position.x >= 0.0 and dsolid.end.x <= vsz.x, "%dx%d room %d: 2D %s runs off the side" % [int(vsz.x), int(vsz.y), rc, dc["art"]])
 				check(not HallsScene.meets_monster(drc, vsz), "%dx%d room %d: 2D %s at (%.2f, %.2f) meets the monster's box" % [int(vsz.x), int(vsz.y), rc, dc["art"], dc["x"], dc["z"]])
 		check(decor_seen >= 8, "%dx%d: fight rooms still have some 2D decor (%d in 60)" % [int(vsz.x), int(vsz.y), decor_seen])
 		hero.room_props = keep_props
