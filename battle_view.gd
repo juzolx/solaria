@@ -1633,6 +1633,30 @@ func _faceoff_rect(art: Dictionary, ui: float, sc: float, move: float, boss: boo
 	var feet := maxf(seam, top_min + rows * u)
 	return Rect2(_snap(Vector2(size.x * 0.5 - sz.x / 2.0, feet + move - rows * u)), sz)
 
+## How much brighter a monster is drawn: art averaging under LIFT_LUMA (0-255, after the dark grade) is lifted toward it,
+## at most LIFT_MAX, all channels alike so its colours and mood stay (lead, Oct 26: The Hollow Saint
+## averaged 60 and was lost on the dark room). Measured once per picture.
+const LIFT_LUMA := 92.0
+const LIFT_MAX := 1.5
+static func _art_lift(art: Dictionary) -> float:
+	if art.has("lift"):
+		return art["lift"]
+	var lift := 1.0
+	if art.has("img"):
+		var img: Image = art["img"]
+		var total := 0.0
+		var n := 0
+		for y in range(0, img.get_height(), 2):
+			for x in range(0, img.get_width(), 2):
+				var c := img.get_pixel(x, y)
+				if c.a > 0.1:
+					total += 0.299 * c.r8 + 0.587 * c.g8 + 0.114 * c.b8
+					n += 1
+		if n > 0:
+			lift = clampf(LIFT_LUMA / (total / n), 1.0, LIFT_MAX)
+	art["lift"] = lift
+	return lift
+
 ## True when the monster's solid pixels at u screen px per art px, centred on the stage with its
 ## feet where the face-off stands them, stay inside Room3D.MONSTER_BOX.
 func _in_monster_box(art: Dictionary, u: float, seam: float, top_min: float, rows: float) -> bool:
@@ -1845,6 +1869,11 @@ func _draw() -> void:
 			etint = Color(0.16, 0.05, 0.12, enemy_alpha) if intro_t >= 0.0 and intro_t < INTRO_REVEAL else Color(0.95, 0.85, 0.9, enemy_alpha)
 			var glow := Color(0.95, 0.2, 0.25, (0.45 + 0.15 * sin(bob * 2.4)) * enemy_alpha)
 			var one := 1.0 / _scr()  # one screen pixel, like the Mythic edge (fable r3: 2 design px was a mixel wireframe)
+			if _art_lift(art) > 1.05 and not (intro_t >= 0.0 and intro_t < INTRO_REVEAL):
+				# a dark Calamity gets a faint cold ghost-light behind it, two screen pixels out, so its
+				# shape leaves the dark hall (lead, Oct 26: The Hollow Saint was lost)
+				for off in [Vector2(-2, 0), Vector2(2, 0), Vector2(0, -2), Vector2(0, 2), Vector2(-1.5, -1.5), Vector2(1.5, -1.5), Vector2(-1.5, 1.5), Vector2(1.5, 1.5)]:
+					draw_texture_rect(ewhite, Rect2(local.position + off * one, local.size), false, Color(0.62, 0.72, 0.9, 0.16 * enemy_alpha))
 			for off in [Vector2(-one, 0), Vector2(one, 0), Vector2(0, -one), Vector2(0, one)]:
 				draw_texture_rect(ewhite, Rect2(local.position + off, local.size), false, glow)
 		else:
@@ -1855,6 +1884,8 @@ func _draw() -> void:
 				var one := 1.0 / _scr()
 				for off in [Vector2(-one, 0), Vector2(one, 0), Vector2(0, -one), Vector2(0, one)]:
 					draw_texture_rect(ewhite, Rect2(local.position + off, local.size), false, Color(Color(Monsters.tier_color(state.enemy_tier)), 0.55 * enemy_alpha))
+		var lift := _art_lift(art)   # dark art drawn brighter so it reads on the dark hall
+		etint = Color(etint.r * lift, etint.g * lift, etint.b * lift, etint.a)
 		draw_texture_rect(etex, local, false, etint)
 		if Combat.winding(state):
 			# telegraph: it glows and shows a "!" while it gathers a big blow (Calamities too;
