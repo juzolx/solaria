@@ -10,3 +10,4 @@ These go into the final big update after 2.1.
 - Town: let the player zoom out far enough to see the whole town (Juzo). Sent to town dev.
 - Town, gatehouse: curtain walls don't meet the gate towers (gap on the west, offset on the east); field runs up to the wall line. Sent to town dev with a wall-continuity check.
 - Town, Clinic: deck overhangs the town wall; a cart hidden under the deck; town pets stacked on each other and the fence; lamp post half hidden by a planter. Sent to town dev.
+- PC gets very slow while playing (with the team's background Godot runs going at the same time). Check the game's own frame cost on PC too (perf run) in the final pass.
