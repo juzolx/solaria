@@ -1168,9 +1168,9 @@ def bare_heads(out, idxs, cells, skulls, d, fam, by_index=False):
     if d in BACK_SILHOUETTE:  # from behind the body's skull circle reached her robe's collar: its purples read as hair
         skulls = {k: back_skull(c, skulls[k][0])[:3] if k.startswith("n") else skulls[k] for c, k in zip(out, K)}
     hp = set() if by_index else hair_palette(out, idxs, skulls)
-    # the dome's 4 tones: the face's own skin (its commonest colour) as the middle, one lighter, two darker,
-    # of its hue only (a cheek's pink drew a line across a goblin's dome, the lightest tone a near-white
-    # blob on the dwarf's: Juzo/lead R4); from the portrait's skin-indexed face, or an own-skin build's bare face
+    # the dome's 4 tones from the face's own skin (its commonest colour), not a ramp of every face colour (a
+    # cheek's pink drew a line across a goblin's dome, the lightest a near-white blob on the dwarf's: lead R4);
+    # from the portrait's skin-indexed face, or an own-skin build's bare face
     fp, fq = out[7].load(), idxs[7].load(); fx, fy, fr = skulls["s_idle0"]
     box = [(x, y) for y in range(round(fy), min(C, round(fy + 0.8 * fr))) for x in range(round(fx - 0.6 * fr), round(fx + 0.6 * fr) + 1)]
     cnt = {}
@@ -1183,10 +1183,10 @@ def bare_heads(out, idxs, cells, skulls, d, fam, by_index=False):
             if bp[t][3] and lum255(bp[t]) >= 40 and bp[t][:3] not in hp:
                 cnt[(bp[t], 0)] = cnt.get((bp[t], 0), 0) + 1
     pal = []
-    if cnt:  # the face's main skin as the middle; the other three its value moved (the face has few lit tones)
-        (col, ri) = max(cnt, key=cnt.get)
+    if cnt:  # the face's main skin as the lit spot (no paler: a lighter index hit the ramp's near-white top), then
+        (col, ri) = max(cnt, key=cnt.get)  # three darker steps of it
         h, sat, v = colorsys.rgb_to_hsv(*(t / 255 for t in col[:3]))
-        for dv, ds in ((-0.26, 0.10), (-0.13, 0.05), (0, 0), (0.07, -0.08)):  # dark edge, shadow, skin, light
+        for dv, ds in ((-0.2, 0.08), (-0.12, 0.05), (-0.05, 0.02), (0, 0)):  # dark edge, shadow, skin, light
             rgb = tuple(round(t * 255) for t in colorsys.hsv_to_rgb(h, max(0, min(1, sat + ds)), max(0, min(1, v + dv))))
             pal.append((0, rgb + (255,), max(1, min(255, ri + shade(rgb, "skin") - shade(col, "skin"))) if ri else 0))
     near = lambda col: any(sum(abs(col[j] - h[j]) for j in range(3)) <= 18 for h in hp)
