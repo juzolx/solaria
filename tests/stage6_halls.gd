@@ -159,7 +159,7 @@ func _initialize() -> void:
 				for j in range(i + 1, r.standing.size()):
 					check(not Room3D.stacks(a, r.standing[j]), "z%d %s: %s (%.2f, %.2f) and %s (%.2f, %.2f) stack" % [z, r.kind, a[4], a[0], a[1], r.standing[j][4], r.standing[j][0], r.standing[j][1]])
 			rooms_with_props += 1 if r.standing.size() >= 2 else 0
-			# Juzo: a fight room's props never meet the face-off monster's box (0.20..0.80 w, above 0.72 h),
+			# Juzo: a fight room's props never meet the face-off monster's box (Room3D.MONSTER_BOX),
 			# checked on the drawn rect at the room's own layout (the 430 phone or the SE)
 			if r.event in Room3D.FIGHT_EVENTS:
 				var lay := Vector2(504, 443) if r.small else Vector2(504, 615)
@@ -317,7 +317,9 @@ func _initialize() -> void:
 			rv2.scene.build(hero, vsz, vs)
 			for dc in rv2.scene.decor:
 				decor_seen += 1
-				var drc := rv2.scene.sprite_rect(rv2.scene.tx("res://art/dungeon/%s.png" % String(dc["art"])), float(dc["x"]), float(dc["z"]), float(dc["h"]), vs)
+				var dtx := rv2.scene.tx("res://art/dungeon/%s.png" % String(dc["art"]))
+				var drc := rv2.scene.solid_rect(dtx, rv2.scene.sprite_rect(dtx, float(dc["x"]), float(dc["z"]), float(dc["h"]), vs))
+				check(drc.position.x >= 0.0 and drc.end.x <= vsz.x, "%dx%d room %d: 2D %s runs off the side" % [int(vsz.x), int(vsz.y), rc, dc["art"]])
 				check(not HallsScene.meets_monster(drc, vsz), "%dx%d room %d: 2D %s at (%.2f, %.2f) meets the monster's box" % [int(vsz.x), int(vsz.y), rc, dc["art"], dc["x"], dc["z"]])
 		check(decor_seen >= 8, "%dx%d: fight rooms still have some 2D decor (%d in 60)" % [int(vsz.x), int(vsz.y), decor_seen])
 		hero.room_props = keep_props
