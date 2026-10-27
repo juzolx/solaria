@@ -1,5 +1,5 @@
 extends SceneTree
-## The fight in one zone's room: a common monster and the zone's boss, into shots/fights/<tag>, with
+## The fight in one zone's room: a common monster, the zone's boss and its Calamity, into shots/fights/<tag>, with
 ## the room's standing props printed (the face-off keeps them off the monster: Room3D.monster_clear).
 ## godot --path . --resolution 430x932 --position 3000,3000 -s tests/_fight_room_shot.gd -- <zone 0-9> <tag>
 const TestHero := preload("res://tests/test_hero.gd")
@@ -34,7 +34,7 @@ func _initialize() -> void:
 	main.nav_page = 0
 	main._apply_nav()
 	var boss: String = String(GameData.ZONES[zone]["boss"]["art"])
-	for which in ["common", "boss"]:
+	for which in ["common", "boss", "calamity"]:
 		st.floor_num = zone * GameData.ZONE_FLOORS + 12
 		main.battle.last_floor = st.floor_num
 		st.room_count = 3
@@ -55,9 +55,14 @@ func _initialize() -> void:
 			st.enemy_name = Monsters.name_of(st.enemy_species)
 			st.enemy_art = boss
 			st.enemy_is_boss = true
+		elif which == "calamity":
+			st.enemy_species = "calamity_%d" % zone
+			st.enemy_name = Monsters.name_of(st.enemy_species)
+			st.enemy_art = st.enemy_species
+			st.enemy_calamity = zone + 1
 		Sprites.clear_monster_cache()
 		main.refresh()
-		await create_timer(3.0 if which == "boss" else 1.5).timeout
+		await create_timer(1.5 if which == "common" else 3.0).timeout
 		await RenderingServer.frame_post_draw
 		var hs: HallsScene = main.battle.halls
 		var props: Array = []

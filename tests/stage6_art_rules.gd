@@ -204,6 +204,26 @@ const TINTED := ["barghest", "pooka", "spriggan", "leshy", "boss_black_annis", "
 	"vetala", "boss_dullahan", "boss_hel", "bunyip", "afanc"]
 ## A boss or Calamity must fit the SE's face-off at 1x: its top under the bar, name and chip
 ## row (98 design px), its feet behind the hero's (the team line, 0.9 of the stage).
+## No box crop on a monster's silhouette (fable r6: The Pale Tide and Umibozu ended in a hard
+## rectangle): an edge of its used rect solid for over 60% of its length, meeting a side solid
+## for over 15% of the height, is a picture cut off by its frame, not a shape. Flat things that
+## really stand on the floor (coils, hems, a gravestone) reach 44% at most and no cut side.
+func _box_crop(key: String, img: Image) -> void:
+	var r := img.get_used_rect()
+	var runs := {}
+	for e in ["top", "bottom", "left", "right"]:
+		var best := 0
+		var run := 0
+		var n := r.size.x if e in ["top", "bottom"] else r.size.y
+		for i in n:
+			var at := Vector2i(r.position.x + i, r.position.y if e == "top" else r.end.y - 1) if e in ["top", "bottom"] 				else Vector2i(r.position.x if e == "left" else r.end.x - 1, r.position.y + i)
+			run = run + 1 if img.get_pixelv(at).a > 0.1 else 0
+			best = maxi(best, run)
+		runs[e] = float(best) / float(n)
+	for e in ["top", "bottom"]:
+		for side in ["left", "right"]:
+			check(not (runs[e] > 0.6 and runs[side] > 0.15), "%s: a box crop, its %s edge %d%% straight and its %s side %d%% (shape the edge: tools/soften_crop.py)" % [key, e, roundi(runs[e] * 100.0), side, roundi(runs[side] * 100.0)])
+
 func _se_height(key: String) -> void:
 	if not key.begins_with("boss_") and not key.begins_with("calamity_"):
 		return
@@ -368,6 +388,7 @@ func _initialize() -> void:
 		if info.has(k):
 			check(info[k]["size"] == [img.get_width(), img.get_height()], "art_info size of " + k)
 			check(int(info[k]["foot"]) == img.get_used_rect().end.y - 1, "art_info foot of " + k)
+		_box_crop(k, img)
 	for k in info:
 		check(FileAccess.file_exists("res://art/enemies/%s.png" % k), "art_info.gd entry %s has a file" % k)
 

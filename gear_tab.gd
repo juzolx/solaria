@@ -1,6 +1,7 @@
 class_name GearTab
 extends VBoxContainer
 ## Items › Gear: what you're wearing. Tap a slot, then tap an item to wear it.
+const FitBox := preload("res://fit_box.gd")
 
 var main
 var state: GameState
@@ -28,7 +29,12 @@ var slot_px := SLOT_PX
 var pill_line: RichTextLabel
 var pill_row: HBoxContainer
 var doll_center: Control
-var short_on := -1   # the layout applied: -1 none yet, 0 roomy, 1 short (the screen size is known at refresh, not setup)
+var short_on := -1   # the layout applied: -1 none yet, 0 roomy, 1 short, 2 wide (the screen size is known at refresh, not setup)
+## Juzo (wide PC): a 648 px tall window can't stack the doll over the bag list (the page needed 584 px
+## of 385), so wide screens put them side by side; the doll's column scrolls if it is still too tall.
+var split: BoxContainer
+var doll_scroll: ScrollContainer
+var list_col: VBoxContainer   # the bag list's column (its width picks the grid's columns)
 
 func setup(m) -> void:
 	main = m
@@ -55,8 +61,25 @@ func setup(m) -> void:
 	# 0.13+: a paper doll: your hero in the middle wearing it all, slots on either side.
 	# Interface pass (approved mockup 08): square slots with their name under them, the hero
 	# big in the middle on a plinth, and the picked slot's item on one line underneath.
+	split = BoxContainer.new()
+	split.vertical = true
+	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	split.add_theme_constant_override("separation", 3)
+	add_child(split)
+	doll_scroll = ScrollContainer.new()
+	doll_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	doll_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED   # phones: as tall as it is
+	doll_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	split.add_child(doll_scroll)
+	var doll_col := UI.vbox(3)
+	doll_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	doll_scroll.add_child(doll_col)
+	list_col = UI.vbox(3)
+	list_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list_col.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	split.add_child(list_col)
 	var doll := UI.hbox(6)
-	add_child(doll)
+	doll_col.add_child(doll)
 	var left := UI.vbox(3)
 	doll.add_child(left)
 	var center := Control.new()
@@ -108,14 +131,14 @@ func setup(m) -> void:
 		slot_styles[s] = st
 	slot_detail = UI.rich(UI.FONT_BODY)
 	slot_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(slot_detail)
+	doll_col.add_child(slot_detail)
 	# Your numbers as four pills (icon-free words, big values): Attack, Defense, HP, Gear Score
 	var prow := UI.hbox(6)
-	add_child(prow)
+	doll_col.add_child(prow)
 	pill_row = prow
 	pill_line = UI.rich(UI.FONT_BODY)
 	pill_line.visible = false
-	add_child(pill_line)
+	doll_col.add_child(pill_line)
 	for k in ["ATK", "DEF", "HP", "Score"]:
 		var pp := PanelContainer.new()
 		pp.add_theme_stylebox_override("panel", UiSkin.bevel(UiSkin.SLATE, UI.EDGE, 4))
@@ -139,26 +162,26 @@ func setup(m) -> void:
 	stats_label.clip_text = true
 	stats_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	UI.tip(stats_label, "")
-	add_child(stats_label)
+	doll_col.add_child(stats_label)
 	list_title = UI.wrap("", UI.FONT_BODY, UI.TEXT)
-	add_child(list_title)
+	list_col.add_child(list_title)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.custom_minimum_size.y = ItemGrid.CELL + 12   # always one whole row; the doll gives way first
-	add_child(scroll)
+	list_col.add_child(scroll)
 	var sv := UI.vbox(4)
 	sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(sv)
 	item_grid = ItemGrid.grid()
-	sv.add_child(item_grid)
+	sv.add_child(FitBox.hold(item_grid))   # Juzo (wide PC): the columns come from the width, never set it
 	empty_note = UI.label("", UI.FONT_BODY, UI.DIM)
 	sv.add_child(empty_note)
-	resized.connect(_on_resized)
+	list_col.resized.connect(_on_resized)
 
 
 func _on_resized() -> void:
-	ItemGrid.fit([item_grid], size.x)
+	ItemGrid.fit([item_grid], list_col.size.x)
 
 func _on_card_input(event: InputEvent, s: String) -> void:
 	var mb := event as InputEventMouseButton
@@ -202,16 +225,26 @@ func _count(s: String) -> int:
 ## Fable r5 #2: the short-screen layout (52 px slots, the numbers as one line).
 func _fit_short() -> void:
 	var s := 1 if get_viewport_rect().size.y < 1000.0 else 0
+	if main != null and main.get("is_tall") == false:   # (test stand-ins without is_tall count as phones)
+		s = 2
 	if s == short_on:
 		return
 	short_on = s
-	slot_px = 52 if s == 1 else SLOT_PX
-	doll_center.custom_minimum_size.y = 4 * (slot_px + 22) - 4
+	slot_px = 52 if s >= 1 else SLOT_PX
+	# wide: the slot names step out (each slot's tip and its ghost picture name it)
+	doll_center.custom_minimum_size.y = 4 * slot_px + 3 * 3 if s == 2 else 4 * (slot_px + 22) - 4
 	for k in slot_cards:
 		(slot_cards[k] as Control).custom_minimum_size = Vector2(slot_px, slot_px)
 		(slot_caps[k] as Control).custom_minimum_size.x = slot_px
+		(slot_caps[k] as Control).visible = s != 2
 	pill_row.visible = s == 0
-	pill_line.visible = s == 1
+	pill_line.visible = s >= 1
+	split.vertical = s != 2
+	split.add_theme_constant_override("separation", 10 if s == 2 else 3)
+	doll_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO if s == 2 else ScrollContainer.SCROLL_MODE_DISABLED
+	doll_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL if s == 2 else Control.SIZE_FILL
+	# the hero and a slot column each side, plus room for the scroll bar
+	doll_scroll.custom_minimum_size.x = 2 * slot_px + 12 + Sprites.PORTRAIT * 3 + 14 if s == 2 else 0
 
 func refresh() -> void:
 	_fit_short()
@@ -294,7 +327,7 @@ func refresh() -> void:
 
 func _rebuild() -> void:
 	list_title.text = "%s · %d in your bag" % [slot, _count(slot)]
-	ItemGrid.fit([item_grid], size.x)
+	ItemGrid.fit([item_grid], list_col.size.x)
 	for c in item_grid.get_children():
 		c.queue_free()
 	if state.equipped.has(slot):

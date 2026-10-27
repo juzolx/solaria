@@ -48,6 +48,7 @@ var light := Color.WHITE
 var dark := 0.4
 var t := 0.0
 var key := ""
+var _used := {}   # art path -> its solid pixels' rect (solid_rect)
 var gate := false          # a champion's gate waits here: the middle door is a portal
 var _tex := {}
 var r3: Room3D = null      # the real 3D room (not on Low graphics): `shared`, while this view draws it
@@ -116,8 +117,27 @@ func build(st: GameState, sz: Vector2, scr := 1.0) -> void:
 		var side := -1.0 if i % 2 == 0 else 1.0
 		var dc := {"art": kinds[rng.randi() % kinds.size()], "x": side * rng.randf_range(2.0, 2.4), "z": rng.randf_range(3.4, D - 0.5), "h": 1.1}
 		# a fight room's decor never meets the face-off monster (the rolls above stay, so rooms keep their look)
-		if ev in Room3D.FIGHT_EVENTS and meets_monster(sprite_rect(tx("res://art/dungeon/%s.png" % String(dc["art"])), float(dc["x"]), float(dc["z"]), 1.1, scr), sz):
-			continue
+		if ev in Room3D.FIGHT_EVENTS:
+			var dt := tx("res://art/dungeon/%s.png" % String(dc["art"]))
+			# the whole picture keeps off the box (the monster layout test reads it so); only its solid pixels need be on screen
+			var full := sprite_rect(dt, float(dc["x"]), float(dc["z"]), 1.1, scr)
+			var rc := solid_rect(dt, full)
+			if meets_monster(full, sz) or rc.position.x < 0.0 or rc.end.x > sz.x:
+				# (or half off the screen) move it out to the side, just beside the box, at the first depth where it fits; else none
+				var fits := false
+				for nz in [3.6, 3.9, 4.2]:
+					var nx: float = side * ((0.5 - Room3D.MONSTER_BOX.position.x) / 0.62 * nz + 0.02)
+					full = sprite_rect(dt, nx, nz, 1.1, scr)
+					nx += side * (full.size.x / 2.0 + absf(full.get_center().x - proj(nx, FLOOR_Y, nz).x)) * nz / focal
+					full = sprite_rect(dt, nx, nz, 1.1, scr)
+					var nr := solid_rect(dt, full)
+					if not meets_monster(full, sz) and nr.position.x >= 0.0 and nr.end.x <= sz.x:
+						dc["x"] = nx
+						dc["z"] = nz
+						fits = true
+						break
+				if not fits:
+					continue
 		decor.append(dc)
 
 # =====================================================================
@@ -460,6 +480,18 @@ func door_label(st: GameState, i: int) -> String:
 	if gate and i == 1:
 		return ""
 	return String(Halls.read_door(st, i)["label"])
+
+## The part of a sprite drawn at rect that has solid pixels (the art's used rect, scaled). Cached.
+func solid_rect(tex: Texture2D, rect: Rect2) -> Rect2:
+	if tex == null or rect.size == Vector2.ZERO:
+		return rect
+	var k := tex.resource_path
+	if not _used.has(k):
+		var img := tex.get_image()
+		_used[k] = img.get_used_rect() if img else Rect2i(Vector2i.ZERO, Vector2i(tex.get_size()))
+	var u: Rect2i = _used[k]
+	var s := rect.size / tex.get_size()
+	return Rect2(rect.position + Vector2(u.position) * s, Vector2(u.size) * s)
 
 ## Whether a drawn rect meets the face-off monster's box (Room3D.MONSTER_BOX) in a view of size sz.
 static func meets_monster(rect: Rect2, sz: Vector2) -> bool:

@@ -197,11 +197,11 @@ func shot(label: String) -> void:
 	# Flag any popup or screen that runs off a phone-width screen
 	var screen_w := root.get_visible_rect().size.x
 	for c in root.get_children():
-		if c.get("ui_root") is Control:
-			var need: float = (c.get("ui_root") as Control).get_combined_minimum_size().x
+		if c.get("ui_box") is Control:   # (the screen itself never grows: ui_need() is what it asks for)
+			var need: float = c.ui_need().x
 			if need > screen_w + 1.0:
-				fail("SCREEN TOO WIDE: %s needs %.0f px of %.0f%s" % [label, need, screen_w, _culprit(c.get("ui_root"), screen_w)])
-			var tall: float = (c.get("ui_root") as Control).get_combined_minimum_size().y
+				fail("SCREEN TOO WIDE: %s needs %.0f px of %.0f%s" % [label, need, screen_w, _culprit(c.get("ui_box"), screen_w)])
+			var tall: float = c.ui_need().y
 			if tall > root.get_visible_rect().size.y + 1.0:
 				fail("SCREEN TOO TALL: %s needs %.0f px of %.0f (the bottom bar is pushed off)" % [label, tall, root.get_visible_rect().size.y])
 	for c in root.get_children():
@@ -369,4 +369,11 @@ func _initialize() -> void:
 		main._choose_floor()
 		await shot("floor_picker")
 	print("TOUR DONE: %d screens in %s, %d problem%s" % [n, out, fails, "" if fails == 1 else "s"])
+	await _shut_down(main)
 	quit(1 if fails > 0 else 0)
+
+## Frees the game and lets queued frees, tweens and sounds finish before quitting (no "resources still in use at exit").
+func _shut_down(game: Node) -> void:
+	game.queue_free()
+	for i in 3:
+		await process_frame

@@ -87,6 +87,15 @@ if [ "$1" = "shots" ]; then
     echo "$out" | grep -E "TOUR FAIL" && fail=1   # (no head: its exit status is 0 even with no lines)
     echo "$out" | grep -E "^(ERROR|SCRIPT ERROR|USER ERROR):" -A1 | grep -v "^--" | sort -u | head -10 | sed "s/^/shots $res: /" | grep . && fail=1
   done
+  # Juzo (PC wide layout): a late-game hero played for 120 turns, every page after each 40 and at the
+  # larger text size; ROOT OVERFLOW when the interface asks for more than the window or runs past it
+  for res in 1152x648 1280x720; do
+    out=$(eval "timeout 400 $wrap \"$G\" --path . --audio-driver Dummy --resolution $res -s tests/wide_tour.gd" 2>&1)
+    if echo "$out" | grep -q "WIDE TOUR DONE"; then echo "$out" | grep "WIDE TOUR DONE" | sed "s/^/wide $res: /"; else echo "wide $res: FAILED"; echo "$out" | grep -E "SCRIPT ERROR|Refusing" -A1 | head; fail=1; fi
+    echo "$out" | grep -E "TOUR FAIL" && fail=1
+    echo "$out" | grep -q "failures: 0" || fail=1
+    echo "$out" | grep -E "^(ERROR|SCRIPT ERROR|USER ERROR|WARNING):" -A1 | grep -v "^--" | sort -u | head -10 | sed "s/^/wide $res: /" | grep . && fail=1
+  done
 fi
 if [ "$1" = "perf" ]; then
   # 60 s of Auto play at phone size; compare with earlier runs saved in shots/perf

@@ -28,6 +28,11 @@ func _initialize() -> void:
 		if c is Overlay:
 			c.queue_free()
 	var st: GameState = main.state
+	# the shared test save: another project run may have written its own hero there meanwhile
+	if st.level != 30:
+		push_error("not the level 30 test hero (%s, level %d): another run took the test save, try again" % [st.hero_name, st.level])
+		quit(2)
+		return
 	st.in_town = false  # the fight, never the town (a reused test save may be in town)
 	main.nav_page = 0
 	main._apply_nav()
