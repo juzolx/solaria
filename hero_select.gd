@@ -12,11 +12,7 @@ func show_for(main_node, from_title = null) -> void:
 	title_screen = from_title
 	open(m, "Heroes of %s" % m.profile.town_name(m.profile.town), 860.0)
 	var p: Profile = m.profile
-	var count := 0
-	for n in range(1, GameData.MAX_HEROES + 1):
-		if GameState.has_slot(n):
-			count += 1
-	var note := UI.label("Roster %d / %d · %d slots open" % [count, GameData.MAX_HEROES, p.slots_open()], UI.FONT_BODY, UI.DIM)
+	var note := UI.label(p.roster_line(), UI.FONT_BODY, UI.DIM)
 	UI.tip(note, "Pick any 3 Regular heroes to go down together from the Party page. Heroes in this town share its stash and skill book; the Codex is shared by every town.")   # Fable r2: one line, the rest on a tap
 	content.add_child(note)
 	var towns_b := UI.button("Switch town...", func(): close(); TownSelect.new().show_for(m, title_screen))
@@ -27,7 +23,6 @@ func show_for(main_node, from_title = null) -> void:
 	row.add_theme_constant_override("v_separation", 10)
 	content.add_child(row)
 	var shown_empty := false
-	var locked: Array = []
 	for n in range(1, GameData.MAX_HEROES + 1):
 		var open_slot := n <= p.slots_open()
 		if GameState.has_slot(n):
@@ -35,18 +30,11 @@ func show_for(main_node, from_title = null) -> void:
 		elif open_slot and not shown_empty:
 			shown_empty = true   # one empty slot is enough to make a hero in
 			row.add_child(_card(n, true))
-		elif not open_slot:
-			locked.append(n)
-	if not locked.is_empty():
-		var n0: int = locked[0]
-		var more := UI.label(p.slot_lock_note(n0) + ((" %d more locked." % (locked.size() - 1)) if locked.size() > 1 else ""), UI.FONT_BODY, UI.DIM)
-		more.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		content.add_child(more)
 
 ## One line about a hero for menus: name, level, class, mode and depth.
 static func describe(meta: Dictionary) -> String:
 	var hc: bool = meta.get("hardcore", false)
-	var mode := "[color=#f87171]HARDCORE[/color]" if hc else "[color=#4ade80]Regular[/color]"
+	var mode := ("[color=%s]Hardcore[/color]" % UI.hex(UI.RED)) if hc else ""   # Fable r4 #16: Regular says nothing (the town line has the mode)
 	var nm: String = str(meta.get("name", ""))
 	if nm == "":
 		nm = "Hero"
@@ -62,12 +50,9 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 	var h := UI.hbox(10)
 	card.add_child(h)
 	if meta.is_empty():
-		var v0 := UI.vbox(6)
-		v0.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		h.add_child(v0)
-		v0.add_child(UI.label("SLOT %d" % n, UI.FONT_BODY, UI.DIM))
-		v0.add_child(UI.label("Empty slot" if open_slot else "Locked", UI.FONT_BODY, UI.TEXT if open_slot else UI.DIM))
-		v0.add_child(UI.wrap("Recruit a new hero at the Inn in town." if open_slot else m.profile.slot_lock_note(n), UI.FONT_BODY, UI.DIM))
+		var one := UI.wrap("Slot %d · %s" % [n, "empty: recruit a hero at the Inn" if open_slot else "locked: " + m.profile.slot_lock_note(n)], UI.FONT_BODY, UI.DIM)
+		one.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(one)
 		return card
 	var pic := TextureRect.new()
 	pic.texture = Sprites.portrait(meta.get("appearance", {}), HeroArt.meta_looks(meta))
@@ -82,19 +67,26 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 	h.add_child(v)
 	var top := UI.hbox(6)
 	v.add_child(top)
-	top.add_child(UI.label("SLOT %d" % n, UI.FONT_BODY, UI.DIM))
+	top.add_child(UI.label("Slot %d" % n, UI.FONT_CAPTION, UI.DIM))
 	if m.started and m.state != null and n in m.state.party_slots:
-		top.add_child(UI.chip("IN TEAM", UI.GREEN, UI.FONT_BODY))
+		top.add_child(UI.chip("In team", UI.GREEN, UI.FONT_CAPTION))
 	var info := UI.rich(UI.FONT_BODY)
 	info.text = describe(meta)
 	v.add_child(info)
 	var row := UI.hbox(6)
 	v.add_child(row)
-	var play := UI.primary("Playing" if (m.started and active) else "Play", func(): _play(n), UI.GOLD)
-	play.disabled = m.started and active
-	play.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	play.custom_minimum_size = Vector2(0, UI.TAP)
-	row.add_child(play)
+	if m.started and active:   # Fable r4 #4: the hero you're playing is a chip, not a dead gold button
+		var now := UI.chip("Playing now", UI.DIM, UI.FONT_BODY)
+		now.size_flags_vertical = Control.SIZE_SHRINK_CENTER   # Fable r5 #11: a tag, not a wide text box
+		row.add_child(now)
+		var gap := Control.new()
+		gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(gap)
+	else:
+		var play := UI.primary("Play", func(): _play(n), UI.GOLD)
+		play.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		play.custom_minimum_size = Vector2(0, UI.TAP)
+		row.add_child(play)
 	var del := UI.button("Delete", func():
 		m.confirm("Delete %s?" % str(meta.get("name", "this hero")), "This hero, their gear and gold are gone for good. The Codex and the shared stash are kept.", "Delete hero", func():
 			if m.started and active:
@@ -105,8 +97,8 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 			if title_screen and is_instance_valid(title_screen):
 				title_screen.refresh_menu()
 			HeroSelect.new().show_for(m, title_screen)))
-	del.add_theme_color_override("font_color", UI.RED)
-	del.custom_minimum_size = Vector2(0, UI.TAP)
+	del.add_theme_color_override("font_color", UI.DIM)
+	del.custom_minimum_size = Vector2(96, UI.TAP)   # Fable r5 #11: body size, a real target (the confirm guards it)
 	row.add_child(del)
 	return card
 

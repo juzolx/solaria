@@ -12,7 +12,7 @@ extends RefCounted
 ## (the cabin belongs to a town), but a reward, once earned, stays for the account.
 ## Everything is keyed by stable ids (zone, set, monster, class ids; see stable-ids.md).
 ## A reward is granted the moment its milestone is reached (no claim step to forget);
-## a toast says what you got and the Codex > Rewards tab lists them all.
+## a toast says what you got and the Codex › Rewards tab lists them all.
 
 const ENABLED := true  # the feature's on/off switch (build plan: one per big feature)
 
@@ -81,7 +81,7 @@ const OTHER := [
 const GROUPS := [
 	["Bestiary", "Defeat every kind of monster in a region (bosses too)."],
 	["Items", "Fill the Collection: Uniques, Signatures and whole sets."],
-	["Pets", "Own pets of every kind (Codex > Pets)."],
+	["Pets", "Own pets of every kind (Codex › Pets)."],
 	["Classes", "Secret classes and God classes found by any of your heroes."],
 	["Trophies", "Trophies in this town's cabin."],
 ]

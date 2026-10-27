@@ -90,6 +90,15 @@ func _phone_width(key: String, w: int) -> void:
 ## (tools/monster_import.py TINT); none may slide back to grey on a re-import.
 const TINTED := ["barghest", "pooka", "spriggan", "leshy", "boss_black_annis", "draugr", "ankou", "revenant",
 	"vetala", "boss_dullahan", "boss_hel", "bunyip", "afanc"]
+## A boss or Calamity must fit the SE's face-off at 1x: its top under the bar, name and chip
+## row (98 design px), its feet behind the hero's (the team line, 0.9 of the stage).
+func _se_height(key: String) -> void:
+	if not key.begins_with("boss_") and not key.begins_with("calamity_"):
+		return
+	var rows := float(ArtInfo.DATA["enemies"][key]["foot"]) + 1.0
+	var room := ArtStyle.SE_STAGE.y * 0.9 - (20.0 + 14.0 + 64.0)   # team line; bar end + BOSS_GAP
+	check(rows / ArtStyle.SE_SCALE <= room, "%s: %d rows can't stand in an SE's %.0f px face-off at 1x" % [key, rows, room])
+
 func _tinted(key: String, img: Image) -> void:
 	if not key in TINTED:
 		return
@@ -103,7 +112,9 @@ func _tinted(key: String, img: Image) -> void:
 			total += maxf(c.r, maxf(c.g, c.b)) - minf(c.r, minf(c.g, c.b))
 			n += 1
 	var ch := total / maxf(1.0, n)
-	check(ch >= 0.07, "%s: mean chroma %.3f, grey again (tools/monster_import.py TINT)" % [key, ch])
+	# fable r5: as close under the lowest as the import allows (pooka 0.077, barghest 0.086; the rest
+	# 0.100-0.113); the colours stay as Juzo approved them (art-ratings.md, Oct 25)
+	check(ch >= 0.075, "%s: mean chroma %.3f, grey again (tools/monster_import.py TINT)" % [key, ch])
 
 func _luma_floor(key: String, img: Image) -> void:
 	var total := 0.0
@@ -175,6 +186,7 @@ func _initialize() -> void:
 				_phone_width(f.get_basename(), img.get_width())
 				_luma_floor(f.get_basename(), img)
 				_tinted(f.get_basename(), img)
+				_se_height(f.get_basename())
 				continue
 			check(img.get_size() == ArtStyle.MONSTER_SIZE or img.get_size() == ArtStyle.TALL_SIZE, "%s%s is %s (68x68 or 68x132)" % [d, f, img.get_size()])
 			var rough := 0
@@ -295,7 +307,16 @@ func _initialize() -> void:
 	check((hi.get("faces", []) as Array) == HeroArt.FACES, "the 10 faces")
 	for wt in ["sword", "dagger", "axe", "mace", "spear", "bow", "staff"]:
 		check(wt in hi.get("weapons", []), "weapon drawing " + wt)
-	for b in ["m", "f"]:
+	# every body folder: the two standard bodies and each build's (goblin_m, orc_f...)
+	var dirs: Array = ["m", "f"]
+	for race in hi.get("builds", {}):
+		for body in (hi["builds"][race]["bodies"] as Dictionary):
+			var d := "%s_%s" % [hi["builds"][race]["key"], body]
+			if not d in dirs:
+				dirs.append(d)
+	check(dirs.size() == 10, "hero body folders: m, f and 8 builds (%d)" % dirs.size())
+	check(not DirAccess.dir_exists_absolute("res://art/heroes/golem_m"), "the retired golem is not shipped")
+	for b in dirs:
 		for f in _pngs("res://art/heroes/%s/" % b):
 			var img := _load("res://art/heroes/%s/%s" % [b, f])
 			# weapons swing past the body, so their cells are the whole padded frame (128); the rest are 96
@@ -314,6 +335,60 @@ func _initialize() -> void:
 				for i in img.get_width() / HeroArt.CELL:
 					var used := img.get_region(Rect2i(i * HeroArt.CELL, 0, HeroArt.CELL, HeroArt.CELL)).get_used_rect()
 					check(used.end.y - 1 == Sprites.HERO_FOOT - 8, "art/heroes/%s/%s frame %d stands on the feet row" % [b, f, i])
+	# Registration (Fable hero R2 item 13): frames of one body agree with each other
+	for b in dirs:
+		var c := HeroArt.CELL
+		var out := _load("res://art/heroes/%s/outfit_%s.png" % [b, "warrior" if b in ["m", "f"] else "plate"])
+		var t0 := out.get_region(Rect2i(0, 0, c, c)).get_used_rect().position.y
+		for i in [2, 6]:  # (a) the head doesn't jump between the idle and the swing or the hit
+			var ti := out.get_region(Rect2i(i * c, 0, c, c)).get_used_rect().position.y
+			check(absi(ti - t0) <= 3, "%s outfit top idle %d vs frame %d: %d (a lurch)" % [b, t0, i, ti])
+		var hands: Array = hi["hand"][b]
+		for wt in hi.get("weapons", []):
+			var w := _load("res://art/heroes/%s/weapon_%s.png" % [b, wt])
+			var fs := HeroArt.FRAME
+			for i in 9:
+				var cell := w.get_region(Rect2i(i * fs, 0, fs, fs))
+				var used := cell.get_used_rect()
+				var h := Vector2i(int(hands[i][0]) + HeroArt.PAD, int(hands[i][1]) + HeroArt.PAD)
+				var near := false  # (b) the hand holds the weapon
+				for y in range(maxi(0, h.y - 3), mini(fs, h.y + 4)):
+					for x in range(maxi(0, h.x - 3), mini(fs, h.x + 4)):
+						near = near or cell.get_pixel(x, y).a8 > 0
+				check(near, "%s weapon_%s frame %d: the hand %s holds it" % [b, wt, i, h])
+				# (c) at rest the weapon stays above the floor and inside the portrait crop
+				var low := (HeroArt.FOOT + HeroArt.PAD) if i in [0, 1, 6] else (99 if i >= 7 else fs)
+				check(used.end.y - 1 <= low, "%s weapon_%s frame %d reaches row %d (under %d)" % [b, wt, i, used.end.y - 1, low])
+		if FileAccess.file_exists("res://art/heroes/%s/look_crown.png" % b):  # (d) the crown stays on the head
+			var cr := _load("res://art/heroes/%s/look_crown.png" % b)
+			var x0 := cr.get_region(Rect2i(0, 0, c, c)).get_used_rect().get_center().x
+			for i in 7:
+				var xi := cr.get_region(Rect2i(i * c, 0, c, c)).get_used_rect().get_center().x
+				check(absf(xi - x0) <= 3.0, "%s crown frame %d at x %.0f, idle at %.0f" % [b, i, xi, x0])
+			if b in ["m", "f"]:
+				var hs := _load("res://art/heroes/%s/hair_short.png" % b).get_region(Rect2i(0, 0, c, c)).get_used_rect()
+				check(absf(x0 - hs.get_center().x) <= 3.0, "%s crown centred on the hair (%.0f vs %.0f)" % [b, x0, hs.get_center().x])
+	# The dyed share of the build outfits (the class colour must read on every family)
+	for b in dirs:
+		if b in ["m", "f"]:
+			continue
+		for fam in ["plate", "robe", "leather", "cloth"]:
+			var ip := "res://art/heroes/%s/outfit_%s_idx.png" % [b, fam]
+			if not FileAccess.file_exists(ip):
+				continue
+			var ix := _load(ip)
+			var col := _load("res://art/heroes/%s/outfit_%s.png" % [b, fam])
+			var tot := 0
+			var dyed := 0
+			for y in HeroArt.CELL:
+				for x in HeroArt.CELL:
+					var q := ix.get_pixel(x, y)
+					if col.get_pixel(x, y).a8 == 0 or q.r8 > 0 or q.g8 > 0:
+						continue
+					tot += 1
+					if q.b8 > 0:
+						dyed += 1
+			check(dyed * 100 >= tot * 15, "%s outfit_%s idle0: %d of %d pixels dyed (under 15%%: the tiny fairy plate is mostly metal at 19%%)" % [b, fam, dyed, tot])
 	# The hero builds from the layers, battle and portrait, recoloured, for any class/tier/weapon
 	var hb := Sprites.hero_back({"body": "fem", "skin": 6, "hair": "Braid", "hair_color": 8, "race": "Orc", "face": "grim"},
 		{"Class": {"cls": "Knight", "tier": 75}, "Weapon": {"type": "spear", "glow": false}})

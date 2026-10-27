@@ -1,7 +1,7 @@
 class_name Lore
 extends RefCounted
 ## 0.13+ (Stage 3): the story of Solaria, found a page at a time in the dungeon
-## (rare drops from monsters, and in chests), read in Codex > Lore. And the town's
+## (rare drops from monsters, and in chests), read in Codex › Lore. And the town's
 ## keepers talk to you, about how your climb is going. All original writing.
 
 const DROP_CHANCE := 1.2    # % per monster from floor 3
@@ -33,9 +33,9 @@ static func maybe_find(g: GameState, chance: float) -> bool:
 	var i := g.codex.lore.size()
 	g.codex.lore.append(i)
 	g.codex.dirty = true
-	g.say("[color=#e8b14a]You find a torn page: \"%s\".[/color] Read it in Codex > Lore." % PAGES[i][0])
+	g.say("[color=#e8b14a]You find a torn page: \"%s\".[/color] Read it in Codex › Lore." % PAGES[i][0])
 	g.events.append({"type": "toast", "text": "A lore page: \"%s\"" % PAGES[i][0]})
-	g.tip("lore", "Lore pages tell Solaria's story, a page at a time. Read them in Codex > Lore.")
+	g.tip("lore", "Lore pages tell Solaria's story, a page at a time. Read them in Codex › Lore.")
 	return true
 
 # =====================================================================
@@ -76,14 +76,21 @@ static func talk(g: GameState, page: int) -> String:
 		return ""
 	var k: Array = KEEPERS[page]
 	var lines: Array = (k[1] as Array).duplicate()
-	# They notice how you're doing
+	# They notice how you're doing. Fable r4 #9: the town's news is told by ONE keeper per visit
+	# (two people saying the same sentence broke them); the others keep to their own lines.
+	var news: Array = []
 	if not g.grave.is_empty():
-		lines.append("Word is you fell on floor %d, and the %s is wearing your boots. Go get them back." % [int(g.grave["floor"]), Monsters.name_of(String(g.grave["killer"]))])
+		news.append("Word is you fell on floor %d, and the %s is wearing your boots. Go get them back." % [int(g.grave["floor"]), Monsters.name_of(String(g.grave["killer"]))])
 	if g.best_floor >= 100:
-		lines.append("Floor %d! Half the town thinks you're a ghost now." % g.best_floor)
+		news.append("Floor %d! Half the town thinks you're a ghost now." % g.best_floor)
 	elif g.best_floor >= 25:
-		lines.append("Past floor %d already. The kids are playing at being you." % g.best_floor)
+		news.append("Past floor %d already. The kids are playing at being you." % g.best_floor)
 	if g.town_event != "" and TownEvents.EVENTS.has(g.town_event):
-		lines.append("Have you seen? %s! The whole town's out." % String(TownEvents.EVENTS[g.town_event]["name"]))
-	var pick := absi(hash("%d-%d" % [g.codex.stat("home_trips"), page])) % lines.size()
+		news.append("Have you seen? %s! The whole town's out." % String(TownEvents.EVENTS[g.town_event]["name"]))
+	var trips := int(g.codex.stat("home_trips"))
+	var pages: Array = KEEPERS.keys()
+	pages.sort()
+	if not news.is_empty() and int(pages[absi(hash("news-%d" % trips)) % pages.size()]) == page:
+		return "%s: \"%s\"" % [k[0], news[absi(hash("%d-news" % trips)) % news.size()]]
+	var pick := absi(hash("%d-%d" % [trips, page])) % lines.size()
 	return "%s: \"%s\"" % [k[0], lines[pick]]

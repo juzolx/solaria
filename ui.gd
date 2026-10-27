@@ -58,6 +58,7 @@ const SP_L := 16
 
 static var sfx: Sfx  # set by main, used for button clicks
 static var tip_layer: CanvasLayer  # set by main: where tap-tips appear
+static var force_touch := false   # tests: a mouse click acts as a finger tap (ui_tour --touch)
 static var _tip: Control
 # Fable r1 #2: the phone layout is 504 design px on a 375-430 pt screen, so 44 pt = 52-59 design px.
 # Fable r2: 44 pt on a 375 pt phone (iPhone SE) is 44 / 0.744 = 59 design px, so TAP is 60.
@@ -77,6 +78,20 @@ static func short(n: int) -> String:
 	if absi(n) < 1000000:
 		return "%.1fk" % (n / 1000.0)
 	return "%.1fM" % (n / 1000000.0)
+
+## Fable r3 #9: every button that spends says it one way: "Buy · 1,899 gold", "Build · 12.4k gold
+## + 60 scrap". Never "g", never brackets.
+static func cost(verb: String, gold: int, extra := "") -> String:
+	var g := short(gold) if absi(gold) >= 10000 else _commas(gold)
+	return "%s · %s gold%s" % [verb, g, (" + " + extra) if extra != "" else ""]
+
+static func _commas(n: int) -> String:
+	var s := str(absi(n))
+	var out := ""
+	while s.length() > 3:
+		out = "," + s.substr(s.length() - 3) + out
+		s = s.substr(0, s.length() - 3)
+	return ("-" if n < 0 else "") + s + out
 
 static func hex(c: Color) -> String:
 	return "#" + c.to_html(false)
@@ -136,24 +151,33 @@ static func heading(text: String, note := "") -> Control:
 		text = text.get_slice("  -  ", 0)
 	var v := vbox(4)
 	v.set_meta("heading", text)
+	# Fable r3 #2: a heading is never raised (a bevel is the game's "press me"): gold words on a
+	# flat 2 px rule across the row, so "Active" or "Help" can't be mistaken for a chip
 	var plate := PanelContainer.new()
-	var sb := UiSkin.bevel(UiSkin.SLATE, UiSkin.IRON, 4)
-	sb.content_margin_left = 12
-	sb.content_margin_right = 12
-	sb.content_margin_top = 6
-	sb.content_margin_bottom = 6
-	plate.add_theme_stylebox_override("panel", sb)
-	plate.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	plate.add_theme_stylebox_override("panel", _heading_rule())
+	plate.size_flags_horizontal = Control.SIZE_FILL
 	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(plate)
 	var l := label(text, FONT_BODY, GOLD)
-	if text.length() > 24:   # a long title wraps across the row (a wrapping label in a shrunk plate goes one letter a line)
+	if text.length() > 24:   # a long title wraps across the row (short ones keep their width in a row of buttons)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		plate.size_flags_horizontal = Control.SIZE_FILL
 	plate.add_child(l)
 	if note != "":
 		v.add_child(UI.wrap(note, FONT_BODY, DIM))   # UI.: a bare wrap() is Godot's number wrap
 	return v
+
+static var _rule: StyleBoxFlat
+static func _heading_rule() -> StyleBoxFlat:
+	if _rule == null:
+		_rule = StyleBoxFlat.new()
+		_rule.bg_color = Color(0, 0, 0, 0)
+		_rule.border_color = GOLD_DULL
+		_rule.border_width_bottom = 2
+		_rule.content_margin_left = 0
+		_rule.content_margin_right = 0
+		_rule.content_margin_top = 4
+		_rule.content_margin_bottom = 4
+	return _rule
 
 ## The title label inside a heading (for counts that change: "Vault · 3 / 20").
 static func heading_label(h: Control) -> Label:
@@ -199,19 +223,38 @@ static func sync_tabs(t: TabContainer) -> void:
 		if b.has_meta("on") and bool(b.get_meta("on")) == on:   # (get_meta with a null default logs an engine error)
 			continue
 		b.set_meta("on", on)
-		var face := UiSkin.bevel(UiSkin.SLATE, GOLD_DULL, 6) if on else UiSkin.bevel(PANEL, EMPTY, 6)
-		for st in ["normal", "hover", "pressed", "focus"]:
-			var sb := (face if st != "hover" or on else UiSkin.bevel(UiSkin.SLATE, EDGE, 6)).duplicate() as StyleBox
-			sb.content_margin_left = 17
-			sb.content_margin_right = 17
-			b.add_theme_stylebox_override(st, sb)
-		for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-			b.add_theme_color_override(c, GOLD if on else (TEXT if c == "font_hover_color" else DIM))
+		chip_look(b, on)
+
+## The chip look (tab strips, the floor picker's zones): gold on slate when on, dim when off.
+static func chip_look(b: Button, on: bool) -> void:
+	var faces: Array = _chip_faces()   # Fable r3 #16: built once, shared by every chip
+	for st in ["normal", "hover", "pressed", "focus"]:
+		b.add_theme_stylebox_override(st, faces[0] if on else (faces[2] if st == "hover" else faces[1]))
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		b.add_theme_color_override(c, GOLD if on else (TEXT if c == "font_hover_color" else DIM))
+
+static var _chip_face_cache: Array = []
+## [on, off, off-hover] chip faces with the 17 px side margins.
+static func _chip_faces() -> Array:
+	if _chip_face_cache.is_empty():
+		for sb in [UiSkin.bevel(UiSkin.SLATE, GOLD_DULL, 6), UiSkin.bevel(PANEL, EMPTY, 6), UiSkin.bevel(UiSkin.SLATE, EDGE, 6)]:
+			var c := (sb as StyleBox).duplicate() as StyleBox
+			c.content_margin_left = 8   # Fable r5 #9 (was 17): six Hero chips fit one phone row
+			c.content_margin_right = 8
+			_chip_face_cache.append(c)
+	return _chip_face_cache
 
 ## Fable r2 #13: the notch / Dynamic Island (top) and home bar (bottom) in design px, set by
 ## main._fit_layout; popups, the title and the creator keep their controls out of them.
 static var safe_top := 0.0
 static var safe_bottom := 0.0
+static var nav_ref: Control   # the phone nav bar (main sets it)
+
+## The lowest y a floating card may reach: the nav bar's top, else above the home bar.
+static func floor_y(vp_h: float) -> float:
+	if nav_ref != null and is_instance_valid(nav_ref) and nav_ref.is_visible_in_tree():
+		return nav_ref.get_global_rect().position.y
+	return vp_h - safe_bottom
 
 ## Fable r2 #5: the OptionButton arrow, a 7x4 bone chevron on the 2 px grid (Godot's is smoothed).
 static var _chevron: Texture2D
@@ -288,6 +331,41 @@ static func button(text: String, on_press: Callable) -> Button:
 		b.create_tween().tween_property(b, "scale", Vector2(0.94, 0.94), 0.06))
 	b.button_up.connect(func(): b.create_tween().tween_property(b, "scale", Vector2.ONE, 0.1))
 	return b
+
+## Fable r5 #4: a button that can't be used right now still answers a tap with the reason
+## (a disabled button gets no tap, and a tooltip is hover-only on a phone). reason "" makes it
+## live again. The button is faded, keeps its place, and the tap shows the reason as a tip
+## instead of doing the action (the tap is eaten before the button sees it).
+static func why(b: Button, reason: String, fade := true) -> void:
+	b.disabled = false
+	if not b.has_meta("tip0"):
+		b.set_meta("tip0", b.tooltip_text)   # the hover text it had while usable
+	b.tooltip_text = reason if reason != "" else String(b.get_meta("tip0"))
+	b.set_meta("why", reason)
+	b.modulate.a = 1.0 if reason == "" or not fade else 0.55
+	if b.has_meta("why_wired"):
+		return
+	b.set_meta("why_wired", true)
+	b.gui_input.connect(func(ev: InputEvent):
+		var r := String(b.get_meta("why", ""))
+		if r == "":
+			return
+		var press: bool = (ev is InputEventScreenTouch and ev.pressed) or (ev is InputEventMouseButton and ev.button_index == MOUSE_BUTTON_LEFT)
+		if not press:
+			return
+		b.accept_event()
+		if ev.is_pressed():
+			if sfx:
+				sfx.play("error")
+			show_tip(b, r))
+
+## The reason for UI.why when a price is out of reach: "Need 120 more gold." ("" when it isn't).
+static func need_gold(have: int, cost: int) -> String:
+	return "" if have >= cost else "Need %s more gold." % _commas(cost - have)
+
+## True while UI.why holds a reason on this button.
+static func blocked(b: Button) -> bool:
+	return String(b.get_meta("why", "")) != ""
 
 ## A colored button for the main action on a screen.
 static func primary(text: String, on_press: Callable, color := GOLD) -> Button:
@@ -387,8 +465,46 @@ static func tip(c: Control, text: String) -> void:
 	if c is BaseButton:
 		return  # buttons do their job on tap; the hover text is enough
 	c.gui_input.connect(func(ev: InputEvent):
-		if (ev is InputEventScreenTouch and ev.pressed) or (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT and DisplayServer.is_touchscreen_available()):
+		if (ev is InputEventScreenTouch and ev.pressed) or (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT and (force_touch or DisplayServer.is_touchscreen_available())):
+			# Fable r5 #3: a label whose tip is its own (whole, uncut) words has nothing to add
+			if c is Label and c.tooltip_text == (c as Label).text and c.get_theme_font("font").get_string_size((c as Label).text, HORIZONTAL_ALIGNMENT_LEFT, -1, c.get_theme_font_size("font_size")).x <= c.size.x:
+				return
 			show_tip(c, c.tooltip_text))
+
+## Fable r5 #10: a path ("Items › Gear") whose › never starts or ends a wrapped line (no-break spaces).
+const PATH_SEP := " › "
+static func path(parts: Array) -> String:
+	return PATH_SEP.join(parts)
+
+## Fable r5 #15: "today", "yesterday", "3 days ago", then "12 Oct".
+static func when(unix: int) -> String:
+	var days := int(Time.get_unix_time_from_system() / 86400.0) - int(unix / 86400.0)
+	if days <= 0:
+		return "today"
+	if days == 1:
+		return "yesterday"
+	if days < 7:
+		return "%d days ago" % days
+	var d := Time.get_date_dict_from_unix_time(unix)
+	return "%d %s" % [d["day"], ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][int(d["month"]) - 1]]
+
+## Juzo (r5 follow-up): the hero stands IN their shadow, never above it. pic shows a portrait at
+## k x; the bottom of its last boot row (Sprites.PORTRAIT_FOOT, the same row in every body) goes
+## on the plinth's centre line at ground_y, cx is the centre across. The tour's FLOATING HERO /
+## CUT SHADOW gate finds the pair by the meta set here.
+static func seat_hero(pic: Control, pl: TextureRect, k: int, cx: float, ground_y: float) -> void:
+	pic.position = Vector2(roundf(cx - pic.size.x / 2.0), roundf(ground_y) - (Sprites.PORTRAIT_FOOT + 1) * k)
+	pl.position = Vector2(roundf(cx - pl.texture.get_width() / 2.0), roundf(ground_y) - roundf(pl.texture.get_height() / 2.0))
+	pl.set_meta("hero_pic", pic)
+	pl.set_meta("hero_k", k)
+
+## Where the shadow's centre line goes so the whole plinth fits in a box h tall (2 px spare).
+static func seat_ground(h: float, pl: TextureRect) -> float:
+	return h - roundf(pl.texture.get_height() / 2.0) - 2.0
+
+## A short phone (the SE: 896 design px tall): pages drop their roomy extras.
+static func short_screen() -> bool:
+	return (Engine.get_main_loop() as SceneTree).root.get_visible_rect().size.y < 1000.0
 
 ## Pops a small explanation next to a control; it fades by itself.
 static func show_tip(near: Control, text: String) -> void:
@@ -397,9 +513,11 @@ static func show_tip(near: Control, text: String) -> void:
 	if is_instance_valid(_tip):
 		_tip.queue_free()
 	var p := panel(INSET, GOLD, 8, 10, 1)
+	p.theme = theme()   # a CanvasLayer carries no theme (Fable r4 #2)
+	p.name = "Tip"
 	var r := rich(FONT_BODY)
 	r.text = text
-	r.custom_minimum_size = Vector2(300, 0)
+	r.custom_minimum_size = Vector2(minf(300.0, near.get_viewport_rect().size.x - 40.0), 0)
 	p.add_child(r)
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tip_layer.add_child(p)
@@ -411,8 +529,9 @@ static func show_tip(near: Control, text: String) -> void:
 		return
 	var at := near.get_global_rect()
 	var pos := Vector2(at.position.x, at.end.y + 6)
-	if pos.y + p.size.y > vp.y - 8:
+	if pos.y + p.size.y > floor_y(vp.y) - 8:
 		pos.y = at.position.y - p.size.y - 6
+	pos.y = clampf(pos.y, safe_top + 8.0, vp.y - safe_bottom - p.size.y - 8.0)
 	pos.x = clampf(pos.x, 8, vp.x - p.size.x - 8)
 	p.position = pos
 	var tw := p.create_tween()
@@ -467,6 +586,18 @@ static func game_font() -> Font:
 
 ## The one shared theme (Fable r1 #3): built on first use, reused by every popup.
 static var _theme: Theme
+## Fable r4 #2: Controls that are children of main (a Node2D) or of a CanvasLayer inherit no
+## theme and fell back to Godot's own (smooth white sans). Folding ours into the default theme
+## once makes every Control in the game Pixelify, bone and iron, wherever it is added.
+static func adopt_default_theme() -> void:
+	var dt := ThemeDB.get_default_theme()
+	if dt == null or dt.has_meta("solaria"):
+		return
+	dt.merge_with(theme())
+	dt.default_font = game_font()
+	dt.default_font_size = FONT_BODY
+	dt.set_meta("solaria", true)
+
 static func theme() -> Theme:
 	if _theme == null:
 		_theme = make_theme()

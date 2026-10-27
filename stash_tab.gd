@@ -1,6 +1,6 @@
 class_name StashTab
 extends VBoxContainer
-## Town > Vault: a chest shared by all your Regular heroes, shown as a grid of
+## Town › Vault: a chest shared by all your Regular heroes, shown as a grid of
 ## item pictures (empty squares are free space). Tap a picture to see the item,
 ## then move it between your bag and the Vault. Hardcore heroes can't use it.
 
@@ -32,7 +32,7 @@ func setup(m) -> void:
 	head.add_child(title)
 	upgrade_button = UI.button("", _upgrade)
 	head.add_child(upgrade_button)
-	var note := UI.label("Shared by the heroes of this town. Tap an item to look at it, then move it, or drag it across.", UI.FONT_BODY, UI.DIM)
+	var note := UI.label("Shared by the heroes of this town. Tap an item to look at it, then move it.", UI.FONT_BODY, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(note)
 	var scroll := ScrollContainer.new()
@@ -122,12 +122,14 @@ func refresh() -> void:
 	var p: Profile = main.profile
 	title.text = ""   # the count is on the Vault heading below
 	UI.heading_label(vault_head).text = "Vault · %d / %d" % [p.stash.size(), p.stash_capacity()]
+	bag_head.visible = not state.bag.is_empty()   # Fable r3 #13: no heading over nothing
+	bag_grid.visible = bag_head.visible
 	var cost := GameData.stash_cost(p.stash_level)
 	if p.stash_level >= GameData.STASH_MAX_LEVEL:
 		upgrade_button.text = "Vault is max size"
 		upgrade_button.disabled = true
 	else:
-		upgrade_button.text = "+%d slots (%d gold)" % [GameData.STASH_STEP, cost]
+		upgrade_button.text = UI.cost("+%d slots" % GameData.STASH_STEP, cost)
 		upgrade_button.disabled = state.gold < cost
 	var key := "%d|%d|%d|%s" % [state.bag_version, p.stash.size(), p.stash_level, str(picked)]
 	if key == shown:

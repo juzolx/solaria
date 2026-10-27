@@ -8,6 +8,7 @@ var box: PanelContainer
 var scroll: ScrollContainer  # tall popups scroll instead of running off the screen
 var head: HBoxContainer   # the title and Close: above the scroll, so they never scroll away (Fable r1 #3)
 var foot: HBoxContainer   # under the scroll: a second Close when the content is taller than the screen
+var top: VBoxContainer    # over the scroll: what must stay on screen while you scroll (the creator's hero)
 var frame_box: VBoxContainer
 var bottom_close: Button
 
@@ -45,8 +46,12 @@ func open(parent: Node, title: String, width := 560.0, border := UI.GOLD, closab
 		cb.custom_minimum_size = Vector2(UI.TAP * 2, UI.TAP)
 		cb.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		head.add_child(cb)
+	top = UI.vbox(8)
+	top.visible = false
+	frame_box.add_child(top)
 	scroll = ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.add_theme_constant_override("scrollbar_v_separation", 6)   # Fable r5 #5: words never touch the bar
 	frame_box.add_child(scroll)
 	content = UI.vbox(12)
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -73,6 +78,9 @@ func _fit_height() -> void:
 	var vh := get_viewport().get_visible_rect().size.y
 	var need := content.get_combined_minimum_size().y
 	var max_h := vh - UI.safe_top - UI.safe_bottom - 70.0 - head.get_combined_minimum_size().y - 10.0
+	top.visible = top.get_child_count() > 0
+	if top.visible:
+		max_h -= top.get_combined_minimum_size().y + 8.0
 	# a long popup also gets a Close at the bottom, so the way out is never a scroll away
 	if bottom_close:
 		bottom_close.visible = need > max_h

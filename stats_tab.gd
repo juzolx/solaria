@@ -1,6 +1,6 @@
 class_name StatsTab
 extends ScrollContainer
-## Codex > Stats: lifetime numbers for all your heroes together.
+## Codex › Stats: lifetime numbers for all your heroes together.
 ## Per-monster numbers are in the Bestiary.
 
 var main
@@ -33,19 +33,16 @@ func refresh() -> void:
 	var row := func(label: String, v: int) -> String: return "%s  [color=%s]%s[/color]" % [label, g, _n(v)]
 	lines.append("#Combat")
 	for e in [["Monsters defeated", c.stat("kills")], ["Bosses defeated", c.stat("boss_kills")], ["Deaths", c.stat("deaths")],
-			["Turns fought", c.stat("turns")], ["Damage dealt", c.stat("damage")], ["Biggest hit", c.stat("best_hit")], ["Taps", c.stat("taps")],
+			["Turns fought", c.stat("turns")], ["Damage dealt", c.stat("damage")], ["Biggest hit", c.stat("best_hit")], ["Monsters tapped", c.stat("taps")],
 			["Potions drunk", c.stat("potions_used")]]:
 		lines.append(row.call(e[0], e[1]))
-	var tiers: Array = []
+	# Fable r5 #16: one row per tier like the rest (the colour on the name), no mid-list wrap
 	for t in range(1, 6):
-		tiers.append("[color=%s]%s %s[/color]" % [Monsters.tier_color(t), Monsters.tier_name(t), _n(c.stat("tier_%d" % t))])
-	lines.append("Rare monsters:  " + "   ".join(tiers))
+		lines.append("[color=%s]%s monsters[/color]  [color=%s]%s[/color]" % [Monsters.tier_color(t), Monsters.tier_name(t), g, _n(c.stat("tier_%d" % t))])
 	lines.append("#Loot")
 	lines.append(row.call("Items found", c.stat("items")))
-	var by: Array = []
 	for r in [0, 1, 2, 3, 4, 5, 7]:
-		by.append("[color=%s]%s %s[/color]" % [GameData.color_of(r), GameData.RARITY_NAMES[r], _n(c.stat("items_r%d" % r))])
-	lines.append("   ".join(by))
+		lines.append("[color=%s]%s items[/color]  [color=%s]%s[/color]" % [GameData.color_of(r), GameData.RARITY_NAMES[r], g, _n(c.stat("items_r%d" % r))])
 	lines.append(row.call("Gold earned", c.stat("gold_earned")))
 	lines.append(row.call("Set items crafted", c.stat("sets_crafted")))
 	lines.append(row.call("Rerolls won", c.stat("rerolls_won")))

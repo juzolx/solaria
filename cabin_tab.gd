@@ -1,6 +1,6 @@
 class_name CabinTab
 extends ScrollContainer
-## Town > Trophy Cabin (2.1 G3): this town's proudest moments on the shelves.
+## Town › Trophy Cabin (2.1 G3): this town's proudest moments on the shelves.
 ## Purely for show (trophies never give power). Bigger cabins hold more.
 
 var main
@@ -22,7 +22,6 @@ func refresh() -> void:
 		return
 	shown = key
 	OnlineUI.clear(box)
-	box.add_child(UI.heading("Trophy Cabin"))
 	if not Buildings.built("cabin"):
 		box.add_child(UI.wrap("An empty lot. Build the cabin (above) and %s gets a place to hang its trophies. They are already being counted: %d so far." % [p.town_name(p.town), Trophies.data.size()], UI.FONT_BODY, UI.DIM))
 		return
@@ -43,7 +42,7 @@ func refresh() -> void:
 		card.custom_minimum_size = Vector2(150, 0)
 		var v := UI.vbox(2)
 		card.add_child(v)
-		v.add_child(UI.label(String(k[0]).to_upper(), UI.FONT_BODY, Color(String(k[1]))))
+		v.add_child(UI.label(String(k[0]), UI.FONT_BODY, Color(String(k[1]))))
 		v.add_child(UI.wrap(String(t["name"]), UI.FONT_BODY, UI.TEXT))
 		v.add_child(UI.label("%s  ·  %s" % [String(t.get("hero", "")), String(t.get("date", ""))], UI.FONT_BODY, UI.DIM))
 		grid.add_child(card)

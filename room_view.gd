@@ -14,13 +14,21 @@ var key := ""
 var motes: Array = []
 var hit := {}              # "m<i>" / "d<i>" / "p<i>" -> Rect2 (tap targets)
 const TRAP_Z := 3.6   # a spotted trap's circle always lies here, right of the hero (never under them)
-const TRAP_X := 1.4   # its left edge clear of his shoulder; the shrine glyph mirrors it on the left
+const TRAP_X := 1.65  # its left edge clear of his hair (0.14 z each side); the shrine glyph mirrors it on the left
+const TRAP_R := 1.0   # its radius: 64 art px, like the glyph (Room3D.TRAP_SIZE)
+const MID_Z := 4.6    # the room's one thing in the middle stands this deep at least: its base above the hero's hair
+const MID_Z_SMALL := 4.3
+const CAMP := Vector2(-1.2, 2.6)   # the camp's fire; its tents and pack stand round it, all nearer than the 3D props
 const TRAP_Z_SMALL := 4.0   # on a short screen (scene.small) the floor is shorter: the circle sits deeper
 const REDRAW_HZ := 30.0     # only the flicker and the 2 Hz pulses move here
 var _redraw_in := 0.0
 var _trap_mesh: ArrayMesh = null
 var _trap_at := ""
-const LABEL_FS := 16       # prop names, the hint line and the floor title (same font as the fights)
+const LABEL_FS := 16       # prop names, the hint line and the floor title at 430 (label_fs() sizes them per phone)
+const FLOOR_GAP := 40.0    # design px of floor between the leader's hair and the doors' feet on a short view
+var _mid_name := ""        # the middle prop's name this frame: the hint line carries it
+var _tall_key := ""
+var _tall := 0.0
 
 func setup(m) -> void:
 	main = m
@@ -90,6 +98,7 @@ func _draw() -> void:
 	if state == null or scene.key == "":
 		return
 	hit.clear()
+	_mid_name = ""
 	var font := UI.game_font()
 	scene.draw_shell(self, size)
 	scene.draw_doors(self, state, hit, font)
@@ -97,9 +106,11 @@ func _draw() -> void:
 	var things: Array = scene.scenery()
 	for i in state.room_props.size():
 		var p: Dictionary = state.room_props[i]
-		things.append({"z": _prop_z(float(p["y"])), "kind": "prop", "i": i})
+		things.append({"z": _prop_z(float(p["y"]), float(p["x"])), "kind": "prop", "i": i})
 	var doors_open := state.door_pending()
 	var rtrap: Dictionary = state.room_trap
+	if scene.is_3d() and scene.r3 and scene.r3.built_key == scene.room_key:
+		scene.r3.mark_trap(null, Color.WHITE, false, 0.0, 0.0, false)   # shown again below while it's spotted
 	if not rtrap.is_empty() and rtrap.get("spotted", false) and not rtrap.get("done", false) and not doors_open:
 		things.append({"z": _trap_z(), "kind": "trap"})
 	things.sort_custom(func(a, b): return float(a["z"]) > float(b["z"]))
@@ -127,15 +138,29 @@ func _draw() -> void:
 			msg += "  (Auto in a moment)"
 	elif doors_open and not state.room_props.is_empty() and String(state.room_props[0]["kind"]) == "merchant":
 		msg = "Tap Snik to trade, or pick a door"
-	draw_string_outline(font, Vector2(0, size.y - 14), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, LABEL_FS, 5, Color(0, 0, 0, 0.9))
-	draw_string(font, Vector2(0, size.y - 14), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, LABEL_FS, Color("#fee761"))
-	var title := "%s  -  Floor %d" % [GameData.zone_for_floor(state.floor_num)["name"], state.floor_num]
-	draw_string_outline(font, Vector2(10, 24), title, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FS, 5, Color(0, 0, 0, 0.9))
-	draw_string(font, Vector2(10, 24), title, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FS, Color(1, 1, 1, 0.8))
+	# the thing in the middle is named here, not over the middle door (Fable dungeon round 5)
+	if _mid_name != "" and not msg.to_lower().contains(_mid_name.to_lower()):
+		msg = "%s - %s" % [_mid_name, msg.substr(0, 1).to_lower() + msg.substr(1)]
+	var fs := label_fs()
+	# under the leader's boots (his feet stand 12+ px up), not through them
+	draw_string_outline(font, Vector2(0, size.y - 4), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, fs, 5, Color(0, 0, 0, 0.9))
+	draw_string(font, Vector2(0, size.y - 4), msg, HORIZONTAL_ALIGNMENT_CENTER, size.x, fs, Color("#fee761"))
+	if not scene.small:   # a short view's top row belongs to the door labels (the bar above shows the floor)
+		var title := "%s  -  Floor %d" % [GameData.zone_for_floor(state.floor_num)["name"], state.floor_num]
+		draw_string_outline(font, Vector2(10, 24), title, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 5, Color(0, 0, 0, 0.9))
+		draw_string(font, Vector2(10, 24), title, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.8))
 
-## A prop's y (0 far .. 1 near, as rolled by Halls) to depth.
-func _prop_z(y: float) -> float:
-	return lerpf(HallsScene.D - 0.5, 2.2, clampf((y - 0.3) / 0.5, 0.0, 1.0))   # never nearer than 2.2: near props dwarf the hero
+## Text size for the room's own words: 14 screen px on every phone (16 design px was 12 on the SE).
+func label_fs() -> int:
+	return mini(20, int(ceilf(14.0 / maxf(HallsScene.screen_scale(self), 0.01))))
+
+## A prop's y (0 far .. 1 near, as rolled by Halls) to depth: never nearer than 2.2 (near props
+## dwarf the hero), and in the middle (x near 0.5) deep enough that its base shows above his hair.
+func _prop_z(y: float, x := 0.5) -> float:
+	var z := lerpf(HallsScene.D - 0.5, 2.2, clampf((y - 0.3) / 0.5, 0.0, 1.0))
+	if absf(x - 0.5) < 0.2:
+		z = maxf(z, MID_Z_SMALL if scene.small else MID_Z)
+	return z
 
 ## A prop's x (0 left .. 1 right) to world x, kept where a phone sees it at depth z.
 func _prop_x(x: float, z := HallsScene.D) -> float:
@@ -153,7 +178,7 @@ func _draw_prop(i: int, font: Font) -> void:
 		tile = "mimic"
 	if used and kind == "chest":
 		tile = "chest_open"
-	var z := _prop_z(float(p["y"]))
+	var z := _prop_z(float(p["y"]), float(p["x"]))
 	var x := _prop_x(float(p["x"]), z)
 	var rect := Rect2()
 	var bob := sin(t * 2.0) * 1.5
@@ -168,8 +193,8 @@ func _draw_prop(i: int, font: Font) -> void:
 	elif kind == "merchant":
 		if state.door_pending():
 			# while you pick a door Snik steps aside, below and left of them, so he never covers one
-			z = 3.0
-			x = _prop_x(0.2, z)
+			z = 2.6
+			x = _prop_x(0.22, z)   # door 0's top half and its label stay clear
 		var sn := Sprites.enemy_by_key("treasure_goblin")
 		if sn.has("tex"):
 			rect = scene.sprite(self, SpriteLight.lit(sn["tex"], scene.zone), x, z, 1.4, Color.WHITE, bob)
@@ -181,7 +206,7 @@ func _draw_prop(i: int, font: Font) -> void:
 		if not used:
 			rect = _draw_gate()
 	elif kind == "camp":
-		rect = _draw_camp(-0.6, 2.1)   # by the left wall, below and beside the doors
+		rect = _draw_camp(CAMP.x, CAMP.y)   # near left, nearer than every 3D prop, the fire clear of the hero
 	elif tile != "":
 		var big := 1.5 if tile == "altar" else 1.3
 		rect = scene.sprite(self, scene.tx("res://art/props/%s.png" % tile), x, z, big, Color(0.6, 0.6, 0.6) if used else Color.WHITE)
@@ -197,12 +222,16 @@ func _draw_prop(i: int, font: Font) -> void:
 	if tile == "mimic":
 		lab = "Mimic!"
 		lc = Color("#e43b44")
-	var lw := maxf(160.0, font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FS).x + 16.0)
-	var at := Vector2(rect.get_center().x - lw / 2.0, rect.end.y + 16)
 	if absf(rect.get_center().x - size.x / 2.0) < 70.0:
-		at.y = rect.position.y - 6   # in the middle the hero stands below the prop: label it above
-	draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, lw, LABEL_FS, 5, Color(0, 0, 0, 0.9))
-	draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, lw, LABEL_FS, lc)
+		# in the middle the hero stands below it and the middle door above it: the hint line names it
+		if tile != "mimic":   # the mimic's hint already shouts
+			_mid_name = lab
+		return
+	var fs := label_fs()
+	var lw := maxf(160.0, font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 16.0)
+	var at := Vector2(rect.get_center().x - lw / 2.0, rect.end.y + 16)
+	draw_string_outline(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, lw, fs, 5, Color(0, 0, 0, 0.9))
+	draw_string(font, at, lab, HORIZONTAL_ALIGNMENT_CENTER, lw, fs, lc)
 
 ## A trap you've spotted (hidden ones stay hidden): its rune circle on the floor (art/traps/<kind>.png,
 ## its own sigil in the middle), in the colour of what it does (Halls.TRAPS "color"). It doesn't turn
@@ -220,8 +249,13 @@ func _draw_trap() -> void:
 	var tex := scene.tx("res://art/traps/%s.png" % String(rtrap["kind"]))
 	if tex == null:
 		tex = scene.tx("res://art/traps/circle.png")
+	var rim := ArtStyle.oklab(col).distance_to(ArtStyle.oklab(Color(scene.mood()["accent"]))) < 0.1
+	if scene.is_3d() and scene.r3 and scene.r3.built_key == scene.room_key:
+		# in the room, so a prop standing in front of the ring covers it (drawn over, it hid their feet)
+		scene.r3.mark_trap(tex, tint, rim, x, z, true)
+		return
 	var mesh := trap_mesh(x, z)
-	if ArtStyle.oklab(col).distance_to(ArtStyle.oklab(Color(scene.mood()["accent"]))) < 0.1:
+	if rim:
 		# a trap the colour of the zone's accent gets an outline-black rim, so it isn't the shrine again
 		var c := scene.proj(x, HallsScene.FLOOR_Y, z)
 		draw_mesh(mesh, tex, Transform2D(0.0, Vector2(1.03, 1.03), 0.0, c - c * 1.03), Color("#0e0812"))
@@ -233,7 +267,7 @@ func trap_mesh(x: float, z: float) -> ArrayMesh:
 	var at := "%s|%s|%s" % [x, z, scene.key]
 	if _trap_mesh and _trap_at == at:
 		return _trap_mesh
-	var r := 1.1   # the same size as the shrine's glyph
+	var r := TRAP_R
 	var fy := HallsScene.FLOOR_Y + 0.01
 	var n := 8
 	var pts := PackedVector2Array()
@@ -280,13 +314,14 @@ func _draw_team() -> void:
 			continue
 		var n: int = (an["tex"] as Array).size()
 		var fi := int(t * float(an["fps"]) + j) % n
-		var sz: float = float(an["size"]) * float(unit if j == 0 else maxi(1, unit - 1)) / scr
+		# companions one step smaller, but never under 2x (on the SE 1x stood half the leader's size)
+		var sz: float = float(an["size"]) * float(unit if j == 0 else clampi(unit - 1, mini(unit, 2), unit)) / scr
 		var feet := team_feet(j, float(xs[j]))
 		scene.shadow(self, feet, sz * 0.18)
 		var a := 0.4 if (j == 0 and state.leader_down) or (j > 0 and members[j - 1].knocked_out) else 1.0
 		# 2.1 heroes stand on their frame's foot row (older art on ~0.9 of theirs)
 		var foot := float(an["foot"]) / float(an["size"]) if an.has("foot") else 0.9
-		draw_texture_rect(an["tex"][fi], Rect2(feet - Vector2(sz / 2.0, sz * foot), Vector2(sz, sz)), false, Color(0.85, 0.82, 0.8, a))
+		draw_texture_rect(an["tex"][fi], Rect2(feet - Vector2(sz / 2.0, sz * foot), Vector2(sz, sz)), false, Color(team_tint(), a))
 		if j == 0:
 			# pets use the leader's own pixel size (one art px = sz / cell)
 			var k := sz / float(an["size"])
@@ -295,11 +330,58 @@ func _draw_team() -> void:
 			_draw_pet(feet, k, spots)
 			_draw_menagerie_room(feet, k, spots, pets)
 
+## The team's tint: the old warm grey taking a third of the zone light's hue at his spot (same
+## brightness), so he stands in the Cinder Abyss's red and the Shadow Deep's violet like the props.
+func team_tint() -> Color:
+	var lc := scene.lit(0.0, HallsScene.FLOOR_Y + 1.0, 1.4)
+	var m := maxf(lc.r, maxf(lc.g, lc.b))
+	var hue := Color(lc.r / m, lc.g / m, lc.b / m) * 0.9 if m > 0.001 else Color(0.85, 0.82, 0.8)
+	return Color(0.85, 0.82, 0.8).lerp(Color(hue, 1.0), 0.35)
+
 ## Where member j (0 = the leader) stands, xf across the view. A short screen puts the team
 ## lower, so the floor between them and the doors stays (Fable round 3, the SE).
-func team_feet(j: int, xf: float) -> Vector2:
+func team_feet(j: int, xf: float, scr := -1.0) -> Vector2:
 	var up := (12.0 if j == 0 else 30.0) if scene.small else (26.0 if j == 0 else 44.0)
-	return Vector2(size.x * xf, size.y - up)
+	var y := size.y - up
+	if scene.small:
+		# the SE's room view can be 345 design px tall: keep 40 px of floor between the hair and the
+		# doors' feet, the team sinking (boots cropped) rather than the doors rising into the top row
+		if scr <= 0.0:
+			scr = HallsScene.screen_scale(self)
+		var lead := size.y - 12.0
+		var need := scene.proj(0.0, HallsScene.FLOOR_Y, HallsScene.D).y + FLOOR_GAP + _leader_tall(scr if scr > 0.01 else 1.0)
+		y += maxf(0.0, need - lead)
+	return Vector2(size.x * xf, y)
+
+## The leader's feet to the top of his hair (design px) at screen scale scr. Cached per art and scale.
+func _leader_tall(scr: float) -> float:
+	var art := Sprites.hero_back_of(state)
+	var an: Dictionary = (art.get("anims", {}) as Dictionary).get("combat_idle", {})
+	if an.is_empty():
+		return 0.0
+	var k := "%d|%.3f" % [(an["tex"][0] as Texture2D).get_rid().get_id(), scr]
+	if _tall_key != k:
+		_tall_key = k
+		var sz: float = float(an["size"]) * float(ArtStyle.unit(scr)) / scr
+		var foot := float(an["foot"]) / float(an["size"]) if an.has("foot") else 0.9
+		var img: Image = (an["tex"][0] as Texture2D).get_image()
+		var top := float(img.get_used_rect().position.y) if img else 0.0
+		_tall = sz * foot - top * sz / float(an["size"])
+	return _tall
+
+## Half the leader's drawn art width (design px) at screen scale scr: the hair a floor decal must clear.
+func leader_half_w(scr: float) -> float:
+	var art := Sprites.hero_back_of(state)
+	var an: Dictionary = (art.get("anims", {}) as Dictionary).get("combat_idle", {})
+	if an.is_empty():
+		return 0.0
+	var sz: float = float(an["size"]) * float(ArtStyle.unit(scr)) / scr
+	var img: Image = (an["tex"][0] as Texture2D).get_image()
+	if img == null:
+		return sz / 2.0
+	var r := img.get_used_rect()
+	var c := float(an["size"]) / 2.0
+	return maxf(c - r.position.x, r.end.x - c) * sz / float(an["size"])
 
 ## The top of the leader's drawn art (design px) at screen scale scr, for layout checks.
 func leader_head_y(scr: float) -> float:
@@ -307,11 +389,7 @@ func leader_head_y(scr: float) -> float:
 	var an: Dictionary = (art.get("anims", {}) as Dictionary).get("combat_idle", {})
 	if an.is_empty():
 		return size.y
-	var sz: float = float(an["size"]) * float(ArtStyle.unit(scr)) / scr
-	var foot := float(an["foot"]) / float(an["size"]) if an.has("foot") else 0.9
-	var img: Image = (an["tex"][0] as Texture2D).get_image()
-	var top := float(img.get_used_rect().position.y) if img else 0.0
-	return team_feet(0, 0.5).y - sz * foot + top * sz / float(an["size"])
+	return team_feet(0, 0.5, scr).y - _leader_tall(scr)
 
 ## Your companion trots at the leader's heels (true size: k units per art pixel, feet on the floor).
 func _draw_pet(leader_feet: Vector2, k: float, xs: Array) -> void:
@@ -425,11 +503,19 @@ func _row(leader_feet: Vector2, leader_sz: float, k: float, pets: Array, members
 ## a phone can see them (|x| <= 0.78 z).
 func _draw_camp(x: float, z: float) -> Rect2:
 	var s := scene.focal / z
-	var t1 := scene.sprite(self, scene.tx("res://art/props/tent.png"), x - 1.3, z + 1.2, 1.1)
-	var t2 := scene.sprite(self, scene.tx("res://art/props/tent.png"), x - 0.7, z + 0.7, 1.1)
-	var lamp := scene.sprite(self, scene.tx("res://art/props/candles.png"), x - 0.2, z + 1.0, 0.4)
-	scene.glow(self, Vector2(lamp.get_center().x, lamp.end.y), s * 0.5, Color("#feae34", 0.5 + 0.15 * sin(t * 5.0)))
 	var flick := 1.0 + 0.06 * sin(t * 9.0)
-	var fire := scene.sprite(self, scene.tx("res://art/props/cookfire.png"), x, z, 1.0, Color(flick, flick, flick))
-	scene.sprite(self, scene.tx("res://art/props/backpack.png"), x - 0.4, z - 0.2, 0.5)
-	return fire.merge(t1).merge(t2)
+	var out := Rect2()
+	for piece in camp_pieces(x, z):   # far to near
+		var r := scene.sprite(self, scene.tx("res://art/props/%s.png" % String(piece[0])), float(piece[1]), float(piece[2]), float(piece[3]),
+			Color(flick, flick, flick) if piece[0] == "cookfire" else Color.WHITE)
+		if piece[0] == "candles":
+			scene.glow(self, Vector2(r.get_center().x, r.end.y), s * 0.5, Color("#feae34", 0.5 + 0.15 * sin(t * 5.0)))
+		if piece[0] in ["tent", "cookfire"]:
+			out = r if out.size == Vector2.ZERO else out.merge(r)
+	return out
+
+## The camp's pieces round its fire at (x, z), far to near: [art, x, depth, height].
+## All nearer than z 3.5 and inside a phone's view (Fable dungeon round 4).
+static func camp_pieces(x: float, z: float) -> Array:
+	return [["tent", x - 0.8, z + 0.8, 1.1], ["candles", x - 0.2, z + 0.5, 0.4], ["tent", x - 0.6, z + 0.4, 1.1],
+		["cookfire", x, z, 1.0], ["backpack", x - 0.4, z - 0.2, 0.5]]

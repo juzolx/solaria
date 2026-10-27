@@ -32,7 +32,7 @@ func _fill() -> void:
 		var c := UI.card(UI.TEAL if saved else UI.BORDER)
 		body.add_child(c[0])
 		var inner: VBoxContainer = c[1]
-		inner.add_child(UI.label(Presets.name_of(state, i) if saved else "Empty slot %d" % (i + 1), 17, UI.TEXT if saved else UI.DIM))
+		inner.add_child(UI.label(Presets.name_of(state, i) if saved else "Empty slot %d" % (i + 1), UI.FONT_BODY, UI.TEXT if saved else UI.DIM))
 		inner.add_child(UI.wrap(Presets.summary(state, i), UI.FONT_BODY, UI.DIM))
 		var row := UI.hbox(8)
 		inner.add_child(row)
@@ -60,7 +60,7 @@ func _fill_teams() -> void:
 		var c := UI.card(UI.GOLD if saved else UI.BORDER)
 		body.add_child(c[0])
 		var inner: VBoxContainer = c[1]
-		var lbl := UI.label(Presets.team_label(m.profile, i) if saved else "Empty team %d" % (i + 1), 16, UI.TEXT if saved else UI.DIM)
+		var lbl := UI.label(Presets.team_label(m.profile, i) if saved else "Empty team %d" % (i + 1), UI.FONT_BODY, UI.TEXT if saved else UI.DIM)
 		lbl.clip_text = true
 		inner.add_child(lbl)
 		var row := UI.hbox(8)
@@ -136,7 +136,7 @@ func _rename(i: int) -> void:
 	edit.text = Presets.name_of(state, i)
 	edit.max_length = 20
 	edit.custom_minimum_size = Vector2(0, UI.TAP)
-	edit.add_theme_font_size_override("font_size", 18)
+	edit.add_theme_font_size_override("font_size", UI.FONT_BODY)
 	o.content.add_child(edit)
 	var ok := UI.primary("Save name", func():
 		Presets.rename(state, i, edit.text)

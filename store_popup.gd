@@ -1,6 +1,6 @@
 class_name StorePopup
 extends Overlay
-## Stage 4: the real-money store (Menu > Supporter store). Only reachable when
+## Stage 4: the real-money store (Menu › Supporter store). Only reachable when
 ## Store.ENABLED is true; the supporter looks, plus Restore purchases.
 
 var main

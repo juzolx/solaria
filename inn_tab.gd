@@ -1,6 +1,6 @@
 class_name InnTab
 extends ScrollContainer
-## Town > Inn: rest to full health (cheap; free while you're new), buy potions,
+## Town › Inn: rest to full health (cheap; free while you're new), buy potions,
 ## and hear what the regulars are saying.
 
 const RUMORS := [
@@ -23,6 +23,7 @@ var potion_label: Label
 var rumor: Label
 var recruit_label: Label
 var recruit_button: Button
+var recruit_wait: Button   # Fable r4 #4: no free slot: a plain button that says why (never a disabled primary)
 
 func setup(m) -> void:
 	main = m
@@ -70,6 +71,10 @@ func setup(m) -> void:
 	recruit_button = UI.primary("Recruit a new hero", _recruit, UI.GOLD)
 	recruit_button.custom_minimum_size = Vector2(0, UI.TAP)
 	rv.add_child(recruit_button)
+	recruit_wait = UI.button("", func(): main.toast(main.profile.recruit_note()))
+	recruit_wait.custom_minimum_size = Vector2(0, UI.TAP)
+	recruit_wait.add_theme_color_override("font_color", UI.DIM)
+	rv.add_child(recruit_wait)
 	box.add_child(UI.heading("Overheard at the bar"))
 	rumor = UI.label("", UI.FONT_BODY, Color("#d6c7a1"))
 	rumor.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -95,12 +100,12 @@ func refresh() -> void:
 	hp_label.text = "Health  %d / %d" % [g.hero_hp, mx]
 	var cost := Town.rest_cost(g)
 	var full := g.hero_hp >= mx
-	rest_button.text = "You're fully rested" if full else ("Rest for the night  (free)" if cost == 0 else "Rest for the night  (%d gold)" % cost)
-	rest_button.disabled = full or g.gold < cost
+	rest_button.text = "You're fully rested" if full else ("Rest for the night · free" if cost == 0 else UI.cost("Rest for the night", cost))
+	UI.why(rest_button, "You're at full health." if full else UI.need_gold(g.gold, cost))
 	potion_label.text = "Potions: %d" % g.potions
 	_recruit_refresh()
-	potion_button.text = "Buy one  (%d gold)" % g.potion_cost()
-	potion_button.disabled = g.gold < g.potion_cost()
+	potion_button.text = UI.cost("Buy one", g.potion_cost())
+	UI.why(potion_button, UI.need_gold(g.gold, g.potion_cost()))
 
 ## A new hero joins the town in the next open slot, and you play them right away.
 ## The hero you were playing stays in town (and can join your team).
@@ -117,5 +122,10 @@ func _recruit() -> void:
 func _recruit_refresh() -> void:
 	var p: Profile = main.profile
 	var note := p.recruit_note()
-	recruit_label.text = "Heroes of %s: %d of %d slots used (a town holds up to %d).%s" % [p.town_name(p.town), GameState.town_heroes(p.town), p.slots_open(), GameData.MAX_HEROES, ("\n" + note) if note != "" else ""]
-	recruit_button.disabled = note != ""
+	recruit_label.text = p.roster_line()
+	recruit_button.visible = note == ""
+	recruit_wait.visible = note != ""
+	if note != "":
+		var nxt := p.slots_open() + 1
+		recruit_wait.text = ("Recruit · slot %d at floor %d" % [nxt, int(GameData.SLOT_UNLOCKS[nxt - 1])]) if nxt <= GameData.SLOT_UNLOCKS.size() and p.slots_open() < GameData.MAX_HEROES else "Recruit · the town is full"
+		recruit_wait.tooltip_text = note

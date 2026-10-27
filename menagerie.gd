@@ -241,7 +241,7 @@ static func try_catch(g: GameState) -> bool:
 			"Your Beast Whisperer hums it calm. " if helper else "", p["name"], "" if int(p["id"]) in g.pets_out else (" (waiting at home: one of its kind is already out)" if not same_kind_out(g, int(p["id"])).is_empty() else " (waiting at home: your team is full)")])
 		g.events.append({"type": "mini_event", "kind": "pet", "title": "CAUGHT!", "sub": "%s joins you" % p["name"]})
 		g.feats["caught"] = int(g.feats.get("caught", 0)) + 1
-		g.tip("caught", "Pets fight beside you and grow with every kill. Pick who comes along in Character > Pets. Pets are never lost: when they go down they come home hurt and rest.")
+		g.tip("caught", "Pets fight beside you and grow with every kill. Pick who comes along in Hero › Pets. Pets are never lost: when they go down they come home hurt and rest.")
 		Lineage._move_on(g)
 		return true
 	g.say("[color=#f87171]The %s slips your grip and lashes out![/color]" % g.enemy_name)

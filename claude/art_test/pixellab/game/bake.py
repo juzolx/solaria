@@ -378,7 +378,7 @@ def main():
         print(b, "faces done")
         # ---- weapons ----
         hands = {k: SW[b][k][1] for k in K}
-        info["hand"][b] = [list(hands[k]) for k in K]
+        info["hand"][b] = [list(mid_hands(hands)[k]) for k in K]
         for wt, drawing in WEAPON_DRAWINGS.items():
             save(f"{b}/weapon_{wt}", weapon_cells(wt, drawing, hands, b))
             if wt not in info["weapons"]:
@@ -411,7 +411,7 @@ def race_cells(b, paths, race=""):
     """A race's signature feature (PixelLab edits of the base frames, 'add only ...'): the pixels the edit
     changed, minus edit noise on the hair (the hair is its own layer) and specks. Front view: what sticks
     out below the head (wings, tail) goes to a layer drawn BEHIND the body; the rest is drawn on top."""
-    front, back = [], []
+    front, back, ref = [], [], {}
     for k in K:
         base = CELL[b][k]
         ed = cell(L(paths[k]), b, k)
@@ -443,6 +443,14 @@ def race_cells(b, paths, race=""):
             if len(c) >= 6 and not (inside and len(c) < 25):
                 keep.append(c)
         pts = set().union(*keep) if keep else set()
+        if race in HEAD_ONLY:  # only what overlaps the idle's feature, moved with the head (dilated 2 px):
+            r0 = "s_idle0" if k.startswith("s") else "n_idle0"  # the mid-swing edits grew hair and face residue
+            if r0 in ref:  # around the ears (3x their height for 2 frames of 4: Fable hero R2 item 8)
+                dx = OFF_OWN[b][k][0] - OFF_OWN[b][r0][0]; dy = OFF_OWN[b][k][1] - OFF_OWN[b][r0][1]
+                near = {(x + dx + i, y + dy + j) for (x, y) in ref[r0] for i in range(-2, 3) for j in range(-2, 3)}
+                pts &= near  # pixel by pixel: the residue is joined to the ears, so whole parts would keep it
+            else:
+                ref[k] = pts
         if race in BONE_OFF:  # the bone drawn over the clothes below the head (a spine on the coat) goes
             pts = no_bone(pts, ep, hl)
         f = Image.new("RGBA", (C, C)); bk = Image.new("RGBA", (C, C))
@@ -456,6 +464,7 @@ def race_cells(b, paths, race=""):
     return front, back
 
 
+HEAD_ONLY = ["Elf", "Demon"]  # ears and horns: every frame keeps only the idle's feature, moved with the head
 BONE_OFF = ["Undead"]  # keep the soul fire and the eyes; a glowing spine over the outfit read as a caterpillar
 
 
@@ -521,6 +530,13 @@ def swing(b):
     return a
 
 
+def mid_hands(hands):
+    """The hand points as the weapon is drawn: atk2's halfway between atk1's and atk3's (the swing's middle)."""
+    out = dict(hands)
+    out["n_atk2"] = ((hands["n_atk1"][0] + hands["n_atk3"][0]) // 2, (hands["n_atk1"][1] + hands["n_atk3"][1]) // 2)
+    return out
+
+
 def weapon_cells(wt, drawing, hands, b):
     """The weapon on every frame (F x F cells, the body cell PAD in): one drawing, turned and pinned to the hand."""
     sb = b
@@ -531,9 +547,7 @@ def weapon_cells(wt, drawing, hands, b):
     i0 = SW[sb]["n_idle0"][2]
     cells = []
     for k in K:
-        g = hands[k]
-        if k == "n_atk2":  # the hand halfway along the arc too
-            g = ((hands["n_atk1"][0] + hands["n_atk3"][0]) // 2, (hands["n_atk1"][1] + hands["n_atk3"][1]) // 2)
+        g = mid_hands(hands)[k]  # the hand halfway along the arc too
         g = (g[0] + PAD, g[1] + PAD)
         if k.startswith("n_atk"):
             a = sw_a[k]
@@ -542,11 +556,25 @@ def weapon_cells(wt, drawing, hands, b):
                 a = math.radians(150 if 90 < deg < 150 else 30 if 30 < deg <= 90 else deg)
             cells.append(w.placed((F, F), g, a))
         elif k.startswith("s"):
-            cells.append(mir.placed((F, F), g, math.pi - rest))
+            cells.append(rested(mir, g, math.pi - rest, PORTRAIT_LOW))
         else:  # idle sways a little with the drawn arm; the hit frame tilts back
             ang = rest + (SW[sb][k][2] - i0) * 0.4 + (math.radians(HIT_TILT) if k == "n_hit" else 0)
-            cells.append(w.placed((F, F), g, ang))
+            cells.append(rested(w, g, ang, FOOT + PAD))
     return cells
+
+
+PORTRAIT_LOW = 99  # the lowest frame row the menu portrait shows (Sprites.PORTRAIT_CROP ends at frame row 99)
+
+
+def rested(w, g, ang, low):
+    """A weapon at rest, tilted the least it takes (5-degree steps either way) to keep its lower end at or
+    above row `low`: a bow held by its middle hung 3-9 rows under the feet and out of the portrait."""
+    for d in [0] + [s * t for t in range(5, 90, 5) for s in (1, -1)]:
+        c = w.placed((F, F), g, ang + math.radians(d))
+        bb = c.getbbox()
+        if not bb or bb[3] - 1 <= low:
+            return c
+    return w.placed((F, F), g, ang)
 
 
 def weapon_drawings():
@@ -572,22 +600,21 @@ WEAPON_DRAWINGS = weapon_drawings()
 # as an edit of those (claude/art_test/races, jobs.txt / ojobs.txt). The head stays drawn (no hair-style
 # swap): hair recolours by its shade, the family's fabric takes the class colour (index B = dye shade).
 RACES_RAW = os.path.abspath(os.path.join(REPO, "..", "solaria_dev", "claude", "art_test", "races", "raw"))
-# Golem is no longer playable (Juzo, Oct 24): its art stays in art/heroes/golem_m, unused (a monster candidate)
+# Golem is no longer playable (Juzo, Oct 24): its drawings stay in races/raw (a monster candidate), not baked into the app
 BUILDS = {"Goblin": "goblin", "Dwarf": "dwarf", "Orc": "orc", "Fairy": "fairy"}
-OWN_SKIN = ["Goblin", "Orc", "Werewolf", "Golem"]  # races whose drawn skin hue is their signature: no skin recolour
+OWN_SKIN = ["Goblin", "Orc", "Werewolf"]  # races whose drawn skin hue is their signature: no skin recolour
 # races drawn as a feature layer on another build's frames (PixelLab edits of that build's base frames)
 FEATURE_BUILDS = {"Werewolf": "orc"}
 # a fixed skin for a race drawn over a build (light to dark): the werewolf greys to match its fur
 SKIN_RAMP = {"Werewolf": ["#c4c4c8", "#9a9aa0", "#76767c", "#525258", "#323238"]}
-# builds drawn once for both bodies (a golem is stone: no man or woman build)
-SHARED = {"Golem": "m"}
-HAIRLESS = ["Golem"]  # stone: the cyan runes on its head are not hair
-STONE = ["Golem"]  # grey stone bodies: the sword is found as bright steel only
+SHARED = {}  # builds drawn once for both bodies, {race: body} (the golem was the only one)
+HAIRLESS = []  # races whose drawn head has no hair to recolour
+STONE = []  # grey stone bodies: the sword is found as bright steel only
 # wings cut from the build's own base frames (the outfit edits leave them out, so the class outfit
 # shows): over the back in battle, behind the body on the portrait. Hue range 0-1.
 WINGS = {"Fairy": (0.68, 0.92)}
 # hovering builds: feet this many art pixels above the foot row, per frame (idle frames bob)
-FLOAT = {"Fairy": {"n_idle0": 4, "n_idle1": 6, "s_idle0": 4, "s_idle1": 6}}
+FLOAT = {}  # was the fairy 4-6 px up: it read as a mis-registered sprite over the shadow (Fable hero R2 item 10)
 CROWNED = ["Dwarf"]  # build races with a crown awakening (races.gd look "crown")
 FAMILY_SRC = {"plate": "warrior", "robe": "mage", "leather": "leather", "cloth": "cloth"}
 FAMILY_OF = {"Warrior": "plate", "Knight": "plate", "Sentinel": "plate",
@@ -597,7 +624,13 @@ FAMILY_OF = {"Warrior": "plate", "Knight": "plate", "Sentinel": "plate",
 # the dyed fabric of each family, as hue ranges (0-1): plate's skirt, the robe, the tunic, the gambeson
 DYE_HUES = {"plate": [(0.94, 1.0), (0.0, 0.04)], "robe": [(0.70, 0.86)], "leather": [(0.20, 0.45)], "cloth": [(0.52, 0.68)]}
 # frames a build reuses (his goblin's second idle frame lost its shirt: both idle frames are the first)
-ALIAS = {("goblin", "m", "n_idle1"): "n_idle0", ("fairy", "m", "n_idle1"): "n_idle0"}  # his fairy's 2nd idle hides the sword
+ALIAS = {("goblin", "m", "n_idle1"): "n_idle0", ("fairy", "m", "n_idle1"): "n_idle0",  # his fairy's 2nd idle hides the sword
+         # his orc idles were drawn 11 rows taller than his other frames (a lurch at every swing): the neutral
+         # atk0 stance stands in for both and the game makes the breath (hero_art _breath, heroes.json "breath")
+         ("orc", "m", "n_idle0"): "n_atk0", ("orc", "m", "n_idle1"): "n_atk0"}
+# every build's second portrait was a separate drawing (a jump cut at 2 fps): the first stands in and the game
+# makes the breath (Fable hero R2 item 4)
+ALIAS.update({(r, b, "s_idle1"): "s_idle0" for r in ("goblin", "dwarf", "orc", "fairy") for b in "mf"})
 
 
 def build_src(race, fam, b, k):
@@ -609,7 +642,10 @@ def build_src(race, fam, b, k):
     return os.path.join(RACES_RAW, stem + ".png")
 
 
-def dye_index(c, fam, idx):
+DYE_SHARE = []  # (family, dyed share of the non-skin, non-hair pixels) per build frame, checked after the bake
+
+
+def dye_index(c, fam, idx, green_skin=False):
     """Marks the family's dyed fabric in the index's blue channel (shade 1..255) for the class colour."""
     import colorsys
     cp, ip = c.load(), idx.load()
@@ -617,15 +653,24 @@ def dye_index(c, fam, idx):
     for y in range(C):
         for x in range(C):
             px = cp[x, y]
-            if not px[3] or ip[x, y][0] or ip[x, y][1]:
-                continue
+            if not px[3] or ip[x, y][0] or ip[x, y][1] or (green_skin and greenish(px)):
+                continue  # an orc's or goblin's drawn green skin is not cloth (it is indexed as skin after)
             h, sat, v = colorsys.rgb_to_hsv(*(q / 255 for q in px[:3]))
-            if sat > (0.15 if fam == "cloth" else 0.3) and v > 0.12 and any(lo <= h <= hi for lo, hi in DYE_HUES[fam]):
-                pts.append((x, y, R.lum(px[:3])))
+            if sat > 0.15 and v > 0.12:
+                pts.append((x, y, R.lum(px[:3]), int(h * 18) % 18))
+    # every fabric hue that covers at least 15% of the coloured cloth, not one fixed hue range per family:
+    # the fixed ranges dyed 9% of the leather and plate builds (a 2-3 px belt: Fable hero R2 item 5)
+    bins = {}
+    for q in pts:
+        bins[q[3]] = bins.get(q[3], 0) + 1
+    pts = [q for q in pts if bins[q[3]] >= 0.15 * len(pts)]
     if not pts:
         return idx
-    ls = sorted(q[2] for q in pts); lo, hi = ls[len(ls) // 20], ls[-len(ls) // 20 - 1]
-    for x, y, l in pts:
+    tot = sum(1 for y in range(C) for x in range(C) if cp[x, y][3] and not ip[x, y][0] and not ip[x, y][1]
+              and not (green_skin and greenish(cp[x, y])))
+    DYE_SHARE.append((fam, round(len(pts) / max(1, tot), 2)))
+    ls = sorted(q[2] for q in pts); lo, hi = ls[len(ls) // 20], ls[-(len(ls) // 20) - 1]
+    for x, y, l, _ in pts:
         ip[x, y] = (0, 0, 1 + max(0, min(254, round((l - lo) / max(1, hi - lo) * 254))))
     return idx
 
@@ -657,7 +702,7 @@ def even_hair(idx, lo_to=40, hi_to=200):
     pts = [(x, y) for y in range(C) for x in range(C) if ip[x, y][1]]
     if len(pts) < 10:
         return
-    vs = sorted(ip[q][1] for q in pts); lo, hi = vs[len(vs) // 20], vs[-len(vs) // 20 - 1]
+    vs = sorted(ip[q][1] for q in pts); lo, hi = vs[len(vs) // 20], vs[-(len(vs) // 20) - 1]
     for q in pts:
         r, g, b = ip[q]
         ip[q] = (r, max(1, min(255, round(lo_to + (g - lo) / max(1, hi - lo) * (hi_to - lo_to)))), b)
@@ -671,7 +716,7 @@ def own_skin_index(c, idx, fam):
            if cp[x, y][3] and not any(ip[x, y]) and greenish(cp[x, y]) and not dyed(cp[x, y], fam)]
     if not pts:
         return
-    ls = sorted(R.lum(cp[q][:3]) for q in pts); lo, hi = ls[len(ls) // 20], ls[-len(ls) // 20 - 1]
+    ls = sorted(R.lum(cp[q][:3]) for q in pts); lo, hi = ls[len(ls) // 20], ls[-(len(ls) // 20) - 1]
     for q in pts:
         ip[q] = (1 + max(0, min(254, round((R.lum(cp[q][:3]) - lo) / max(1, hi - lo) * 254))), 0, 0)
 
@@ -688,6 +733,88 @@ def greenish(px):
     import colorsys
     h, sat, v = colorsys.rgb_to_hsv(*(q / 255 for q in px[:3]))
     return 0.11 <= h <= 0.40 and sat > 0.25
+
+
+HAIR_BUILDS = ["Goblin", "Dwarf", "Orc", "Fairy"]  # builds that take the creator's hair style (Fable hero R1 item 6)
+
+
+HAIR_FIT = {("goblin", "m"): 0.9, ("goblin", "f"): 0.9, ("dwarf", "m"): 0.9, ("dwarf", "f"): 0.9,
+            ("orc", "m"): 0.85, ("orc", "f"): 0.9, ("fairy", "m"): 0.7, ("fairy", "f"): 0.8}  # head size vs the human, by eye
+
+
+def fit_build_hair(d, b, bcells, info, s):
+    """Every drawn human hair style moved onto a build's head (0 generations): scaled by s (HAIR_FIT,
+    the build's head against the human's, measured by eye: the drawings' necks hide under hair, beards
+    and hoods) and pinned per frame by the top of the head and the middle of the skull's top rows."""
+    def box(c):  # the skull, not the frame's top pixel (a raised arm in atk1 took the hair with it)
+        p = c.load(); top = skull_top(c)
+        xs = [x for y in range(top, top + 6) for x in range(C) if p[x, y][3]]
+        return (min(xs) + max(xs)) / 2, top
+    def boxes(cells):  # a frame's head stays within 4 px of its idle's sideways (the arm beside it pulls)
+        out = {k: box(cells[k]) for k in K}
+        for k in K:
+            r = out["s_idle0" if k.startswith("s") else "n_idle0"]
+            out[k] = (max(r[0] - 4, min(r[0] + 4, out[k][0])), out[k][1])
+        return out
+    hb = boxes(CELL[b]); bb = boxes(bcells)
+    for st, k_ in info["styles"].items():
+        src = os.path.join(OUT, b, f"hair_{k_}")
+        if not os.path.exists(src + ".png"):
+            continue
+        sh, si = Image.open(src + ".png"), Image.open(src + "_idx.png")
+        cells, idxs = [], []
+        for i, k in enumerate(K):
+            hcx, htop = hb[k]; bcx, btop = bb[k]
+            at = (round(bcx - hcx * s), round(btop - htop * s))
+            hc, ic = sh.crop((i * C, 0, i * C + C, C)).convert("RGBA"), si.crop((i * C, 0, i * C + C, C))
+            hp, ip = hc.load(), ic.load()
+            for y in range(C):  # the hair only: the human scalp and ears under it stay human
+                for x in range(C):
+                    if not ip[x, y][1]:
+                        hp[x, y] = (0, 0, 0, 0)
+            for im, out in ((hc, cells), (ic, idxs)):
+                big = im.resize((round(C * s), round(C * s)), Image.NEAREST)
+                c = Image.new(big.mode, (C, C))
+                c.paste(big, at)
+                out.append(c)
+            if k.startswith("n"):  # seen from behind the hair is the whole head: no scalp through it
+                back_hair(cells[-1], idxs[-1], bcells[k], NAPE.get(d, 0))
+        save(f"{d}/hair_{k_}", cells, idxs)
+
+
+NAPE = {"orc_m": 4}  # rows of strands the back hair reaches down the neck (his sat on the skull like a cap)
+
+
+def back_hair(c, ix, body, nape):
+    """A back-view hair cell over a build head: every head pixel between the hair's left and right edge on a
+    row (a gap in spiky or tied hair showed the dwarf's pale dome) takes the hair's darkest shade, and nape
+    rows of strands (every other column one row shorter) hang below it, over the head and neck only."""
+    p, q, bp = c.load(), ix.load(), body.load()
+    hair = [(x, y) for y in range(C) for x in range(C) if p[x, y][3]]
+    if len(hair) < 12:
+        return  # bald, or next to nothing: the drawn head shows
+    dark = min(hair, key=lambda t: R.lum(p[t][:3]))
+    col, idx = p[dark], q[dark]
+    rows = {}
+    for x, y in hair:
+        lo, hi = rows.get(y, (x, x)); rows[y] = (min(lo, x), max(hi, x))
+    def width(y):
+        xs = [x for x in range(C) if bp[x, y][3]]
+        return max(xs) - min(xs) + 1 if xs else 0
+    st = skull_top(body); head_w = max(width(y) for y in range(st, min(C, st + 8)))
+    for y, (lo, hi) in rows.items():
+        if width(y) > head_w * 1.2:
+            continue  # the shoulders and back: pigtails hang over them, not a sheet of hair
+        for x in range(lo, hi + 1):
+            if not p[x, y][3] and bp[x, y][3]:
+                p[x, y] = col; q[x, y] = idx
+    if nape:
+        bottom = max(rows)
+        lo, hi = rows[bottom]
+        for x in range(lo + 1, hi):
+            for y in range(bottom + 1, bottom + 1 + nape - (x % 2)):
+                if y < C and bp[x, y][3] and not p[x, y][3]:
+                    p[x, y] = col; q[x, y] = idx
 
 
 def build_bodies(info):
@@ -752,7 +879,7 @@ def build_bodies(info):
                                 or 0.065 <= hsv((x, y))[0] <= 0.13 and hsv((x, y))[1] >= 0.42 and hsv((x, y))[2] >= 0.5)}
                         if more:
                             idx = index_of(c, hair | more)
-                    idx = dye_index(c, fam, idx)
+                    idx = dye_index(c, fam, idx, race in OWN_SKIN)
                     if race in OWN_SKIN:
                         own_skin_index(c, idx, fam)
                     if race in HAIR_EVEN:
@@ -764,7 +891,7 @@ def build_bodies(info):
                         drop_stray_lines(c, er)
                     out.append(c); idxs.append(idx)
                 if (key, b) in BIG_HEAD:
-                    heads = head_regions(cells)
+                    heads = head_regions(cells, SKULL_H.get((key, b)))
                     out = [grow_head(c, heads[k], BIG_HEAD[(key, b)]) for c, k in zip(out, K)]
                     idxs = [grow_head(c, heads[k], BIG_HEAD[(key, b)]) for c, k in zip(idxs, K)]
                 save(f"{d}/outfit_{fam}", out, idxs)
@@ -772,7 +899,9 @@ def build_bodies(info):
             for wt, drawing in WEAPON_DRAWINGS.items():
                 # the build's own hands, the standard body's swing (its own detected angles drop the staff)
                 save(f"{d}/weapon_{wt}", weapon_cells(wt, drawing, {k: sw[k][1] for k in K}, b))
-            info["hand"][d] = [list(sw[k][1]) for k in K]
+            info["hand"][d] = [list(mid_hands({k: sw[k][1] for k in K})[k]) for k in K]
+            if fams and (key, b, "n_idle1") in ALIAS:  # one idle drawing: the game makes the breath
+                info.setdefault("breath", []).append(d)
             if fams:  # a body is only offered once it has an outfit
                 info["builds"].setdefault(race, {"key": key, "bodies": {}, "skin": race not in OWN_SKIN})["bodies"][b] = fams
             print(race, b, "build done:", fams)
@@ -787,25 +916,39 @@ def build_bodies(info):
                 info.setdefault("looks", {}).setdefault("wings_big", []).append(f"{d}/race_{race.lower()}")
             if race in CROWNED and fams:  # the crown on the build head (its top centre per frame)
                 tops = []
-                for k in K:
-                    bb = cells[k].getbbox(); cp = cells[k].load()
-                    top = [x for x in range(C) if any(cp[x, y][3] for y in range(bb[1], bb[1] + 3))]
-                    tops.append(((min(top) + max(top)) // 2, bb[1]))
+                for k in K:  # the skull's top row and middle, x kept within 3 px of the idle's: the highest
+                    cp = cells[k].load(); y = skull_top(cells[k])  # pixel of atk1 is the raised axe arm
+                    xs = [x for x in range(C) if cp[x, y][3]]
+                    x = (min(xs) + max(xs)) // 2
+                    if tops and not k.startswith("s"):
+                        x = max(tops[0][0] - 3, min(tops[0][0] + 3, x))
+                    elif k == "s_idle1":
+                        x = max(tops[7][0] - 3, min(tops[7][0] + 3, x))
+                    tops.append((x, y))
                 save(f"{d}/look_crown", [crown_on((C, C), t) for t in tops])
                 info.setdefault("looks", {}).setdefault("crown", []).append(f"{d}/look_crown")
+            if race in HAIR_BUILDS and fams:  # the creator's hair style on the build's own head
+                hc = cells
+                if (key, b) in BIG_HEAD:
+                    heads = head_regions(cells, SKULL_H.get((key, b)))
+                    hc = {k: grow_head(cells[k], heads[k], BIG_HEAD[(key, b)]) for k in K}
+                fit_build_hair(d, b, hc, info, HAIR_FIT[(key, b)])
+                if race in CROWNED:
+                    info.setdefault("crown_lift", {})[d] = crown_lifts(d, skull_top(hc["n_idle0"]), info)
+                info["builds"][race]["hair"] = True
             if race in SHARED and fams:
                 e = info["builds"][race]
                 for ob in "mf":
                     e["bodies"][ob] = fams
                 e["share"] = SHARED[race]
             for fr, fk in FEATURE_BUILDS.items():
-                fp = {k: os.path.join(FEATURES, f"{fr.lower()}_{b}_{k}.png") for k in K}
+                fp = {k: os.path.join(FEATURES, f"{fr.lower()}_{b}_{ALIAS.get((key, b, k), k)}.png") for k in K}
                 if fk != key or not fams or not all(os.path.exists(q) for q in fp.values()):
                     continue
                 front, back = build_feature(cells, {k: bcell(L(fp[k]), k) for k in K}, sw)
                 front, back = [above_floor(c) for c in front], [above_floor(c) for c in back]
                 if (key, b) in BIG_HEAD:  # the wolf head sits on the grown orc head
-                    heads = head_regions(cells)
+                    heads = head_regions(cells, SKULL_H.get((key, b)))
                     front = [grow_head(c, heads[k], BIG_HEAD[(key, b)], 10) for c, k in zip(front, K)]
                 save(f"{d}/race_{fr.lower()}", front)
                 save(f"{d}/race_{fr.lower()}_back", back)
@@ -921,8 +1064,8 @@ def petal_drawing(src_cell, hues):
 
 
 def wing_layer(cells, hues, race="Fairy", scale=1.0):
-    """Big butterfly wings on every frame, all behind the body (the class outfit reads from behind
-    too): the one drawing per view, centred where the frame's own small wings were, so every frame
+    """Big butterfly wings on every frame: over the body's back in the battle frames (they grow from it, as
+    the angel's do) and behind the body on the portrait (Fable hero R2 item 6): the one drawing per view, centred where the frame's own small wings were, so every frame
     has the same wings. The second idle frame draws them narrower: a gentle flap."""
     key, sb = WING_SRC[race]
     feat = os.path.join(FEATURES, f"{key}_wings_{WING_STYLE}_%s.png")
@@ -950,7 +1093,9 @@ def wing_layer(cells, hues, race="Fairy", scale=1.0):
         layer = Image.new("RGBA", (C, C))
         layer.alpha_composite(w, (0, 0))
         layer = ImageChops.offset(layer, round(cx - sx), round(cy - sy))
-        back.append(layer); front.append(Image.new("RGBA", (C, C)))
+        empty = Image.new("RGBA", (C, C))
+        (back if k.startswith("s") else front).append(layer)
+        (front if k.startswith("s") else back).append(empty)
     return front, back
 
 
@@ -1056,7 +1201,7 @@ def recolour(c, pts, ramp):
     p = c.load()
     if not pts:
         return
-    ls = sorted(R.lum(p[q][:3]) for q in pts); lo, hi = ls[len(ls) // 20], ls[-len(ls) // 20 - 1]
+    ls = sorted(R.lum(p[q][:3]) for q in pts); lo, hi = ls[len(ls) // 20], ls[-(len(ls) // 20) - 1]
     for q in pts:
         t = (R.lum(p[q][:3]) - lo) / max(1, hi - lo)
         r = ramp[max(0, min(len(ramp) - 1, int(t * len(ramp))))]
@@ -1189,6 +1334,20 @@ def derived_looks(b, info):
     crown = [crown_on((C, C), t) for t in head_tops(b)]
     save(f"{b}/look_crown", crown)
     looks.setdefault("crown", []).append(f"{b}/look_crown")
+    ref = head_tops(b)[0][1]  # the crown sits on short hair: other styles raise or lower it by their own top
+    info.setdefault("crown_lift", {})[b] = crown_lifts(b, ref, info)
+
+
+def crown_lifts(d, ref, info):
+    """Rows to raise the crown per hair style of folder d (idle0 hair top against `ref`); 0s left out."""
+    out = {}
+    for k_ in info["styles"].values():
+        path = os.path.join(OUT, d, f"hair_{k_}.png")
+        if os.path.exists(path):
+            bb = Image.open(path).convert("RGBA").crop((0, 0, C, C)).getbbox()
+            if bb and ref - bb[1]:
+                out[k_] = ref - bb[1]
+    return out
 
 
 def class_dye(cells, idxs):
@@ -1214,19 +1373,67 @@ def class_dye(cells, idxs):
     px = sorted(by[max(bins, key=bins.get)])
     v, h, sat = px[len(px) // 2]
     out = []
-    for dv, dh, ds in ((0.45, -15, 1.15), (0.7, -8, 1.08), (1.0, 0, 1.0), (1.3, 5, 0.9), (1.6, 9, 0.8)):
-        r, g, b = colorsys.hsv_to_rgb((h + dh / 360) % 1, min(1, sat * ds), min(0.9, v * dv))
-        out.append("#%02x%02x%02x" % (round(r * 255), round(g * 255), round(b * 255)))
-    return out
+    hsv = [((h + dh / 360) % 1, min(1, sat * ds), min(0.9, v * dv))
+           for dv, dh, ds in ((0.45, -15, 1.15), (0.7, -8, 1.08), (1.0, 0, 1.0), (1.3, 5, 0.9), (1.6, 9, 0.8))]
+    return [("#%02x%02x%02x" % tuple(round(t * 255) for t in colorsys.hsv_to_rgb(*q))) for q in even_ramp(hsv)]
+
+
+DYE_FLOOR, DYE_TOP, DYE_STEP = 0.11, 0.25, 0.06  # the darkest step no darker than #241a28; the lightest at least 0.25
+
+
+def even_ramp(hsv):
+    """Five HSV steps with distinct shades: the darkest floored at DYE_FLOOR luminance, the lightest at least
+    DYE_TOP, and when two neighbours differ by less than DYE_STEP all five are respaced evenly between the ends
+    (the cream cleric's top three steps were one colour; the nightstalker's whole ramp was under the floor)."""
+    import colorsys
+    def lum(q):
+        return R.lum([round(t * 255) for t in colorsys.hsv_to_rgb(*q)]) / 255
+    def at(q, target):  # the same hue and saturation at a target luminance (value search)
+        lo, hi = 0.0, 1.0
+        for _ in range(20):
+            mid = (lo + hi) / 2
+            if lum((q[0], q[1], mid)) < target:
+                lo = mid
+            else:
+                hi = mid
+        return (q[0], q[1], (lo + hi) / 2)
+    ls = [lum(q) for q in hsv]
+    a, z = max(ls[0], DYE_FLOOR), max(ls[-1], DYE_TOP)
+    if z - a < 4 * DYE_STEP:
+        z = a + 4 * DYE_STEP
+    if ls[0] >= DYE_FLOOR and ls[-1] >= DYE_TOP and all(ls[i + 1] - ls[i] >= DYE_STEP for i in range(4)):
+        return hsv
+    return [at(q, a + (z - a) * i / 4) for i, q in enumerate(hsv)]
 
 
 BIG_HEAD = {("orc", "m"): 1.4}  # his orc head was a pea on a boulder (25% of the height; the chibi rule is ~40%)
 
 
-def head_regions(cells):
-    """Per frame: (x0, x1, neck) of the head on the bare build body. The head is the top part down to the
-    first row much wider than the head itself (the shoulders)."""
+SKULL_H = {("orc", "m"): 12}  # the skull's height under its top (back and front), measured by eye: his neck
+# hides in the shoulders, so finding it per frame grew a different head on every frame (Fable hero R2 item 3)
+
+
+def skull_top(c):
+    """The first row of the skull: at least 10 px wide (a mohawk or topknot above it is narrower)."""
+    p = c.load(); bb = c.getbbox()
+    for y in range(bb[1], bb[3]):
+        xs = [x for x in range(C) if p[x, y][3]]
+        if xs and max(xs) - min(xs) + 1 >= 10:
+            return y
+    return bb[1]
+
+
+def head_regions(cells, skull_h=None):
+    """Per frame: (x0, x1, neck) of the head on the bare build body. With skull_h: the same head on every
+    frame, skull_h rows under each frame's skull top, its columns from those rows. Without: the top part
+    down to the first row much wider than the head itself (the shoulders)."""
     out = {}
+    if skull_h:
+        for k in K:
+            c = cells[k]; p = c.load(); bb = c.getbbox(); neck = skull_top(c) + skull_h
+            xs = [x for y in range(bb[1], neck + 1) for x in range(C) if p[x, y][3]]
+            out[k] = (min(xs), max(xs), neck)
+        return out
     for k in K:
         c = cells[k]; p = c.load(); bb = c.getbbox()
         widest, neck, x0, x1 = 0, bb[3], C, 0

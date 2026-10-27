@@ -1,6 +1,6 @@
 class_name RaceTab
 extends ScrollContainer
-## Character > Race: your racial power and awakening, your transformation
+## Hero › Race: your racial power and awakening, your transformation
 ## (and any cure), how every race feels about you, and the realms.
 
 var main
@@ -59,21 +59,24 @@ func _power_card() -> void:
 		title += "  -  " + state.form
 	hv.add_child(UI.name_plate(title))   # Fable r2 #11
 	var t := UI.rich(UI.FONT_BODY)
-	t.text = "[color=%s]%s.[/color] %s" % [UI.hex(UI.DIM), r, info["text"]]
+	t.text = String(info["text"])   # Fable r5 #8: the plate above already names the race
 	hv.add_child(t)
 	# The meter
 	var pw := Lineage.power(state)
 	var nr := Lineage.next_rank(state)
 	var row := UI.hbox(8)
 	v.add_child(row)
-	var pl := UI.label("%s  %.1f" % [p["name"], pw], UI.FONT_BODY, c)
+	var pl := UI.label(("%s  %d" if is_equal_approx(pw, roundf(pw)) else "%s  %.1f") % [p["name"], int(pw) if is_equal_approx(pw, roundf(pw)) else pw], UI.FONT_BODY, c)
 	pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(pl)
-	for n in [1, 5]:
-		var b := UI.button("+%d" % n, func(): Lineage.spend_power(state, n); main.refresh())
-		b.disabled = state.stat_points < n
-		b.tooltip_text = "Put %d stat point%s into %s (each is worth %.2f)" % [n, "" if n == 1 else "s", p["name"], Races.POWER_POINT]
+	# Fable r5 #8: say what the buttons spend; none at all while there are no points
+	for n in ([1, 5] if state.stat_points > 0 else []):
+		var b := UI.button("Spend %d" % n, func(): Lineage.spend_power(state, n); main.refresh())
+		UI.why(b, "" if state.stat_points >= n else "You have %d stat point%s." % [state.stat_points, "" if state.stat_points == 1 else "s"])
+		if state.stat_points >= n:
+			b.tooltip_text = "Put %d stat point%s into %s (each is worth %.2f)" % [n, "" if n == 1 else "s", p["name"], Races.POWER_POINT]
 		row.add_child(b)
+	v.add_child(UI.label(("stat points → %s (%.2f each)" % [p["name"], Races.POWER_POINT]) if state.stat_points > 0 else "Level up to get stat points to spend here.", UI.FONT_BODY, UI.DIM))
 	var bar := UI.bar(c, 10)
 	bar.max_value = float(nr["power"]) if not nr.is_empty() else maxf(1.0, pw)
 	bar.value = minf(pw, bar.max_value)
@@ -85,7 +88,7 @@ func _power_card() -> void:
 		", and an Angel who falls too far never rises again" if r == "Angel" else ""]
 	v.add_child(fl)
 	var how := UI.rich(UI.FONT_BODY)
-	how.text = "[color=%s]%s Every 10 points: %s[/color]" % [UI.hex(UI.DIM), p["how"], Classes.bonus_text(Races.power_bonus(r, 10.0))]
+	how.text = "[color=%s]%s Every 100 points: %s[/color]" % [UI.hex(UI.DIM), p["how"], Classes.bonus_text(Races.power_bonus(r, 100.0))]   # (per 10 rounded to +0%)
 	v.add_child(how)
 
 # ---------- Awakening ----------

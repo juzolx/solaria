@@ -1,6 +1,6 @@
 class_name MailTab
 extends ScrollContainer
-## Town > Mailbox: letters with rewards (bounties, deeds, news and gifts).
+## Town › Mailbox: letters with rewards (bounties, deeds, news and gifts).
 ## Each letter shows its gear as pictures. Collect takes what fits your bag;
 ## anything that doesn't fit waits in the letter. Mail is always safe.
 
@@ -25,14 +25,15 @@ func refresh() -> void:
 	OnlineUI.clear(box)
 	var head := UI.hbox(8)
 	box.add_child(head)
-	var title := UI.heading("Mailbox")
+	var title := Control.new()   # Fable r5 #13: the bar above already says "Mailbox"
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
 	var waiting := Mail.waiting(g)
 	var all := UI.primary("Collect all (%d)" % waiting, _collect_all, UI.GREEN)
-	all.disabled = waiting == 0
+	all.visible = waiting > 0   # Fable r4: no dead gold button
 	head.add_child(all)
-	var note := UI.label("Rewards from bounties, deeds and gifts arrive here. Mail is always safe: it can't be lost in the dungeon. Gear that doesn't fit in your bag (%d / %d) waits in its letter." % [g.bag.size(), g.bag_capacity()], UI.FONT_BODY, UI.DIM)
+	# Fable r4 #13: one line; the bag sentence only when the bag is full
+	var note := UI.label("Mail is safe: it can't be lost in the dungeon." + (" Gear that doesn't fit in your bag (%d / %d) waits in its letter." % [g.bag.size(), g.bag_capacity()] if g.bag.size() >= g.bag_capacity() else ""), UI.FONT_BODY, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(note)
 	if g.mail.is_empty():
@@ -77,7 +78,7 @@ func _letter(l: Dictionary) -> PanelContainer:
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(t)
-	var when := Time.get_date_string_from_unix_time(int(l.get("time", 0)))
+	var when := UI.when(int(l.get("time", 0)))   # Fable r5 #15: "today", not "2026-10-26"
 	top.add_child(UI.label(when, UI.FONT_BODY, UI.DIM))
 	v.add_child(UI.label("From: %s" % l["from"], UI.FONT_BODY, UI.DIM))
 	var body := UI.label(String(l["body"]), UI.FONT_BODY, UI.TEXT if not empty else UI.DIM)
@@ -105,9 +106,7 @@ func _letter(l: Dictionary) -> PanelContainer:
 	var b := UI.primary("Bag full" if full else "Collect", _collect.bind(id), UI.GREEN)
 	b.custom_minimum_size = Vector2(120, UI.TAP)
 	b.size_flags_horizontal = Control.SIZE_SHRINK_END
-	b.disabled = full
-	if full:
-		b.tooltip_text = "Sell, salvage or stash something to make room. The gear waits here."
+	UI.why(b, "Your bag is full. Sell, salvage or stash something; the gear waits here." if full else "")
 	v.add_child(b)
 	return card
 

@@ -1,6 +1,6 @@
 class_name BestiaryTab
 extends BoxContainer   # a row on wide screens, stacked on phones (refresh sets vertical)
-## Codex > Bestiary: every creature, zone by zone. Ones you haven't met are
+## Codex › Bestiary: every creature, zone by zone. Ones you haven't met are
 ## "???". Once you've met one you see its lore, your kills, the gear it likes
 ## to drop and the real drop odds. Its Signature item stays a secret until
 ## you find it.
@@ -100,7 +100,8 @@ func refresh() -> void:
 	list.same_column_width = stacked
 	(get_child(1) as Control).size_flags_vertical = Control.SIZE_EXPAND_FILL   # the plate and its text
 	# ...and the plate as tall as the tallest boss (121 rows) at 2 screen px: 326 design on an SE
-	backdrop.custom_minimum_size.y = maxf(PLATE, ceilf(TALLEST * 2.0 / _screen_scale()) + 2.0)
+	# (+10: the 8 px padding under the feet, fable r5: the tallest overhung the plate's top)
+	backdrop.custom_minimum_size.y = maxf(PLATE, ceilf(TALLEST * 2.0 / _screen_scale()) + 10.0)
 	list.clear()
 	keys.clear()
 	# Icons are a head crop shown 1:1 on screen (fable r1: whole 76 px monsters squeezed to 22 px were blobs)
@@ -111,7 +112,7 @@ func refresh() -> void:
 		var z: Dictionary = GameData.ZONES[zi]
 		var h := list.add_item(str(z["name"]))
 		list.set_item_selectable(h, false)
-		list.set_item_custom_fg_color(h, Color(z["color"]).lightened(0.4))
+		list.set_item_custom_fg_color(h, UI.DIM)   # Fable r3 #13: region names are labels, not entries
 		keys.append("")
 		var ids: Array = []  # monster ids (names are only shown)
 		for e in z["enemies"]:
@@ -136,9 +137,9 @@ func refresh() -> void:
 			if n == selected:
 				list.select(i)
 	# fable r4: the ten Calamities get their page too, after the last zone (slain ones lit)
-	var ch := list.add_item("CALAMITIES")
+	var ch := list.add_item("Calamities")
 	list.set_item_selectable(ch, false)
-	list.set_item_custom_fg_color(ch, Color("#ff6b6b"))
+	list.set_item_custom_fg_color(ch, UI.DIM)
 	keys.append("")
 	for ci in Calamity.LIST.size():
 		var ck := String(Calamity.info(ci)[1])
@@ -207,7 +208,7 @@ func _show() -> void:
 	var kills := int(e["kills"])
 	var dim := UI.hex(UI.DIM)
 	var lines: Array = []
-	lines.append("[font_size=18][color=#e8b14a]%s[/color][/font_size]" % Monsters.name_of(selected))
+	lines.append("[font_size=%d][color=#e8b14a]%s[/color][/font_size]" % [UI.FONT_TITLE, Monsters.name_of(selected)])
 	if not home.is_empty():
 		var z: Dictionary = GameData.ZONES[int(home["zone"])]
 		var first := int(home["zone"]) * GameData.ZONE_FLOORS + 1
@@ -301,12 +302,12 @@ func _show_calamity(ci: int) -> void:
 	if rec.is_empty():
 		pic.texture = art.get("white", null)
 		pic.modulate = Color(0.5, 0.48, 0.6)
-		lines.append("[font_size=18][color=#ff6b6b]???[/color][/font_size]")
+		lines.append("[color=#ff6b6b]???[/color]")
 		lines.append("[color=%s]A Calamity: it waits somewhere in region %d. About 1 fight in 20,000 is one.[/color]" % [dim, ci + 1])
 	else:
 		pic.texture = _lit_pic(String(c[1]), art, 9)
 		pic.modulate = Color.WHITE
-		lines.append("[font_size=18][color=#ff6b6b]%s[/color][/font_size]" % c[0])
+		lines.append("[color=#ff6b6b]%s[/color]" % c[0])
 		lines.append("[color=%s]Slain by %s, %s. It never comes back.[/color]" % [dim, rec.get("hero", "?"), rec.get("date", "?")])
 		lines.append("[i]%s[/i]" % c[3])
 		lines.append("")
@@ -341,7 +342,10 @@ func _num(n: int) -> String:
 
 ## Screen pixels per design pixel (the window's stretch factor).
 func _screen_scale() -> float:
-	var sc := PixelPic.stretch(self) if is_inside_tree() else 1.0   # the window's stretch, not the canvas
+	# the window's stretch, not the canvas; main's until this tab is in the tree (fable r5: the
+	# first refresh read 1.0 and kept the wide list's "[Boss]" tag on an SE)
+	var at: Node = self if is_inside_tree() else main
+	var sc := PixelPic.stretch(at) if at is CanvasItem and at.is_inside_tree() else 1.0
 	return sc if sc > 0.01 else 1.0
 
 ## Puts the monster on the plate at a whole number of screen pixels per art pixel
@@ -351,6 +355,7 @@ func _place_pic() -> void:
 		return
 	var sc := _screen_scale()
 	var room := backdrop.size * sc   # the picture may reach the plate's padding (fable r4)
+	room.y -= 8.0 * sc   # ...but not over its top (the feet stand 8 px up, below)
 	var k := maxf(1.0, floorf(minf(room.x / pic_size.x, room.y / pic_size.y)))
 	# Commons never outsize the bosses (2x on a phone): one scale for the whole Bestiary
 	k = minf(k, float(maxi(2, ArtStyle.unit(sc) - 1)))

@@ -33,6 +33,8 @@ func _initialize() -> void:
 				c.queue_free()
 		st.floor_num = zone * GameData.ZONE_FLOORS + 12
 		st.room_count = rc
+		st.room_props = []   # a plain room: no event left in the save (a rift stood in the middle door)
+		st.room_trap = {}
 		st.exploring = true
 		st.in_town = false
 		main._room_ready = true
@@ -48,7 +50,28 @@ func _initialize() -> void:
 		seen[label] = true
 		await create_timer(0.8).timeout   # let the rebuilt room render before the shot
 		await RenderingServer.frame_post_draw
-		root.get_texture().get_image().save_png(out.path_join("z%d_%s.png" % [zone, label.replace(" ", "_")]))
+		var img := root.get_texture().get_image()
+		img.save_png(out.path_join("z%d_%s.png" % [zone, label.replace(" ", "_")]))
+		if rv.scene.r3 and rv.scene.r3.pool_mat:
+			# the Flooded Depths pool reads as water: its rim colour shows inside its spot (Fable dungeon r5)
+			# canvas (design) px to the image's screen px
+			var xf := Transform2D.IDENTITY.scaled(Vector2.ONE * float(img.get_width()) / root.get_visible_rect().size.x) * rv.get_global_transform_with_canvas()
+			var a := xf * rv.scene.proj(1.0, HallsScene.FLOOR_Y, 3.8)
+			var b := xf * rv.scene.proj(3.0, HallsScene.FLOOR_Y, 4.8)
+			var rim := Color("#4fb0c6")
+			var n := 0
+			for y in range(int(minf(a.y, b.y)), int(maxf(a.y, b.y)) + 1):
+				for x in range(int(minf(a.x, b.x)), int(maxf(a.x, b.x)) + 1):
+					if x >= 0 and y >= 0 and x < img.get_width() and y < img.get_height():
+						var c := img.get_pixel(x, y)
+						n += 1 if Vector3(c.r - rim.r, c.g - rim.g, c.b - rim.b).length() < 0.1 else 0
+			var u := ArtStyle.unit(HallsScene.screen_scale(rv))
+			var texels := n / (u * u)   # art pixels, the same on every phone
+			print("z%d %s: pool rim texels %d" % [zone, label, texels])
+			if texels < 8:
+				push_error("z%d %s: the pool barely shows (%d rim texels, want 8+)" % [zone, label, texels])
+				quit(1)
+				return
 		print("z%d room %d: %s" % [zone, rc, label])
 	print("HALLS SHOTS DONE")
 	quit()

@@ -1,6 +1,6 @@
 class_name BountyTab
 extends ScrollContainer
-## Town > Bounty Board: monster contracts for the zone you're in. Each posting
+## Town › Bounty Board: monster contracts for the zone you're in. Each posting
 ## shows its reward up front (gold, gear, or a weapon for your class). Take up to
 ## Town.MAX_TAKEN and hunt in the dungeon; the reward is mailed the moment you finish.
 
@@ -26,16 +26,17 @@ func refresh() -> void:
 	OnlineUI.clear(box)
 	var head := UI.hbox(8)
 	box.add_child(head)
-	var title := UI.heading("Bounty Board  -  %s" % String(GameData.zone_for_floor(maxi(1, g.floor_num))["name"]))
+	var title := UI.heading("Contracts in %s" % String(GameData.zone_for_floor(maxi(1, g.floor_num))["name"]))   # Fable r5 #13: the bar names the board
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
-	var reroll := UI.button("Repost · %dg" % Town.reroll_cost(g), func():
+	var reroll := UI.button(UI.cost("Repost", Town.reroll_cost(g)), func():
 		if Town.reroll(g):
 			main.sfx.play("buy")
 		shown = ""
 		main.refresh())
-	reroll.disabled = g.gold < Town.reroll_cost(g)
-	reroll.tooltip_text = "Replace the postings you haven't taken. They also change every day."
+	UI.why(reroll, UI.need_gold(g.gold, Town.reroll_cost(g)))
+	if not UI.blocked(reroll):
+		reroll.tooltip_text = "Replace the postings you haven't taken. They also change every day."
 	head.add_child(reroll)
 	var taken: Array = []
 	var posted: Array = []
@@ -109,6 +110,6 @@ func _card(c: Dictionary, taken: bool) -> PanelContainer:
 			shown = ""
 			main.refresh(), accent)
 		take.custom_minimum_size = Vector2(100, UI.TAP)
-		take.disabled = Town.taken_count(g) >= Town.max_taken()
+		UI.why(take, "You have %d contracts already. Finish one first." % Town.max_taken() if Town.taken_count(g) >= Town.max_taken() else "")
 		right.add_child(take)
 	return card

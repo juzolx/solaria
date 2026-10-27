@@ -1,6 +1,6 @@
 class_name PartyTab
 extends ScrollContainer
-## Character > Party: bring your other Regular heroes along. They fight with
+## Hero › Party: bring your other Regular heroes along. They fight with
 ## their own gear and skills, earn XP with you, and share your skill book.
 
 var main
@@ -53,7 +53,7 @@ func refresh() -> void:
 		options.append([n, meta])
 	box.add_child(UI.heading("Bring along"))
 	if options.is_empty():
-		var t := UI.label("No other Regular heroes yet. Make more from the title screen: each town holds up to %d heroes." % GameData.MAX_HEROES, UI.FONT_BODY, UI.DIM)
+		var t := UI.label("No other Regular heroes yet. Recruit more at Town › Inn. %s" % main.profile.recruit_note(), UI.FONT_BODY, UI.DIM)   # Fable r5 #6
 		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(t)
 	for o in options:

@@ -663,7 +663,7 @@ func gain_stone(id: String, from_text := "") -> void:
 		skill_book[id] = 1
 		say("[color=#c4b5fd]Ability stone%s:[/color] you learned %s!" % [from_text, name_tag])
 		events.append({"type": "stone", "name": s["name"], "rarity": int(s["rarity"]), "new": true})
-		tip("stones", "An ability stone! New skills go in your Skill Book (Character > Skills). Equip up to 3 active and 5 passive skills.")
+		tip("stones", "An ability stone! New skills go in your Skill Book (Hero › Skills). Equip up to 3 active and 5 passive skills.")
 		_page("skills")
 		if equip_skill(id) and SkillData.is_active(id):
 			say("%s is equipped." % s["name"])
@@ -785,7 +785,7 @@ func _check_spec() -> void:
 		class_told = t
 		events.append({"type": "class_pick", "tier": t})
 		say("[color=#e8b14a]Level %d: choose your next class in the Class tab![/color]" % int(ClassTree.PICK_LEVELS[t]))
-		tip("class_pick_%d" % t, "Your class can evolve! Open Character > Class and choose where your Evolution Tree goes.")
+		tip("class_pick_%d" % t, "Your class can evolve! Open Hero › Class and choose where your Evolution Tree goes.")
 
 ## What a stat would be if this item were worn instead of the current one.
 func stat_if_equipped(item: Dictionary) -> int:
@@ -980,7 +980,7 @@ func choose_class(class_name_picked: String) -> void:
 	hero_hp = get_max_hp()
 	say("You are a [color=%s]%s[/color]!" % [info["color"], hero_class])
 	var first: String = info["start"][0]
-	tip("ability", "%s is your first skill: %s Press it when it's ready, or leave Auto on. Monsters drop ability stones with more skills." % [SkillData.skill_name(first), SkillData.info(first)["text"]])
+	tip("ability", "%s is your first skill: %s Tap it when it's ready, or leave Auto on. Monsters drop ability stones with more skills." % [SkillData.skill_name(first), SkillData.info(first)["text"]])
 	_page("abilities")
 	save_game()
 
@@ -1226,11 +1226,11 @@ func gain_xp(amount: int) -> void:
 		if auto_stats:
 			auto_spend()
 		else:
-			tip("level", "Level up! You got %d stat points. Spend them in Character > Hero, or turn on Auto to follow your class's build." % GameData.STAT_POINTS_PER_LEVEL)
+			tip("level", "Level up! You got %d stat points. Spend them in the Hero page, or turn on Auto to follow your class's build." % GameData.STAT_POINTS_PER_LEVEL)
 		if level in SkillData.ACTIVE_SLOTS_AT or level in SkillData.PASSIVE_SLOTS_AT:
 			var kind := "active" if level in SkillData.ACTIVE_SLOTS_AT else "passive"
 			say("[color=#c4b5fd]A new %s skill slot is open![/color]" % kind)
-			tip("slot_%d" % level, "Level %d: a new %s skill slot! Equip another skill in Character > Skills." % [level, kind])
+			tip("slot_%d" % level, "Level %d: a new %s skill slot! Equip another skill in Hero › Skills." % [level, kind])
 			_fill_empty_slots()
 		if level == 2:
 			_page("stats")
@@ -2295,7 +2295,7 @@ func _maybe_find_pack(was_boss: bool) -> void:
 func _death_losses() -> String:
 	var parts: Array = []
 	if gold > 0:
-		parts.append("%d gold" % gold)
+		parts.append("%s gold" % UI._commas(gold))
 		gold = 0
 	var kept: Array[Dictionary] = []
 	var lost_items := 0
@@ -2426,7 +2426,7 @@ func _give_item(item: Dictionary) -> void:
 		var s := GameData.scrap_value(item, scrap_mult())
 		scrap += s
 		say("Bag overflowing! Salvaged %s (+%d scrap)" % [_tag(item), s])
-		tip("bag_full", "Your bag is past its limit, so new drops turn into scrap. Sell or salvage items in the Bag tab to make room.")
+		tip("bag_full", "Your bag is past its limit, so new drops turn into scrap. Sell or salvage items in Items › Bag to make room.")
 	else:
 		if keep and not Church.is_cursed(item):
 			item["locked"] = true  # never lose a unique by accident
@@ -2439,9 +2439,9 @@ func _give_item(item: Dictionary) -> void:
 			events.append({"type": "toast", "text": "Your bag is full! New drops still come in, but you'll have to sell or salvage to use them."})
 			events.append({"type": "bag_full"})
 		if r == GameData.LEGENDARY:
-			tip("legendary", "A Legendary! Every Legendary has a special effect. Check it in the Bag or Gear tab.")
+			tip("legendary", "A Legendary! Every Legendary has a special effect. Check it in Items › Bag.")
 		if has_upgrade(item["slot"]):
-			tip("first_upgrade", "That's an upgrade! Press Equip Best in the Gear tab to put it on.")
+			tip("first_upgrade", "That's an upgrade! Tap Equip Best in Items › Gear to put it on.")
 
 # =====================================================================
 # Codex: achievements and guide pages
@@ -3690,7 +3690,7 @@ func _convert_stats(data: Dictionary) -> void:
 	stat_points = maxi(0, total - used)
 	var back := int(round(old_unique * sc))
 	if f < 1.0 or back > 0 or stat_points > 0:
-		say("[color=#e8b14a]New stats! Agility was split into Agility and Dexterity, and Wisdom, Luck and Charisma are new.[/color] You have %d points to spend in Character > Hero." % stat_points)
+		say("[color=#e8b14a]New stats! Agility was split into Agility and Dexterity, and Wisdom, Luck and Charisma are new.[/color] You have %d points to spend in the Hero page." % stat_points)
 	else:
 		say("[color=#e8b14a]New stats! Agility was split into Agility and Dexterity, and Wisdom, Luck and Charisma are new.[/color]")
 
@@ -4218,7 +4218,7 @@ func use_scroll(id: String) -> String:
 			return _open_box()
 		"tome":
 			respec_tomes += 1
-			return "[color=#c4b5fd]Tome of Forgetting![/color] Your next respec is free (Character > Hero)."
+			return "[color=#c4b5fd]Tome of Forgetting![/color] Your next respec is free (the Hero page)."
 	return ""
 
 func _open_box() -> String:

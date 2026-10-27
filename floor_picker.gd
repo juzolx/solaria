@@ -9,6 +9,7 @@ var state: GameState
 var zone_shown := 0
 var rows: VBoxContainer
 var zone_bar: HFlowContainer
+var zone_head: Control   # Fable r5 #18: "Zone" over the chips, both only once there are two zones
 var boss_buttons := {}  # floor -> Button (negative floor = the big "Fight" button)
 var tick := Timer.new()
 var from_town := false   # picking where to go down to from town (main._leave_town)
@@ -32,7 +33,9 @@ func show_from_town(main_node) -> void:
 func show_for(main_node) -> void:
 	m = main_node
 	state = m.state
-	open(m, "Into the dungeon: choose your floor" if from_town else "Choose a floor", 780.0)
+	open(m, "Into the dungeon" if from_town else "Choose a floor", 780.0)
+	if from_town:
+		content.add_child(UI.label("Choose your floor", UI.FONT_BODY, UI.DIM))
 	if from_town:
 		var start_head := UI.heading("Start from")
 		UI.tip(start_head, "Dives start at a checkpoint: floor 1, or the floor after any boss you've beaten (26, 51, 76...). Bright floors are checkpoints you can start from.")
@@ -80,7 +83,7 @@ func show_for(main_node) -> void:
 		content.add_child(carry_note)
 		carry_head = gold_head
 		# 2.1: quick swap to a saved preset (gear, skills, team, supplies) right before the dive
-		content.add_child(UI.heading("Preset"))
+		# (no heading: with no saved preset it sat over a lone "Presets..." button, Fable r4 #8)
 		preset_box = GridContainer.new()
 		preset_box.columns = 2
 		preset_box.add_theme_constant_override("h_separation", 8)
@@ -103,10 +106,10 @@ func show_for(main_node) -> void:
 		content.add_child(supply_box)
 		_fill_team()
 		_fill_supplies()
-		risk_note = UI.label("", UI.FONT_BODY, Color("#fca5a5"))
-		risk_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		UI.tip(risk_note, "Bound items are always safe. Fall, and the gear plus half that gold wait in your grave on that floor, guarded by your killer; potions, scrolls and elixirs you carry are lost.")
+		risk_note = UI.label("", UI.FONT_BODY, Color("#fca5a5"))   # the count lives in the Dive button now
+		risk_note.visible = false
 		content.add_child(risk_note)
+		UI.tip(dive_button, "Bound items are always safe. Fall, and the gear plus half that gold wait in your grave on that floor, guarded by your killer; potions, scrolls and elixirs you carry are lost.")
 		_show_carry()
 	var sub := UI.rich(UI.FONT_BODY)
 	if from_town:
@@ -117,8 +120,9 @@ func show_for(main_node) -> void:
 	if World.curses_unlocked(state):
 		var cb := UI.button("Curses (%d on): harder climb, better loot" % state.curses.size(), func(): curses_popup(m))
 		cb.custom_minimum_size = Vector2(0, UI.TAP)
-		cb.add_theme_color_override("font_color", UI.PURPLE)
 		content.add_child(cb)
+	zone_head = UI.heading("Zone")
+	content.add_child(zone_head)
 	zone_bar = HFlowContainer.new()
 	zone_bar.add_theme_constant_override("h_separation", 6)
 	zone_bar.add_theme_constant_override("v_separation", 6)
@@ -144,12 +148,14 @@ func _zone_block(f: int) -> int:
 func _build() -> void:
 	OnlineUI.clear(zone_bar)
 	var blocks := _zone_block(state.best_floor) + 1
+	zone_head.visible = blocks > 1
+	zone_bar.visible = blocks > 1
 	for zb in blocks:
 		var first := zb * GameData.ZONE_FLOORS + 1
 		var zone := GameData.zone_for_floor(first)
 		var b := UI.button(GameData.rank_prefix(first) + str(zone["name"]), _show_zone.bind(zb))
-		if zb == zone_shown:
-			b.add_theme_stylebox_override("normal", UI.style(Color(zone["color"]).darkened(0.5), Color(zone["color"]).lightened(0.3), 6, 4, 2))
+		b.custom_minimum_size = Vector2(0, UI.BUTTON_H)
+		UI.chip_look(b, zb == zone_shown)
 		zone_bar.add_child(b)
 	OnlineUI.clear(rows)
 	boss_buttons.clear()
@@ -184,7 +190,6 @@ func _build() -> void:
 		for f in range(start, start + GameData.SUB_FLOORS):
 			var b := UI.button(str(f), _pick_floor.bind(f) if from_town else _go.bind(f))
 			b.custom_minimum_size = Vector2(56, UI.BUTTON_H)   # Fable r2 #8: was 44x36
-			b.disabled = not _allowed(f)
 			if GameData.is_boss_floor(f):
 				b.add_theme_stylebox_override("normal", UI.style(Color("#3a1414"), UI.RED, 6, 4))
 				b.add_theme_stylebox_override("hover", UI.style(Color("#4d1a1a"), Color("#fca5a5"), 6, 4))
@@ -195,6 +200,7 @@ func _build() -> void:
 				b.add_theme_stylebox_override("normal", UI.style(Color("#2a2010"), UI.GOLD, 6, 4, 3))
 				b.add_theme_color_override("font_color", UI.GOLD)
 				b.tooltip_text = "Dive here" if from_town else "You are here"
+			UI.why(b, _why_not(f))
 			floors_box.add_child(b)
 	# Quick buttons for the zone's two bosses
 	var bosses := UI.hbox(8)
@@ -219,7 +225,17 @@ func _update_cooldowns() -> void:
 			b.text = ("Fight %s" % GameData.boss_name(f)) + ("  (resting %ds)" % cd if cd > 0 else "")
 		else:
 			b.text = str(f) if cd <= 0 else "%ds" % cd
-		b.disabled = cd > 0 or not _allowed(f)
+		UI.why(b, _why_not(f, cd))   # Fable r5 #4: a tap on a closed floor says why
+
+## Why floor f can't be picked right now ("" when it can).
+func _why_not(f: int, cd := 0) -> String:
+	if cd > 0:
+		return "%s is resting: back in %ds." % [GameData.boss_name(f), cd]
+	if _allowed(f):
+		return ""
+	if from_town:
+		return "Dives start at a checkpoint: floor 1, or the floor after a boss you've beaten."
+	return "You haven't reached floor %d yet." % f
 
 ## The deepest checkpoint you can start a dive from: just past the last boss you beat.
 func last_start() -> int:
@@ -265,10 +281,25 @@ func _pick_floor(f: int) -> void:
 	_build()
 	_show_dive()
 
+## Worn and carried gear that isn't bound: what waits in your grave if you fall.
+func _items_at_risk() -> int:
+	var n := 0
+	for s in state.equipped:
+		if not GameState.is_bound(state.equipped[s]):
+			n += 1
+	return n + state.bag.filter(func(it): return not GameState.is_bound(it)).size()
+
 func _show_dive() -> void:
 	if dive_button == null:
 		return
-	dive_button.text = "Dive · floor %d · %d gold at risk" % [dive_floor, Town.carry_amount(state, state.carry_pick)]
+	var gold := Town.carry_amount(state, state.carry_pick)
+	var items := _items_at_risk()
+	var risk: Array = []
+	if gold > 0:
+		risk.append("%s gold" % UI._commas(gold))
+	if items > 0:
+		risk.append("%d item%s" % [items, "" if items == 1 else "s"])
+	dive_button.text = "Dive · floor %d · %s" % [dive_floor, (" + ".join(risk) + " at risk") if not risk.is_empty() else "nothing at risk"]
 	for f in quick_buttons:
 		(quick_buttons[f] as Button).set_pressed_no_signal(int(f) == dive_floor)
 
@@ -335,7 +366,6 @@ func _fill_presets() -> void:
 	var edit := UI.button("Presets...", func(): PresetsScreen.new().show_for(m, _after_presets))
 	edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	edit.custom_minimum_size = Vector2(0, UI.TAP)
-	edit.add_theme_color_override("font_color", UI.TEAL)
 	preset_box.add_child(edit)
 
 func _use_preset(i: int) -> void:
@@ -367,7 +397,7 @@ func _fill_team() -> void:
 		var tp := TextureRect.new()
 		tp.texture = Sprites.portrait(hg.appearance, hg.hero_looks())
 		tp.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		tp.custom_minimum_size = Vector2(40, 40)
+		tp.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT)   # whole pixels (was squeezed into 40 px; Fable r4 #8)
 		tp.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tp.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		h.add_child(tp)
@@ -380,8 +410,9 @@ func _fill_team() -> void:
 			state.set_row(String(r[0]), "back" if row == "front" else "front")
 			m.sfx.play("click")
 			_fill_team())
-		rb.add_theme_color_override("font_color", UI.GOLD if row == "front" else UI.BLUE)
+		rb.add_theme_color_override("font_color", UI.GOLD if row == "front" else UI.TEXT)
 		rb.tooltip_text = "Tap to move between the front and back row"
+		rb.visible = rows.size() > 1   # Fable r5 #18: no row to pick when you go alone
 		h.add_child(rb)
 		if int(r[3]) > 0:
 			h.add_child(UI.button("Leave", func():
@@ -432,16 +463,18 @@ func _fill_supplies() -> void:
 			state.move_supply(key, -1)
 			_fill_supplies()
 			_show_carry())
-		minus.disabled = carried <= 0
-		minus.tooltip_text = "Leave one at home (safe)"
+		UI.why(minus, "" if carried > 0 else "You aren't taking any.")
+		if carried > 0:
+			minus.tooltip_text = "Leave one at home (safe)"
 		minus.custom_minimum_size = Vector2(UI.TAP, UI.TAP)
 		h.add_child(minus)
 		var plus := UI.button("+", func():
 			state.move_supply(key, 1)
 			_fill_supplies()
 			_show_carry())
-		plus.disabled = home <= 0
-		plus.tooltip_text = "Take one down with you"
+		UI.why(plus, "" if home > 0 else "None at home. Buy more in town.")
+		if home > 0:
+			plus.tooltip_text = "Take one down with you"
 		plus.custom_minimum_size = Vector2(UI.TAP, UI.TAP)
 		h.add_child(plus)
 	if state.supply_home("potion") + state.potions == 0:

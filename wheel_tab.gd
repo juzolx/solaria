@@ -1,6 +1,6 @@
 class_name WheelTab
 extends BoxContainer
-## Town > Tavern: Fortune's Wheel. Put an item on it: win and it comes back one
+## Town › Tavern: Fortune's Wheel. Put an item on it: win and it comes back one
 ## rarity higher, lose and it's gone for good. Rarer items have worse odds.
 ## Legendary and better, and locked items, can't go on the wheel.
 
@@ -82,7 +82,8 @@ class Wheel:
 		draw_colored_polygon(ptr, Color("#feae34"))
 		draw_polyline(ptr + PackedVector2Array([ptr[0]]), UiSkin.SOOT, 2.0)
 		var font := UI.game_font()   # interface pass: the game font everywhere
-		draw_string(font, Vector2(0, size.y - 4), "%d%% win" % chance, HORIZONTAL_ALIGNMENT_CENTER, size.x, UI.MIN_FONT, UI.GREEN)
+		if chance > 0:   # Fable r5 #14: no "0% win" before an item is picked
+			draw_string(font, Vector2(0, size.y - 4), "%d%% win" % chance, HORIZONTAL_ALIGNMENT_CENTER, size.x, UI.MIN_FONT, UI.GREEN)
 
 func setup(m) -> void:
 	main = m
@@ -267,7 +268,7 @@ func _update() -> void:
 			selected_id = -1
 			wheel.chance = 0
 			info.text = "[color=%s]Pick an item to spin for.[/color]" % UI.hex(UI.DIM)
-			spin_button.disabled = true
+			UI.why(spin_button, "Pick an item from your bag first.")
 			spin_button.text = "Spin!"
 		wheel.queue_redraw()
 		return
@@ -277,8 +278,11 @@ func _update() -> void:
 	var fee := GameData.gamble_fee(item)
 	info.text = "[color=%s]%s[/color]\n[color=#4ade80]%d%%[/color] to become [color=%s]%s[/color]\n[color=#f87171]%d%%[/color] to lose it\nFee: %d gold" % [
 		GameData.color_of(r), GameData.display_name(item), wheel.chance, GameData.color_of(r + 1), GameData.RARITY_NAMES[r + 1], 100 - wheel.chance, fee]
-	spin_button.disabled = spinning or state.gold < fee
-	spin_button.text = "Spin! (%d gold)" % fee
+	if spinning:
+		spin_button.disabled = true
+	else:
+		UI.why(spin_button, UI.need_gold(state.gold, fee))
+	spin_button.text = UI.cost("Spin!", fee)
 	wheel.queue_redraw()
 
 func _spin() -> void:
@@ -399,8 +403,11 @@ func _update_high() -> void:
 			minis.append(w)
 	info.text = "[color=%s]Tap items to load them onto wheels (up to %d).[/color]" % [UI.hex(UI.DIM), wheel_cap()] if items.is_empty() else \
 		"%d wheel%s loaded  -  fee %d gold\n[color=%s]If every wheel wins, you also win the fees back %dx.[/color]" % [items.size(), "" if items.size() == 1 else "s", fee, UI.hex(UI.DIM), items.size()]
-	spin_button.text = "Spin %d wheel%s! (%d gold)" % [items.size(), "" if items.size() == 1 else "s", fee] if not items.is_empty() else "Spin!"
-	spin_button.disabled = spinning or items.is_empty() or state.gold < fee
+	spin_button.text = UI.cost("Spin %d wheel%s!" % [items.size(), "" if items.size() == 1 else "s"], fee) if not items.is_empty() else "Spin!"
+	if spinning:
+		spin_button.disabled = true
+	else:
+		UI.why(spin_button, "Tap items to load them first." if items.is_empty() else UI.need_gold(state.gold, fee))
 
 func _spin_time() -> float:
 	return maxf(0.6, 1.5 - 0.15 * float(heat))
@@ -486,15 +493,18 @@ func _toggle_leg() -> void:
 func _update_leg() -> void:
 	if not WheelTables.legendary_unlocked(state):
 		leg_info.text = "[color=%s]%s[/color]\n[color=%s]Pay gold for one spin and win one prize. The top prizes almost never come up; Luck and goblin builds raise their odds. Tap Odds to see every prize.[/color]" % [UI.hex(UI.RED), WheelTables.lock_text(state), UI.hex(UI.DIM)]
-		spin_button.disabled = true
+		UI.why(spin_button, WheelTables.lock_text(state))
 		spin_button.text = "Locked (floor %d)" % WheelTables.LEGENDARY_UNLOCK_FLOOR
 		return
 	var fort := WheelTables.fortune(state)
 	var cost := WheelTables.spin_cost(state)
 	leg_info.text = "One spin, one prize. Spins cost gold you found in the dungeon.\nYour Fortune: [color=#facc15]%d[/color]  (Luck and goblin builds)\nTop prizes: [color=#facc15]%s[/color]  [color=%s](base %s)[/color]" % [
 		int(fort), WheelTables.pct_text(WheelTables.top_pct(fort)), UI.hex(UI.DIM), WheelTables.pct_text(WheelTables.top_pct(0.0))]
-	spin_button.disabled = spinning or state.gold < cost
-	spin_button.text = "Spin! (%s gold)" % UI.short(cost)
+	if spinning:
+		spin_button.disabled = true
+	else:
+		UI.why(spin_button, UI.need_gold(state.gold, cost))
+	spin_button.text = UI.cost("Spin!", cost)
 
 func _spin_leg() -> void:
 	if spinning:
@@ -523,7 +533,7 @@ func _spin_leg() -> void:
 ## Every prize on both tables, with your odds and the base odds. Read from
 ## WheelTables: the same numbers the Wheel rolls.
 func show_odds() -> void:
-	var o := Overlay.new().open(main, "WHEEL ODDS", 480.0, UI.GOLD)
+	var o := Overlay.new().open(main, "Wheel odds", 480.0, UI.GOLD)
 	o.content.add_child(UI.heading("Item Wheel"))
 	o.content.add_child(UI.wrap("Win: the item comes back one rarity higher. Lose: it's gone.", UI.FONT_BODY, UI.DIM))
 	var nt := UI.rich(UI.FONT_BODY)

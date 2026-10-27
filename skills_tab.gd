@@ -1,6 +1,6 @@
 class_name SkillsTab
 extends VBoxContainer
-## Character > Skills: the Skill Book. Every skill you've found from ability
+## Hero › Skills: the Skill Book. Every skill you've found from ability
 ## stones. Equip 3 active and 5 passive (slots open as you level), rank them
 ## up with duplicate stones, and craft any skill with dust.
 
@@ -124,8 +124,9 @@ func _slot_button(id: String, open: bool, need: int, active: bool, index := -1) 
 	b.clip_text = true
 	b.add_theme_font_size_override("font_size", UI.MIN_FONT)
 	if not open:
-		b.text = "Lv %d" % need
-		b.disabled = true
+		b.text = "Lv %d ›" % need   # Fable r5 #19: a tap says when it opens
+		UI.why(b, "Opens at level %d." % need, false)
+		b.add_theme_color_override("font_color", UI.DIM)
 		return b
 	# Next update: drag a skill card onto a slot to put it there; drag a slotted skill back to the book to take it off
 	Drag.wire(b, {} if id == "" else {"kind": "skill", "id": id, "from_slot": true}, null if id == "" else SkillIcons.for_tag(String(SkillData.info(id)["tags"][0])),
@@ -136,7 +137,7 @@ func _slot_button(id: String, open: bool, need: int, active: bool, index := -1) 
 			shown = ""
 			refresh())
 	if id == "":
-		b.text = "+"   # interface pass: an empty slot is a dim slate block with a +
+		b.text = "Empty"   # Fable r5 #19 (was "+"): a dim slate block that says what it is
 		b.add_theme_color_override("font_color", UI.DIM)
 		_face(b, UI.PANEL, UI.EMPTY)
 		b.pressed.connect(func():
@@ -182,9 +183,16 @@ func _passes(id: String) -> bool:
 
 func refresh() -> void:
 	dust_label.text = "Dust %d" % state.dust
+	# Fable r5 #19: tag chips only for tags you own a skill in (All / Active / Passive / Equipped always)
+	var have_tags := {}
+	for sid in state.skill_book:
+		if SkillData.SKILLS.has(sid):
+			for tg in SkillData.info(sid)["tags"]:
+				have_tags[String(tg)] = true
 	for i in filter_chips.get_child_count():
 		var c := filter_chips.get_child(i) as Button
 		var on := i == filter_pick.selected
+		c.visible = i < 4 or on or have_tags.has(filter_pick.get_item_text(i))
 		_face(c, UiSkin.SLATE if on else UI.PANEL, UI.GOLD_DULL if on else UI.EMPTY)
 		c.add_theme_color_override("font_color", UI.GOLD if on else UI.DIM)
 	var key := "%s|%s|%s|%d|%d|%d|%s" % [str(state.skill_book), str(state.active_slots), str(state.passive_slots), filter_pick.selected, state.level, state.dust, state.sig_slot]
@@ -278,7 +286,7 @@ func _popup() -> void:
 	o.foot.visible = true
 	for src: Button in [equip_button, craft_button, sell_button]:
 		var b := UI.primary(src.text, func(): o.close(); src.pressed.emit(), UI.GREEN) if src == equip_button else UI.button(src.text, func(): o.close(); src.pressed.emit())
-		b.disabled = src.disabled
+		UI.why(b, String(src.get_meta("why", "")))
 		b.tooltip_text = src.tooltip_text
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.custom_minimum_size.y = UI.TAP
@@ -288,10 +296,9 @@ func _show_detail() -> void:
 	if selected == "" or not SkillData.SKILLS.has(selected):
 		detail.text = "[color=%s]Tap a skill to see it, tap it again to equip or unequip. Skills that share a tag with your class (%s) hit %d%% harder.[/color]" % [
 			UI.hex(UI.DIM), ", ".join(state.class_info().get("tags", [])), int(Classes.AFFINITY_POWER * 100)]
-		equip_button.disabled = true
-		craft_button.disabled = true
+		for nb in [equip_button, craft_button, sell_button]:
+			UI.why(nb, "Tap a skill in your book first.")
 		craft_button.text = "Rank up"
-		sell_button.disabled = true
 		sell_button.text = "Sell"
 		return
 	var s := SkillData.info(selected)
@@ -305,19 +312,19 @@ func _show_detail() -> void:
 	detail.text = "[b]%s[/b]  [color=%s]%s %s[/color]  %s  [color=#e8b14a]Rank %d/5[/color]\n%s%s" % [
 		s["name"], SkillData.RARITY_COLORS[int(s["rarity"])], SkillData.RARITY_NAMES[int(s["rarity"])], "active" if s["kind"] == "active" else "passive",
 		" ".join(tags), r, SkillData.describe(selected, maxi(1, r)), extra]
-	equip_button.disabled = r <= 0
+	UI.why(equip_button, "Craft it first: it isn't in your book yet." if r <= 0 else "")
 	var block := state.skill_sell_block(selected)
 	sell_button.text = "Sell (%d dust)" % state.skill_sell_price(selected) if state.skill_book.has(selected) else "Sell"
-	sell_button.disabled = block != ""
-	sell_button.tooltip_text = block if block != "" else "Sell it for dust to rank up your other skills (it leaves your book)"
+	sell_button.set_meta("tip0", "Sell it for dust to rank up your other skills (it leaves your book)")
+	UI.why(sell_button, block)
 	equip_button.text = "Unequip" if state.is_skill_equipped(selected) else "Equip"
 	if r >= SkillData.MAX_RANK:
 		craft_button.text = "Max rank"
-		craft_button.disabled = true
+		UI.why(craft_button, "It's at its highest rank.")
 	else:
 		var cost := SkillData.craft_cost(selected, r)
 		craft_button.text = "%s (%d dust)" % ["Rank up" if r > 0 else "Craft", cost]
-		craft_button.disabled = state.dust < cost
+		UI.why(craft_button, "" if state.dust >= cost else "Need %d more dust." % (cost - state.dust))
 
 func _toggle_equip() -> void:
 	if selected == "" or state.skill_rank(selected) <= 0:

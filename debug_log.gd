@@ -1,7 +1,7 @@
 class_name DebugLog
 extends RefCounted
 ## R6: a small local log of errors and warnings (last MAX lines), kept on the
-## phone only so Juzo can copy it from Menu > "Copy debug info" when a TestFlight
+## phone only so Juzo can copy it from Menu › "Copy debug info" when a TestFlight
 ## build misbehaves. Nothing is ever sent anywhere (the privacy policy says no
 ## analytics): the player sees the text and decides to paste it.
 ##

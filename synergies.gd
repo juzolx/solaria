@@ -2,7 +2,7 @@ class_name Synergies
 extends RefCounted
 ## 0.13+ (Stage 3): team synergies and the Team Strike. Who you bring matters: certain
 ## mixes of classes fight better together, and a whole team builds up to a combined
-## attack. Shown in Character > Party and on the fight screen.
+## attack. Shown in Hero › Party and on the fight screen.
 
 ## id -> {name, text, test(classes) via _has}
 const LIST := {

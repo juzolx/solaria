@@ -33,6 +33,13 @@ func _reader() -> GameState:
 	g.ctrack["doors_read"] = Halls.READS_FOR_LEVEL_2
 	return g
 
+## The room's one thing for each kind (halls.gd PROP_NAMES), as the room view draws it: art, height.
+const EVENTS := ["", "chest", "altar", "nest", "npc", "traveler", "merchant", "beast", "campfire", "rift", "camp", "gate"]
+const EVENT_ART2D := {"chest": ["res://art/props/chest.png", 1.3], "altar": ["res://art/props/altar.png", 1.5],
+	"nest": ["res://art/props/nest.png", 1.3], "npc": ["res://art/people/stranger.png", 1.4], "traveler": ["res://art/people/smith.png", 1.5],
+	"beast": ["res://art/enemies/barghest.png", 1.3], "merchant": ["res://art/enemies/treasure_goblin.png", 1.4],
+	"campfire": ["res://art/props/campfire.png", 1.1], "rift": ["res://art/halls/rift_0.png", 1.9]}
+
 func _initialize() -> void:
 	# every zone: wall, floor, ceiling, door and torch; doors on the one 32x56 canvas
 	for z in 10:
@@ -98,15 +105,76 @@ func _initialize() -> void:
 			check(ArtStyle.in_palette(m[key]), "MOODS[%d] %s is a palette colour" % [z, key])
 		check(Color(GameData.ZONES[z]["color"]).is_equal_approx(m["accent"]), "%s's colour is its accent" % GameData.ZONES[z]["name"])
 
+	# round 5 (a): an unread door's frame never wears a reader's colour (danger, safe, a fight)
+	for z in 10:
+		var uf := HallsScene.unread_frame(z)
+		for c in HallsScene.READ_COLORS:
+			check(ArtStyle.oklab(uf).distance_to(ArtStyle.oklab(c)) >= 0.15, "z%d: the unread frame %s looks like the read colour %s" % [z, uf.to_html(false), (c as Color).to_html(false)])
+	# (f) neighbouring door glows never overlap (a safe and a danger glow would blend)
+	check(Room3D.GLOW_W < float(HallsScene.DOOR_X[1]) - float(HallsScene.DOOR_X[0]) - 0.02, "door glows (%.2f wide) overlap their neighbours" % Room3D.GLOW_W)
+
 	# every room of every zone, gate or not: props inside a phone's view, real art everywhere
 	Room3D.offscreen.clear()
 	Room3D.in_hero.clear()
 	var names := {}
+	var rooms_with_props := 0
 	for z in 10:
 		for s in 14:
 			var r := Room3D.new()
 			r.rebuild(z, 1000 + s * 7919, {"light": HallsScene.MOODS[z]["light"], "amb": HallsScene.ambient(z),
-				"accent": HallsScene.MOODS[z]["accent"], "kind": HallsScene.MOODS[z]["kind"], "dark": 0.4, "gate": s % 3 == 0})
+				"accent": HallsScene.MOODS[z]["accent"], "kind": HallsScene.MOODS[z]["kind"], "dark": 0.4, "gate": s % 3 == 0,
+				"small": s % 2 == 1, "event": EVENTS[s % EVENTS.size()], "torch_z": Vector2(3.9, 3.9) if s % 2 == 1 else Vector2(4.6, 4.6)})
+			# (d) round 5: far-wall torches clear the door frames and the labels, at the room's own layout
+			var flay := Vector2(488, 345) if r.small else Vector2(488, 587)
+			var fscr := 375.0 / 504.0 if r.small else 0.853
+			var fcy := flay.y * (0.28 if r.small else 0.40)
+			var ffo := 0.62 * flay.x
+			var fp := func(x: float, y: float, zz: float) -> Vector2: return Vector2(flay.x / 2.0 + ffo * x / zz, fcy - ffo * y / zz)
+			var lfont := UI.game_font()
+			for n in r.root3.get_children():
+				if not (n is Sprite3D) or (n as Sprite3D).position.z > -Room3D.RD + 0.2 or (n as Sprite3D).position.y < 0.5 or (n as Sprite3D).texture == null:
+					continue
+				var sp := n as Sprite3D
+				var sz3 := -sp.position.z
+				var hw := Room3D._half_w(sp.texture) * sp.pixel_size
+				var bot3 := sp.position.y + HallsScene.FLOOR_Y   # the art's lowest opaque row sits on its spot
+				var tl3: Vector2 = fp.call(sp.position.x - hw, bot3 + Room3D.base_height(sp.texture) * sp.pixel_size, sz3)
+				var br3: Vector2 = fp.call(sp.position.x + hw, bot3, sz3)
+				var trect := Rect2(tl3, br3 - tl3)
+				for i in 3:
+					var dx: float = HallsScene.DOOR_X[i]
+					var fr := 2.0 * Room3D.FRAME_TEXEL
+					var dtl: Vector2 = fp.call(dx - HallsScene.DOOR_W / 2.0 - fr, HallsScene.FLOOR_Y + HallsScene.DOOR_H + fr, HallsScene.D)
+					var dbr: Vector2 = fp.call(dx + HallsScene.DOOR_W / 2.0 + fr, HallsScene.FLOOR_Y, HallsScene.D)
+					check(not trect.intersects(Rect2(dtl, dbr - dtl)), "z%d %s (%s): a far torch at x %.2f is on door %d's frame" % [z, r.kind, "SE" if r.small else "430", sp.position.x, i])
+					var lfs := mini(20, int(ceilf(16.0 / fscr)))
+					var base_y := dtl.y + fr * ffo / HallsScene.D - 15.0 - (lfs if i == 1 and not r.small else 0)
+					var lrect := Rect2(fp.call(dx, 0.0, HallsScene.D).x - HallsScene.LABEL_MAX_W / 2.0, base_y - lfont.get_ascent(lfs), HallsScene.LABEL_MAX_W, lfont.get_ascent(lfs) + lfont.get_descent(lfs))
+					check(not trect.intersects(lrect), "z%d %s (%s): a far torch at x %.2f covers door %d's label" % [z, r.kind, "SE" if r.small else "430", sp.position.x, i])
+			# (c, d) every standing prop clear of the doorways and the middle, none hiding another's base
+			for i in r.standing.size():
+				var a: Array = r.standing[i]
+				check(Room3D.door_clear(a[0], a[1], a[2], a[3]), "z%d %s: %s at (%.2f, %.2f) stands in a doorway" % [z, r.kind, a[4], a[0], a[1]])
+				check(absf(a[0]) - a[2] >= Room3D.CLEAR_X - 0.001, "z%d %s: %s at (%.2f, %.2f) stands in the middle" % [z, r.kind, a[4], a[0], a[1]])
+				for j in range(i + 1, r.standing.size()):
+					check(not Room3D.stacks(a, r.standing[j]), "z%d %s: %s (%.2f, %.2f) and %s (%.2f, %.2f) stack" % [z, r.kind, a[4], a[0], a[1], r.standing[j][4], r.standing[j][0], r.standing[j][1]])
+			rooms_with_props += 1 if r.standing.size() >= 2 else 0
+			# Juzo: a fight room's props never meet the face-off monster's box (0.20..0.80 w, above 0.72 h),
+			# checked on the drawn rect at the room's own layout (the 430 phone or the SE)
+			if r.event in Room3D.FIGHT_EVENTS:
+				var lay := Vector2(504, 443) if r.small else Vector2(504, 615)
+				var cy := lay.y * (0.28 if r.small else 0.40)
+				var fo := 0.62 * lay.x
+				for a in r.standing:
+					var ax: float = a[0]
+					var az: float = a[1]
+					var pr := Rect2(lay.x / 2.0 + fo * (ax - float(a[2])) / az, cy + fo * (-HallsScene.FLOOR_Y - float(a[3])) / az, fo * 2.0 * float(a[2]) / az, fo * float(a[3]) / az)
+					check(not HallsScene.meets_monster(pr, lay), "z%d %s (%s, %s): %s at (%.2f, %.2f) meets the monster's box" % [z, r.kind, r.event, "SE" if r.small else "430", a[4], ax, az])
+			# the fight's floor stays clear where a fight can happen (monsters never overlap props)
+			if String(EVENTS[s % EVENTS.size()]) in Room3D.FIGHT_EVENTS:
+				for sp in r.standing_props():
+					var foot := Rect2(float(sp["x"]) - float(sp["w"]) / 2.0, float(sp["z"]) - 0.15, float(sp["w"]), 0.3)
+					check(not foot.intersects(Room3D.FIGHT_CLEAR), "z%d %s: %s at (%.2f, %.2f) stands on the fight's floor" % [z, r.kind, sp["art"], sp["x"], sp["z"]])
 			names[r.kind] = true
 			var lights := 0
 			var meshes := 0
@@ -162,6 +230,7 @@ func _initialize() -> void:
 			r.free()
 	check(Room3D.offscreen.is_empty(), "props a phone can't see: %s" % str(Room3D.offscreen.slice(0, 5)))
 	check(Room3D.in_hero.is_empty(), "floor art under the hero: %s" % str(Room3D.in_hero.slice(0, 5)))
+	check(rooms_with_props >= 100, "most rooms still have dressing (%d of 140 have 2+ standing props)" % rooms_with_props)
 
 
 	# the layout follows the room's one thing: an altar always gets the shrine, nothing else does
@@ -200,13 +269,25 @@ func _initialize() -> void:
 	hero.new_game()
 	hero.choose_class("Warrior")
 	se.state = hero
-	se.size = Vector2(504, 443)
 	var scr := 375.0 / 504.0
+	# round 5 (b, h): the SE's real room view is 488 wide and 345..443 tall (the hint box and log
+	# under it change its height): 40+ px of floor over the hair always, 60+ when it's 443
+	for sz_se in [Vector2(488, 345), Vector2(488, 419), Vector2(504, 443)]:
+		se.size = sz_se
+		se.scene.key = ""
+		se.scene.build(hero, se.size, scr)
+		var door_feet := se.scene.proj(0.0, HallsScene.FLOOR_Y, HallsScene.D).y
+		var head := se.leader_head_y(scr)
+		check(se.scene.small, "a %d px tall room view is a short screen" % int(sz_se.y * scr))
+		var want := 60.0 if sz_se.y >= 443.0 else RoomView.FLOOR_GAP
+		check(head - door_feet >= want, "SE %dx%d: %.0f design px between the hero's head (%.0f) and the door feet (%.0f), want %.0f" % [int(sz_se.x), int(sz_se.y), head - door_feet, head, door_feet, want])
+		# the door labels' row stays on screen
+		var dtop := se.scene.proj(0.0, HallsScene.FLOOR_Y + HallsScene.DOOR_H, HallsScene.D).y
+		var lfs2: int = HallsScene.fit_label(UI.game_font(), "?", scr)[1]
+		check(dtop - 15.0 - UI.game_font().get_ascent(lfs2) >= 0.0, "SE %dx%d: the door labels run off the top" % [int(sz_se.x), int(sz_se.y)])
+	se.size = Vector2(504, 443)
+	se.scene.key = ""
 	se.scene.build(hero, se.size, scr)
-	var door_feet := se.scene.proj(0.0, HallsScene.FLOOR_Y, HallsScene.D).y
-	var head := se.leader_head_y(scr)
-	check(se.scene.small, "a 330 px tall room view is a short screen")
-	check(head - door_feet >= 60.0, "SE: %.0f design px between the hero's head (%.0f) and the door feet (%.0f)" % [head - door_feet, head, door_feet])
 	# 2D things in the room (the room's one thing, Snik, travelers) stand on their lowest opaque row
 	for f in ["res://art/people/smith.png", "res://art/enemies/treasure_goblin.png", "res://art/props/chest.png", "res://art/people/stranger.png"]:
 		var tx: Texture2D = load(f)
@@ -216,6 +297,117 @@ func _initialize() -> void:
 			var feet_y := (se.scene.proj(0.6, HallsScene.FLOOR_Y, zz) * scr).round().y / scr
 			check(absf(rc.end.y - Room3D.base_pad(tx) * k - feet_y) < 0.01, "%s at z %.1f: base %.2f px off the floor" % [f.get_file(), zz, rc.end.y - Room3D.base_pad(tx) * k - feet_y])
 	se.free()
+
+	# round 4: the room view on the 430 phone and the SE
+	var font := ThemeDB.fallback_font
+	for geo in [[Vector2(504, 615), 0.853], [Vector2(504, 443), 375.0 / 504.0], [Vector2(488, 345), 375.0 / 504.0]]:
+		var vsz: Vector2 = geo[0]
+		var vs: float = geo[1]
+		var rv2 := RoomView.new()
+		rv2.state = hero
+		rv2.size = vsz
+		# the 2D decor (Low graphics) of fight rooms keeps off the monster's box too
+		var keep_props: Array = hero.room_props
+		var keep_room: int = hero.room_count
+		hero.room_props = []
+		var decor_seen := 0
+		for rc in 60:
+			hero.room_count = 100 + rc
+			rv2.scene.key = ""
+			rv2.scene.build(hero, vsz, vs)
+			for dc in rv2.scene.decor:
+				decor_seen += 1
+				var drc := rv2.scene.sprite_rect(rv2.scene.tx("res://art/dungeon/%s.png" % String(dc["art"])), float(dc["x"]), float(dc["z"]), float(dc["h"]), vs)
+				check(not HallsScene.meets_monster(drc, vsz), "%dx%d room %d: 2D %s at (%.2f, %.2f) meets the monster's box" % [int(vsz.x), int(vsz.y), rc, dc["art"], dc["x"], dc["z"]])
+		check(decor_seen >= 8, "%dx%d: fight rooms still have some 2D decor (%d in 60)" % [int(vsz.x), int(vsz.y), decor_seen])
+		hero.room_props = keep_props
+		hero.room_count = keep_room
+		rv2.scene.key = ""
+		rv2.scene.build(hero, vsz, vs)
+		var sc := rv2.scene
+		var head2 := rv2.leader_head_y(vs)
+		var hair := rv2.leader_half_w(vs)
+		var tag := "%dx%d" % [int(vsz.x), int(vsz.y)]
+		check(absf(HallsScene.floor_y(vsz, 5.2, vs) - sc.proj(0.0, HallsScene.FLOOR_Y, 5.2).y) < 0.01, "%s: floor_y matches the room's floor" % tag)
+		# (a) the room's one thing in the middle stands with its base above the hero's hair
+		var mz := rv2._prop_z(0.5, 0.5)
+		check(sc.proj(0.0, HallsScene.FLOOR_Y, mz).y <= head2 - 6.0, "%s: a middle prop's base (y %.0f) is behind the hair (top %.0f)" % [tag, sc.proj(0.0, HallsScene.FLOOR_Y, mz).y, head2])
+		# (e) the trap ring and the shrine glyph clear the hair by their edges
+		var tz := rv2._trap_z()
+		check(sc.proj(RoomView.TRAP_X - RoomView.TRAP_R, HallsScene.FLOOR_Y, tz).x >= sc.center.x + hair, "%s: the trap ring runs behind the hair" % tag)
+		var gz := 4.0 if sc.small else Room3D.GLYPH.y
+		check(sc.proj(Room3D.GLYPH.x + Room3D.TRAP_SIZE / 2.0, HallsScene.FLOOR_Y, gz).x <= sc.center.x - hair, "%s: the shrine glyph runs behind the hair" % tag)
+		# (f) door labels clear the frame round their door
+		for i in 3:
+			var dx: float = HallsScene.DOOR_X[i]
+			var tl := sc.proj(dx - HallsScene.DOOR_W / 2.0, HallsScene.FLOOR_Y + HallsScene.DOOR_H, HallsScene.D)
+			var br := sc.proj(dx + HallsScene.DOOR_W / 2.0, HallsScene.FLOOR_Y, HallsScene.D)
+			var drect := Rect2(tl, br - tl)
+			for lab in ["?", "Monsters", "Wounded", "Trap: Treasure"]:
+				var fit := HallsScene.fit_label(UI.game_font(), lab, vs)
+				var fs: int = fit[1]
+				var tw := UI.game_font().get_string_size(String(fit[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+				check(tw <= HallsScene.LABEL_MAX_W, "%s: label %s is %.0f px wide" % [tag, lab, tw])
+				check(fs * vs >= 13.5 or tw > HallsScene.LABEL_MAX_W - 12.0, "%s: label %s is %.1f screen px" % [tag, lab, fs * vs])
+				var at := sc.door_label_at(drect, i, fs)
+				var lrect := Rect2(drect.get_center().x - tw / 2.0, at.y - font.get_ascent(fs), tw, font.get_ascent(fs) + font.get_descent(fs))
+				check(not lrect.intersects(drect.grow(8)), "%s: door %d's label touches its frame" % [tag, i])
+		# (b, h) 2D things never cover a nearer standing 3D prop; the camp stays in view and near
+		for ev in EVENTS:
+			var r3 := Room3D.new()
+			r3.rebuild(4, 4242 + ev.length() * 31, {"light": HallsScene.MOODS[4]["light"], "amb": HallsScene.ambient(4),
+				"accent": HallsScene.MOODS[4]["accent"], "kind": "x", "dark": 0.4, "event": ev, "small": sc.small})
+			var flat2d: Array = []   # [rect, depth, what]
+			if ev == "camp":
+				for piece in RoomView.camp_pieces(RoomView.CAMP.x, RoomView.CAMP.y):
+					var tx: Texture2D = load("res://art/props/%s.png" % piece[0])
+					var rc := sc.sprite_rect(tx, piece[1], piece[2], piece[3], vs)
+					flat2d.append([rc, piece[2], piece[0]])
+					var halfw := rc.size.x / 2.0 / (sc.focal / float(piece[2]))
+					check(absf(piece[1]) + halfw * 0.9 <= Room3D.SEEN * float(piece[2]) and float(piece[2]) <= 3.45, "%s camp: %s at (%.1f, %.1f) out of view or too deep" % [tag, piece[0], piece[1], piece[2]])
+			elif EVENT_ART2D.has(ev):
+				var e: Array = EVENT_ART2D[ev]
+				var ez := rv2._prop_z(0.5, 0.5)
+				flat2d.append([sc.sprite_rect(load(e[0]), rv2._prop_x(0.5, ez), ez, e[1], vs), ez, ev])
+			if ev == "merchant":
+				var sx := rv2._prop_x(0.22, 2.6)
+				flat2d.append([sc.sprite_rect(load("res://art/enemies/treasure_goblin.png"), sx, 2.6, 1.4, vs), 2.6, "Snik aside"])
+			for f2 in flat2d:
+				for st3 in r3.standing:
+					if float(st3[1]) >= float(f2[1]):
+						continue   # behind the 2D thing: it may cover it
+					var a3 := sc.proj(float(st3[0]) - float(st3[2]), HallsScene.FLOOR_Y + float(st3[3]), float(st3[1]))
+					var b3 := sc.proj(float(st3[0]) + float(st3[2]), HallsScene.FLOOR_Y, float(st3[1]))
+					check(not (f2[0] as Rect2).intersects(Rect2(a3, b3 - a3)), "%s %s: the 2D %s (z %.1f) covers the nearer %s at (%.2f, %.2f)" % [tag, ev, f2[2], f2[1], st3[4], st3[0], st3[1]])
+			r3.vp.free()
+			r3.free()
+		rv2.free()
+
+	# the zone tiles come remapped (tools/hall_tiles_deep.gd), the same as the runtime remap
+	for z in 10:
+		for part in ["wall", "floor", "ceil"]:
+			var src := "res://art/halls/z%d_%s.png" % [z, part]
+			var baked := Image.load_from_file(ProjectSettings.globalize_path(src.get_basename() + "_deep.png"))
+			var live := Room3D.tile_image(src, z)
+			check(baked != null and live != null and baked.get_data() == live.get_data(), "z%d %s_deep.png is stale: re-run tools/hall_tiles_deep.gd" % [z, part])
+	# the shared fx the room draws load as their files (a stale import showed the Shadow spell's
+	# purple sheet as every prop's contact shadow)
+	for fx in ["res://art/fx/shadow.png", "res://art/fx/glow.png"]:
+		var disk := Image.load_from_file(ProjectSettings.globalize_path(fx))
+		var tex: Texture2D = load(fx)
+		var live := tex.get_image() if tex else null
+		if disk and live:
+			disk.convert(Image.FORMAT_RGBA8)
+			live.convert(Image.FORMAT_RGBA8)
+		var same := disk != null and live != null and disk.get_size() == live.get_size()
+		if same:   # alpha everywhere, colour where it shows (the import rewrites hidden pixels' colour)
+			for py in disk.get_height():
+				for px in disk.get_width():
+					var dc := disk.get_pixel(px, py)
+					var lc := live.get_pixel(px, py)
+					if absf(dc.a - lc.a) > 0.01 or (dc.a > 0.0 and Vector3(dc.r - lc.r, dc.g - lc.g, dc.b - lc.b).length() > 0.02):
+						same = false
+		check(same, "%s's import is stale: reimport (godot --headless --editor --quit)" % fx)
 	check(names.size() >= 25, "rooms have their own names per zone (%d)" % names.size())
 	print("STAGE6 HALLS TESTS DONE, failures: ", fails)
 	quit()
