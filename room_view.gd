@@ -323,7 +323,8 @@ func leader_half_w(scr: float) -> float:
 	if an.is_empty():
 		return 0.0
 	var sz: float = float(an["size"]) * float(ArtStyle.unit(scr)) / scr
-	var img: Image = (an["tex"][0] as Texture2D).get_image()
+	var imgs: Array = an.get("img", [])  # HeroArt keeps the first idle Image: no GPU read-back
+	var img: Image = imgs[0] if not imgs.is_empty() and imgs[0] != null else (an["tex"][0] as Texture2D).get_image()
 	if img == null:
 		return sz / 2.0
 	var r := img.get_used_rect()
@@ -338,8 +339,10 @@ func leader_head_y(scr: float) -> float:
 		return size.y
 	var sz: float = float(an["size"]) * float(ArtStyle.unit(scr)) / scr
 	var foot := float(an["foot"]) / float(an["size"]) if an.has("foot") else 0.9
-	var img: Image = (an["tex"][0] as Texture2D).get_image()
-	var top := float(img.get_used_rect().position.y) if img else 0.0
+	var top := float(an["top"]) if an.has("top") else 0.0  # HeroArt.anims: the head's top row
+	if not an.has("top"):
+		var img: Image = (an["tex"][0] as Texture2D).get_image()
+		top = float(img.get_used_rect().position.y) if img else 0.0
 	return team_feet(0, 0.5).y - sz * foot + top * sz / float(an["size"])
 
 ## Your companion trots at the leader's heels (true size: k units per art pixel, feet on the floor).

@@ -210,8 +210,9 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 	var build := build_dir(app)
 	_lay_weapon(data, build if build != "" else b, weapon, cells, true)
 	if build != "":
+		var br := build_race(app)
 		# another body build (goblin, dwarf...): its own drawn head, the class's outfit family dyed in the class colour
-		var fams: Array = info()["builds"][art_race(app)]["bodies"][b]
+		var fams: Array = info()["builds"][br]["bodies"][b]
 		var fam := str(info().get("family_of", {}).get(cls, "plate"))
 		if not fam in fams:
 			fam = str(fams[0])
@@ -224,16 +225,18 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 			for h in drawn:
 				dye.append(Color(h))
 		# goblins keep their drawn yellow-green skin (their own hue family); dwarves take the skin choice
-		var bd: Dictionary = info()["builds"][art_race(app)]
+		var bd: Dictionary = info()["builds"][br]
 		var bskin := skin if bool(bd.get("skin", true)) else PackedColorArray()
 		if bd.has("skin_ramp"):
 			bskin = _ramp(bd["skin_ramp"])  # the werewolf's grey, matching its fur
 		# a race drawn over another build (the werewolf's wolf head, fur and tail on the orc)
-		var feat := str(info()["builds"][art_race(app)].get("feature", ""))
+		var feat := str(bd.get("feature", ""))
 		if feat != "":
 			feat = _looked("%s/%s" % [build, feat], app).get_file()  # the fairy's bigger wings once awakened
 			_lay(data, "%s/%s_back" % [build, feat], PackedColorArray(), PackedColorArray(), cells)
 		_lay(data, "%s/outfit_%s" % [build, fam], bskin, hair, cells, false, 0, dye)
+		if not _armed(weapon):
+			_open_hand(data, build, cells)
 		if feat != "":  # over the body's back in battle (the fairy's wings grow from it)
 			_lay(data, "%s/%s" % [build, feat], PackedColorArray(), PackedColorArray(), cells)
 		if bool(bd.get("hair", false)):  # the creator's hair style, fitted to the build's head (bake.py)
@@ -241,12 +244,17 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 		_lay_look(data, build, app, cells)
 		_lay_weapon(data, build, weapon, cells, false)
 		var breath: bool = not back or b == "f" or build in info().get("breath", [])  # one drawn idle or portrait pose
-		return _finish(key, data, cells, _glow(app), breath)
+		var glow := _glow(app)
+		if glow.a == 0.0 and br != art_race(app):  # a Lich dwarf: the dwarf, outlined in the form's colour
+			glow = Color(Races.FORMS.get(art_race(app), {}).get("color", "#7fd0f0"), 0.75)
+		return _sourced(_finish(key, data, cells, glow, breath), build, weapon)
 	var race := race_key(app, b)
 	if race != "":
 		race = _looked(race, app)  # an awakening's variant of the race layer (a second pair of wings...)
 		_lay(data, race + "_back", skin, hair, cells)  # wings / tail behind the body on the portrait
 	_lay(data, outfit_key(cls, tier, b), skin, hair, cells)
+	if not _armed(weapon):
+		_open_hand(data, b, cells)
 	var head := "%s/hair_%s" % [b, style_key(app)]
 	_lay(data, head, skin, hair, cells)
 	var face := str(app.get("face", "neutral"))
@@ -259,7 +267,68 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 		_lay(data, race, skin, hair, cells)  # ears, horns, halo, wings from behind...
 	_lay_look(data, b, app, cells)
 	_lay_weapon(data, b, weapon, cells, false)
-	return _finish(key, data, cells, _glow(app), back and b == "f")
+	# her second idle and second portrait are drawn 2 px over: both made from the first (no hop; R3 neck check)
+	return _sourced(_finish(key, data, cells, _glow(app), b == "f"), b, weapon)
+
+## The frames whose weapon hand opens when nothing is held (idle, hit, portrait); a swing stays a fist (a punch).
+const OPEN_HAND := [0, 1, 6, 7, 8]
+
+static func _armed(weapon: String) -> bool:
+	var w := WEAPON_AS.get(weapon, weapon) as String
+	return w != "" and w in info().get("weapons", [])
+
+## Unarmed, the weapon hand (drawn clenched round a grip) becomes the free hand mirrored about the body's
+## centre column (heroes.json "axis"): Juzo saw a fist holding nothing at the hip on the Gear page.
+static func _open_hand(data: PackedByteArray, dir: String, cells: Vector2i) -> void:
+	var ax: Array = info().get("axis", {}).get(dir, [])
+	var hs: Array = info().get("hand", {}).get(dir, [])
+	if ax.size() < 9 or hs.size() < 9:
+		return
+	var dw := FRAME * 9
+	for f in range(cells.x, cells.y):
+		if not f in OPEN_HAND:
+			continue
+		var a := float(ax[f]) + PAD
+		var hx := int(hs[f][0]) + PAD
+		var hy := int(hs[f][1]) + PAD
+		for y in range(maxi(0, hy - 7), mini(FRAME, hy + 6)):
+			for x in range(maxi(0, hx - 7), mini(FRAME, hx + 8)):
+				var mx := roundi(2.0 * a - x)
+				if absf(x - a) < 4.0 or mx < 0 or mx >= FRAME:
+					continue  # the body's middle stays as drawn
+				var i := (y * dw + f * FRAME + x) * 4
+				var j := (y * dw + f * FRAME + mx) * 4
+				for k in 4:
+					data[i + k] = data[j + k]
+
+## Where a look's weapon comes from, for its glow (weapon_white).
+static func _sourced(fr: Dictionary, dir: String, weapon: String) -> Dictionary:
+	fr["wsrc"] = {"dir": dir, "weapon": weapon}
+	return fr
+
+## The weapon alone as white silhouettes, one per frame of an animation (anims): a legendary weapon's glow
+## outlines the weapon, not the whole hero (Fable hero R3 item 11). Built the first time a glow asks.
+static func weapon_white(an: Dictionary) -> Array:
+	if an.has("wwhite"):
+		return an["wwhite"]
+	var src: Dictionary = an.get("wsrc", {})
+	var ids: Array = an.get("ids", [])
+	var out := []
+	if src.is_empty() or ids.is_empty():
+		an["wwhite"] = out
+		return out
+	var data := PackedByteArray()
+	data.resize(FRAME * 9 * FRAME * 4)
+	var span := Vector2i(int(ids.min()), int(ids.max()) + 1)
+	_lay_weapon(data, src["dir"], src["weapon"], span, true)
+	_lay_weapon(data, src["dir"], src["weapon"], span, false)
+	var sheet := Image.create_from_data(FRAME * 9, FRAME, false, Image.FORMAT_RGBA8, data)
+	for i in ids:
+		var white := Sprites._silhouette(sheet.get_region(Rect2i(int(i) * FRAME, 0, FRAME, FRAME)))
+		white.convert(Image.FORMAT_LA8)
+		out.append(ImageTexture.create_from_image(white))
+	an["wwhite"] = out
+	return out
 
 ## The creator fields a hero picture shows (the back view has no face), so stepping through faces or any
 ## other field never rebuilds the battle frames.
@@ -279,15 +348,18 @@ static func _looked(layer: String, app: Dictionary) -> String:
 		return layer + "__" + look
 	return layer
 
+## The rows a crown may move from where it sits (down, up): bake.py LIFT (a bald dwarf's -21 put it on his beard).
+const LIFT := Vector2i(-3, 8)
+
 ## A look drawn over any head (the crown).
 static func _lay_look(data: PackedByteArray, dir: String, app: Dictionary, cells: Vector2i) -> void:
 	var look := str(app.get("look", ""))
 	if look != "" and ResourceLoader.exists(DIR + "%s/look_%s.png" % [dir, look]):
 		var lift := 0
 		if look == "crown":  # it sits on short hair: taller or flatter styles move it (bake.py crown_lifts)
-			var bd: Dictionary = info().get("builds", {}).get(art_race(app), {})
+			var bd: Dictionary = info().get("builds", {}).get(build_race(app), {})
 			if dir in ["m", "f"] or bool(bd.get("hair", false)):
-				lift = int(info().get("crown_lift", {}).get(dir, {}).get(style_key(app), 0))
+				lift = clampi(int(info().get("crown_lift", {}).get(dir, {}).get(style_key(app), 0)), LIFT.x, LIFT.y)
 		_lay(data, "%s/look_%s" % [dir, look], PackedColorArray(), PackedColorArray(), cells, false, 0, PackedColorArray(), lift)
 
 ## The "glow" awakening: a soft outline in the race colour (clear when the hero has none).
@@ -330,16 +402,24 @@ static func _finish(key: String, data: PackedByteArray, cells: Vector2i, glow :=
 	if glow.a > 0.0:
 		_outline(data, cells, glow)
 	var sheet := Image.create_from_data(FRAME * 9, FRAME, false, Image.FORMAT_RGBA8, data)
-	var out := {"img": [], "tex": [], "white": []}
+	var out := {"img": [], "tex": [], "white": [], "top": FRAME}
+	var pair: Array = IDLE if cells.x == 0 else PORTRAIT
+	var first: Image = null
 	for i in 9:
 		if i < cells.x or i >= cells.y:
 			out["img"].append(null); out["tex"].append(null); out["white"].append(null)
 			continue
 		var im := sheet.get_region(Rect2i(i * FRAME, 0, FRAME, FRAME))
-		var pair: Array = IDLE if cells.x == 0 else PORTRAIT
 		if breath and i == pair[1]:  # the second pose made from the first: one drawing, no jump cut
-			im = _breath(out["img"][pair[0]])
-		out["img"].append(im)
+			im = _breath(first)
+		if i in pair:  # the head's top row (companion bars sit on it: a fairy's is 17 rows under a human's)
+			first = im if first == null else first
+			var r := im.get_used_rect()
+			if r.size.y > 0:
+				out["top"] = mini(int(out["top"]), r.position.y)
+		# Images are kept only where something reads them: the first battle idle (Sprites.hero's still) and
+		# the portrait pair (portrait_frames, the town walkers); the rest live as textures (Fable hero R3 item 15)
+		out["img"].append(im if i in PORTRAIT or i == IDLE[0] else null)
 		out["tex"].append(ImageTexture.create_from_image(im))
 		var white := Sprites._silhouette(im)
 		white.convert(Image.FORMAT_LA8)  # white + alpha: a quarter of the RGBA texture (drawn with a modulate)
@@ -367,7 +447,8 @@ static func _outline(data: PackedByteArray, cells: Vector2i, c: Color) -> void:
 ## plays the one swing, "hurt" is the hit frame. "foot": the feet row inside a frame.
 static func anims(fr: Dictionary, back: bool) -> Dictionary:
 	var pick := func(ids: Array, fps: float) -> Dictionary:
-		var a := {"img": [], "tex": [], "white": [], "size": FRAME, "foot": FOOT + PAD, "fps": fps, "ids": ids}
+		var a := {"img": [], "tex": [], "white": [], "size": FRAME, "foot": FOOT + PAD, "fps": fps, "ids": ids,
+			"top": int(fr.get("top", 37)), "wsrc": fr.get("wsrc", {})}
 		for i in ids:
 			a["img"].append(fr["img"][i]); a["tex"].append(fr["tex"][i]); a["white"].append(fr["white"][i])
 		return a
@@ -436,9 +517,25 @@ static func art_race(app: Dictionary) -> String:
 		return f
 	return Races.current(str(app.get("race", "Human")))  # an old slot summary may still say Golem
 
+## The race whose body build a hero wears: its form when the form has one (the werewolf's orc build), else the
+## race's own (a Lich dwarf stays a dwarf: Fable hero R3 item 7), else "" (the standard body).
+static func build_race(app: Dictionary) -> String:
+	var builds: Dictionary = info().get("builds", {})
+	var ar := art_race(app)
+	if builds.has(ar):
+		return ar
+	var r := Races.current(str(app.get("race", "Human")))
+	return r if builds.has(r) else ""
+
+## How many outfits a class has on a hero's body (the build families have one per class).
+static func outfit_tiers(cls: String, app: Dictionary) -> int:
+	if build_dir(app) != "":
+		return 1
+	return (info().get("classes", {}).get(cls.to_lower(), {}).get(body_key(app), [0]) as Array).size()
+
 ## The folder of a race's own body build ("goblin_m"), or "" when the race uses the standard body.
 static func build_dir(app: Dictionary) -> String:
-	var bd: Dictionary = info().get("builds", {}).get(art_race(app), {})
+	var bd: Dictionary = info().get("builds", {}).get(build_race(app), {})
 	var b := body_key(app)
 	if bd.is_empty() or not (bd["bodies"] as Dictionary).has(b):
 		return ""

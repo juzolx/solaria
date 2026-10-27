@@ -1470,7 +1470,7 @@ func _member_bar(i: int) -> Rect2:
 		var an: Dictionary = (art["anims"] as Dictionary).get("combat_idle", {})
 		if not an.is_empty():
 			sz = float(an["size"])
-		var top := c.position.y + (float(Sprites.BODY_OFFSET.y) - (sz - HeroArt.CORE) / 2.0 + 37.0) * u
+		var top := c.position.y + (float(Sprites.BODY_OFFSET.y) - (sz - HeroArt.CORE) / 2.0 + float(an.get("top", 37))) * u
 		var mid := c.position.x + (float(Sprites.BODY_OFFSET.x) - (sz - HeroArt.CORE) / 2.0 + sz / 2.0) * u
 		return Rect2(mid - 16.0 * u, top - 10.0, 32.0 * u, 5.0)
 	return Rect2(c.position + Vector2(8.0, 8.0) * Sprites.HD * u, Vector2(32.0 * Sprites.HD * u, 5.0))
@@ -2179,10 +2179,12 @@ func _draw_anim_hero(c: Rect2, u: float, a: float, glow: Color) -> void:
 	var off := Vector2(Sprites.BODY_OFFSET) - Vector2((s - HeroArt.CORE) / 2, (s - HeroArt.CORE) / 2)
 	var r := squashed(Rect2(c.position + off * u, Vector2(s, s) * u), hero_squash)
 	var white: Texture2D = an["white"][fi]
-	if glow.a > 0.0:
+	if glow.a > 0.0:  # around the weapon only (the whole-hero outline hid the hair and the rim light)
+		var ww: Array = HeroArt.weapon_white(an)
+		var gw: Texture2D = ww[fi] if fi < ww.size() else white
 		var pulse := 0.22 + 0.1 * sin(bob * 4.0)
 		for d in [Vector2(-u, 0), Vector2(u, 0), Vector2(0, -u), Vector2(0, u)]:
-			draw_texture_rect(white, Rect2(r.position + d, r.size), false, Color(glow, pulse * a))
+			draw_texture_rect(gw, Rect2(r.position + d, r.size), false, Color(glow, pulse * a))
 	# rim light: strong from above, fainter on both sides, so a dark hero still reads on a dark floor
 	draw_texture_rect(white, Rect2(r.position + Vector2(0, -u), r.size), false, Color(_rim_color(), 0.6 * a))
 	for d in [Vector2(-u, 0), Vector2(u, 0)]:

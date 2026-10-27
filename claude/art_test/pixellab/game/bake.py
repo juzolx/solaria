@@ -16,8 +16,8 @@ from PIL import Image, ImageChops
 HERE = os.path.dirname(os.path.abspath(__file__)); PL = os.path.dirname(HERE)
 REPO = os.path.abspath(os.path.join(PL, "..", "..", ".."))
 OUT = os.path.join(REPO, "art", "heroes")
-sys.path.insert(0, os.path.join(PL, "custom")); sys.path.insert(0, os.path.join(PL, "classes")); sys.path.insert(0, os.path.join(PL, "hair"))
-import recolour as R, weapons as W, headswap as HS
+sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(PL, "custom")); sys.path.insert(0, os.path.join(PL, "classes")); sys.path.insert(0, os.path.join(PL, "hair"))
+import recolour as R, weapons as W, headswap as HS, race_reg as RR
 
 C, FOOT = 96, 80  # the feet sit where the old LPC heroes stood (Sprites.HERO_FOOT on the 96 canvas)
 K = ["n_idle0", "n_idle1", "n_atk0", "n_atk1", "n_atk2", "n_atk3", "n_hit", "s_idle0", "s_idle1"]
@@ -291,9 +291,9 @@ def save(name, cells, idx=None):
     os.makedirs(os.path.dirname(os.path.join(OUT, name)), exist_ok=True)
     base = os.path.basename(name)
     whole = base.startswith("outfit_")
-    cells = [despeck(c, 3, 20 if whole else 0) for c in cells]
+    cells = [despeck(c, 4, 20 if whole else 0) for c in cells]  # islands of 1-3 px (Juzo: specks by her hair, R3)
     if base.startswith("hair_") or base.startswith("race_"):
-        cells = [despeck4(c, 8 if base.startswith("hair_") else 3) for c in cells]
+        cells = [despeck(despeck4(c, 8 if base.startswith("hair_") else 3), 4) for c in cells]  # its cuts leave crumbs
     sheet(cells).save(os.path.join(OUT, name + ".png"), optimize=True)
     if idx is not None:
         sheet(idx).save(os.path.join(OUT, name + "_idx.png"), optimize=True)
@@ -333,6 +333,10 @@ def main():
                         print("size mismatch", cls, tier, b, k, im.size); break
                     cells.append(body_cell(im, b, k))
                 else:
+                    if FAMILY_OF.get(cls.title()) == "plate":
+                        sym_front(cells)
+                    if cls == "warrior" and not tier:
+                        HEAD_FIX[b] = head_fixes(b, cells)
                     idxs = [index_of(c) for c in cells]
                     save(f"{b}/outfit_{cls}" + (f"_t{tier}" if tier else ""), cells, idxs)
                     if b == "m" and not tier:
@@ -340,6 +344,8 @@ def main():
                         if dy:
                             info.setdefault("dye", {})[cls] = dy
                     info["classes"].setdefault(cls, {}).setdefault(b, []).append(int(tier or 0))
+        if b == "f":
+            borrowed_tiers(info)
         print(b, "outfits done")
         # ---- hair styles (heads) ----
         for st in STYLES:
@@ -351,8 +357,11 @@ def main():
             else:
                 src = {d: L(os.path.join(PL, "hair", "lib", f"{k_}_{'north' if d == 'n' else 'south'}.png")) for d in "ns"}
                 base, offs = ROT["m"], OFF_M[b]
+            offs = fixed(b, offs)
             cn, hn = head_cells(b, src["n"], base["n"], offs)
             cs, hs = head_cells(b, src["s"], base["s"], offs)
+            for i in (7, 8):
+                neck(b, cs[i], i)
             cells = cn[:7] + cs[7:]; hairs = hn[:7] + hs[7:]
             save(f"{b}/hair_{k_}", cells, [index_of(c, h) for c, h in zip(cells, hairs)])
             info["styles"][st] = k_
@@ -365,7 +374,7 @@ def main():
             fi = L(os.path.join(lib, f"{e}_south.png")); fp = fi.load(); fm = R.masks(fi)
             cells = []
             for k in K[7:]:
-                dx, dy = OFF_OWN[b][k]
+                dx, dy = fixed(b, OFF_OWN[b])[k]
                 c = Image.new("RGBA", (C, C)); cp = c.load()
                 for x in range(x0, x1 + 1):
                     for y in range(y0 - 3, y1 + 1):
@@ -399,8 +408,146 @@ def main():
         print(b, "looks done")
     build_bodies(info)
     print("specks dropped (corner-only bits):", SPECKS[0], "px")
+    print("race layers registered:", *REG_LOG, sep=chr(10) + "  ")
+    print("drawn hair taken off the build outfits:", BARED)
+    body_axes(info)
     with open(os.path.join(OUT, "heroes.json"), "w", newline=chr(10)) as f:
         json.dump(info, f, indent=1)
+
+
+NECK = 2  # skin rows between the chin and the collar on the portrait (Juzo: the chin sat on the chest plate)
+HEAD_FIX = {}  # body -> frame -> (dx, dy, collar row, neck centre x, chin row) for the portrait frames
+
+
+def head_fixes(b, cells):
+    """Where the portrait head goes on the body (Juzo, Gear page: a pasted-on head, no neck, off-centre):
+    centred over the shoulders and lifted to leave NECK rows above the collar (the first outfit row under
+    the chin). cells: the warrior's base frames (every outfit shares the head)."""
+    rot = ROT[b]["s"]; rp = rot.load(); hb = HS.head_bottom(rot)
+    xs = [x for y in range(hb - 3, hb) for x in range(rot.width) if rp[x, y][3]]
+    rcx = sum(xs) / len(xs)
+    out = {}
+    for i, k in enumerate(K):
+        if not k.startswith("s"):
+            continue
+        dx, dy = OFF_OWN[b][k]; chin = hb - 1 + dy; ccx = rcx + dx
+        p = cells[i].load(); bb = cells[i].getbbox()
+        top = next(y for y in range(C) if any(p[x, y][3] for x in range(round(ccx) - 2, round(ccx) + 3)))
+        row = min(bb[3] - 1, top + 4)
+        rx = [x for x in range(C) if p[x, row][3]]
+        fx = round((min(rx) + max(rx)) / 2 - ccx) if k == "s_idle0" else out["s_idle0"][0]  # one sideways place: no head hop
+        fy = min(0, top - 1 - NECK - chin)
+        out[k] = (fx, fy, top, ccx + fx, chin + fy)
+    print(b, "portrait head fix:", {k: v[:3] for k, v in out.items()})
+    return out
+
+
+def fixed(b, offs):
+    """Head offsets with the portrait head fix added."""
+    return {k: (o[0] + HEAD_FIX.get(b, {}).get(k, (0, 0))[0], o[1] + HEAD_FIX.get(b, {}).get(k, (0, 0))[1])
+            for k, o in offs.items()}
+
+
+def neck(b, c, i):
+    """A neck under the portrait chin down to the collar: skin, a shadow row under the chin, the outline at
+    both sides, laid only where the head cell is empty (long hair stays over it)."""
+    k = K[i]; fix = HEAD_FIX.get(b, {}).get(k)
+    if not fix:
+        return
+    _, _, top, cx, chin = fix
+    rot = ROT[b]["s"]; rp = rot.load(); m = R.masks(rot)
+    skin = sorted((R.lum(rp[q][:3]), rp[q]) for q, kd in m.items() if kd == "skin")
+    line = min((R.lum(rp[x, y][:3]), rp[x, y]) for y in range(rot.height) for x in range(rot.width) if rp[x, y][3])[1]
+    shadow, base = skin[len(skin) // 4][1], skin[len(skin) * 3 // 5][1]
+    hb = HS.head_bottom(rot)
+    w = max(4, round(0.3 * len({x for x in range(rot.width) if rp[x, hb - 2][3]})))
+    x0 = round(cx - w / 2)
+    p = c.load()
+    for y in range(chin + 1, top):
+        for x in range(x0 - 1, x0 + w + 1):
+            if 0 <= x < C and 0 <= y < C and not p[x, y][3]:
+                p[x, y] = line if x in (x0 - 1, x0 + w) else (shadow if y == chin + 1 else base)
+
+
+def sym_front(cells):
+    """The plate outfits from the front read as one symmetric suit (Juzo, Gear page: a shoulder plate on one
+    side only, dark plates and red cloth mixed): the shoulders and chest of the portrait frames (the top
+    40% of the body, above the hands) mirrored from the fuller side about the hips' centre."""
+    for i in range(7, 9):
+        c = cells[i]; p = c.load(); bb = c.getbbox()
+        ax = RR.body_axis(c)
+        band = range(bb[1], bb[1] + int(0.4 * (bb[3] - bb[1])))
+        left = sum(1 for y in band for x in range(C) if p[x, y][3] and x < ax)
+        right = sum(1 for y in band for x in range(C) if p[x, y][3] and x > ax)
+        src = c.copy(); sp = src.load()
+        for y in band:
+            for x in range(C):
+                if (x > ax) if left >= right else (x < ax):
+                    mx = round(2 * ax - x)
+                    p[x, y] = sp[mx, y] if 0 <= mx < C else (0, 0, 0, 0)
+
+
+def body_axes(info):
+    """The body's centre column per frame (hips), per body folder: HeroArt mirrors the free hand onto the
+    weapon hand about it when nothing is held."""
+    ax = info.setdefault("axis", {})
+    for d in sorted(os.listdir(OUT)):
+        for fam in ("warrior", "plate"):
+            path = os.path.join(OUT, d, f"outfit_{fam}.png")
+            if os.path.exists(path):
+                im = L(path)
+                ax[d] = [round(RR.body_axis(im.crop((i * C, 0, i * C + C, C))), 1) for i in range(len(K))]
+                break
+
+
+def borrowed_tiers(info, cls="warrior"):
+    """Her class tiers without a generation (Juzo: no PixelLab for rounds 3-5; Fable hero R3 item 9): what
+    each of his tiers added to his base outfit (pauldrons and gold trim, the cape, the ornate plates and
+    runes) carried onto her base frames (the outfit cells start at the shoulders: no head to leave out). Each of her pixels looks up the matching place
+    on his frame (same rows from the top of the body to the feet, same columns from the hip centre,
+    scaled by the shoulder width) and takes his tier's pixel there when his tier changed it."""
+    def cells_of(path):
+        if not os.path.exists(path + ".png"):
+            return None
+        im = L(path + ".png")
+        return [im.crop((i * C, 0, i * C + C, C)) for i in range(len(K))]
+    def frame(c):
+        p = c.load(); bb = c.getbbox(); h = bb[3] - bb[1]
+        def span(y):
+            xs = [x for x in range(C) if p[x, y][3]]
+            return (min(xs), max(xs)) if xs else (C // 2, C // 2)
+        hip = [x for y in range(bb[1] + int(h * 0.6), bb[1] + int(h * 0.7)) for x in range(C) if p[x, y][3]]
+        sh = span(bb[1] + int(h * 0.45))
+        return bb[1], bb[3] - 1, sum(hip) / max(1, len(hip)), sh[1] - sh[0] + 1
+    mb, fb = cells_of(os.path.join(OUT, "m", f"outfit_{cls}")), cells_of(os.path.join(OUT, "f", f"outfit_{cls}"))
+    have = info["classes"].get(cls, {}).get("f", [0])
+    for tier in info["classes"].get(cls, {}).get("m", []):
+        mt = cells_of(os.path.join(OUT, "m", f"outfit_{cls}_t{tier}"))
+        if not tier or tier in have or not mt or not mb or not fb:
+            continue
+        out = []
+        for i in range(len(K)):
+            m0, m1, f0 = mb[i].load(), mt[i].load(), fb[i].copy()
+            mtop, mbot, mcx, mw = frame(mb[i]); ftop, fbot, fcx, fw = frame(fb[i])
+            sx = max(0.8, min(1.25, fw / max(1, mw))); sy = (fbot - ftop) / max(1, mbot - mtop)
+            fp = f0.load()
+            for y in range(C):
+                my = round(mtop + (y - ftop) / sy)
+                if my < 0 or my >= C:
+                    continue
+                for x in range(C):
+                    mx = round(mcx + (x - fcx) / sx)
+                    if not 0 <= mx < C or not m1[mx, my][3]:
+                        continue
+                    a, b0 = m1[mx, my], m0[mx, my]
+                    if RR.steel(a) and not b0[3]:
+                        continue  # a sword his tier edit drew (t15 atk2), not armour
+                    if not b0[3] or sum(abs(a[j] - b0[j]) for j in range(3)) > 60:
+                        fp[x, y] = a
+            out.append(f0)
+        save(f"f/outfit_{cls}_t{tier}", out, [index_of(c) for c in out])
+        info["classes"][cls].setdefault("f", []).append(tier)
+        print("f", cls, "tier", tier, "borrowed from his")
 
 
 RACES = ["Elf", "Angel", "Demon", "Beastkin", "Dragonkin", "Undead", "Vampire", "Lich"]
@@ -411,7 +558,7 @@ def race_cells(b, paths, race=""):
     """A race's signature feature (PixelLab edits of the base frames, 'add only ...'): the pixels the edit
     changed, minus edit noise on the hair (the hair is its own layer) and specks. Front view: what sticks
     out below the head (wings, tail) goes to a layer drawn BEHIND the body; the rest is drawn on top."""
-    front, back, ref = [], [], {}
+    front, back, found = [], [], {}
     for k in K:
         base = CELL[b][k]
         ed = cell(L(paths[k]), b, k)
@@ -442,29 +589,41 @@ def race_cells(b, paths, race=""):
             inside = all(bp[q][3] and q[1] > hl for q in c)
             if len(c) >= 6 and not (inside and len(c) < 25):
                 keep.append(c)
-        pts = set().union(*keep) if keep else set()
-        if race in HEAD_ONLY:  # only what overlaps the idle's feature, moved with the head (dilated 2 px):
-            r0 = "s_idle0" if k.startswith("s") else "n_idle0"  # the mid-swing edits grew hair and face residue
-            if r0 in ref:  # around the ears (3x their height for 2 frames of 4: Fable hero R2 item 8)
+        found[k] = (set().union(*keep) if keep else set(), ep, bp, hl)
+    for k in K:
+        pts, ep, bp, hl = found[k]
+        if race in HEAD_ONLY:  # only what overlaps the reference feature, moved with the head (dilated 2 px):
+            r0 = "s_idle0" if k.startswith("s") else HEAD_REF.get((race, b), "n_idle0")  # the mid-swing edits
+            if k != r0:  # grew hair and face residue around the ears (Fable hero R2 item 8, R3 item 4)
                 dx = OFF_OWN[b][k][0] - OFF_OWN[b][r0][0]; dy = OFF_OWN[b][k][1] - OFF_OWN[b][r0][1]
-                near = {(x + dx + i, y + dy + j) for (x, y) in ref[r0] for i in range(-2, 3) for j in range(-2, 3)}
+                near = {(x + dx + i, y + dy + j) for (x, y) in found[r0][0] for i in range(-2, 3) for j in range(-2, 3)}
                 pts &= near  # pixel by pixel: the residue is joined to the ears, so whole parts would keep it
-            else:
-                ref[k] = pts
         if race in BONE_OFF:  # the bone drawn over the clothes below the head (a spine on the coat) goes
             pts = no_bone(pts, ep, hl)
         f = Image.new("RGBA", (C, C)); bk = Image.new("RGBA", (C, C))
+        fx, fy = HEAD_FIX[b][k][:2] if k in HEAD_FIX.get(b, {}) else (0, 0)
         for (x, y) in pts:
             if k.startswith("s") and y > hl:
                 if not bp[x, y][3]:
                     bk.putpixel((x, y), ep[x, y])  # wings / tail peeking out from behind
+            elif y <= hl and 0 <= x + fx < C and 0 <= y + fy < C:
+                f.putpixel((x + fx, y + fy), ep[x, y])  # ears, horns, a halo: with the head (HEAD_FIX)
             else:
                 f.putpixel((x, y), ep[x, y])
         front.append(f); back.append(bk)
+    bodies = []  # the bare frames without the sword (in atk2/atk3 it crosses the hips and pulled the axis 9 px)
+    for k in K:
+        bc = CELL[b][k].copy(); bcp = bc.load()
+        for q in SW[b][k][0]:
+            bcp[q] = (0, 0, 0, 0)
+        bodies.append(bc)
+    front = RR.register(front, bodies, race, REG_LOG)
     return front, back
 
 
 HEAD_ONLY = ["Elf", "Demon"]  # ears and horns: every frame keeps only the idle's feature, moved with the head
+HEAD_REF = {("Elf", "f"): "n_atk0"}  # her idle edits drew hair and skin under the ears (19 rows to atk0's 8)
+REG_LOG = []  # what race_reg repaired, printed after the bake
 BONE_OFF = ["Undead"]  # keep the soul fire and the eyes; a glowing spine over the outfit read as a caterpillar
 
 
@@ -563,7 +722,7 @@ def weapon_cells(wt, drawing, hands, b):
     return cells
 
 
-PORTRAIT_LOW = 99  # the lowest frame row the menu portrait shows (Sprites.PORTRAIT_CROP ends at frame row 99)
+PORTRAIT_LOW = 95  # Sprites.PORTRAIT_CROP ends at frame row 99: a limb ending on it read as cut (Fable hero R3 item 13)
 
 
 def rested(w, g, ang, low):
@@ -615,7 +774,8 @@ STONE = []  # grey stone bodies: the sword is found as bright steel only
 WINGS = {"Fairy": (0.68, 0.92)}
 # hovering builds: feet this many art pixels above the foot row, per frame (idle frames bob)
 FLOAT = {}  # was the fairy 4-6 px up: it read as a mis-registered sprite over the shadow (Fable hero R2 item 10)
-CROWNED = ["Dwarf"]  # build races with a crown awakening (races.gd look "crown")
+CROWNED = ["Dwarf", "Goblin", "Orc", "Fairy"]  # build races with a crown awakening (races.gd look "crown"; Fable hero R3 item 8)
+HAIR_LOW = 76  # the lowest row a build's fitted hair reaches (the fairy's very long hair hung under her feet)
 FAMILY_SRC = {"plate": "warrior", "robe": "mage", "leather": "leather", "cloth": "cloth"}
 FAMILY_OF = {"Warrior": "plate", "Knight": "plate", "Sentinel": "plate",
              "Mage": "robe", "Cleric": "robe", "Acolyte": "robe", "Conjurer": "robe",
@@ -757,6 +917,8 @@ def fit_build_hair(d, b, bcells, info, s):
             out[k] = (max(r[0] - 4, min(r[0] + 4, out[k][0])), out[k][1])
         return out
     hb = boxes(CELL[b]); bb = boxes(bcells)
+    for k, (fx, fy) in ((k, v[:2]) for k, v in HEAD_FIX.get(b, {}).items()):
+        hb[k] = (hb[k][0] + fx, hb[k][1] + fy)  # the human hair sheets carry the portrait head fix
     for st, k_ in info["styles"].items():
         src = os.path.join(OUT, b, f"hair_{k_}")
         if not os.path.exists(src + ".png"):
@@ -779,7 +941,77 @@ def fit_build_hair(d, b, bcells, info, s):
                 out.append(c)
             if k.startswith("n"):  # seen from behind the hair is the whole head: no scalp through it
                 back_hair(cells[-1], idxs[-1], bcells[k], NAPE.get(d, 0))
+            squeeze_rows(cells[-1], idxs[-1], btop + 10, HAIR_LOW)
         save(f"{d}/hair_{k_}", cells, idxs)
+
+
+def squeeze_rows(c, ix, top, low):
+    """A layer reaching under row `low`: its rows under `top` squeezed (rows dropped evenly) to end on low,
+    the colour cell and its index alike (the Tiny build's very long hair reached her ankles and under)."""
+    bb = c.getbbox()
+    if not bb or bb[3] - 1 <= low or top >= low:
+        return
+    bottom = bb[3] - 1
+    for im in (c, ix):
+        src = im.copy(); sp, p = src.load(), im.load()
+        empty = (0, 0, 0, 0) if im.mode == "RGBA" else (0, 0, 0)
+        for y in range(top + 1, bottom + 1):
+            for x in range(C):
+                p[x, y] = empty
+        for ty in range(top + 1, low + 1):
+            sy = top + round((ty - top) * (bottom - top) / (low - top))
+            for x in range(C):
+                p[x, ty] = sp[x, sy]
+
+
+KEEP_DRAWN_HAIR = ["Orc"]  # his shoulders reach the skull rows: the head found ran over the vest and turned it to skin
+BARED = []  # (folder, family, hair pixels taken off its outfit's frames)
+
+
+def bare_heads(out, idxs, cells, heads, d, fam):
+    """The drawn hair off a build's outfit frames (Fable hero R3 item 6: braids showed under every style
+    and Bald was a full head of hair): hair on the head becomes skin, a bald dome the style is laid over
+    (in shades taken by rank from the outfit's own skin); hair off the head (braids on the shoulders) takes
+    the pixels beside it, or goes. From the front the brows stay (hair low in the face)."""
+    pal = sorted({(R.lum(c.load()[x, y][:3]), c.load()[x, y], ix.load()[x, y][0])
+                  for c, ix in zip(out, idxs) for y in range(C) for x in range(C)
+                  if ix.load()[x, y][0] and not ix.load()[x, y][1] and c.load()[x, y][3]})
+    n = 0
+    for c, ix, k in zip(out, idxs, K):
+        p, q = c.load(), ix.load()
+        hair = [(x, y) for y in range(C) for x in range(C) if q[x, y][1] and p[x, y][3]]
+        if not hair or not pal:
+            continue
+        x0, x1, neck = heads[k]; top = skull_top(cells[k])
+        neck = min(neck, top + round(0.9 * (x1 - x0)))  # a round head: the braids made the found head run to the hips
+        cx, cy, rx, ry = (x0 + x1) / 2, (top + neck) / 2, max(1, (x1 - x0) / 2), max(1, (neck - top) / 2)
+        inside = lambda x, y, f=1.0: ((x - cx) / (rx * f)) ** 2 + ((y - cy) / ry) ** 2 <= 1.1
+        ls = sorted(R.lum(p[h][:3]) for h in hair)
+        front = k.startswith("s")
+        gone = set()
+        if not front:  # braids down the back the masks read as cloth: the drawn hair's colours under the head, in its columns
+            cols = {p[h][:3] for h in hair}
+            gone = {(x, y) for y in range(neck + 1, min(C, neck + 31)) for x in range(x0, x1 + 1)
+                    if p[x, y][3] and not q[x, y][1] and any(sum(abs(p[x, y][j] - hc[j]) for j in range(3)) < 30 for hc in cols)}
+        for (x, y) in hair:
+            if front and y > top + 0.45 * (neck - top) and inside(x, y, 0.7):
+                continue  # brows
+            if inside(x, y):  # a smooth dome in three skin tones (by rank the strands stayed drawn on the scalp)
+                t = ls.index(R.lum(p[x, y][:3])) / max(1, len(ls) - 1)
+                _, col, r = pal[int((0.1 if t < 0.15 else 0.5 if t < 0.6 else 0.7) * (len(pal) - 1))]
+                p[x, y] = col; q[x, y] = (r, 0, 0)
+            else:
+                gone.add((x, y))
+        for (x, y) in sorted(gone):
+            side = [(x + dd * s, y) for dd in (1, 2, 3) for s in (-1, 1)]
+            nb = [t for t in side if 0 <= t[0] < C and t not in gone and p[t][3]]
+            l = [t for t in nb if t[0] < x]; r = [t for t in nb if t[0] > x]
+            if l and r:
+                p[x, y] = p[l[0]]; q[x, y] = q[l[0]]
+            else:
+                p[x, y] = (0, 0, 0, 0); q[x, y] = (0, 0, 0)
+        n += len(hair)
+    BARED.append((d, fam, n))
 
 
 NAPE = {"orc_m": 4}  # rows of strands the back hair reaches down the neck (his sat on the skull like a cap)
@@ -890,6 +1122,8 @@ def build_bodies(info):
                             p[q] = (0, 0, 0, 0)
                         drop_stray_lines(c, er)
                     out.append(c); idxs.append(idx)
+                if race in HAIR_BUILDS and race not in KEEP_DRAWN_HAIR:
+                    bare_heads(out, idxs, cells, head_regions(cells, SKULL_H.get((key, b))), d, fam)
                 if (key, b) in BIG_HEAD:
                     heads = head_regions(cells, SKULL_H.get((key, b)))
                     out = [grow_head(c, heads[k], BIG_HEAD[(key, b)]) for c, k in zip(out, K)]
@@ -914,10 +1148,14 @@ def build_bodies(info):
                 save(f"{d}/race_{race.lower()}__wings_big", big_f)
                 save(f"{d}/race_{race.lower()}__wings_big_back", big_b)
                 info.setdefault("looks", {}).setdefault("wings_big", []).append(f"{d}/race_{race.lower()}")
+            hc = cells
+            if (key, b) in BIG_HEAD:
+                heads = head_regions(cells, SKULL_H.get((key, b)))
+                hc = {k: grow_head(cells[k], heads[k], BIG_HEAD[(key, b)]) for k in K}
             if race in CROWNED and fams:  # the crown on the build head (its top centre per frame)
                 tops = []
                 for k in K:  # the skull's top row and middle, x kept within 3 px of the idle's: the highest
-                    cp = cells[k].load(); y = skull_top(cells[k])  # pixel of atk1 is the raised axe arm
+                    cp = hc[k].load(); y = skull_top(hc[k])  # pixel of atk1 is the raised axe arm
                     xs = [x for x in range(C) if cp[x, y][3]]
                     x = (min(xs) + max(xs)) // 2
                     if tops and not k.startswith("s"):
@@ -928,13 +1166,9 @@ def build_bodies(info):
                 save(f"{d}/look_crown", [crown_on((C, C), t) for t in tops])
                 info.setdefault("looks", {}).setdefault("crown", []).append(f"{d}/look_crown")
             if race in HAIR_BUILDS and fams:  # the creator's hair style on the build's own head
-                hc = cells
-                if (key, b) in BIG_HEAD:
-                    heads = head_regions(cells, SKULL_H.get((key, b)))
-                    hc = {k: grow_head(cells[k], heads[k], BIG_HEAD[(key, b)]) for k in K}
                 fit_build_hair(d, b, hc, info, HAIR_FIT[(key, b)])
-                if race in CROWNED:
-                    info.setdefault("crown_lift", {})[d] = crown_lifts(d, skull_top(hc["n_idle0"]), info)
+                if race in CROWNED:  # measured from the skull, not the hair (a bald layer's one pixel was the chin)
+                    info.setdefault("crown_lift", {})[d] = crown_lifts(d, skull_top(hc["n_idle0"]), info, True)
                 info["builds"][race]["hair"] = True
             if race in SHARED and fams:
                 e = info["builds"][race]
@@ -1162,6 +1396,7 @@ def build_feature(cells, edits, sw):
 # A look that changes a race's own feature is a full variant of the race layer ("race_angel__wings2"),
 # worn instead of it; the crown is drawn over any head (look_crown). "glow" is drawn by HeroArt.
 FALLEN = [(18, 14, 24), (30, 24, 40), (44, 36, 56), (62, 52, 76), (84, 72, 100)]  # black wings, dark to light
+DRAGON = [(14, 38, 40), (29, 84, 82), (45, 127, 122), (190, 82, 24), (247, 118, 34), (252, 168, 92)]  # teal bone, #f77622 membrane
 CROWN = [".K...K...K.",
          "KYK.KYK.KYK",
          "KGYKGYGKYGK",
@@ -1315,6 +1550,22 @@ def derived_looks(b, info):
             save(f"{b}/race_angel__{look}", vf, [index_of(c) for c in vf])
             save(f"{b}/race_angel__{look}_back", vb, [index_of(c) for c in vb])
             looks.setdefault(look, []).append(f"{b}/race_angel")
+    drg, drgb = sheet_cells(f"{b}/race_dragonkin"), sheet_cells(f"{b}/race_dragonkin_back")
+    if ang and angb and drg:
+        # Wyrmkin and up: dragon wings, teal bones and an orange membrane, under the horns and tail
+        vf, vb = [], []
+        for i, (c, cb) in enumerate(zip(ang, angb)):
+            w, wb = c.copy(), cb.copy()
+            for x in (w, wb):
+                h = halo_of(x)
+                for q in h:
+                    x.load()[q] = (0, 0, 0, 0)
+                recolour(x, pts_of(x), DRAGON)
+            vf.append(under(drg[i], w))
+            vb.append(under(drgb[i], wb) if drgb else wb)
+        save(f"{b}/race_dragonkin__dragon_wings", vf, [index_of(c) for c in vf])
+        save(f"{b}/race_dragonkin__dragon_wings_back", vb, [index_of(c) for c in vb])
+        looks.setdefault("dragon_wings", []).append(f"{b}/race_dragonkin")
     dem = sheet_cells(f"{b}/race_demon")
     if dem:
         # Demon Noble: great horns (each horn 1.4x from its base)
@@ -1338,15 +1589,26 @@ def derived_looks(b, info):
     info.setdefault("crown_lift", {})[b] = crown_lifts(b, ref, info)
 
 
-def crown_lifts(d, ref, info):
-    """Rows to raise the crown per hair style of folder d (idle0 hair top against `ref`); 0s left out."""
+LIFT = (-3, 8)  # the crown moves at most this far from where it sits (rows down, rows up)
+
+
+def crown_lifts(d, ref, info, skull=False):
+    """Rows to raise the crown per hair style of folder d (idle0 hair top against `ref`); 0s left out.
+    skull: ref is the build's skull top and a style lower than it (bald, buzz) leaves the crown on the skull
+    (they lowered it onto the beard: Fable hero R3 item 5)."""
     out = {}
     for k_ in info["styles"].values():
         path = os.path.join(OUT, d, f"hair_{k_}.png")
         if os.path.exists(path):
-            bb = Image.open(path).convert("RGBA").crop((0, 0, C, C)).getbbox()
-            if bb and ref - bb[1]:
-                out[k_] = ref - bb[1]
+            hc = Image.open(path).convert("RGBA").crop((0, 0, C, C))
+            bb = hc.getbbox()
+            if not bb or (skull and len(pts_of(hc)) < 12):
+                continue
+            lift = max(LIFT[0], min(LIFT[1], ref - bb[1]))
+            if skull:
+                lift = max(0, lift)
+            if lift:
+                out[k_] = lift
     return out
 
 
