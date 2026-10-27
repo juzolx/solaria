@@ -48,7 +48,7 @@ def level_props(owners=None):
         if lid == "clinic":  # its door is reached along the wall lane from the west: props stand east of it
             f = [(dc[0] + 1, dc[1]), (dc[0] + 2, dc[1]), (dc[0] + 3, dc[1]), (dc[0] + 4, dc[1])]
         if lid == "tavern":  # the Vault stands in front of the row's west end: everything east of the door
-            f = [(dc[0] + 1, dc[1]), (dc[0] + 2, dc[1]), (dc[0] + 3, dc[1]), (dc[0] + 3, dc[1] + 1)]
+            f = [(dc[0] + 3, dc[1]), (dc[0] + 4, dc[1]), (dc[0] + 5, dc[1]), (dc[0] + 5, dc[1] + 1)]   # (clear of the Vault's merlons; row 20 stays open to the Vault door)
         n0 = len(d)
         if LEVEL == 1:      # still growing: scaffolding and a pile of stone and timber at the front
             d += [(UP, 0, *f[0]), (UP, 1, *f[1]), (UP, 11, *f[3])]
@@ -57,7 +57,7 @@ def level_props(owners=None):
             LIGHTS.append((f[0][0] + .5, f[0][1] + .5, 34, (255, 190, 110), 40))
         if LEVEL >= 3:      # banners by the door and a showpiece at the side
             lift = (4,) if lid == "stash" else ()   # its side is the river bank: the chest and the sign stand
-            d += [(UP, l3[0], *f[1]), (UP, l3[0], *f[2]), (UP, l3[1], *side, *lift), (P32, 12, *f[3]),   # 4 px up the grass, off the water line (Fable P6/P7)
+            d += [(UP, l3[0], *f[1]), (UP, l3[0], *f[2]), (UP, l3[1], *side, *lift), (UP, 16, *f[3]),   # 4 px up the grass, off the water line (Fable P6/P7)
                   (UP, 6, side[0] + (door == "i"), side[1] + (door == "j"), *lift)]
             LIGHTS.append((f[3][0] + .5, f[3][1] + .5, 30, (255, 170, 90), 36))
         if owners is not None:
@@ -95,9 +95,8 @@ def decor():
     # MARKET = the whole square as one place (Juzo): the well in the middle of the square with
     # the main street flowing round it, a ring of stalls around it, crates/carts between
     d += [(P48, 5, 20, 20),
-          (P48, 0, 23, 21), (P48, 1, 17, 17), (P48, 2, 22, 17),
-          (P48, 4, 25, 23), (P48, 0, 22, 24), (P48, 2, 17, 24), (P48, 1, 16, 22), (P48, 3, 14, 24),
-          (P48, 9, 14, 20),
+          (P48, 1, 17, 18), (P48, 2, 22, 17),     # (Juzo: no stall overlaps a building or stands
+          (P48, 4, 25, 24), (P48, 0, 22, 24), (P48, 2, 16, 24), (P48, 3, 14, 19),   # stacked behind another; the purple one clear of the Shop)
           (P32, 0, 16, 20), (P32, 1, 16, 21), (P32, 39, 22, 19), (P32, 2, 18, 23), (P32, 0, 21, 16),
           (P32, 3, 21, 22), (P32, 29, 20, 22)]
     LIGHTS.extend([(20.5, 20.5, 20, (255, 190, 110), 50)])
@@ -109,36 +108,39 @@ def decor():
     d += [(P48, 6, 17, 8), (P48, 8, 12, 14)]   # the board west of the stair foot, clear of the Tavern
     # street lamps along the main street and lanes
     # (none behind a building: the Inn hid (17, 11) and (13, 9), the Clinic (22, 31))
-    d += [lamp(22, 25), *([] if HARDCORE else [lamp(7, 15)]), lamp(8, 26), lamp(32, 23)]
+    d += [lamp(22, 25), *([] if HARDCORE else [lamp(7, 15)]), lamp(8, 26)] # (no lamp by the Vault's front: the game drew the Vault's lantern over it)
     # the Inn's yard (everyone lives at the Inn): benches, barrels, lantern, cart
     d += [(P32, 3, 10, 14), (P32, 0, 9, 14), (P32, 0, 12, 14)]   # (no lantern: (12, 13) was on the wing's own cell)
     # inn / tavern fronts
-    d += [(P32, 3, 14, 15), (P32, 0, 16, 15), (P32, 14, 13, 15), (P32, 0, 22, 15), (P32, 0, 23, 15)]   # (the Tavern hid 25 and 26)
+    # (none on the Inn's front row: the game draws the level props there over them)
+    d += [(P32, 0, 22, 15), (P32, 0, 23, 15)]   # (the Tavern hid 25 and 26)
     # blacksmith yard on the west lane, just inside the gate (faces the lane on +i)
-    d += [(P32, 17, 6, 30), (P32, 18, 6, 33), (P32, 42, 5, 34)]
-    # shop front (cross street side)
-    d += [(P32, 1, 13, 24), (P32, 2, 13, 21)]
-    # vault: lantern + chest
-    d += [(P32, 31, 32, 21)]
+    # (the yard clutter and the shop and vault fronts are gone: they stood on the level props'
+    # cells, and the game draws a level prop over whatever stands in front of it)
     # (the public garden behind the Tavern is gone: the Tavern stands in front of all of it)
     # guild training yard: a fenced dirt ring with dummies, a shield target, racks, hay and a grindstone
     # (Juzo: the Guild sat on top of the dummies) the ring keeps clear of the Guild's wing (i 34), the
     # corner tower (row 3) and the east wall's battlements (i 37); its open front is the gate
-    d += [e for e in fence("wood", 35, 4, 37, 6) if not (e[4] == "i" and e[3] == 6)]
-    d += [(P32, 40, 36, 4), (P32, 40, 36, 5), (P32, 40, 35, 5), (P32, 18, 35, 4), (P32, 3, 34, 7)]
+    # (and its west side open: the Guild's L3 showpiece and sign stand right behind that rail)
+    d += [e for e in fence("wood", 35, 4, 37, 6) if not (e[4] == "i" and e[3] == 6) and not (e[4] == "j" and e[2] == 35)]
+    d += [(P32, 40, 36, 4), (P32, 40, 36, 5), (P32, 18, 35, 4), (P32, 3, 34, 7)]
     # clinic: herb pots, cauldron; pet pen with fence, kennel, hay
-    d += [(P32, 43, 22, 33)]
-    d += [e for e in fence("wood", 28, 29, 32, 35) if not (e[4] == "j" and e[2] == 28)]   # the Clinic's wall closes the west side
+    d += [(P32, 43, 21, 34)]   # (Juzo: west of the door the planter hid its lower half: out on the lane's edge)
+    # (the pen ends a row short of the lane: its south rail stood on the Clinic's level props' row,
+    # Juzo saw a cart on the fence line) the Clinic's wall closes the west side
+    d += [e for e in fence("wood", 28, 29, 32, 34) if not (e[4] == "j" and e[2] == 28)]
     d += [(P48, 14, 30, 30), (P32, 58, 29, 32), (P32, 59, 30, 33), (P32, 37, 29, 30)]
     # the paved plaza where the Blacksmith stood (Juzo: no crops): a shade tree, a lamp and
     # two benches facing the square
     d += [(TREE, 0, 10, 17), (P32, 3, 12, 17), (P32, 3, 12, 18), lamp(11, 16)]
     # vegetable plots behind the gatehouse, fenced: rows of wheat, a bare path row, pumpkins, cabbages
     for i in range(9, 18):
-        for j, c in {29: 22, 30: 22 if i < 13 else 21, 31: None, 32: 20, 33: 21 if i < 13 else 20}.items():
-            if c is not None and not (j == 33 and i in (11, 12, 15, 16)):   # the gatehouse hides those
+        # (Juzo: the field ran up to the wall line) four rows and a fence along its south side, so
+        # it reads as a fenced plot inside the walls; the pieces the gatehouse hides are culled
+        for j, c in {29: 22, 30: 22 if i < 13 else 21, 31: None, 32: 20 if i < 13 else 21}.items():
+            if c is not None:
                 d.append((P32, c, i, j))
-    d += [e for e in fence("wood", 9, 29, 18, 34) if not (e[3] == 34 and 10 <= e[2] <= 16 or (e[2], e[3]) == (18, 33))] + [(P32, 40, 15, 31), (P32, 40, 10, 32), (P32, 50, 12, 31), (P32, 30, 13, 31)]
+    d += [e for e in fence("wood", 9, 29, 18, 33) if (e[2], e[3]) != (18, 32)] + [(P32, 40, 15, 31), (P32, 40, 10, 32), (P32, 50, 12, 31), (P32, 30, 13, 31)]
     # orchard (east, where the houses were)
     d += [(P32, 30, 35, 12), (P32, 50, 34, 17), (P32, 2, 36, 11)]   # (none by the east wall: it cut their feet)
     # trophy cabin: hide rack, skull pike, antler... (built state)
@@ -177,7 +179,7 @@ def decor():
         d.append((P32, 12, 1, j))
         LIGHTS.append((1.5, j + .5, 28, (255, 170, 90), 30))
     d += [("fence", "wood", 7, 27, "j"), ("fence", "wood", 7, 28, "j"), ("fence", "wood", 9, 27, "j"), ("fence", "wood", 9, 28, "j")]
-    for i, j in ((3, 26), (11, 26), (13, 29), (25, 26), (27, 29), (31, 26), (33, 29), (36, 26)):
+    for i, j in ((3, 26), (13, 29), (25, 26), (27, 29), (31, 26), (33, 29), (36, 26)):
         d.append(("reeds", 0, i, j))
     # river side: reeds-ish rocks, signpost at the bridge
     d += [(P32, 19, 23, 25), (P32, 24, 12, 29), (P32, 23, 30, 29), (P32, 25, 36, 30)]   # the stump on the bank, not in the water
@@ -207,6 +209,7 @@ def trees():
     for tx, ty in TOWERS:
         busy |= {(tx + a, ty + b) for a in range(-1, 4) for b in range(-1, 4)}
     busy |= {(1, 18), (1, 19), (1, 7)}  # behind the Trophy Cabin's roof and the Inn wing: only a scrap of crown showed
+    busy |= {(34, 10), (35, 17), (36, 21), (34, 18), (36, 10), (35, 12), (37, 22), (37, 24)}   # in front of the Guild's and the Tavern's level props (the game draws those over a crown)
     free = lambda i, j: 0 < i < N - 1 and 0 < j < N - 1 and g[i][j] == "grass" and (i, j) not in busy
     oaks, pines, small = (0, 1, 4, 15, 14), (2, 3, 10, 11), (5, 9, 12, 13)
     t, used = [], set()
@@ -220,7 +223,9 @@ def trees():
                 add(i, j, pines + oaks)
     orch = random.Random(23)                   # the orchard: 3 fruit-tree kinds, some flipped, loosely spaced
     for i, j in ((34, 10), (36, 10), (35, 12), (37, 13), (34, 14), (36, 15), (35, 17), (37, 17), (34, 18)):
-        t.append((orch.choice((0, 4, 14)) + (100 if orch.random() < .5 else 0), i, j, orch.randint(-6, 6), orch.randint(-3, 3)))
+        tr = (orch.choice((0, 4, 14)) + (100 if orch.random() < .5 else 0), i, j, orch.randint(-6, 6), orch.randint(-3, 3))
+        if (i, j) not in busy:   # (the draws still happen, so the other trees keep their look)
+            t.append(tr)
     for i in range(N):                 # river: trees only on the far (north) bank, set back a
         for j in range(N):             # cell so they never hide the water
             if g[i][j] == "water" and (j == 0 or g[i][j - 1] != "water") and i % 3 == 0 and rng.random() < .8:

@@ -313,6 +313,25 @@ func _initialize() -> void:
 				forges += 1
 				on_smith = on_smith and forge.has_point(Vector2(float(l[0]), float(l[1])))
 		check(on_smith and forges >= 1, "the forge smoke and forge light stand on the Blacksmith")
+		# (Juzo: "zoom out more so we can see all of the town") at the farthest zoom every building
+		# fits the view on a 430 phone, an SE and a wide PC window, in whole device pixels where
+		# the town allows (a phone needs less than one device pixel per map pixel)
+		var tb := TownView.town_box(Vector2(float(d["origin"][0]), float(d["origin"][1])), float(d["grid"]))
+		var all_in := true
+		for sp in d["spots"]:
+			var rr: Array = sp["rect"]
+			all_in = all_in and tb.encloses(Rect2(rr[0], rr[1], rr[2], rr[3]))
+		check(all_in, "the town box holds every building's footprint")
+		for v in [[Vector2(430, 932), 2.56], [Vector2(375, 667), 2.0], [Vector2(1280, 720), 1.0], [Vector2(1920, 1080), 1.0]]:
+			var vs: Vector2 = v[0]
+			var fit := minf(vs.x / tb.size.x, vs.y / tb.size.y)
+			var s := TownView.scale_for(fit, float(v[1]), fit)
+			var steps := TownView.zoom_steps(fit)
+			check(tb.size.x * s <= vs.x + 0.01 and tb.size.y * s <= vs.y + 0.01 and absf(float(steps[0]) - minf(fit, 2.0)) < 0.001 and steps[-1] == 3.0,
+				"the farthest zoom shows the whole town at %s (scale %.2f, steps %s)" % [vs, s, steps])
+			if fit * float(v[1]) >= 1.0:
+				check(is_equal_approx(s * float(v[1]), roundf(s * float(v[1]))), "whole device pixels at the farthest zoom on %s" % vs)
+		check(is_equal_approx(TownView.scale_for(2.0, 2.56, 0.3) * 2.56, 5.0), "2x stays whole device pixels")
 		# the Hardcore stop faces the ruin: set_mode turns people to the church rect's middle
 		var cr: Array = d["spots"].filter(func(sp): return sp["id"] == "church")[0]["rect"]
 		var face := float(cr[0]) + float(cr[2]) / 2.0
@@ -411,6 +430,16 @@ func _initialize() -> void:
 	var vo := Vector2(-100, -50)
 	check(TownView.view_has(vo, 2.56, Vector2(430, 932), Vector2((529.0 - 0.5) / 2.56, 100)), "a point just inside the view is in view")
 	check(not TownView.view_has(vo, 2.56, Vector2(430, 932), Vector2((530.0 + 0.5) / 2.56, 100)), "a point just past the right edge is not")
+	# (Juzo: the pets stood on each other, walkers on top of one another) a pet takes a free pen spot;
+	# a walker doesn't step onto someone standing
+	var pets := [{"x": 100.0, "y": 100.0, "to": Vector2.ZERO}, {"x": 140.0, "y": 100.0, "to": Vector2(180, 100)}]
+	var free := TownView.free_spots([Vector2(104, 100), Vector2(180, 102), Vector2(220, 100)], pets, null, 14.0)
+	check(free == [Vector2(220, 100)], "pets never share a pen spot (%s)" % [free])
+	check(TownView.free_spots([Vector2(104, 100)], pets, pets[0], 14.0).size() == 1, "a pet may stay on its own spot")
+	var walkers := [{"x": 50.0, "y": 50.0, "wait": 1.0, "path": []}, {"x": 90.0, "y": 50.0, "wait": 0.0, "path": [Vector2i(1, 1)]}]
+	check(TownView.crowded(Vector2(54, 52), walkers, null, 7.0), "a walker waits rather than step onto someone standing")
+	check(not TownView.crowded(Vector2(92, 50), walkers, null, 7.0), "someone walking past is no obstacle")
+	check(not TownView.crowded(Vector2(54, 52), walkers, walkers[0], 7.0), "nobody is in their own way")
 	# the glow texture's core is capped and the light count shares a cluster's glow
 	check(TownView.band_alpha(0.0) <= 0.7 and TownView.band_alpha(1.0) == 0.0, "the glow core is capped at 0.7")
 	check(TownView.light_counts([[0, 0], [10, 0], [200, 0]]) == [2, 2, 1], "lamps within 56 px share their glow")
