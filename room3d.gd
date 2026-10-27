@@ -45,8 +45,9 @@ const GLOW_W := HallsScene.DOOR_W * 1.4   # a door's foot glow, world units wide
 const FAR_TORCH_BASE := 3.0   # a far-wall torch's art base on a tall view: over the side labels ("?" at 19 px)
 const FIGHT_EVENTS := ["", "chest", "gate"]   # fight rooms (and ambushes), mimics, champions
 ## The face-off monster's box on screen (Juzo: monsters never overlap props): big monsters'
-## solid pixels span 0.21..0.79 of the width down to 0.71 of the height at 430.
-const MONSTER_BOX := Rect2(0.20, 0.0, 0.60, 0.72)
+## solid pixels span 0.18..0.82 of the width (six Calamities, on the true 488-wide 430 stage)
+## down to 0.71 of the height, plus about 5 px a side (monsters dev).
+const MONSTER_BOX := Rect2(0.17, 0.0, 0.66, 0.72)
 ## Each layout's horizon (share of the height) and height / width: the 430 phone, the SE.
 const LAYOUT_TALL := Vector2(0.40, 615.0 / 504.0)
 const LAYOUT_SMALL := Vector2(0.28, 443.0 / 504.0)
