@@ -369,4 +369,11 @@ func _initialize() -> void:
 		main._choose_floor()
 		await shot("floor_picker")
 	print("TOUR DONE: %d screens in %s, %d problem%s" % [n, out, fails, "" if fails == 1 else "s"])
+	await _shut_down(main)
 	quit(1 if fails > 0 else 0)
+
+## Frees the game and lets queued frees, tweens and sounds finish before quitting (no "resources still in use at exit").
+func _shut_down(game: Node) -> void:
+	game.queue_free()
+	for i in 3:
+		await process_frame

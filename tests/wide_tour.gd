@@ -64,6 +64,7 @@ func _initialize() -> void:
 	main.profile.text_size = 1
 	main._fit_layout()
 	print("WIDE TOUR DONE %dx%d, checks: %d, failures: %d" % [win.x, win.y, checks, fails])
+	await _shut_down(main)
 	quit()
 
 ## Every page, checked; pictures of a few on the last pass (with --shots=).
@@ -155,3 +156,9 @@ func _close() -> void:
 			c.queue_free()
 	await create_timer(0.6).timeout
 	await process_frame
+
+## Frees the game and lets queued frees, tweens and sounds finish before quitting (no "resources still in use at exit").
+func _shut_down(game: Node) -> void:
+	game.queue_free()
+	for i in 3:
+		await process_frame
