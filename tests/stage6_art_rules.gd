@@ -719,6 +719,77 @@ func _initialize() -> void:
 					if skin.has(im.get_pixel(t.x, t.y).to_html(false)):
 						at.append(t - Vector2i(cx, top))
 				check(n == 0, "%s %s back: %d px of bald dome skin above the hairline %s" % [d, st, n, str(at.slice(0, 4))])
+		# R5: the bald heads on every outfit (bake.py bare_heads): (a) no dye inside the skull from behind (goblin_m's
+		# dyed hair), (b) no near-black inside the portrait's dome (a cap line, a lock's outline), (c) the portrait
+		# dome no wider than the face under it (dwarf_f's mushroom), (d) no braid down her chest on the portrait
+		for body: String in bd["bodies"]:
+			var d := "%s_%s" % [bd["key"], body]
+			for fam in ["plate", "robe", "leather", "cloth"]:
+				var op := "res://art/heroes/%s/outfit_%s.png" % [d, fam]
+				if not FileAccess.file_exists(op):
+					continue
+				var o := _load(op)
+				var ix := _load(op.replace(".png", "_idx.png"))
+				for f in [0, 7]:
+					var cell := o.get_region(Rect2i(f * HeroArt.CELL, 0, HeroArt.CELL, HeroArt.CELL))
+					var cix := ix.get_region(Rect2i(f * HeroArt.CELL, 0, HeroArt.CELL, HeroArt.CELL))
+					var ur := cell.get_used_rect()
+					var cx := ur.get_center().x
+					var top := ur.position.y
+					while top < ur.end.y and range(cx - 2, cx + 3).all(func(x: int) -> bool: return cell.get_pixel(x, top).a8 == 0):
+						top += 1
+					var run := func(y: int) -> Vector2i:  # the opaque run through the head's middle on row y
+						var a := cx
+						var b_ := cx
+						while a > 0 and cell.get_pixel(a - 1, y).a8 > 0:
+							a -= 1
+						while b_ < HeroArt.CELL - 1 and cell.get_pixel(b_ + 1, y).a8 > 0:
+							b_ += 1
+						return Vector2i(a, b_)
+					var r2: Vector2i = run.call(top + 2)
+					cx = (r2.x + r2.y) / 2
+					var n := 0
+					if f == 0:
+						for y in range(top, top + 9):
+							for x in range(cx - 5, cx + 6):
+								n += 1 if cix.get_pixel(x, y).b8 > 0 and cell.get_pixel(x, y).a8 > 0 else 0
+						check(n == 0, "%s/%s Bald back: %d dye-indexed px inside the skull" % [d, fam, n])
+						continue
+					for y in range(top + 2, top + 5):  # its top rows (an orc's small head has its brows by top + 5)
+						for x in range(cx - 3, cx + 4):
+							var c := cell.get_pixel(x, y)
+							n += 1 if c.a8 > 0 and c.get_luminance() < 0.16 else 0
+					check(n == 0, "%s/%s Bald portrait: %d near-black px inside the dome" % [d, fam, n])
+					if d != "dwarf_f":
+						continue
+					var dome_w := 0
+					var face_w := 0
+					for y in range(top + 1, top + 7):
+						var r_: Vector2i = run.call(y)
+						dome_w = maxi(dome_w, r_.y - r_.x + 1)
+					for y in range(top + 10, top + 15):
+						var r_: Vector2i = run.call(y)
+						face_w = maxi(face_w, r_.y - r_.x + 1)
+					check(dome_w <= face_w + 2, "%s/%s Bald portrait: dome %d px wide over a %d px face" % [d, fam, dome_w, face_w])
+					var br := 0
+					for y in range(top + 16, top + 29):
+						for x in range(cx - 15, cx + 16):
+							var c := cell.get_pixel(x, y)
+							var q := cix.get_pixel(x, y)
+							if absi(x - cx) >= 5 and c.a8 > 0 and q.r8 == 0 and q.g8 == 0 and q.b8 == 0 and c.r > c.g and c.g >= c.b and c.r - c.b > 0.16:
+								br += 1
+					check(br < 8, "%s/%s Bald portrait: %d px of braid browns down her chest" % [d, fam, br])
+	# Wings one size through the swing (R5 item 5: the m angel's were two-thirds on atk0 and the hit)
+	for b in ["m", "f"]:
+		for layer in ["race_angel", "race_fallen_angel", "race_angel__wings2", "race_dragonkin__dragon_wings"]:
+			var path := "res://art/heroes/%s/%s.png" % [b, layer]
+			if not FileAccess.file_exists(path):
+				continue
+			var im := _load(path)
+			var hs := []
+			for i in range(7):
+				hs.append(im.get_region(Rect2i(i * HeroArt.CELL, 0, HeroArt.CELL, HeroArt.CELL)).get_used_rect().size.y)
+			check(hs.min() >= 0.85 * hs.max(), "%s/%s: wing heights %s through the swing" % [b, layer, str(hs)])
 	# (f2) the crown sits on (into) every style's hair, battle idle and portrait (R4 item 8)
 	for d: String in hi.get("crown_lift", {}):
 		if not FileAccess.file_exists("res://art/heroes/%s/look_crown.png" % d):

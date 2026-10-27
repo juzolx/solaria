@@ -410,6 +410,8 @@ def main():
             if not all(os.path.exists(p) for p in paths.values()):
                 continue
             front, back = race_cells(b, paths, race)
+            if race == "Angel":
+                front = steady_wings(b, front)
             save(f"{b}/race_{race.lower()}", front, [index_of(c) for c in front])
             if any(c.getbbox() for c in back):
                 save(f"{b}/race_{race.lower()}_back", back, [index_of(c) for c in back])
@@ -614,6 +616,11 @@ def borrowed_tiers(info, cls="warrior"):
             for (x, y) in took:  # a lone rune spark or hem ember reads as a speck at 1x (Fable hero R4 item 12)
                 if sum(1 for dx in (-1, 0, 1) for dy in (-1, 0, 1) if (dx or dy) and (x + dx, y + dy) in took) < 2:
                     fp[x, y] = orig[x, y]
+            red = {t for t in took if fp[t][3] and fp[t][0] > 150 and fp[t][0] > fp[t][1] + 60 and fp[t][0] > fp[t][2] + 60}
+            for g in comps(red) if red else []:  # and the embers in pairs (t75: 5-13 a frame, R5 item 9)
+                if len(g) <= 2:
+                    for t in g:
+                        fp[t] = orig[t]
             out.append(f0)
         out = [despeck(c, 4, 20) for c in out]
         forearms("f", out)  # his tier's edit over her base can cut the forearm her base had
@@ -691,6 +698,33 @@ def race_cells(b, paths, race=""):
         bodies.append(bc)
     front = RR.register(front, bodies, race, REG_LOG)
     return front, back
+
+
+def steady_wings(b, cells):
+    """A battle frame whose wings came out a third smaller (his atk0 and hit: 42 rows to the idle's 57, so they
+    popped twice a swing: Fable hero R5 item 5) takes the idle's wings instead, moved with the frame's head
+    (the halo stays its own)."""
+    def wings(c):
+        return pts_of(c) - halo_of(c)
+    def height(c):
+        w = wings(c)
+        return max(y for _, y in w) - min(y for _, y in w) + 1 if w else 0
+    h0 = height(cells[0])
+    out = []
+    for i, (c, k) in enumerate(zip(cells, K)):
+        if i == 0 or i >= 7 or height(c) >= 0.85 * h0:
+            out.append(c)
+            continue
+        dx = OFF_OWN[b][k][0] - OFF_OWN[b]["n_idle0"][0]; dy = OFF_OWN[b][k][1] - OFF_OWN[b]["n_idle0"][1]
+        n = c.copy(); np_, sp = n.load(), cells[0].load()
+        for t in wings(c):
+            np_[t] = (0, 0, 0, 0)
+        for (x, y) in wings(cells[0]):
+            if 0 <= x + dx < C and 0 <= y + dy < C:
+                np_[x + dx, y + dy] = sp[x, y]
+        print(b, "angel wings", k, "from idle0:", height(c), "->", height(n))
+        out.append(n)
+    return out
 
 
 HEAD_ONLY = ["Elf", "Demon"]  # ears and horns: every frame keeps only the idle's feature, moved with the head
@@ -1075,6 +1109,13 @@ DARK_BRAID = ["orc_f"]  # her braid is drawn in the outline black (braid(dark=Tr
 TOPKNOT = ["orc_m"]  # his drawn topknot over the skull goes (it poked through every style: Fable hero R4 item 7)
 BARED = []  # (folder, family, hair pixels taken off its outfit's frames)
 DOMES = {}  # folder -> back frame -> the bald dome's pixels on its outfits (every family)
+OUTLINE_SKULL = ["fairy_m"]  # the skull from behind by the head's outline too (the body's circle sat 5 rows low on
+# him and domed his dark collar), the hair by its colours (the fairy_f's hair is wider than her head: the circle)
+DRAWN_BALD = ["dwarf_m"]
+  # his portrait head is drawn bald (his skull circle sits low, on the beard)
+BROW = {"fairy_m": 0.3, "fairy_f": 0.3}  # the brow at cy - BROW*r on the portrait (the fairies' skull sits low: 0.2 domed their eyes)
+FRONT_BRAID = ["dwarf_f"]  # two braids down her chest on the portrait (front_braids)
+CHEEK_STRANDS = ["goblin_f"]  # her hair's two 1-px strands beside the jaw
 
 
 SKULL_R = (8, 11.5)  # a build skull's radius, from the smallest (fairy) to the largest (dwarf, orc) by eye
@@ -1165,7 +1206,7 @@ def bare_heads(out, idxs, cells, skulls, d, fam, by_index=False):
     From the front the face (brows, a beard) stays as drawn. No hair index is left: what stays is outfit.
     by_index: the hair is what the index marks (his pauldrons reach the skull, so colours would take the plate).
     From behind a braid down the back goes too (braid())."""
-    if d in BACK_SILHOUETTE:  # from behind the body's skull circle reached her robe's collar: its purples read as hair
+    if d in BACK_SILHOUETTE or d in OUTLINE_SKULL:  # from behind the body's skull circle reached her robe's collar: its purples read as hair
         skulls = {k: back_skull(c, skulls[k][0])[:3] if k.startswith("n") else skulls[k] for c, k in zip(out, K)}
     hp = set() if by_index else hair_palette(out, idxs, skulls)
     # the dome's 4 tones from the face's own skin (its commonest colour), not a ramp of every face colour (a
@@ -1195,14 +1236,21 @@ def bare_heads(out, idxs, cells, skulls, d, fam, by_index=False):
         p, q = c.load(), ix.load()
         cx, cy, r = skulls[k]; top = cy - r; bb = cells[k].getbbox()
         front = k.startswith("s")
+        if front and d in DRAWN_BALD:  # his portrait head is drawn bald: the dome painted a cap over his brows
+            for y in range(C):  # and eyes (r5 item 11); only the hair index goes
+                for x in range(C):
+                    if q[x, y][1]:
+                        q[x, y] = (q[x, y][0], 0, q[x, y][2])
+            continue
+        brow = cy - BROW.get(d, 0.2) * r  # the portrait's brow row: the dome stops over it
         inside = lambda x, y: (x - cx) ** 2 + (y - cy) ** 2 <= r * r
-        face = lambda x, y: front and y > top + 0.9 * r and abs(x - cx) <= 0.75 * r  # brows down: the face, a beard
+        face = lambda x, y: front and y > min(top + 0.9 * r, brow + 1) and abs(x - cx) <= 0.75 * r  # brows down: the face, a beard
         low = min(bb[1] + int(0.62 * (bb[3] - bb[1])), round(cy + r) + 30)
         xa, xb = max(0, round(cx - r) - 6), min(C - 1, round(cx + r) + 6)
         own = set()
         if front:  # the portrait's own hair shades (lit from the front: the braids are lighter than from behind)
             cnt = {}
-            for y in range(max(0, round(cy - r)), round(cy - 0.2 * r)):
+            for y in range(max(0, round(cy - r)), round(brow)):
                 for x in range(max(0, round(cx - r)), min(C, round(cx + r) + 1)):
                     if p[x, y][3] and inside(x, y) and lum255(p[x, y]) >= 28:
                         cnt[p[x, y][:3]] = cnt.get(p[x, y][:3], 0) + 1
@@ -1211,12 +1259,15 @@ def bare_heads(out, idxs, cells, skulls, d, fam, by_index=False):
         nearf = lambda col: near(col) or col in own
         # from behind, the dark strands inside the skull (not its rim) are hair too: near-black orc hair
         strand = lambda x, y: not front and lum255(p[x, y]) < 60 and (x - cx) ** 2 + (y - cy) ** 2 <= (r - 1.5) ** 2
-        ishair = lambda x, y: (p[x, y][3] and ((q[x, y][1] if by_index else nearf(p[x, y][:3])) or strand(x, y))
-                               and not face(x, y) and not (d in HOODED and q[x, y][2]))  # never the dyed hood
+        ishair = lambda x, y: (p[x, y][3] and ((q[x, y][1] if by_index else nearf(p[x, y][:3])) or strand(x, y)
+                                               or (inside(x, y) and q[x, y][1]))  # hair-indexed in the skull: goblin_m's near-black
+                               and not (q[x, y][0] and not q[x, y][1])  # never skin-indexed (a fairy's face is her hair's colours)
+                               and not face(x, y) and not (d in HOODED and q[x, y][2]  # never the dyed hood, but
+                                                           and not (inside(x, y) and y <= cy + 0.4 * r)))  # his dyed hair is (r5 item 3)
         todo = [(x, y) for y in range(0, low + 1) for x in range(xa, xb + 1) if ishair(x, y) and (inside(x, y) or by_index)]
         if d in DARK_BRAID and front:  # her dark cap above the brows (the palette never saw it): the head's own outline
             todo, (cx, cy, r, sh) = [], back_skull(c, cx); top = cy - r
-            hair = {(x, y) for y in range(max(1, round(cy - r)), min(C - 1, round(cy - 0.2 * r) + 1, sh))
+            hair = {(x, y) for y in range(max(1, round(cy - r)), min(C - 1, round(brow) + 1, sh))
                     for x in range(max(1, round(cx - r)), min(C - 1, round(cx + r) + 1))
                     if p[x, y][3] and all(p[x + dx, y + dy][3] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))}
         elif d in BACK_SILHOUETTE and not front:  # an orc's head from behind: all mane or braids, the collar indexed as hair
@@ -1233,21 +1284,92 @@ def bare_heads(out, idxs, cells, skulls, d, fam, by_index=False):
                     t = (x + dx, y + dy)
                     if t not in hair and xa <= t[0] <= xb and 0 <= t[1] <= low and ishair(*t):
                         hair.add(t); todo.append(t)
-        # a speck the hair walled in (a tie, a dark knot in the middle of the dome) goes with it
+        # a speck the hair walled in (a tie, a dark knot in the middle of the dome) goes with it; from the front
+        # so does the old hairline's outline above the brow (a black cap line on goblin_m: r5 item 3)
         hair |= {(x, y) for y in range(max(1, int(top)), min(C - 1, round(cy + r))) for x in range(max(1, round(cx - r)), min(C - 1, round(cx + r) + 1))
                  if (x, y) not in hair and (x - cx) ** 2 + (y - cy) ** 2 <= (r - 2) ** 2
                  and sum((x + dx, y + dy) in hair for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))) >= 3}
+        if front:
+            for _ in range(6):
+                hair |= {(x, y) for y in range(max(1, int(top)), min(C - 1, round(brow) + 1))
+                         for x in range(max(1, round(cx - r)), min(C - 1, round(cx + r) + 1))
+                         if (x, y) not in hair and p[x, y][3] and lum255(p[x, y]) < 40 and (x - cx) ** 2 + (y - cy) ** 2 <= (r - 1.5) ** 2
+                         and sum((x + dx, y + dy) in hair for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))) >= 2}
+        # from behind the dome ends at the neck (the body's narrowest row under the skull): under it her braid's
+        # root went skin-coloured on the collar (r5 item 4)
+        yn = None
+        if not front:
+            bpp = cells[k].load()
+            wid = lambda y: sum(1 for x in range(C) if bpp[x, y][3])
+            ys = range(round(cy + 0.3 * r), min(C, round(cy + r) + 3))
+            m = min(ys, key=lambda y: (wid(y), -y))
+            if wid(m) < wid(round(cy)) - 2:
+                yn = m
         dome = set()
         if pal:
             for y in range(max(0, int(top)), min(C, round(cy + r) + 1)):
                 for x in range(max(0, round(cx - r)), min(C, round(cx + r) + 1)):
-                    if inside(x, y) and p[x, y][3] and (x, y) in hair and not (front and y > cy - 0.2 * r):
+                    if inside(x, y) and p[x, y][3] and (x, y) in hair and not (front and y > brow) and not (yn and y > yn):
                         # a round ramp from a light spot up and to the left, darker toward the edge
                         t = math.hypot(x - (cx - 0.35 * r), y - (cy - 0.45 * r)) / (1.45 * r)
                         _, col, ri = pal[3 if t < 0.36 else 2 if t < 0.7 else 1 if t < 0.88 else 0]
                         p[x, y] = col; q[x, y] = (ri, 0, 0); dome.add((x, y))
+        line_ = min((p[t] for t in pts_of(c)), key=lum255, default=(0, 0, 0, 255))
+        if front and dome:  # the portrait's dome no wider than the face under it, round on top: the drawn bangs'
+            # silhouette filled with skin was a mushroom cap 3 px wider than the face each side (r5 item 2)
+            yb = int(brow) + 1; x0 = round(cx); best = None
+            for y in range(yb, min(C, yb + 6)):
+                if not p[x0, y][3] or (x0, y) in hair:
+                    continue
+                a, b_ = x0, x0
+                while a > 0 and p[a - 1, y][3] and (a - 1, y) not in hair:
+                    a -= 1
+                while b_ < C - 1 and p[b_ + 1, y][3] and (b_ + 1, y) not in hair:
+                    b_ += 1
+                if best is None or b_ - a > best[1] - best[0]:
+                    best = (a, b_)
+            if best and best[1] - best[0] + 1 <= 2 * r:  # (an orc's face runs into his shoulders: left as it was)
+                fx, hw = (best[0] + best[1]) / 2, (best[1] - best[0] + 1) / 2 + 0.5
+                rows = {}
+                for (x, y) in dome:
+                    rows.setdefault(y, []).append(x)
+                yt = min((y for y, xs in rows.items() if len(xs) >= 5), default=min(rows))
+                ccy = yt + hw - 0.5
+                half = lambda y: hw if y >= ccy else math.sqrt(max(0, hw * hw - (y - ccy) ** 2))
+                # the whole egg is the dome (a lock's dark outline or a bare patch inside it stayed as drawn), with
+                # its own outline round the top and sides; under the brow the face as drawn
+                egg = {(x, y) for y in range(yt, math.floor(brow) + 1) for x in range(max(0, math.floor(fx - hw)), min(C, math.ceil(fx + hw) + 1))
+                       if abs(x - fx) <= half(y)}
+                rim_ = {(x, y) for (x, y) in egg if any((x + dx, y + dy) not in egg for dx, dy in ((1, 0), (-1, 0), (0, -1)))}
+                for (x, y) in egg:
+                    if (x, y) in rim_:
+                        p[x, y] = line_; q[x, y] = (0, 0, 0)
+                    else:
+                        t = math.hypot(x - (cx - 0.35 * r), y - (cy - 0.45 * r)) / (1.45 * r)
+                        _, col, ri = pal[3 if t < 0.36 else 2 if t < 0.7 else 1 if t < 0.88 else 0]
+                        p[x, y] = col; q[x, y] = (ri, 0, 0)
+                dome = (dome & egg) | egg
+                hair |= egg
+                for y in range(max(0, yt - 6), yt):  # over the egg: a lock's tip, the old hairline's peak
+                    for x in range(max(0, math.floor(fx - hw) - 2), min(C, math.ceil(fx + hw) + 3)):
+                        p[x, y] = (0, 0, 0, 0); q[x, y] = (0, 0, 0)
+            # under the dome one outline row, not three: the rest of a dark run down to the eyes takes the dome's
+            # two darkest tones (a black cap rim over a dwarf_m's eyes: r5 item 11)
+            for x in range(round(cx - 0.6 * r), round(cx + 0.6 * r) + 1):
+                ys = [y for (xx, y) in dome if xx == x]
+                if not ys:
+                    continue
+                run, y = [], max(ys) + 1
+                while y < C and p[x, y][3] and lum255(p[x, y]) < 40 and not q[x, y][0]:
+                    run.append(y); y += 1
+                if len(run) >= 3:
+                    for j, yy in enumerate(run[:-1]):
+                        _, col, ri = pal[1 if j == 0 else 0]
+                        p[x, yy] = col; q[x, yy] = (ri, 0, 0); dome.add((x, yy)); hair.add((x, yy))
         if not front:  # the hair layers cover it from behind (back_hair): it shows only when Bald
-            DOMES.setdefault(d, {}).setdefault(k, set()).update(dome)
+            DOMES.setdefault(d, {}).setdefault(k, set()).update(dome | {  # and a scalp drawn bare (dwarf_m's)
+                (x, y) for y in range(max(0, int(top) - 4), round(cy) + 1) for x in range(max(0, round(cx - r)), min(C, round(cx + r) + 1))
+                if p[x, y][3] and q[x, y][0] and abs(x - cx) <= 0.8 * r and not (yn and y > yn)})  # (his circle sits low)
         gone = hair - dome
         src = c.copy(); sp = src.load(); sq = ix.copy().load()
         for (x, y) in sorted(gone):
@@ -1280,6 +1402,53 @@ def bare_heads(out, idxs, cells, skulls, d, fam, by_index=False):
         if not front and not by_index:
             n += braid(c, ix, src, sq, cx, cy, r, low, lambda col: nearf(col), hair, d not in BACK_SILHOUETTE,
                        d in DARK_BRAID)
+        if front:  # loose bits the clipped dome left round the head (a lock's tip, a stub of the old hairline)
+            heads_ = {(x, y) for y in range(max(0, round(cy - r) - 8), min(C, round(cy + r))) for x in range(C) if p[x, y][3]}
+            for g in comps(heads_) if heads_ else []:
+                if len(g) < 8:
+                    for t in g:
+                        p[t] = (0, 0, 0, 0); q[t] = (0, 0, 0)
+        if front and d in FRONT_BRAID:
+            n += front_braids(c, ix, cx, cy, r, low, line)
+        if front and d in CHEEK_STRANDS:  # two 1-px dark strands outside the jaw's outline (r5 item 6)
+            for y in range(round(brow), min(C, round(cy + r) + 1)):
+                for x in range(2, C - 2):
+                    for sg in (1, -1):
+                        if (p[x, y][3] and lum255(p[x, y]) < 40 and not any(q[x, y]) and not p[x - sg, y][3]
+                                and p[x + sg, y][3] and lum255(p[x + sg, y]) < 40 and p[x + 2 * sg, y][3]
+                                and lum255(p[x + 2 * sg, y]) >= 40 and abs(x - cx) >= 0.5 * r):
+                            p[x, y] = (0, 0, 0, 0); q[x, y] = (0, 0, 0)
+        # from behind, what the hair and the braids covered on the back (under the neck, inside the body) takes
+        # the cloth round it that neither touched: the refills copied the braid's own browns into a dark brown
+        # stain, and a braid wider than they reached left a hole (her leather back: r5 item 4)
+        if not front:
+            bpp = cells[k].load(); yc = min(yn, cy + r) if yn else cy + r
+            fix = {(x, y) for y in range(C) for x in range(C) if y > yc and sp[x, y][3] and bpp[x, y][3]
+                   and ((x, y) in hair or p[x, y] != sp[x, y])
+                   and any(p[x - dd, y][3] for dd in range(1, 11) if x - dd >= 0)
+                   and any(p[x + dd, y][3] for dd in range(1, 11) if x + dd < C)}
+            # and the braid's outline specks the masks missed: unindexed browns within 2 px of it
+            by = {(x + dx, y + dy) for x, y in fix for dx in (-2, -1, 0, 1, 2) for dy in (-2, -1, 0, 1, 2)}
+            fix |= {(x, y) for (x, y) in by if 0 <= x < C and y > yc and y < C and p[x, y][3] and p[x, y] == sp[x, y]
+                    and not any(q[x, y]) and p[x, y][0] > p[x, y][1] >= p[x, y][2] and p[x, y][0] - p[x, y][2] > 25}
+            pool = lambda u, v: ((u, v) not in fix and (u, v) not in hair and p[u, v][3] and p[u, v] == sp[u, v]
+                                 and lum255(p[u, v]) >= 40 and not nearf(p[u, v][:3]))
+            for (x, y) in sorted(fix):
+                for wy, wx in ((3, 12), (6, 16)):
+                    cnt = {}
+                    for v in range(max(0, y - wy), min(C, y + wy + 1)):
+                        for u in range(max(0, x - wx), min(C, x + wx + 1)):
+                            if pool(u, v):
+                                key = (p[u, v], q[u, v][0], q[u, v][2]); cnt[key] = cnt.get(key, 0) + 1
+                    # the cloth itself: its dyed pixels when it has them, else its lit ones (a strap's dark brown
+                    # or the clasp's grey took the whole back)
+                    dyed = {t: m for t, m in cnt.items() if t[2]}
+                    lit = {t: m for t, m in cnt.items() if lum255(t[0]) >= 60}
+                    cnt = dyed or lit or cnt
+                    if cnt:
+                        col, ri, bi = max(cnt, key=cnt.get)
+                        p[x, y] = col; q[x, y] = (ri, 0, bi)
+                        break
         for y in range(C):
             for x in range(C):
                 if q[x, y][1]:
@@ -1341,11 +1510,13 @@ def braid(c, ix, src, sq, cx, cy, r, low, ishaircol, taken, wide=False, dark=Fal
         if (l or rr) if wide else (l and rr):
             # the commonest colour round it: the cloth or plate itself (copying the pixel beside it drew a
             # strap, a stud or a seam across in streaks)
-            cnt = {}
+            cnt, alt = {}, {}  # the braid's own browns left unmasked refilled it as a brown band (r5 item 4)
             for v in range(max(0, y - 3), min(C, y + 4)):
                 for u in range(max(0, x - 6), min(C, x + 7)):
                     if ok((u, v)):
-                        cnt[(sp[u, v], sq[u, v][0], sq[u, v][2])] = cnt.get((sp[u, v], sq[u, v][0], sq[u, v][2]), 0) + 1
+                        bag = alt if ishaircol(sp[u, v][:3]) else cnt
+                        bag[(sp[u, v], sq[u, v][0], sq[u, v][2])] = bag.get((sp[u, v], sq[u, v][0], sq[u, v][2]), 0) + 1
+            cnt = cnt or alt
             col, ri, bi = max(cnt, key=cnt.get) if cnt else (sp[l or rr], sq[l or rr][0], sq[l or rr][2])
             p[x, y] = col; q[x, y] = (ri, 0, bi)
         else:
@@ -1364,6 +1535,59 @@ def braid(c, ix, src, sq, cx, cy, r, low, ishaircol, taken, wide=False, dark=Fal
                 col, ri, bi = max(cnt, key=cnt.get)
                 p[x, y] = col; q[x, y] = (ri, 0, bi)
     return len(seen)
+
+
+def front_braids(c, ix, cx, cy, r, low, line):
+    """The dwarf_f's two braids down her chest on the portrait (Fable hero R5 item 1: a Bald dwarf_f wore them
+    under every style): unindexed browns beside the middle (cx +-5..15) from the jaw down, joined across 2 px,
+    a strand 6 rows or longer of rows at most 4 px wide. Each row's run of braid and its outline takes the
+    cloth or plate beside it, its left half the left side's, its right half the right's, with one outline
+    pixel between them (the seam the braid lay on). Returns its size."""
+    p, q = c.load(), ix.load()
+    src, sq = c.copy().load(), ix.copy().load()
+    brown = lambda x, y: (src[x, y][3] and not any(sq[x, y]) and src[x, y][0] > src[x, y][1] >= src[x, y][2]
+                          and src[x, y][0] - src[x, y][2] > 40)
+    dark = lambda x, y: src[x, y][3] and lum255(src[x, y]) < 40
+    seeds = {(x, y) for y in range(round(cy + 0.5 * r), low + 1) for x in range(max(1, round(cx) - 15), min(C - 1, round(cx) + 16))
+             if abs(x - cx) >= 5 and brown(x, y)}
+    n, done = 0, set()
+    for s0 in sorted(seeds):
+        if s0 in done:
+            continue
+        comp, st = {s0}, [s0]
+        while st:
+            x, y = st.pop()
+            for dx in (-2, -1, 0, 1, 2):
+                for dy in (-2, -1, 0, 1, 2):
+                    t = (x + dx, y + dy)
+                    if t in seeds and t not in comp:
+                        comp.add(t); st.append(t)
+        done |= comp
+        rows = {}
+        for x, y in comp:
+            rows.setdefault(y, []).append(x)
+        rows = {y: xs for y, xs in rows.items() if max(xs) - min(xs) < 4}
+        if len(rows) < 6:
+            continue
+        for y, xs in rows.items():
+            a, b = min(xs), max(xs)
+            for _ in range(2):  # its outline, 2 px at most each side
+                if a > 0 and (dark(a - 1, y) or brown(a - 1, y)):
+                    a -= 1
+                if b < C - 1 and (dark(b + 1, y) or brown(b + 1, y)):
+                    b += 1
+            side = [t if 0 <= t[0] < C and src[t][3] else None for t in ((a - 1, y), (b + 1, y))]
+            if not side[0] and not side[1]:
+                continue
+            mid = (a + b) / 2
+            for x in range(a, b + 1):
+                t = side[0] if (x < mid and side[0]) or not side[1] else side[1]
+                if abs(x - mid) < 0.5 and side[0] and side[1]:
+                    p[x, y] = line; q[x, y] = (0, 0, 0)
+                else:
+                    p[x, y] = src[t]; q[x, y] = (sq[t][0], 0, sq[t][2])
+                n += 1
+    return n
 
 
 def side_braid(c, ix, src, sq, cx, cy, r, low):
