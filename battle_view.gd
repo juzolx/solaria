@@ -1625,10 +1625,25 @@ func _faceoff_rect(art: Dictionary, ui: float, sc: float, move: float, boss: boo
 		# (its feet stay a tenth of the stage behind the hero's)
 		while ui < _hero_unit() + 1.0 and _face_visible(rows * ui / sc, seam, top_min) < FACE_VISIBLE 				and top_min + rows * (ui + 1.0) / sc <= _team_ground() - size.y * 0.1:
 			ui += 1.0
+	# never past the box the dungeon keeps its props out of (Room3D.MONSTER_BOX, in view shares)
+	while ui > 1.0 and not _in_monster_box(art, ui / sc, seam, top_min, rows):
+		ui -= 1.0
 	var u := ui / sc
 	var sz: Vector2 = art["size"] * u
 	var feet := maxf(seam, top_min + rows * u)
 	return Rect2(_snap(Vector2(size.x * 0.5 - sz.x / 2.0, feet + move - rows * u)), sz)
+
+## True when the monster's solid pixels at u screen px per art px, centred on the stage with its
+## feet where the face-off stands them, stay inside Room3D.MONSTER_BOX.
+func _in_monster_box(art: Dictionary, u: float, seam: float, top_min: float, rows: float) -> bool:
+	if not art.has("used"):
+		art["used"] = Rect2((art["img"] as Image).get_used_rect()) if art.has("img") else Rect2(Vector2.ZERO, art["size"])
+	var ur: Rect2 = art["used"]
+	var half: float = (art["size"] as Vector2).x / 2.0
+	var reach := maxf(half - ur.position.x, ur.end.x - half) * u   # the furthest solid pixel from the centre
+	var feet := maxf(seam, top_min + rows * u)
+	var box: Rect2 = Room3D.MONSTER_BOX
+	return reach <= size.x * (0.5 - box.position.x) and feet <= size.y * box.end.y
 
 const COMMON_NEAR := 0.08
 const CALAMITY_SHARE := 0.1   # on top of face_share: up to ~56% of the stage
