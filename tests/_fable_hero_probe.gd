@@ -19,6 +19,8 @@ func _initialize() -> void:
 	_portraits()
 	_build_hair()
 	_unarmed()
+	_doll_back()
+	_bald()
 	print("FABLE HERO PROBE DONE ", out_dir)
 	quit()
 
@@ -31,9 +33,17 @@ func _row(app: Dictionary, cls: String, weapon: String) -> Array:
 	var front := HeroArt.frames(app, cls, 0, weapon, false)
 	var row: Array = []
 	for i in 7:
-		row.append(back["img"][i])
-	row.append(front["img"][7]); row.append(front["img"][8])
+		row.append(_img(back, i))
+	row.append(_img(front, 7)); row.append(_img(front, 8))
 	return row
+
+## Frame i of HeroArt.frames: the kept Image, else its texture's (only idle 0 and the portrait keep one).
+func _img(fr: Dictionary, i: int) -> Image:
+	var im: Image = fr["img"][i]
+	if im == null and fr["tex"][i] != null:
+		im = (fr["tex"][i] as Texture2D).get_image()
+	assert(im != null, "probe frame %d has no image" % i)
+	return im
 
 func _sheet(rows: Array, name: String, scale := 2) -> void:
 	var f := HeroArt.FRAME
@@ -146,3 +156,31 @@ func _unarmed() -> void:
 			img.blend_rect(im, Rect2i(Vector2i.ZERO, im.get_size()), Vector2i(c * p, r * p))
 	img.resize(img.get_width() * 3, img.get_height() * 3, Image.INTERPOLATE_NEAREST)
 	img.save_png(out_dir.path_join("6_unarmed.png"))
+
+## 7 doll back: the same dolls as 6 from behind (the battle idle), 3x.
+func _doll_back() -> void:
+	var rows := []
+	for app in _doll_apps():
+		var row := []
+		for c in [["Warrior", 0, ""], ["Warrior", 15, ""], ["Warrior", 0, "sword"], ["Knight", 0, ""]]:
+			row.append(_img(HeroArt.frames(app, c[0], c[1], c[2], true), 0))
+		rows.append(row)
+	_sheet(rows, "7_doll_back.png", 3)
+
+## 8 bald: the bald builds (dwarf f, goblin f, orc m/f) as Wanderer and Warrior, back idle + portrait, 3x.
+func _bald() -> void:
+	var rows := []
+	for rb in [["Dwarf", "fem"], ["Goblin", "fem"], ["Orc", "masc"], ["Orc", "fem"]]:
+		var app := {"body": rb[1], "race": rb[0], "skin": Races.skins(rb[0])[0], "hair": "Bald", "hair_color": 1}
+		var row := []
+		for c in [["Wanderer", ""], ["Warrior", "sword"]]:
+			row.append(_img(HeroArt.frames(app, c[0], 0, c[1], true), 0))
+			row.append(_img(HeroArt.frames(app, c[0], 0, c[1], false), 7))
+		rows.append(row)
+	_sheet(rows, "8_bald.png", 3)
+
+func _doll_apps() -> Array:
+	return [{"body": "fem", "race": "Human", "skin": 1, "hair": "Long", "hair_color": 0},
+		{"body": "masc", "race": "Human", "skin": 1, "hair": "Short", "hair_color": 1},
+		{"body": "masc", "race": "Orc", "skin": 1, "hair": "Short", "hair_color": 1},
+		{"body": "fem", "race": "Dwarf", "skin": 1, "hair": "Short", "hair_color": 1}]

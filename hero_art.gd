@@ -129,7 +129,7 @@ static func _shade(ramp: PackedColorArray, i: int) -> Color:
 ## first: the frame the sheet's first cell is (the face sheets hold only the portrait frames).
 ## dye: the class colour for a body build's family outfit (index blue channel).
 ## lift: rows to draw the layer higher (negative: lower).
-static func _lay(dst: PackedByteArray, src_path: String, skin: PackedColorArray, hair: PackedColorArray, cells: Vector2i, only_hair := false, first := 0, dye := PackedColorArray(), lift := 0) -> void:
+static func _lay(dst: PackedByteArray, src_path: String, skin: PackedColorArray, hair: PackedColorArray, cells: Vector2i, only_hair := false, first := 0, dye := PackedColorArray(), lift := 0, lift_s := 0) -> void:
 	if _misses.has(src_path):
 		return
 	var src := _sheet(src_path)
@@ -148,9 +148,10 @@ static func _lay(dst: PackedByteArray, src_path: String, skin: PackedColorArray,
 		if ci >= rects.size():
 			break
 		var r: Rect2i = rects[ci]
-		for y in range(maxi(r.position.y, lift - off), mini(r.end.y, FRAME - off + lift)):
+		var lf := lift_s if f >= 7 else lift  # the portrait frames (7, 8) have their own
+		for y in range(maxi(r.position.y, lf - off), mini(r.end.y, FRAME - off + lf)):
 			var row := y * sw + ci * n
-			var drow := (y + off - lift) * dw + f * FRAME + off
+			var drow := (y + off - lf) * dw + f * FRAME + off
 			for x in range(r.position.x, r.end.x):
 				var si := (row + x) * 4
 				if sd[si + 3] == 0:
@@ -242,12 +243,13 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 		if bool(bd.get("hair", false)):  # the creator's hair style, fitted to the build's head (bake.py)
 			_lay(data, "%s/hair_%s" % [build, style_key(app)], bskin, hair, cells)
 		_lay_look(data, build, app, cells)
+		var btop := _head_top(data, cells)
 		_lay_weapon(data, build, weapon, cells, false)
 		var breath: bool = not back or b == "f" or build in info().get("breath", [])  # one drawn idle or portrait pose
 		var glow := _glow(app)
 		if glow.a == 0.0 and br != art_race(app):  # a Lich dwarf: the dwarf, outlined in the form's colour
 			glow = Color(Races.FORMS.get(art_race(app), {}).get("color", "#7fd0f0"), 0.75)
-		return _sourced(_finish(key, data, cells, glow, breath), build, weapon)
+		return _sourced(_finish(key, data, cells, glow, breath, btop), build, weapon)
 	var race := race_key(app, b)
 	if race != "":
 		race = _looked(race, app)  # an awakening's variant of the race layer (a second pair of wings...)
@@ -266,9 +268,23 @@ static func frames(app: Dictionary, cls: String, tier: int, weapon: String, back
 	if race != "":
 		_lay(data, race, skin, hair, cells)  # ears, horns, halo, wings from behind...
 	_lay_look(data, b, app, cells)
+	var top := _head_top(data, cells)
 	_lay_weapon(data, b, weapon, cells, false)
 	# her second idle and second portrait are drawn 2 px over: both made from the first (no hop; R3 neck check)
-	return _sourced(_finish(key, data, cells, _glow(app), b == "f"), b, weapon)
+	return _sourced(_finish(key, data, cells, _glow(app), b == "f", top), b, weapon)
+
+## The highest drawn row of the idle (or portrait) pair before the weapon goes on: the head's top, where the
+## companion bar sits (a fairy's raised mace put it 10 rows over her hair: Fable hero R4 item 9).
+static func _head_top(data: PackedByteArray, cells: Vector2i) -> int:
+	var pair: Array = IDLE if cells.x == 0 else PORTRAIT
+	var dw := FRAME * 9
+	for y in FRAME:
+		for f in pair:
+			var row := (y * dw + int(f) * FRAME) * 4
+			for x in FRAME:
+				if data[row + x * 4 + 3] > 0:
+					return y
+	return FRAME
 
 ## The frames whose weapon hand opens when nothing is held (idle, hit, portrait); a swing stays a fist (a punch).
 const OPEN_HAND := [0, 1, 6, 7, 8]
@@ -356,11 +372,18 @@ static func _lay_look(data: PackedByteArray, dir: String, app: Dictionary, cells
 	var look := str(app.get("look", ""))
 	if look != "" and ResourceLoader.exists(DIR + "%s/look_%s.png" % [dir, look]):
 		var lift := 0
+		var lift_s := 0
 		if look == "crown":  # it sits on short hair: taller or flatter styles move it (bake.py crown_lifts)
 			var bd: Dictionary = info().get("builds", {}).get(build_race(app), {})
 			if dir in ["m", "f"] or bool(bd.get("hair", false)):
-				lift = clampi(int(info().get("crown_lift", {}).get(dir, {}).get(style_key(app), 0)), LIFT.x, LIFT.y)
-		_lay(data, "%s/look_%s" % [dir, look], PackedColorArray(), PackedColorArray(), cells, false, 0, PackedColorArray(), lift)
+				lift = crown_lift(dir, style_key(app))
+				lift_s = crown_lift(dir, style_key(app), true)
+		_lay(data, "%s/look_%s" % [dir, look], PackedColorArray(), PackedColorArray(), cells, false, 0, PackedColorArray(), lift, lift_s)
+
+## Rows the crown moves on a style, in battle or (portrait) on the portrait frames (heroes.json crown_lift(_s)).
+static func crown_lift(dir: String, style: String, portrait := false) -> int:
+	var key := "crown_lift_s" if portrait and info().has("crown_lift_s") else "crown_lift"
+	return clampi(int(info().get(key, {}).get(dir, {}).get(style, 0)), LIFT.x, LIFT.y)
 
 ## The "glow" awakening: a soft outline in the race colour (clear when the hero has none).
 static func _glow(app: Dictionary) -> Color:
@@ -398,7 +421,7 @@ static func _breath(im: Image) -> Image:
 			out.set_pixel(x, y, im.get_pixel(x, y - 1) if y > 0 else Color(0, 0, 0, 0))
 	return out
 
-static func _finish(key: String, data: PackedByteArray, cells: Vector2i, glow := Color(0, 0, 0, 0), breath := false) -> Dictionary:
+static func _finish(key: String, data: PackedByteArray, cells: Vector2i, glow := Color(0, 0, 0, 0), breath := false, top := -1) -> Dictionary:
 	if glow.a > 0.0:
 		_outline(data, cells, glow)
 	var sheet := Image.create_from_data(FRAME * 9, FRAME, false, Image.FORMAT_RGBA8, data)
@@ -415,8 +438,10 @@ static func _finish(key: String, data: PackedByteArray, cells: Vector2i, glow :=
 		if i in pair:  # the head's top row (companion bars sit on it: a fairy's is 17 rows under a human's)
 			first = im if first == null else first
 			var r := im.get_used_rect()
-			if r.size.y > 0:
+			if r.size.y > 0 and top < 0:
 				out["top"] = mini(int(out["top"]), r.position.y)
+			elif top >= 0:
+				out["top"] = top
 		# Images are kept only where something reads them: the first battle idle (Sprites.hero's still) and
 		# the portrait pair (portrait_frames, the town walkers); the rest live as textures (Fable hero R3 item 15)
 		out["img"].append(im if i in PORTRAIT or i == IDLE[0] else null)
