@@ -132,6 +132,17 @@ func play(sound_name: String, pitch := 1.0, db := 0.0) -> void:
 	if haptics and HAPTIC.has(sound_name) and OS.has_feature("mobile"):
 		Input.vibrate_handheld(int(HAPTIC[sound_name]), 0.6)
 
+## Lets go of every stream on quit, so a crossfade or loop still playing doesn't hold one ("resources still in use at exit").
+func _exit_tree() -> void:
+	var all: Array[AudioStreamPlayer] = players.duplicate()
+	all.append_array([music_a, music_b, ambience])
+	for p in all:
+		p.stop()
+		p.stream = null
+	sounds.clear()
+	music_streams.clear()
+	amb_streams.clear()
+
 ## Picks the zone music (or the boss theme) and crossfades when it changes.
 func update_music(state: GameState) -> void:
 	if state.in_town:
