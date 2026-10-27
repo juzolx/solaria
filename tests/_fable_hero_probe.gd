@@ -18,6 +18,7 @@ func _initialize() -> void:
 	_looks()
 	_portraits()
 	_build_hair()
+	_unarmed()
 	print("FABLE HERO PROBE DONE ", out_dir)
 	quit()
 
@@ -125,3 +126,23 @@ func _build_hair() -> void:
 				row.append(HeroArt.frames(app, "Wanderer", 0, "", false)["img"][7])
 			rows.append(row)
 	_sheet(rows, "5_build_hair.png")
+
+## 6 unarmed: the Gear-page doll (no weapon) per body: portrait unarmed, portrait with a sword, Warrior t0/t15,
+## 3x (Juzo: a fist round a missing grip and a one-sided shoulder plate)
+func _unarmed() -> void:
+	var p := Sprites.PORTRAIT
+	var apps := [{"body": "fem", "race": "Human", "skin": 1, "hair": "Long", "hair_color": 0},
+		{"body": "masc", "race": "Human", "skin": 1, "hair": "Short", "hair_color": 1},
+		{"body": "masc", "race": "Orc", "skin": 1, "hair": "Short", "hair_color": 1},
+		{"body": "fem", "race": "Dwarf", "skin": 1, "hair": "Short", "hair_color": 1}]
+	var img := Image.create(p * 4, p * apps.size(), false, Image.FORMAT_RGBA8)
+	img.fill(BG)
+	for r in apps.size():
+		var cols := [{"Class": {"cls": "Warrior", "tier": 0}}, {"Class": {"cls": "Warrior", "tier": 15}},
+			{"Class": {"cls": "Warrior", "tier": 0}, "Weapon": Sprites.gear_look({"slot": "Weapon", "type": "sword", "rarity": 1})},
+			{"Class": {"cls": "Knight", "tier": 0}}]
+		for c in cols.size():
+			var im := Sprites.portrait(apps[r], cols[c]).get_image()
+			img.blend_rect(im, Rect2i(Vector2i.ZERO, im.get_size()), Vector2i(c * p, r * p))
+	img.resize(img.get_width() * 3, img.get_height() * 3, Image.INTERPOLATE_NEAREST)
+	img.save_png(out_dir.path_join("6_unarmed.png"))

@@ -21,7 +21,10 @@
     75
    ],
    "f": [
-    0
+    0,
+    15,
+    35,
+    75
    ]
   },
   "knight": {
@@ -703,6 +706,10 @@
    "m/race_angel",
    "f/race_angel"
   ],
+  "dragon_wings": [
+   "m/race_dragonkin",
+   "f/race_dragonkin"
+  ],
   "horns_big": [
    "m/race_demon",
    "f/race_demon"
@@ -710,8 +717,14 @@
   "crown": [
    "m/look_crown",
    "f/look_crown",
+   "goblin_m/look_crown",
+   "goblin_f/look_crown",
    "dwarf_m/look_crown",
-   "dwarf_f/look_crown"
+   "dwarf_f/look_crown",
+   "orc_m/look_crown",
+   "orc_f/look_crown",
+   "fairy_m/look_crown",
+   "fairy_f/look_crown"
   ],
   "wings_big": [
    "fairy_m/race_fairy",
@@ -750,14 +763,11 @@
    "bun": 1,
    "afro": 1
   },
-  "dwarf_m": {
+  "goblin_m": {
    "spiky": 1,
    "shaggy": 1,
    "mohawk": 1,
    "short_mohawk": 1,
-   "buzz": -4,
-   "bald": -21,
-   "balding": -7,
    "bedhead": 1,
    "porcupine": 1,
    "wild": 1,
@@ -765,44 +775,35 @@
    "bun": 1,
    "afro": 1
   },
-  "dwarf_f": {
-   "short": -5,
-   "spiky": -4,
-   "side_swept": -5,
-   "shaggy": -4,
-   "mohawk": -4,
-   "short_mohawk": -4,
-   "buzz": -10,
-   "bald": -27,
-   "balding": -12,
-   "bedhead": -4,
-   "unkempt": -5,
-   "porcupine": -4,
-   "mop": -5,
-   "parted": -5,
-   "page": -5,
-   "bangs": -5,
-   "long_bangs": -5,
-   "very_long": -5,
-   "wild": -4,
-   "loose": -5,
-   "wavy": -5,
-   "tied_back": -5,
-   "ponytail": -5,
-   "high_ponytail": -5,
-   "half_up": -4,
-   "pigtails": -5,
-   "bun": -4,
-   "braid": -5,
-   "bob": -5,
-   "pixie": -5,
-   "princess": -5,
-   "curly": -5,
-   "long_curls": -5,
-   "afro": -4,
-   "cornrows": -5,
-   "dreadlocks": -5
-  }
+  "goblin_f": {},
+  "dwarf_m": {
+   "spiky": 1,
+   "shaggy": 1,
+   "mohawk": 1,
+   "short_mohawk": 1,
+   "bedhead": 1,
+   "porcupine": 1,
+   "wild": 1,
+   "half_up": 1,
+   "bun": 1,
+   "afro": 1
+  },
+  "dwarf_f": {},
+  "orc_m": {
+   "spiky": 1,
+   "shaggy": 1,
+   "mohawk": 1,
+   "short_mohawk": 1,
+   "bedhead": 1,
+   "porcupine": 1,
+   "wild": 1,
+   "half_up": 1,
+   "bun": 1,
+   "afro": 1
+  },
+  "orc_f": {},
+  "fairy_m": {},
+  "fairy_f": {}
  },
  "builds": {
   "Goblin": {
@@ -928,5 +929,117 @@
   "goblin_m",
   "orc_m",
   "fairy_m"
- ]
+ ],
+ "axis": {
+  "dwarf_f": [
+   46.1,
+   45.1,
+   46.6,
+   48.0,
+   47.7,
+   49.0,
+   46.2,
+   47.9,
+   47.9
+  ],
+  "dwarf_m": [
+   47.4,
+   46.2,
+   44.9,
+   44.6,
+   47.4,
+   48.3,
+   46.8,
+   48.7,
+   48.7
+  ],
+  "f": [
+   47.5,
+   47.8,
+   47.5,
+   48.2,
+   49.0,
+   47.8,
+   44.6,
+   50.0,
+   47.9
+  ],
+  "fairy_f": [
+   41.7,
+   42.7,
+   44.2,
+   47.2,
+   54.1,
+   51.6,
+   43.3,
+   48.7,
+   48.7
+  ],
+  "fairy_m": [
+   42.1,
+   42.1,
+   43.5,
+   46.5,
+   54.6,
+   51.1,
+   43.8,
+   48.7,
+   48.7
+  ],
+  "goblin_f": [
+   47.4,
+   48.0,
+   45.1,
+   45.8,
+   49.6,
+   49.0,
+   45.6,
+   49.4,
+   49.4
+  ],
+  "goblin_m": [
+   46.9,
+   46.9,
+   44.5,
+   43.9,
+   47.4,
+   47.1,
+   47.6,
+   48.4,
+   48.4
+  ],
+  "m": [
+   45.2,
+   44.5,
+   44.6,
+   44.1,
+   44.4,
+   44.4,
+   47.2,
+   49.0,
+   49.1
+  ],
+  "orc_f": [
+   46.6,
+   47.1,
+   47.8,
+   48.8,
+   45.0,
+   47.6,
+   47.9,
+   48.0,
+   48.0
+  ],
+  "orc_m": [
+   46.5,
+   46.5,
+   46.5,
+   47.5,
+   48.0,
+   47.8,
+   47.8,
+   47.8,
+   47.8
+  ]
+ }
 }

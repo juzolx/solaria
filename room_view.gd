@@ -364,8 +364,10 @@ func _leader_tall(scr: float) -> float:
 		_tall_key = k
 		var sz: float = float(an["size"]) * float(ArtStyle.unit(scr)) / scr
 		var foot := float(an["foot"]) / float(an["size"]) if an.has("foot") else 0.9
-		var img: Image = (an["tex"][0] as Texture2D).get_image()
-		var top := float(img.get_used_rect().position.y) if img else 0.0
+		var top := float(an["top"]) if an.has("top") else 0.0  # HeroArt.anims: the head's top row, no GPU read-back
+		if not an.has("top"):
+			var img: Image = (an["tex"][0] as Texture2D).get_image()
+			top = float(img.get_used_rect().position.y) if img else 0.0
 		_tall = sz * foot - top * sz / float(an["size"])
 	return _tall
 
@@ -376,7 +378,8 @@ func leader_half_w(scr: float) -> float:
 	if an.is_empty():
 		return 0.0
 	var sz: float = float(an["size"]) * float(ArtStyle.unit(scr)) / scr
-	var img: Image = (an["tex"][0] as Texture2D).get_image()
+	var imgs: Array = an.get("img", [])  # HeroArt keeps the first idle Image: no GPU read-back
+	var img: Image = imgs[0] if not imgs.is_empty() and imgs[0] != null else (an["tex"][0] as Texture2D).get_image()
 	if img == null:
 		return sz / 2.0
 	var r := img.get_used_rect()

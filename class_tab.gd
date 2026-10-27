@@ -282,6 +282,8 @@ func _tree() -> void:
 	# nodes show the outfit and the class in gold, the ones ahead a dark "?" shape. The choose-now
 	# state is the gold pick panel above, not a second colour here.
 	UI.section(box, "Your path", "Your class evolves at levels 15, 35 and 75.")
+	# a body with one outfit for the class shows no dark shape ahead: it would promise a new look (Fable hero R3 item 9)
+	var tiered := not HeroArt.available() or HeroArt.outfit_tiers(state.hero_class, state.appearance) > 1
 	var row := UI.hbox(0)
 	box.add_child(row)
 	var steps: Array = [{"level": 1, "id": "", "name": state.hero_class}]
@@ -298,7 +300,12 @@ func _tree() -> void:
 		var v := UI.vbox(2)
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(v)
-		var pic := outfit_stage(state, state.hero_class, 0 if i == 0 else int(st["level"]), 1, not reached)
+		var pic: Control
+		if reached or tiered:
+			pic = outfit_stage(state, state.hero_class, 0 if i == 0 else int(st["level"]), 1, not reached)
+		else:
+			pic = Control.new()
+			pic.custom_minimum_size = Vector2(Sprites.PORTRAIT, Sprites.PORTRAIT + 6)
 		if not reached:
 			var q := UI.label("?", UI.FONT_TITLE, UI.DIM)
 			q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
