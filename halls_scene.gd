@@ -64,6 +64,11 @@ var _vig_at := Vector3.ZERO
 ## One 3D room for every view (room view and fights), moved to whichever draws: a second one
 ## would show the last fight's room for a frame and build every room twice (Fable round 3).
 static var shared: Room3D = null
+## The process frame the shared room last moved in. It moves at most once a frame: each move
+## redraws the views, and a redraw queued while deferred calls run is drawn in the same flush,
+## so two views that both draw (the title on its way out and the fight after Continue) would
+## hand it back and forth forever inside one frame (the 2.1 Continue crash).
+static var _moved_frame := -1
 
 func tx(path: String) -> Texture2D:
 	if not _tex.has(path):
@@ -325,6 +330,10 @@ func _draw_3d(ci: CanvasItem, sz: Vector2) -> bool:
 		r3 = null
 		_r3_key = ""
 		return false
+	if ci.is_queued_for_deletion() or not ci.is_inside_tree():
+		# a view on its way out (the title once Continue is tapped) never claims the room back
+		ci.draw_rect(Rect2(Vector2.ZERO, sz), mood()["deep"])
+		return true
 	if shared == null or not is_instance_valid(shared):
 		shared = Room3D.new()
 		ci.add_child.call_deferred(shared)
@@ -361,11 +370,15 @@ func _draw_3d(ci: CanvasItem, sz: Vector2) -> bool:
 	return true
 
 func _move_room(ci: CanvasItem) -> void:
-	if shared == null or not is_instance_valid(shared) or not is_instance_valid(ci):
+	if shared == null or not is_instance_valid(shared):
 		return
 	shared.remove_meta("moving")
-	if shared.get_parent() == ci:
+	if not is_instance_valid(ci) or ci.is_queued_for_deletion() or not ci.is_inside_tree() or shared.get_parent() == ci:
 		return
+	var f := Engine.get_process_frames()
+	if f == _moved_frame:
+		return   # already moved this frame: whoever still wants it asks again when it next draws
+	_moved_frame = f
 	if shared.get_parent():
 		shared.reparent(ci, false)
 	else:
