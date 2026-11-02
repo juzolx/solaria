@@ -163,6 +163,7 @@ func _initialize() -> void:
 	check(GameState.has_slot(3) and GameState.town_heroes(GameState.town) >= 1, "has_slot sees a hero whose only file is the .tmp")
 	check(not GameState.slot_meta(3).is_empty(), "and the title screen can read it")
 	SaveIO.delete_all(hp)
+	ht = hero(3)  # a fresh hero: the old one's files were deleted, and a deleted hero is never saved back (Fable code r1 #2)
 	ht.save_game()
 	DirAccess.rename_absolute(ProjectSettings.globalize_path(hp), ProjectSettings.globalize_path(SaveIO.backup_path(hp, 2)))
 	check(GameState.has_slot(3), "has_slot sees a hero whose only file is .bak2")

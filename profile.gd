@@ -303,6 +303,9 @@ func build_towns(placed: Array) -> void:
 ## Towns made before Regular / Hardcore belonged to the town take it from their heroes.
 func fill_town_modes() -> void:
 	var cur := GameState.town
+	for t in range(1, GameData.MAX_TOWNS + 1):
+		if not towns.has(str(t)) and GameState.town_heroes(t) > 0:
+			towns[str(t)] = {"name": town_name(t)}  # Fable code r1 #8: a lost settings file lost the record, not the town (its mode comes back below)
 	for k in towns:
 		var rec: Dictionary = towns[k]
 		if rec.has("hardcore"):

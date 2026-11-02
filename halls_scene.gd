@@ -14,6 +14,7 @@ const CEIL_Y := 2.5
 const STEP := 0.5         # quads are half a unit (less warping, finer floor)
 static var low := false   # Low graphics: quads twice the size (a quarter as many)
 static var allow_3d := true   # off in tests that only want the 2D drawer
+var flat := false   # Fable code r1 #4: this view only ever uses the 2D drawer and never claims the shared Room3D (the loading screen)
 const DOOR_X := [-1.9, 0.0, 1.9]
 const DOOR_W := 1.3
 const DOOR_H := 2.3
@@ -318,11 +319,13 @@ func draw_shell(ci: CanvasItem, sz: Vector2) -> void:
 ## True while the 3D room stands in for the 2D one (doors, scenery and torches
 ## are part of it then; the views still draw what's in the room on top).
 func is_3d() -> bool:
-	return r3 != null and _r3_key == room_key and key != "" and not low and allow_3d
+	return r3 != null and _r3_key == room_key and key != "" and not low and allow_3d and not flat
 
 ## Draws the 3D room as the backdrop, one viewport pixel per ArtStyle.unit screen pixels.
 ## Only the very first frame (or Low graphics, or headless) uses the 2D drawer.
 func _draw_3d(ci: CanvasItem, sz: Vector2) -> bool:
+	if flat:
+		return false   # drawn once in 2D (nothing redraws it); the shared room stays with the views that render it
 	if low or not allow_3d or DisplayServer.get_name() == "headless":
 		if shared != null and is_instance_valid(shared):
 			shared.queue_free()
