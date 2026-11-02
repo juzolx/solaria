@@ -404,6 +404,7 @@ func _start(is_new: bool) -> void:
 			Buildings.on_recruit(state)
 			profile.save()
 		state.say("Your descent begins..." if not state.hardcore else "[color=#f87171]Hardcore: one life. Make it count.[/color]")
+	GameData.realm_order = state.realm_order  # Fable code r1 #6: a new hero doesn't keep the title's (or the last hero's) realms
 	state.dev_mode = profile.dev_mode
 	state.profile_ref = profile
 	state.path_rooms_on = profile.path_choice != "fight"
@@ -1583,6 +1584,8 @@ func apply_settings() -> void:
 
 func reset_save() -> void:
 	timer.stop()
+	if started and not state.run_over and state.party != null:
+		state.party.save_all(true)  # Fable code r1 #3: the companions' held-back saves, before run_over stops all saving
 	state.run_over = true  # stop any more saving
 	state.delete_own_saves()
 	codex.save()

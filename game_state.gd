@@ -132,6 +132,7 @@ var restored_backup := false  # true if the main save was damaged and the backup
 var save_pending := false     # R4: a save is waiting for the throttle (save_io.gd)
 var _last_write_ms := -1000000
 var _on_disk := false         # this hero has been saved or loaded (so a missing file means deleted)
+var _disk_path := ""          # the file it was last saved to or loaded from (a hero moved to another slot isn't "deleted")
 var _upgrade_key := ""
 var _upgrade_cache := {}
 
@@ -3333,8 +3334,12 @@ func save_game(force := false) -> void:
 		codex.save()
 	if run_over:
 		return
+	if _on_disk and _disk_path == save_paths()[0] and not has_slot(slot):
+		save_pending = false  # Fable code r1 #2: the hero was deleted (a companion from Heroes): don't bring it back
+		return
 	if SaveIO.write(save_paths()[0], data, "hero"):
 		_on_disk = true
+		_disk_path = save_paths()[0]
 	else:
 		save_pending = true  # retried by the next flush (main, every second)
 
@@ -3352,7 +3357,7 @@ func meta() -> Dictionary:
 	return {"name": hero_name, "title": title() if hero_class != "" else "New hero", "class": hero_class, "level": level,
 		"floor": floor_num, "best": best_floor, "hardcore": hardcore, "appearance": appearance.duplicate(),
 		"zone": GameData.zone_for_floor(floor_num)["name"], "date": Time.get_date_string_from_system(),
-		"looks": hero_looks() if hero_class != "" else {}}
+		"looks": hero_looks() if hero_class != "" else {}, "realm_order": realm_order.duplicate()}  # realm_order: Fable code r1 #6
 
 ## [save, backup, temp] for this hero's slot.
 func save_paths() -> Array:
@@ -3430,6 +3435,9 @@ static func slot_meta(n: int) -> Dictionary:
 		m = {"name": d.get("hero_name", ""), "title": d.get("hero_class", "Hero"), "class": d.get("hero_class", ""), "level": d.get("level", 1),
 			"floor": d.get("floor", 1), "best": d.get("best_floor", 1), "hardcore": d.get("hardcore", false), "appearance": d.get("appearance", {}),
 			"zone": GameData.zone_for_floor(int(d.get("floor", 1)))["name"], "date": ""}
+	if not m.has("realm_order"):  # Fable code r1 #6: metas written before it was kept there
+		var lin = d.get("lineage", {})
+		m["realm_order"] = (lin as Dictionary).get("realm_order", []) if lin is Dictionary else []
 	return m
 
 ## Older versions had one Regular and one Hardcore save. Moves them into hero slots.
@@ -3476,10 +3484,14 @@ func load_game() -> bool:
 	if data == null:
 		return false
 	_on_disk = true
+	_disk_path = save_paths()[0]
 	# Choices waiting on screen belong to whoever was playing before
 	path_offer = []
 	path_wait = 0
-	if int(data.get("version", 1)) < GameData.SAVE_VERSION:
+	# Fable code r1 #9: only a real 0.x layout is converted (it keeps just floor, gear and gold). A file that
+	# merely lost its "version" key but was written by 2.1 (save_kind) or carries a hero loads as it is.
+	var old_layout: bool = int(data.get("version", 1)) < GameData.SAVE_VERSION and not data.has("save_kind") and not data.has("hero_class") and not data.has("level")
+	if old_layout:
 		_convert_old_save(data)
 		return true
 
@@ -3636,6 +3648,9 @@ func load_game() -> bool:
 	loot_filter = data.get("loot_filter", loot_filter)
 	enemy_goblin = bool(data.get("enemy_goblin", false))
 	Lineage.from_save(self, data.get("lineage", {}))
+	for id in hidden:  # Fable code r1 #7: a pre-2.1 backup is repaired without the Codex, so its hidden classes are recorded here
+		if not Hidden.info(String(id)).is_empty():
+			Collections.found_class(codex, String(id))
 	Races.retire_rep(rep)  # standing kept under a retired race (Golem) moves to its new one
 	GameData.realm_order = realm_order
 	GearSlots.drop_unknown(self)  # 2.1: gear for a slot this version doesn't know never crashes a load
@@ -4521,6 +4536,7 @@ func set_party(slots: Array) -> void:
 	party_slots = slots.slice(0, Party.MAX_COMPANIONS)
 	party = Party.new()
 	party.load_members(party_slots, self)
+	GameData.realm_order = realm_order  # Fable code r1 #1: each companion's load_game set the static to its own order
 	party_slots = party.members.map(func(m): return m.slot)
 	Bench.refresh(self)
 	spawn_enemy()

@@ -93,6 +93,8 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 				m.reset_save()
 				return
 			GameState.delete_slot(n)
+			if m.started and m.state != null and n in m.state.party_slots:  # Fable code r1 #2: a deleted companion leaves the team
+				m.state.set_party(m.state.party_slots.filter(func(k): return int(k) != n))
 			close()
 			if title_screen and is_instance_valid(title_screen):
 				title_screen.refresh_menu()

@@ -39,6 +39,7 @@ func show_for(main_node) -> void:
 	get_viewport().size_changed.connect(_fit)
 	# Backgrounds: start where your last hero is, then drift through the zones
 	var meta := GameState.slot_meta(m.profile.active_slot)
+	GameData.realm_order = meta.get("realm_order", [])  # Fable code r1 #6: no hero is loaded here, so the static may hold the last one's realms
 	var start_zone := GameData.zone_index(int(meta.get("floor", 1)))
 	for zi in GameData.ZONES.size():
 		bg_keys.append((start_zone + zi) % GameData.ZONES.size())

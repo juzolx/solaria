@@ -33,7 +33,10 @@ func _ready() -> void:
 	var prof = main.get("profile") if main else null
 	var meta: Dictionary = GameState.slot_meta(prof.active_slot) if prof != null else {}
 	if not meta.is_empty():
+		if not bool(main.get("started")):
+			GameData.realm_order = meta.get("realm_order", [])  # Fable code r1 #6: this hero's realms past floor 250, not the last one's
 		var halls := HallsScene.new()
+		halls.flat = true   # Fable code r1 #4: drawn once, so the 2D drawer (the 3D room needs a second frame) and never the shared room
 		var st := GameState.new()
 		st.floor_num = maxi(1, int(meta.get("floor", 1)))
 		var room := Control.new()
