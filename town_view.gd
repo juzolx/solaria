@@ -77,6 +77,7 @@ var live_stops: Array = []  # iso: walk_stops not blocked by a level prop
 var levels_key := ""    # iso: Buildings levels the props, blocked cells and prop occluders were made for
 var level_live: Array = []  # iso: [texture, position] of the level props shown now
 var level_occ: Array = []   # iso: those props as occluders (walkers pass behind them)
+var owner_props := {}       # iso: building id -> its level props that sort behind its own occluder (see _cover)
 var build_queue: Array = []  # walkers still to build, one per frame once the town is on screen
 var pet_half := {}      # pet texture RID -> the same art halved for the iso town (an outline kept, no 0.5 sampling)
 var shadow_step: Texture2D  # the walker shadow squashed on a step frame
@@ -411,6 +412,11 @@ func refresh_levels() -> void:
 	levels_key = key
 	level_live.clear()
 	level_occ.clear()
+	owner_props.clear()
+	var bldg_y := {}   # building id -> the y its own occluder sorts by
+	for o in occluders:
+		if String(o["tag"]) != "":
+			bldg_y[String(o["tag"])] = float(o["y"])
 	var keep := {}
 	for c in inn_doors + walk_doors:
 		keep[c] = true
@@ -436,7 +442,15 @@ func refresh_levels() -> void:
 			var pos := Vector2(float(e[1]), float(e[2]))
 			level_live.append([tx, pos, up_lit.get(String(e[0]))])
 			var used := tx.get_image().get_used_rect()
-			level_occ.append({"tex": tx, "rect": Rect2(pos, tx.get_size()), "y": pos.y + used.end.y - 3.0, "tag": "level", "look": ""})
+			var occ := {"tex": tx, "rect": Rect2(pos, tx.get_size()), "y": pos.y + used.end.y - 3.0, "tag": "level", "look": "", "lit": up_lit.get(String(e[0]))}
+			# a prop on the street beside its building can sort a little behind the building's own base line
+			# (the Shop's bricks and scaffold): the building redraw must never bury it (see _cover)
+			if bldg_y.has(String(id)) and float(bldg_y[String(id)]) > float(occ["y"]):
+				occ["bldg_y"] = float(bldg_y[String(id)])
+				if not owner_props.has(String(id)):
+					owner_props[String(id)] = []
+				owner_props[String(id)].append(occ)
+			level_occ.append(occ)
 			if e.size() > 5:
 				var c := Vector2i(int(e[4]), int(e[5]))
 				if walk_base.has(c) and not keep.has(c):
@@ -1207,9 +1221,20 @@ func _cover(r: Rect2, foot_y: float, live: Array, skip := "") -> void:
 	var lit := _lit()
 	for k in range(first, live.size()):
 		var o: Dictionary = live[k]
+		if o.has("bldg_y"):   # a level prop that sorts behind its own building: drawn right after that building below
+			continue
 		var orect: Rect2 = o["rect"]
-		if orect.intersects(r) and String(o["tag"]) != skip:
+		var tag := String(o["tag"])
+		if orect.intersects(r) and tag != skip:
 			people.draw_texture(o["lit"] if lit and o.get("lit") else o["tex"], orect.position)
+			if owner_props.has(tag):
+				# Fable town fix: the building's redraw covers its whole rect, which buried the bricks, scaffold
+				# and piles standing beside it; put them back on top, unless the walker is in front of one
+				for p in owner_props[tag]:
+					var prect: Rect2 = p["rect"]
+					if float(p["y"]) <= foot_y and prect.intersects(r):
+						continue
+					people.draw_texture(p["lit"] if lit and p.get("lit") else p["tex"], prect.position)
 
 ## Iso: each building's level props (L1 scaffolding + piles, L2 lantern + upgrade, L3 banners + showpiece).
 ## Made by refresh_levels (only when a level changes).

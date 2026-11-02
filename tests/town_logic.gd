@@ -243,6 +243,26 @@ func _initialize() -> void:
 			check(through.is_empty(), "level %d props stand off the walk grid (walked through: %s)" % [lvl, through])
 			var lost2: Array = targets.filter(func(c): return walk.has(c) and not TownView._reaches(w, inns[0], [c]))
 			check(lost2.is_empty(), "level %d props cut no door or stop off (%s)" % [lvl, lost2])
+		# no level prop stands inside a building's footprint (the Shop's bricks and scaffold were buried
+		# under it), and every building that has props has its own occluder tag, which is what keeps
+		# a prop that sorts behind the building's base line on top of the building's redraw (TownView._cover)
+		var occ_tags := {}
+		for o in d["occluders"]:
+			occ_tags[String(o[4])] = true
+		var inside: Array = []
+		var untagged: Array = []
+		for id in d["levels"]:
+			if not occ_tags.has(String(id)):
+				untagged.append(id)
+			for sp in d["spots"]:
+				if String(sp.get("kind", "building")) in ["market", "point"]:
+					continue
+				var fc: Array = sp["cells"]
+				for e in d["levels"][id]:
+					if e.size() > 5 and int(e[4]) >= int(fc[0]) and int(e[4]) <= int(fc[2]) and int(e[5]) >= int(fc[1]) and int(e[5]) <= int(fc[3]):
+						inside.append([id, e[0], sp["id"]])
+		check(inside.is_empty(), "no level prop stands inside a building's footprint (%s)" % [inside])
+		check(untagged.is_empty(), "every building with level props has an occluder tag (%s)" % [untagged])
 		# every picture the town loads exists: occluders (day and lit), level props, bases and overlays
 		var missing: Array = []
 		for o in d["occluders"]:
