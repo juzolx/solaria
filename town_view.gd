@@ -44,12 +44,24 @@ var t := 0.0
 var parts: Array = []  # weather particles in map pixels
 var chimney: Array = []  # the forge chimney's smoke, in every look
 var river: Array = []    # iso: drifting pale dashes on the water, [cell px, phase, side offset]
-var badges := {}       # building id -> number shown on its plate
-var locked := {}       # building id -> why it's closed ("" = open)
-var notes := {}        # building id -> short line under the name
+var badges := {}:       # building id -> number shown on its plate
+	set(v):
+		badges = v
+		labels_dirty = true
+var locked := {}:       # building id -> why it's closed ("" = open)
+	set(v):
+		locked = v
+		labels_dirty = true
+var notes := {}:        # building id -> short line under the name
+	set(v):
+		notes = v
+		labels_dirty = true
 var people: Control    # townsfolk walking the square (drawn on the map, so they share its color grade)
 var folk: Array = []
-var hidden_spots := {}  # building id -> true while it isn't in town yet (the Clinic before your first pet)
+var hidden_spots := {}:  # building id -> true while it isn't in town yet (the Clinic before your first pet)
+	set(v):
+		hidden_spots = v
+		labels_dirty = true
 var pen_pets: Array = []  # your pets wandering the Clinic's pen: {"tex", "x", "y", "to", "wait", "flip", "t"}
 var iso := false        # the isometric town (town.json "iso")
 var hardcore := false   # Hardcore town: the Church is a ruin, the graveyard full
@@ -61,7 +73,9 @@ var walk_door_ids: Array = []  # iso: the spot id of each walk_doors cell (no tr
 var walk_keys: Array = []   # iso: walk.keys(), made once
 var shadow_tex: Texture2D   # a 2-row pixel ellipse under each walker
 var shadow_pet: Texture2D   # the same, wider, under a pet
-var label_key := []         # what the name plates were last drawn for (redrawn only when it changes)
+var labels_dirty := true    # the plates' data changed (set by the badges / locked / notes / hidden_spots setters)
+var label_seen := [Vector2.INF, 0.0, Vector2.INF, "", "", -1]   # origin, scale, size, hover, press, live "Now level" flashes at the last plate redraw
+var fx_idle := false        # the effects layer has drawn nothing since its last (empty) redraw
 var plate_sb := {}          # "normal" / "hot" / "locked" / "note" -> StyleBoxFlat, made once
 var inn_doors: Array = []  # iso: the Inn and its lodging wing - everyone lives at the Inn, so most trips start or end here
 var walk_stops: Array = []  # iso: cells beside stalls, the well and the boards where people stop a while
@@ -77,6 +91,7 @@ var live_stops: Array = []  # iso: walk_stops not blocked by a level prop
 var levels_key := ""    # iso: Buildings levels the props, blocked cells and prop occluders were made for
 var level_live: Array = []  # iso: [texture, position] of the level props shown now
 var level_occ: Array = []   # iso: those props as occluders (walkers pass behind them)
+var bldg_cells := {}        # iso: building id -> its footprint [i0, j0, i1, j1] (a walker is in front of it by cell, see in_front)
 var owner_props := {}       # iso: building id -> its level props that sort behind its own occluder (see _cover)
 var build_queue: Array = []  # walkers still to build, one per frame once the town is on screen
 var pet_half := {}      # pet texture RID -> the same art halved for the iso town (an outline kept, no 0.5 sampling)
@@ -237,6 +252,9 @@ func _ready() -> void:
 			var lt: Texture2D = load("res://art/town/iso/occ/%s.png" % String(o[6])) if o.size() > 6 and String(o[6]) != "" else null
 			occluders.append({"tex": t, "rect": Rect2(float(o[1]), float(o[2]), t.get_width(), t.get_height()), "y": float(o[3]),
 				"tag": String(o[4]), "look": String(o[5]) if o.size() > 5 else "", "lit": lt})
+		for sp in data.get("spots", []):
+			if String(sp.get("kind", "building")) in ["building", "lot"]:
+				bldg_cells[String(sp["id"])] = sp["cells"]
 		occluders.sort_custom(func(a, b): return float(a["y"]) < float(b["y"]))
 		walk_base = walk
 		walk_keys = walk.keys()
@@ -857,11 +875,19 @@ func _process(delta: float) -> void:
 	_step_weather(delta)
 	_step_folk(delta)
 	people.queue_redraw()
-	fx.queue_redraw()
-	var key := [origin, scale_f, size, hover, press, badges.hash(), locked.hash(), notes.hash(), hidden_spots.hash(),
-		level_flash.size(), level_flash.values().filter(func(v): return t < float(v[1])).size()]
-	if key != label_key:
-		label_key = key
+	# the effects layer only has something to draw at dusk or night, with weather, or with sparkles
+	# or smoke; otherwise one last redraw clears it and it then rests
+	var fx_busy := float(look.get("dark", 0.0)) > 0.1 or not parts.is_empty() or not flash_parts.is_empty()
+	if fx_busy or not fx_idle:
+		fx.queue_redraw()
+	fx_idle = not fx_busy
+	var live_flash := 0
+	for id in level_flash:
+		if t < float(level_flash[id][1]):
+			live_flash += 1
+	if labels_dirty or origin != label_seen[0] or scale_f != label_seen[1] or size != label_seen[2] or hover != label_seen[3] or press != label_seen[4] or live_flash != label_seen[5]:
+		labels_dirty = false
+		label_seen = [origin, scale_f, size, hover, press, live_flash]
 		labels.queue_redraw()
 
 # =====================================================================
@@ -1204,37 +1230,57 @@ func _draw_people() -> void:
 			var cov := Rect2(pos, Vector2(w, w)).merge(over)
 			# on the hope path the walker stands in front of the dungeon: sort by the ground under them
 			var up: float = raised.get(f.get("cell", Vector2i(-1, -1)), 0.0)
-			_cover(cov, float(f["y"]) + up, live, "gate" if up > 0.0 else "")
+			_cover(cov, float(f["y"]) + up, live, "gate" if up > 0.0 else "", fx0)
 	people.draw_set_transform(Vector2.ZERO)
 
 ## Your faded marker over a door: you went inside (not a walker still arriving about town).
 static func door_marker(f: Dictionary) -> bool:
 	return f.get("you", false) and float(f.get("fade", 0.0)) >= 1.0 and not f.get("arriving", false)
 
+## Iso: is a figure whose feet are at map px (x, y) in front of a building with footprint cells `c`?
+## By cell, not by the building's single base y: beside or in front of either visible wall counts as
+## in front, so people never vanish behind a house they are standing next to (or show over one they are behind).
+static func in_front(x: float, y: float, c: Array, o: Array) -> bool:
+	var u := (x - float(o[0])) / 16.0
+	var v := (y - float(o[1])) / 8.0 - 1.0
+	return (u + v) / 2.0 > float(c[2]) + 0.5 or (v - u) / 2.0 > float(c[3]) + 0.5
+
 ## Iso: redraw whatever stands in front of a walker (sorts lower on screen) and overlaps it,
-## so people pass behind buildings, walls and trees instead of over their roofs.
-func _cover(r: Rect2, foot_y: float, live: Array, skip := "") -> void:
-	# sorted back to front: find the first one in front of the walker, then draw those back to front
-	var first := live.size()
-	while first > 0 and float(live[first - 1]["y"]) > foot_y:
-		first -= 1
+## so people pass behind buildings, walls and trees instead of over their roofs. Buildings are
+## judged by the walker's foot cell against the building's footprint, everything else by y.
+func _cover(r: Rect2, foot_y: float, live: Array, skip := "", foot_x := INF) -> void:
 	var lit := _lit()
-	for k in range(first, live.size()):
+	if foot_x == INF:
+		foot_x = r.get_center().x
+	for k in live.size():
 		var o: Dictionary = live[k]
 		if o.has("bldg_y"):   # a level prop that sorts behind its own building: drawn right after that building below
 			continue
-		var orect: Rect2 = o["rect"]
 		var tag := String(o["tag"])
+		var cells = bldg_cells.get(tag)
+		if cells != null and tag != skip:
+			if not in_front(foot_x, foot_y, cells, data["origin"]):
+				var br: Rect2 = o["rect"]
+				if br.intersects(r):
+					_draw_building(o, tag, lit, foot_y, r)
+			continue
+		if float(o["y"]) <= foot_y:
+			continue
+		var orect: Rect2 = o["rect"]
 		if orect.intersects(r) and tag != skip:
 			people.draw_texture(o["lit"] if lit and o.get("lit") else o["tex"], orect.position)
-			if owner_props.has(tag):
-				# Fable town fix: the building's redraw covers its whole rect, which buried the bricks, scaffold
-				# and piles standing beside it; put them back on top, unless the walker is in front of one
-				for p in owner_props[tag]:
-					var prect: Rect2 = p["rect"]
-					if float(p["y"]) <= foot_y and prect.intersects(r):
-						continue
-					people.draw_texture(p["lit"] if lit and p.get("lit") else p["tex"], prect.position)
+
+func _draw_building(o: Dictionary, tag: String, lit: bool, foot_y: float, r: Rect2) -> void:
+	var orect: Rect2 = o["rect"]
+	people.draw_texture(o["lit"] if lit and o.get("lit") else o["tex"], orect.position)
+	if owner_props.has(tag):
+		# the building's redraw covers its whole rect, which buried the bricks, scaffold and piles
+		# standing beside it; put them back on top, unless the walker is in front of one
+		for p in owner_props[tag]:
+			var prect: Rect2 = p["rect"]
+			if float(p["y"]) <= foot_y and prect.intersects(r):
+				continue
+			people.draw_texture(p["lit"] if lit and p.get("lit") else p["tex"], prect.position)
 
 ## Iso: each building's level props (L1 scaffolding + piles, L2 lantern + upgrade, L3 banners + showpiece).
 ## Made by refresh_levels (only when a level changes).
@@ -1339,7 +1385,7 @@ func _draw_pen_pets(px: float, live: Array) -> void:
 		people.draw_texture(tx, pos)
 		people.draw_set_transform(Vector2.ZERO, 0.0, Vector2(scale_f, scale_f))
 		if iso:
-			_cover(Rect2(pos, sz), float(p["y"]), live)   # pets hide behind the wall and the kennel too
+			_cover(Rect2(pos, sz), float(p["y"]), live, "", x)   # pets hide behind the wall and the kennel too
 
 ## A pet's art drawn 1:1. Only art far bigger than `px` is halved, once, with TownFolk.half
 ## (outline kept) - never sampled at a fraction every frame.

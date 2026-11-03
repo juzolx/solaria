@@ -263,6 +263,27 @@ func _initialize() -> void:
 						inside.append([id, e[0], sp["id"]])
 		check(inside.is_empty(), "no level prop stands inside a building's footprint (%s)" % [inside])
 		check(untagged.is_empty(), "every building with level props has an occluder tag (%s)" % [untagged])
+		# walkers are sorted against a building by their foot cell, not the building's one base line:
+		# standing at its door or beside its front wall is in front, one cell behind its back corner is behind
+		var order_bad: Array = []
+		for sp in d["spots"]:
+			if not String(sp.get("kind", "building")) in ["building", "lot"]:
+				continue
+			var bc: Array = sp["cells"]
+			var org: Array = d["origin"]
+			var feet := func(i: float, j: float) -> Vector2: return Vector2(float(org[0]) + (i - j) * 16.0, float(org[1]) + (i + j + 1.0) * 8.0)
+			var dd: Array = sp["door"]
+			var fd: Vector2 = feet.call(float(dd[0]), float(dd[1]))
+			var fside: Vector2 = feet.call(float(bc[2]) + 1.0, float(bc[1]) + 1.0)   # beside the right wall
+			var fback: Vector2 = feet.call(float(bc[0]) - 1.0, float(bc[1]) - 1.0)   # behind the back corner
+			var door_in := int(dd[0]) <= int(bc[2]) and int(dd[1]) <= int(bc[3])   # the Church's door cell is inside its lot
+			if sp["id"] != "gate" and not door_in and not TownView.in_front(fd.x, fd.y, bc, org):
+				order_bad.append([sp["id"], "door"])
+			if not TownView.in_front(fside.x, fside.y, bc, org) and sp["id"] != "gate":
+				order_bad.append([sp["id"], "side"])
+			if TownView.in_front(fback.x, fback.y, bc, org):
+				order_bad.append([sp["id"], "back"])
+		check(order_bad.is_empty(), "walkers sort against each building by foot cell (%s)" % [order_bad])
 		# every picture the town loads exists: occluders (day and lit), level props, bases and overlays
 		var missing: Array = []
 		for o in d["occluders"]:
