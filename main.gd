@@ -339,6 +339,8 @@ func save_everything() -> void:
 func _flush_saves() -> void:
 	if started and not state.run_over:
 		state.flush_save()
+	if codex and codex.dirty and state != null and state.autosave and not SaveIO.should_defer(codex.last_write_ms):
+		codex.save()   # perf: the codex write held back after a fight (GameState._check_codex)
 
 ## Phones can kill a backgrounded app without warning (iOS allows about 5 s after a pause),
 ## so save the moment the app is paused, loses focus or is asked to close.

@@ -2470,7 +2470,9 @@ func _check_codex() -> void:
 	for m in Collections.check(codex):  # 2.1 G4: Codex collection rewards (titles and looks only)
 		say("[color=#e8b14a]%s[/color]" % Collections.toast_text(m))
 		events.append({"type": "toast", "text": Collections.toast_text(m), "collection": m["id"]})
-	if codex.dirty and autosave:
+	# perf: in the real game this write is spaced out like hero saves (at most once every
+	# SaveIO.MIN_INTERVAL_MS); a held-back write goes with the next hero save or main's 1 s flush
+	if codex.dirty and autosave and not SaveIO.should_defer(codex.last_write_ms):
 		codex.save()
 
 ## Gives a reward like {"gold": 500} or {"scroll": "luck"}. Returns a short description.

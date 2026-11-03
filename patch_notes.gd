@@ -28,6 +28,7 @@ const NOTES := [
 		"Two new gear slots: Ring and Necklace (8 in all). They give a little Attack or HP plus a small charm from Uncommon up: rings lean to crits, luck and gold, necklaces to healing and wisdom. Six new Uniques to hunt, and Fully Kitted now needs all 8 slots.",
 		"Past floor 50 levels come a little slower and monsters take a little longer to beat, so the road to floor 100 lasts longer. Epic ring and necklace charms are a step smaller (crit 4%, stones and potions 15%).",
 		"Fixes: a fallen Hardcore hero is gone the moment they fall (closing the app can't undo it); a bag past its limit never scraps a Legendary; the fall card fits a phone with OK always in reach; Change look has a Cancel; old Golem heroes are Dwarves with a Dwarf skin and keep their standing; a trial cut short by closing the app gives its gate back; the game stays upright on phones.",
+		"Lighter on phones: the game starts a little faster (music loads when it first plays) and writes your progress to storage less often during long runs. Nothing looks or plays differently.",
 	]},
 	{"version": "0.13", "name": "The Halls Below", "lines": [
 		"Every monster, boss and companion has new dark fantasy art (Dungeon Crawl Stone Soup, CC0).",

@@ -19,7 +19,8 @@ var next_player := 0
 var music_a := AudioStreamPlayer.new()
 var music_b := AudioStreamPlayer.new()
 var music_current := ""
-var music_streams := {}
+var music_streams := {}   # track -> loaded stream (filled as tracks first play)
+var music_paths := {}     # track -> file, found at boot
 var files_found := 0  # how many sound files loaded from the sounds folder
 var ambience := AudioStreamPlayer.new()   # 0.13+: the room you stand in (wind, drips, fire...)
 var ambience_current := ""
@@ -101,12 +102,18 @@ func _ready() -> void:
 	for track in ["zone_0", "zone_1", "zone_2", "zone_3", "zone_4", "zone_5", "zone_6", "zone_7", "zone_8", "zone_9", "boss", "boss2", "menu", "town"]:
 		var path: String = SOUND_DIR + "music_" + track + ".wav"
 		if ResourceLoader.exists(path):
-			var stream: AudioStreamWAV = load(path)
-			stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-			stream.loop_begin = 0
-			stream.loop_end = int(stream.get_length() * stream.mix_rate)
-			music_streams[track] = stream
+			music_paths[track] = path   # perf: loaded the first time it plays (music_stream()), not all 14 at boot
 			files_found += 1
+
+## A music track's stream, loaded and set to loop the first time it's asked for (then kept).
+func music_stream(track: String) -> AudioStreamWAV:
+	if not music_streams.has(track) and music_paths.has(track):
+		var stream: AudioStreamWAV = load(music_paths[track])
+		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		stream.loop_begin = 0
+		stream.loop_end = int(stream.get_length() * stream.mix_rate)
+		music_streams[track] = stream
+	return music_streams.get(track)
 
 func set_volumes(effects: float, music: float) -> void:
 	sfx_db = linear_to_db(maxf(effects, 0.001))
@@ -147,11 +154,11 @@ func _exit_tree() -> void:
 func update_music(state: GameState) -> void:
 	if state.in_town:
 		play_ambience("")
-		play_music("town" if music_streams.has("town") else "menu")
+		play_music("town" if music_paths.has("town") else "menu")
 	elif state.enemy_is_boss:
 		# The boss theme gets faster and heavier for the second half of the fight (or once it enrages)
 		var late := state.enemy_hp * 2 < state.enemy_max_hp or Combat.enrage_left(state) == 0
-		play_music("boss2" if late and music_streams.has("boss2") else "boss")
+		play_music("boss2" if late and music_paths.has("boss2") else "boss")
 	else:
 		play_music("zone_%d" % GameData.zone_index(state.floor_num))
 	if not state.in_town:
@@ -160,18 +167,18 @@ func update_music(state: GameState) -> void:
 
 ## Crossfades to a music track ("menu", "boss", "zone_0"...).
 func play_music(want: String) -> void:
-	if music_streams.is_empty():
+	if music_paths.is_empty():
 		return
-	if not music_streams.has(want):
+	if not music_paths.has(want):
 		return
 	if want == music_current:
-		var active := music_a if music_a.stream == music_streams[want] else music_b
+		var active := music_a if music_a.stream == music_stream(want) else music_b
 		active.volume_db = _music_db()
 		return
 	music_current = want
 	var incoming := music_b if music_a.playing else music_a
 	var outgoing := music_a if incoming == music_b else music_b
-	incoming.stream = music_streams[want]
+	incoming.stream = music_stream(want)
 	incoming.volume_db = -60.0
 	incoming.play()
 	var t := create_tween().set_parallel(true)

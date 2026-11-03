@@ -142,15 +142,18 @@ static func write(path: String, data: Dictionary, kind: String) -> bool:
 	# Keep the last good main file as a backup (a damaged one is dropped). The
 	# .bak chain only moves once a minute and .day once a day, so a run of bad
 	# saves can't push every good copy out.
-	if FileAccess.file_exists(path) and _parse(path, kind) != null:
+	# (perf: the main file is only read back and parsed when a copy is actually due, not on every write)
+	var bak_due := _age(backup_path(path, 1)) >= BAK_EVERY_S
+	var day_due := _age(day_path(path)) >= DAY_EVERY_S
+	if (bak_due or day_due) and FileAccess.file_exists(path) and _parse(path, kind) != null:
 		var main_abs := ProjectSettings.globalize_path(path)
-		if _age(backup_path(path, 1)) >= BAK_EVERY_S:
+		if bak_due:
 			for i in range(BACKUPS, 1, -1):
 				var older := backup_path(path, i - 1)
 				if FileAccess.file_exists(older):
 					_move(older, backup_path(path, i))
 			DirAccess.copy_absolute(main_abs, ProjectSettings.globalize_path(backup_path(path, 1)))
-		if _age(day_path(path)) >= DAY_EVERY_S:
+		if day_due:
 			DirAccess.copy_absolute(main_abs, ProjectSettings.globalize_path(day_path(path)))
 	_move(tmp, path)
 	return true

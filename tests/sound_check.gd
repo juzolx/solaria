@@ -10,8 +10,8 @@ func _initialize() -> void:
 		if not s.sounds.has(n) or not (s.sounds[n] is AudioStreamWAV) or not ResourceLoader.exists("res://sounds/%s.wav" % n):
 			missing.append(n)
 	print("missing: ", missing)
-	for k in s.music_streams:
-		var st: AudioStreamWAV = s.music_streams[k]
+	for k in s.music_paths:
+		var st: AudioStreamWAV = s.music_stream(k)
 		print(k, " len ", st.get_length(), " loop ", st.loop_mode, " end ", st.loop_end, " rate ", st.mix_rate, " fmt ", st.format)
 	var gs := GameState.new()
 	gs.new_game()

@@ -77,6 +77,8 @@ var keepout: Array = []    # floor the standing props stay off (Rect2 in x, dept
 var torch_z := Vector2(4.6, 4.6)   # the side torches' depths (HallsScene rolls them)
 var _fresh := 0            # frames to render every frame after a rebuild (the wipe)
 var pool_mat: StandardMaterial3D   # the Flooded Vaults pool, two frames swapped like the portal
+var _portal_f := -1   # the portal frame and pool frame last set (perf: set only when they change)
+var _pool_f := -1
 static var _half := {}             # texture path -> half its drawn (opaque) width in art px
 var clock := 0.0
 var rng := RandomNumberGenerator.new()
@@ -128,20 +130,23 @@ func _process(delta: float) -> void:
 	else:
 		vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	clock += delta
-	for i in flicker.size():
+	# perf: the lights only matter on frames that render (the flicker reads the clock, so it's the same)
+	for i in (0 if vp.render_target_update_mode == SubViewport.UPDATE_DISABLED else flicker.size()):
 		var o := flicker[i]
 		var base: float = o.get_meta("base", 2.0)
 		o.light_energy = base * (1.0 + 0.11 * sin(clock * 9.0 + i * 2.1) + 0.07 * sin(clock * 23.0 + i))
-	if portal:
-		portal.texture = _tex("res://art/halls/portal_1.png" if int(clock * 4.0) % 2 else "res://art/halls/portal.png")
+	if portal and int(clock * 4.0) % 2 != _portal_f:   # perf: swap the frame only when it changes
+		_portal_f = int(clock * 4.0) % 2
+		portal.texture = _tex("res://art/halls/portal_1.png" if _portal_f else "res://art/halls/portal.png")
 	if _far_csg and is_instance_valid(_far_csg) and not _far_mesh.has(zone):
 		# CSG builds its mesh a frame late; keep it for every later room in this zone
 		var baked := _far_csg.bake_static_mesh()
 		if baked and baked.get_surface_count() > 0:
 			_far_mesh[zone] = baked.duplicate()
 			_far_csg = null
-	if pool_mat:
-		pool_mat.albedo_texture = pool_tex(int(clock * 2.0) % 2)
+	if pool_mat and int(clock * 2.0) % 2 != _pool_f:
+		_pool_f = int(clock * 2.0) % 2
+		pool_mat.albedo_texture = pool_tex(_pool_f)
 
 func texture() -> Texture2D:
 	return vp.get_texture()
@@ -215,7 +220,9 @@ func rebuild(zone_i: int, seed_value: int, mood: Dictionary) -> void:
 		keepout.append(FIGHT_CLEAR)   # the monster's floor in the middle
 	flicker.clear()
 	portal = null
+	_portal_f = -1
 	pool_mat = null
+	_pool_f = -1
 	far_lit = false
 	if world:
 		world.queue_free()

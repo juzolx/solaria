@@ -159,6 +159,7 @@ var guide_queue: Array = []  # pages unlocked this session that haven't popped u
 var new_unlocks: Array = []  # achievements that just unlocked (main shows them)
 var path := PATH        # "" = never save (tests)
 var dirty := false
+var last_write_ms := -100000   # perf: the after-fight write is spaced out like hero saves (SaveIO.should_defer)
 
 static func load_codex(p := PATH) -> Codex:
 	var c := Codex.new()
@@ -192,6 +193,7 @@ func save() -> void:
 	dirty = false
 	if path == "":
 		return
+	last_write_ms = SaveIO.now_ms()
 	SaveIO.write(path, {"bestiary": bestiary, "stats": stats, "collection": collection, "pet_book": pet_book, "achievements": achievements,
 		"title": title, "name_color": name_color, "frame": frame, "lore": lore, "bounties": bounties, "login": login, "guide": guide, "deeds": deeds, "extra_titles": extra_titles, "bought": bought,
 		"coll_earned": coll_earned, "classes_found": classes_found}, "codex")
