@@ -72,6 +72,7 @@ func _initialize() -> void:
 	check(Town.enter(n, true) and n.codex.stat("home_trips") == 0, "a dive with no snapshot isn't counted")
 	Town.leave(n)
 	n.floor_num += 1
+	n.codex.add("kills")  # QA r2 #2: a dive that fought (a bounce straight back isn't a trip)
 	n.path_offer.clear()
 	var _back := Town.enter(n, true)
 	check(n.codex.stat("home_trips") == 1, "a safe dive counts as a trip home")

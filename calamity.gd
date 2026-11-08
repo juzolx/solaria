@@ -16,6 +16,7 @@ const RUN_CHANCE := 50.0       # % to get away when you choose to run
 const POWER_FLOOR := 2000      # tuned like a floor this deep...
 const HP_MULT := 60.0          # ...and far tougher than its bosses
 const ATK_MULT := 12.0
+const CAP := 1.0e17            # QA r2 #20: HP and Attack (always reached), far enough under the int64 edge for any multiplier
 const ITEM_FLOOR := 2000       # its gear is made as if from this floor
 
 ## [name, art, color, lore, title, pet, unique item slot, unique item name]
@@ -84,12 +85,12 @@ static func appear(g: GameState, i: int) -> void:
 	g.enemy_shield = 0
 	var growth := pow(GameData.ENEMY_GROWTH, POWER_FLOOR - 1)  # on purpose the old flat curve: Calamities stay near-unkillable (banded growth would be ~1e10x weaker)
 	var hp := (15.0 + POWER_FLOOR * 15.0) * growth * GameData.ZONE_BOSS_HP * HP_MULT
-	g.enemy_max_hp = int(minf(hp, 9.0e17))
+	g.enemy_max_hp = int(minf(hp, CAP))
 	g.enemy_hp = g.enemy_max_hp
 	g.enemy_base_hp = g.enemy_max_hp
 	# Insta-kill strength: one blow takes a whole hero, whatever their gear
 	var atk := (3.0 + POWER_FLOOR * 2.0) * growth * GameData.BOSS_ATK * ATK_MULT
-	g.enemy_attack = int(minf(maxf(atk, g.get_max_hp() * 4.0), 9.0e17))
+	g.enemy_attack = int(minf(maxf(atk, g.get_max_hp() * 4.0), CAP))
 	g.enemy_base_atk = g.enemy_attack
 	g.events.append({"type": "calamity", "id": i, "name": String(c[0]), "lore": String(c[3]), "color": String(c[2])})
 	g.say("[color=#e43b44]*** A CALAMITY APPROACHES ***[/color] %s." % c[0])
@@ -107,7 +108,10 @@ static func run(g: GameState) -> bool:
 		g.say("[color=#a3e635]You run, and you don't look back. %s lets you go... this time.[/color]" % g.enemy_name)
 		g.enemy_calamity = 0
 		g.events.append({"type": "escaped"})
-		g.spawn_enemy()
+		if Portals.kind(g) == "rift":
+			Rifts._next(g)  # QA r2 #21: the rift goes on with its own monster
+		else:
+			g.spawn_enemy()
 		g.save_game()
 		return true
 	g.say("[color=#f87171]You run. It is already in front of you.[/color]")

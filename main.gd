@@ -413,7 +413,7 @@ func _start(is_new: bool) -> void:
 	Mail.sync(state, profile)
 	_share_skill_book()
 	if not state.hardcore and not state.party_slots.is_empty():
-		state.set_party(state.party_slots)
+		state.set_party(state.party_slots, true)  # the load just spawned this fight: scale it for the team
 		_show_save_notices.call_deferred()  # a companion's save may have been restored
 	Bench.refresh(state)  # next update: who is at home finding things
 	for pet in state.pets:  # next update: pets owned before the Codex kept a pet book
@@ -446,9 +446,8 @@ func _start(is_new: bool) -> void:
 func _share_skill_book() -> void:
 	if state.hardcore:
 		return
-	for id in state.skill_book:
-		profile.skill_book[id] = maxi(int(profile.skill_book.get(id, 0)), int(state.skill_book[id]))
-	state.skill_book = profile.skill_book
+	if state.join_book(profile.skill_book):  # QA r2 #1: a hero's own copy is merged only once
+		state.save_game(true)
 	profile.save()
 
 ## The 7 reward days: one row on a wide screen, two rows on a phone (QA: seven

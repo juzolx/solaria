@@ -306,19 +306,23 @@ static func closeness(g: GameState, id: String) -> float:
 		t += clampf(float(line[1]) / maxf(1.0, float(line[2])), 0.0, 1.0)
 	return t / maxf(1.0, p.size())
 
-## Everything but the trial is done.
-static func ready_for_trial(g: GameState, id: String) -> bool:
-	for line in progress(g, id):
-		if line[0] != "" and int(line[1]) < int(line[2]) and not String(line[0]).begins_with("Beat"):
-			return false
-	return info(id).has("trial") and not g.feats.get("trial_" + id, 0)
-
-## Who holds a one-per-account Legend (a slot number, 0 = nobody).
+## Who holds a one-per-account Legend (town x 100 + slot, 0 = nobody). QA r2 #28: slot numbers repeat
+## in every town, so the town is part of the key (an old key, a bare slot, means the current town).
 static func holder(g: GameState, id: String) -> int:
-	var slot := g.codex.stat("legend_" + id)
-	if slot > 0 and slot != g.slot and not GameState.has_slot(slot):
+	var key := g.codex.stat("legend_" + id)
+	if key <= 0:
 		return 0
-	return slot
+	if key < LEGEND_TOWN:
+		key += GameState.town * LEGEND_TOWN
+	var t := int(float(key) / LEGEND_TOWN)
+	var s := key % LEGEND_TOWN
+	if key != legend_key(g) and not SaveIO.exists(GameState.town_slot_paths(t, s)[0]):
+		return 0
+	return key
+
+const LEGEND_TOWN := 100
+static func legend_key(g: GameState) -> int:
+	return GameState.town * LEGEND_TOWN + g.slot
 
 static func block_reason(g: GameState, id: String) -> String:
 	if g.hidden.has(id):
@@ -326,7 +330,7 @@ static func block_reason(g: GameState, id: String) -> String:
 	var c := info(id)
 	if c.get("one_per_account", false):
 		var h := holder(g, id)
-		if h > 0 and h != g.slot:
+		if h > 0 and h != legend_key(g):
 			return "Another of your heroes already holds this title"
 	for line in progress(g, id):
 		if String(line[0]).begins_with("Beat"):
@@ -349,7 +353,7 @@ static func unlock(g: GameState, id: String) -> void:
 	var c := info(id)
 	g.hidden[id] = true
 	if c.get("one_per_account", false):
-		g.codex.stats["legend_" + id] = g.slot
+		g.codex.stats["legend_" + id] = legend_key(g)
 		g.codex.dirty = true
 	g.codex.add("hidden_classes")
 	Collections.found_class(g.codex, id)  # 2.1 G4: counts toward the Codex rewards (no names shown)

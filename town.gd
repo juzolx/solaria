@@ -107,11 +107,18 @@ static func enter(g: GameState, floor_done := false) -> bool:
 		g.say("[color=#60a5fa]You brought %d backpack%s home.[/color] Your bag now holds %d." % [g.packs_carried, "" if g.packs_carried == 1 else "s", g.bag_capacity()])
 		g.packs_carried = 0
 		g.bag_version += 1
-	_home_tally(g, carried)
+	# QA r2 #2 / #14: walking out and straight back in is not a trip home: no new wares, no new
+	# town event and no home trip counted unless the dive fought something or went somewhere
+	var trip := real_trip(g)
+	if trip:
+		_home_tally(g, carried)
 	Bench.collect(g)  # next update: what your heroes at home found
-	TownEvents.on_home(g)  # a fair, a bard, a bounty day...
-	Smith.restock(g)  # Hilde forges new pieces while you're away
-	Milestones.on_home(g)
+	if trip:
+		TownEvents.on_home(g)  # a fair, a bard, a bounty day...
+		Smith.restock(g)  # Hilde forges new pieces while you're away
+		Milestones.on_home(g)
+	elif g.smith_stock.is_empty():
+		Smith.restock(g)
 	g.path_offer.clear()
 	g.doors.clear()
 	g.room_props.clear()  # the room you left (an untouched rift too) stays behind
@@ -124,8 +131,9 @@ static func enter(g: GameState, floor_done := false) -> bool:
 	g.kill_streak = 0
 	refresh_board(g)
 	# 0.13+ (Juzo): new wares every time you come home, made for how deep you have been
-	g.restock_shop()
-	g.say("[color=#e8b14a]You head back to town.[/color] Nothing can attack you here.%s" % (" You bank the %d gold you carried home." % carried if carried > 0 else ""))
+	if trip or g.shop.is_empty():
+		g.restock_shop()
+	g.say("[color=#e8b14a]You head back to town.[/color] Nothing can attack you here.%s%s" % [" You bank the %d gold you carried home." % carried if carried > 0 else "", "" if trip else " Nothing new since you left."])
 	g.tip("town", "Welcome to town! Tap a building to go in. Take contracts at the Bounty Board, collect your rewards from the Mailbox, and rest at the Inn. Head back down through the cave when you're ready.")
 	g.events.append({"type": "town", "in": true})
 	g.save_game()
@@ -155,6 +163,13 @@ static func leave(g: GameState) -> void:
 	g.events.append({"type": "town", "in": false})
 	Portals.resume(g)  # a realm gate you walked away from opens again
 	g.save_game()
+
+## QA r2 #2: true when the dive since you left town fought something (Floors travel alone doesn't
+## count, or it would be a bounce with one more step). A save from before dives were tracked counts.
+static func real_trip(g: GameState) -> bool:
+	if g.dive.is_empty():
+		return true
+	return g.codex.stat("kills") > int(g.dive.get("kills", 0))
 
 ## Remembers what a dive set off with (also after a fall, when it starts over).
 static func start_dive(g: GameState) -> void:

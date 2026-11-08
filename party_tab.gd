@@ -52,6 +52,8 @@ func refresh() -> void:
 			continue
 		options.append([n, meta])
 	box.add_child(UI.heading("Bring along"))
+	if not state.in_town:  # QA r2 #3: the team changes only in town (it used to reset the fight)
+		box.add_child(UI.label("Teams change in town.", UI.FONT_BODY, UI.DIM))
 	if options.is_empty():
 		var t := UI.label("No other Regular heroes yet. Recruit more at Town › Inn. %s" % main.profile.recruit_note(), UI.FONT_BODY, UI.DIM)   # Fable r5 #6
 		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -76,7 +78,10 @@ func refresh() -> void:
 			main.refresh())
 		add.disabled = state.party_slots.size() >= Party.MAX_COMPANIONS
 		add.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		h.add_child(add)
+		if state.in_town:
+			h.add_child(add)
+		else:
+			add.free()
 	_bench_rows()
 	_synergy_rows()
 
@@ -164,7 +169,10 @@ func _member_card(mem) -> PanelContainer:
 		shown = ""
 		main.refresh())
 	rm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	h.add_child(rm)
+	if state.in_town:
+		h.add_child(rm)
+	else:
+		rm.free()
 	return p
 
 

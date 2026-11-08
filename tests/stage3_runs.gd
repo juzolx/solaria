@@ -20,6 +20,7 @@ func _initialize() -> void:
 	Town.leave(g)
 	g.floor_num = 15
 	g.gold += 300
+	g.codex.add("kills")  # QA r2 #2: a dive that fought (a bounce straight back isn't a trip)
 	g.path_offer.clear()
 	Town.enter(g, true)
 	check(g.runs.size() == 1 and String(g.runs[0]["out"]) == "home" and int(g.runs[0]["gold"]) == 300, "a safe dive is logged with its gold")
