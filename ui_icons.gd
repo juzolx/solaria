@@ -41,6 +41,13 @@ static func gear(type: String, mat: String) -> ImageTexture:
 	var key := "e" + type + mat
 	if _cache.has(key):
 		return _cache[key]
+	if type in Sprites.WEAPON_TYPES:   # the new dark-fantasy weapon art (stat tiles, empty-slot ghosts)
+		var wa := Sprites._img("icons/weapons/%s.png" % type)
+		if wa != null and wa.get_used_rect().size.x > 0:
+			var wtex := ImageTexture.create_from_image(wa.get_region(wa.get_used_rect()))
+			wtex.set_meta("fixed_icon", true)
+			_cache[key] = wtex
+			return wtex
 	var look := {"type": type, "mat": mat, "trim": Color("#5a6988")}
 	var src: Image = Sprites._layer("gear/%s.png" % type, Sprites._gear_map(look, {}))
 	var tex: ImageTexture = null
@@ -113,7 +120,11 @@ static func big(tex: Texture2D, max_side := 9999) -> Texture2D:
 	var used := img.get_used_rect()
 	if used.size.x > 0:
 		img = img.get_region(used)
-	if img.get_width() * 2 <= max_side and img.get_height() * 2 <= max_side:
+	# Weapon pictures (Sprites._weapon_frame): one rule for all of them, never per icon, so a weapon has one pixel size per screen
+	var doubled := img.get_width() * 2 <= max_side and img.get_height() * 2 <= max_side
+	if tex.has_meta("fixed_icon"):
+		doubled = max_side >= 76   # only a big box (the shop's featured item) doubles a weapon, every weapon alike
+	if doubled:
 		img.resize(img.get_width() * 2, img.get_height() * 2, Image.INTERPOLATE_NEAREST)
 	var out := ImageTexture.create_from_image(img)
 	_cache[key] = out

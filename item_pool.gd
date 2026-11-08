@@ -44,6 +44,8 @@ const SPECIAL_TYPES := {
 	"emberforged_greaves": "greaves", "aegis_fragment": "shield", "crown_of_a_hundred_heads": "crown",
 	"anniss_skinning_claw": "dagger", "the_hollow_helm": "helm", "sailors_bane": "spear",
 	"dragonblood_plate": "plate", "book_of_every_monster": "tome",
+	# the realm uniques that had no entry and all fell back to the same plain sword
+	"wardens_last_arrow": "bow", "the_jesters_last_joke": "dagger", "branns_hammer": "mace", "valeths_verdict": "sword", "dawnbreaker": "sword", "hellbrand": "sword",
 	# 2.1 jewelry
 	"anniss_bone_charm": "amulet", "draupnir": "band", "pearl_of_the_strait": "pendant", "andvaranaut": "band",
 	"brisingamen": "pendant", "ring_of_gyges": "signet",
@@ -98,7 +100,7 @@ const ZONES := [
 	# ---------- 1: Sunken Catacombs (undead from Norse, Irish and Eastern European tales) ----------
 	{
 		"Weapon": [
-			["Gravedigger's Spade", "spear", "Digs graves. Fills them too."],
+			["Gravedigger's Spade", "mace", "Digs graves. Fills them too."],
 			["Draugr Greataxe", "axe", "Cold to the touch, even in summer."],
 			["Bone Shiv", "dagger", "Whittled from a femur. Very sharp femur."],
 			["Barrow Blade", "sword", "Buried with a king. The king won't be needing it."],
