@@ -172,7 +172,7 @@ func _supply_card(parent: Control, id: String, title: String, text: String, colo
 	cv.add_child(top)
 	var ic := Sprites.consumable_icon(id)
 	if ic != null:
-		var pic := ItemGrid.picture(28)
+		var pic := ItemGrid.picture(maxi(28, ic.get_width()))   # QA r1 C1: 32 px art at 1x, not squeezed into 28
 		pic.texture = ic
 		top.add_child(pic)
 	var tl := UI.label(title, UI.FONT_BODY, color)
@@ -278,7 +278,7 @@ func refresh() -> void:
 		featured_cmp.text = ItemText.short_compare(state, f)
 		featured_box.tooltip_text = ItemText.tip(state, f)
 		featured_buy.visible = true
-		featured_buy.text = "Bag full" if state.bag_full() else "Buy · %d gold" % state.featured_price()
+		featured_buy.text = "Bag full" if state.bag_full() else UI.cost("Buy", state.featured_price())   # QA r1 B1
 		UI.why(featured_buy, "Your bag is full." if state.bag_full() else UI.need_gold(state.gold, state.featured_price()))
 
 	for entry in gear_buttons:
@@ -324,7 +324,7 @@ func refresh() -> void:
 			if int(item["rarity"]) == r and not item.get("locked", false) and not state.is_upgrade(item):
 				total += state.sell_price(item)
 		var b: Button = quick_sell[r]
-		b.text = "%s (%d)\n+%d gold" % [GameData.RARITY_NAMES[r], n, total]   # two lines: three across must fit a phone
+		b.text = "%s (%d)\n+%s gold" % [GameData.RARITY_NAMES[r], n, UI.gold(total)]   # two lines: three across must fit a phone
 		UI.why(b, "Nothing of that rarity to sell." if n == 0 else "")
 
 ## Interface pass: a shop card wears the panel frame, its line in `edge`.

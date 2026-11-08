@@ -276,8 +276,8 @@ func _update() -> void:
 	var r := int(item["rarity"])
 	wheel.chance = state.gamble_chance(item)
 	var fee := GameData.gamble_fee(item)
-	info.text = "[color=%s]%s[/color]\n[color=#4ade80]%d%%[/color] to become [color=%s]%s[/color]\n[color=#f87171]%d%%[/color] to lose it\nFee: %d gold" % [
-		GameData.color_of(r), GameData.display_name(item), wheel.chance, GameData.color_of(r + 1), GameData.RARITY_NAMES[r + 1], 100 - wheel.chance, fee]
+	info.text = "[color=%s]%s[/color]\n[color=#4ade80]%d%%[/color] to become [color=%s]%s[/color]\n[color=#f87171]%d%%[/color] to lose it\nFee: %s gold" % [
+		GameData.color_of(r), GameData.display_name(item), wheel.chance, GameData.color_of(r + 1), GameData.RARITY_NAMES[r + 1], 100 - wheel.chance, UI.gold(fee)]
 	if spinning:
 		spin_button.disabled = true
 	else:
@@ -402,7 +402,7 @@ func _update_high() -> void:
 			mini_grid.add_child(w)
 			minis.append(w)
 	info.text = "[color=%s]Tap items to load them onto wheels (up to %d).[/color]" % [UI.hex(UI.DIM), wheel_cap()] if items.is_empty() else \
-		"%d wheel%s loaded  -  fee %d gold\n[color=%s]If every wheel wins, you also win the fees back %dx.[/color]" % [items.size(), "" if items.size() == 1 else "s", fee, UI.hex(UI.DIM), items.size()]
+		"%d wheel%s loaded  ·  fee %s gold\n[color=%s]If every wheel wins, you also win the fees back %d×.[/color]" % [items.size(), "" if items.size() == 1 else "s", UI.gold(fee), UI.hex(UI.DIM), items.size()]
 	spin_button.text = UI.cost("Spin %d wheel%s!" % [items.size(), "" if items.size() == 1 else "s"], fee) if not items.is_empty() else "Spin!"
 	if spinning:
 		spin_button.disabled = true
@@ -458,7 +458,7 @@ func _spin_all() -> void:
 		if played >= 2 and wins == played:
 			var bonus := fee * played
 			state.gold += bonus
-			text += "\n[color=#fbbf24][b]CLEAN SWEEP![/b] +%d gold[/color]" % bonus
+			text += "\n[color=#fbbf24][b]CLEAN SWEEP![/b] +%s gold[/color]" % UI.commas(bonus)
 			main.sfx.play("legendary")
 		else:
 			main.sfx.play("level_up" if wins > played - wins else "death")
@@ -532,6 +532,15 @@ func _spin_leg() -> void:
 
 ## Every prize on both tables, with your odds and the base odds. Read from
 ## WheelTables: the same numbers the Wheel rolls.
+## QA r1 B12: the odds list names the prize once: "Scroll of Luck  ×1, kept for later", not
+## "Scroll of Luck  1 Scroll of Luck, kept for later".
+static func _odds_amount(prize: String, amount: String) -> String:
+	var nm := prize.trim_prefix("A ").trim_prefix("An ")
+	var sp := amount.find(" ")
+	if sp > 0 and amount.left(sp).is_valid_int() and amount.substr(sp + 1).begins_with(nm):
+		return "×%s%s" % [amount.left(sp), amount.substr(sp + 1 + nm.length())]
+	return amount
+
 func show_odds() -> void:
 	var o := Overlay.new().open(main, "Wheel odds", 480.0, UI.GOLD)
 	o.content.add_child(UI.heading("Item Wheel"))
@@ -551,16 +560,16 @@ func show_odds() -> void:
 		if float(p[1]) > 0.0:
 			parts.append("%s +%d" % [p[0], int(p[1])])
 	var src := ("  (" + ", ".join(parts) + ")") if not parts.is_empty() else ""
-	o.content.add_child(UI.wrap("Your Fortune: %d%s. Each point raises top prizes by %d%% (up to x%d) and Legendary items by %d%% (up to x%d)." % [
+	o.content.add_child(UI.wrap("Your Fortune: %d%s. Each point raises top prizes by %d%% (up to ×%d) and Legendary items by %d%% (up to ×%d)." % [
 		int(fort), src, int(round(WheelTables.TOP_PER_POINT * 100)), int(WheelTables.TOP_CAP),
-		int(round(WheelTables.RARE_PER_POINT * 100)), int(WheelTables.RARE_CAP)], 12, UI.DIM))
+		int(round(WheelTables.RARE_PER_POINT * 100)), int(WheelTables.RARE_CAP)], UI.FONT_CAPTION, UI.DIM))   # QA r1 D3
 	var lt := UI.rich(UI.FONT_BODY)
 	lines = []
 	var rows := WheelTables.legendary_rows(fort)
 	for i in rows.size():
 		var row: Dictionary = rows[i]
 		var col: String = "#facc15" if row["tier"] == "top" else ("#fb923c" if row["tier"] == "rare" else UI.hex(UI.TEXT))
-		var amount := WheelTables.prize_amount(state, WheelTables.LEGENDARY_PRIZES[i])
+		var amount := _odds_amount(String(row["name"]), String(WheelTables.prize_amount(state, WheelTables.LEGENDARY_PRIZES[i])))
 		lines.append("[color=%s]%s[/color]  [color=%s]%s[/color]\n   yours [b]%s[/b]   [color=%s]base %s[/color]" % [col, row["name"], UI.hex(UI.DIM), amount, WheelTables.pct_text(row["pct"]), UI.hex(UI.DIM), WheelTables.pct_text(row["base_pct"])])
 	lt.text = "\n".join(lines)
 	o.content.add_child(lt)

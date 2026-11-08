@@ -19,7 +19,7 @@ static func lines(g: GameState) -> Array:
 	for r in g.runs:
 		var when := Time.get_datetime_string_from_unix_time(int(r["t"])).substr(5, 11).replace("T", " ")
 		if String(r["out"]) == "home":
-			out.append("[color=#4ade80]Home[/color]  floors %d-%d  +%d gold, %d item%s  [color=#94a3b8]%s[/color]" % [int(r["from"]), int(r["to"]), int(r["gold"]), int(r["items"]), "" if int(r["items"]) == 1 else "s", when])
+			out.append("[color=#4ade80]Home[/color]  floors %d-%d  +%s gold, %d item%s  [color=#94a3b8]%s[/color]" % [int(r["from"]), int(r["to"]), UI.commas(int(r["gold"])), int(r["items"]), "" if int(r["items"]) == 1 else "s", when])
 		else:
 			out.append("[color=#f87171]Fell[/color]  floors %d-%d  to the %s  [color=#94a3b8]%s[/color]" % [int(r["from"]), int(r["to"]), String(r["killer"]), when])
 	return out

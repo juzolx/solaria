@@ -55,9 +55,9 @@ func _trophy(item: Dictionary, have: bool, source: String) -> PanelContainer:
 	var pic := TextureRect.new()
 	pic.texture = Sprites.item_icon(item)
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(40, 40)
+	pic.custom_minimum_size = Vector2(44, 44)   # QA r1 C1: the 44 px icon at 1x (it was squeezed into 40)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
 	if not have:
 		pic.modulate = Color(0, 0, 0, 0.55)
 	v.add_child(pic)

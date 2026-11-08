@@ -21,7 +21,7 @@ func show_for(main_node) -> void:
 		var l := UI.rich(UI.FONT_BODY)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var on := int(st.elixirs.get(id, 0))
-		l.text = "[b]%s[/b] x%d\n[color=%s]%s%s[/color]" % [info["name"], n, UI.hex(UI.DIM), info["text"], ("  (active: %d turns left)" % on) if on > 0 else ""]
+		l.text = "[b]%s[/b] ×%d\n[color=%s]%s%s[/color]" % [info["name"], n, UI.hex(UI.DIM), info["text"], ("  (active: %d turns left)" % on) if on > 0 else ""]
 		h.add_child(l)
 		var b := UI.primary("Drink", func():
 			if st.drink_elixir(id):
@@ -36,7 +36,7 @@ func show_for(main_node) -> void:
 		content.add_child(h2)
 		var l2 := UI.rich(UI.FONT_BODY)
 		l2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		l2.text = "[b]Return Scroll[/b] x%d\n[color=%s]Escape home right now with everything you carry.[/color]" % [st.return_scrolls, UI.hex(UI.DIM)]
+		l2.text = "[b]Return Scroll[/b] ×%d\n[color=%s]Escape home right now with everything you carry.[/color]" % [st.return_scrolls, UI.hex(UI.DIM)]
 		h2.add_child(l2)
 		var rb := UI.primary("Read", func():
 			close()
@@ -51,7 +51,7 @@ func show_for(main_node) -> void:
 		content.add_child(h3)
 		var l3 := UI.rich(UI.FONT_BODY)
 		l3.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		l3.text = "[b]Scroll of Luck[/b] x%d\n[color=%s]Better loot for %d turns.%s[/color]" % [st.supply_carried("luck"), UI.hex(UI.DIM), GameData.LUCK_TURNS,
+		l3.text = "[b]Scroll of Luck[/b] ×%d\n[color=%s]Better loot for %d turns.%s[/color]" % [st.supply_carried("luck"), UI.hex(UI.DIM), GameData.LUCK_TURNS,
 			("  (active: %d turns left)" % st.luck_turns) if st.luck_turns > 0 else ""]
 		h3.add_child(l3)
 		var lb := UI.primary("Read", func():

@@ -22,10 +22,18 @@ func _btn(text: String, on: bool, cb: Callable) -> Button:
 		_fill())
 	b.custom_minimum_size = Vector2(0, UI.TAP)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_no_widen(b)
 	b.add_theme_font_size_override("font_size", UI.FONT_BODY)
 	b.add_theme_color_override("font_color", UI.TEAL if on else UI.DIM)
 	body.add_child(b)
 	return b
+
+## QA r1 A4: a long setting ends in "…" (its tap-tip has it whole) instead of widening the popup.
+func _no_widen(b: Button) -> void:
+	b.clip_text = true
+	b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	if b.tooltip_text == "":
+		b.tooltip_text = b.text
 
 func _stepper(title: String, key: String, steps: Array) -> void:
 	var v := int(AutoDive.value(state, key))
@@ -55,10 +63,10 @@ func _fill() -> void:
 	_btn("Auto-potion: %s" % ("ON" if state.auto_potion else "OFF"), state.auto_potion, func():
 		state.auto_potion = not state.auto_potion
 		state.save_game())
-	var prow := UI.hbox(8)
+	# QA r1 A4: the slider's value sits on its own line over the slider (side by side it was too wide)
+	var prow := UI.vbox(4)
 	body.add_child(prow)
 	var pl := UI.label("", UI.FONT_BODY, UI.PINK)
-	pl.custom_minimum_size = Vector2(110, 0)
 	var slider := HSlider.new()
 	slider.min_value = 10
 	slider.max_value = 70
@@ -71,8 +79,8 @@ func _fill() -> void:
 		state.auto_potion_at = val / 100.0
 		pl.text = "Below %d%%" % int(val)
 		state.save_game())
-	prow.add_child(slider)
 	prow.add_child(pl)
+	prow.add_child(slider)
 	body.add_child(UI.wrap("Auto drinks a potion when your HP drops below this.", UI.FONT_BODY, UI.DIM))
 	_btn("Drink an elixir before bosses: %s" % ("ON" if bool(AutoDive.value(state, "elixir_boss")) else "OFF"), bool(AutoDive.value(state, "elixir_boss")),
 		func(): AutoDive.set_value(state, "elixir_boss", not bool(AutoDive.value(state, "elixir_boss"))))
@@ -84,5 +92,6 @@ func _fill() -> void:
 		close()
 		LootFilter.new().show_for(m))
 	lfb.custom_minimum_size = Vector2(0, UI.TAP)
+	_no_widen(lfb)
 	body.add_child(lfb)
 	m.refresh()

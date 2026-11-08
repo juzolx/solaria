@@ -285,7 +285,7 @@ func _show_home_tally(e: Dictionary) -> void:
 	var t := UI.rich(UI.FONT_BODY)
 	var lines: Array[String] = []
 	if gold > 0:
-		lines.append("[color=%s]+%s gold[/color] banked" % [UI.hex(UI.GOLD), UI.short(gold)])
+		lines.append("[color=%s]+%s gold[/color] banked" % [UI.hex(UI.GOLD), UI.commas(gold)])   # QA r1 B1: the exact figure
 	if items > 0:
 		var best: Dictionary = e.get("best", {})
 		var line := "%d new item%s" % [items, "" if items == 1 else "s"]
@@ -616,7 +616,12 @@ func _show_recap() -> void:
 			profile.show_recap = on
 			profile.save())
 	battle.add_child(recap_panel)
-	recap_panel.custom_minimum_size.x = minf(520.0, battle.size.x - 24.0)
+	# QA r1 A2: never wider than the screen, and hidden while a popup is open (the card paints at
+	# z 60 so its veil covers the action row: above the Menu, the Wardrobe, every Overlay)
+	recap_panel.custom_minimum_size.x = minf(520.0, minf(battle.size.x, get_viewport_rect().size.x) - 24.0)
+	recap_panel.visible = not _popup_open()
+	if not child_entered_tree.is_connected(_recap_under_popup):
+		child_entered_tree.connect(_recap_under_popup)
 	await get_tree().process_frame
 	if is_instance_valid(recap_panel):
 		# Phones: the fight view is shorter than the whole card, so its story scrolls and OK stays on screen
@@ -625,12 +630,20 @@ func _show_recap() -> void:
 		await get_tree().process_frame
 	if is_instance_valid(recap_panel):
 		var top := minf(40.0, maxf(4.0, battle.size.y * 0.06))
-		recap_panel.position = Vector2((battle.size.x - recap_panel.size.x) / 2.0, top)
+		recap_panel.position = Vector2(maxf(0.0, (minf(battle.size.x, get_viewport_rect().size.x) - recap_panel.size.x) / 2.0), top)
 		# the fade lives on the card, so OK before 14 s leaves no timer pointing at a freed card
 		var fade := recap_panel.create_tween()
 		fade.tween_interval(14.0)
 		fade.tween_property(recap_panel, "modulate:a", 0.0, 0.5)
 		fade.tween_callback(recap_panel.queue_free)
+
+func _recap_under_popup(n: Node) -> void:
+	if not (n is Overlay) or not is_instance_valid(recap_panel):
+		return
+	recap_panel.visible = false
+	n.tree_exited.connect(func():
+		if is_instance_valid(recap_panel) and not _popup_open():
+			recap_panel.visible = true)
 
 ## Change your look later (race stays).
 func show_look_editor() -> void:
@@ -869,8 +882,9 @@ func _fit_root() -> void:
 	if bg_wall:
 		bg_wall.size = get_viewport().get_visible_rect().size
 
+var test_window := Vector2i.ZERO   # tests: the window size a headless run can't make (stage6_popup_fit)
 func _fit_layout() -> void:
-	var win := get_tree().root.size
+	var win := get_tree().root.size if test_window == Vector2i.ZERO else test_window
 	var tall := win.x < win.y * 0.95
 	# Design sizes: 1152x648 on wide screens. Phones use a narrower 504x896 layout so the
 	# whole interface draws about 30% bigger (at 648 wide, size-12 text was ~8 pt on a phone).
@@ -1288,6 +1302,12 @@ func toast(text: String) -> void:
 	p.reset_size()
 	# Phones: just above the bottom bar, so it never covers the tabs at the top
 	var y := 64.0 if not is_tall else nav_top() - p.size.y - 12.0
+	# QA r1 A13: in a fight that spot is the Potion / Run row: the toast sits over the fight
+	# view's bottom edge instead (above its own tip strip)
+	if is_tall and fight_frame != null and fight_frame.is_visible_in_tree():
+		var fr := fight_frame.get_global_rect()
+		var strip := (battle.toast_room + 14.0) if battle != null and battle.toast_room > 0.0 else 0.0
+		y = minf(y, fr.end.y - p.size.y - 8.0 - strip)
 	p.position = Vector2((vp.x - p.size.x) / 2.0, y)
 	var tw := p.create_tween()
 	tw.tween_interval(2.4 + text.length() / 30.0)
@@ -1844,6 +1864,9 @@ func _refresh_top() -> void:
 	floor_label.text = "Floor %d" % state.floor_num
 	var boss := state.enemy_is_boss
 	boss_pill.visible = boss
+	# QA r1 E2: the row under the floor is always the pill's height, so the bar doesn't jump when it shows
+	var under_row := boss_pill.get_parent() as Control
+	under_row.custom_minimum_size.y = maxf(under_row.custom_minimum_size.y, boss_pill.get_combined_minimum_size().y)
 	if boss:
 		var bword := "MID BOSS" if state.enemy_boss_kind == "mid" else "ZONE BOSS"
 		# phones: just the word (the full line made the top bar wider than the screen)
@@ -1863,7 +1886,7 @@ func _refresh_top() -> void:
 	# Fable r1 #18: one line, "◆ 9000 · bank 0" (what you carry first; the gear found is in the tip)
 	gold_label.text = ("%s · bank %s" % [UI.short(state.gold), UI.short(state.bank)]) if two else "%s gold" % UI.short(state.gold)
 	gold_label.add_theme_color_override("font_color", UI.TEXT)
-	gold_label.get_parent().tooltip_text = ("At risk if you fall: %d gold you carry and %d piece%s of gear found this dive (plus what you wear).\nBank: %d (always safe). Head home from Town to keep it all." % [state.gold, finds, "" if finds == 1 else "s", state.bank]) if two else "Gold: from enemies and selling. Spend it in Town."
+	gold_label.get_parent().tooltip_text = ("At risk if you fall: %s gold you carry and %d piece%s of gear found this dive (plus what you wear).\nBank: %s (always safe). Head home from Town to keep it all." % [UI.commas(state.gold), finds, "" if finds == 1 else "s", UI.commas(state.bank)]) if two else "Gold: from enemies and selling. Spend it in Town."
 	scrap_label.text = "Scrap  %d" % state.scrap
 	dust_label.text = "Dust  %d" % state.dust
 	potion_label.text = "Potions  %d" % state.potions
@@ -1876,8 +1899,19 @@ func _refresh_top() -> void:
 func _fit_top() -> void:
 	if top_bar == null or ui_root == null:
 		return
+	(class_label.get_parent() as Control).custom_minimum_size.x = 140   # Fable r1 #7 (QA r1 A1 may narrow it on a phone)
 	if is_tall:
 		class_label.custom_minimum_size.x = 0.0   # phones: the line is short (no title) and clips
+		# QA r1 A1: a big bank made the gold pill (and with it the whole phone layout) wider than the
+		# screen. The bank gives way first (its tap-tip still says it), then the name narrows.
+		var room_t := get_viewport_rect().size.x - ui_root.get_theme_constant("margin_left") - ui_root.get_theme_constant("margin_right")
+		if top_bar.get_combined_minimum_size().x > room_t + 0.5 and gold_label.text.contains(" · bank "):
+			gold_label.text = gold_label.text.get_slice(" · bank ", 0)
+			gold_label.reset_size()   # it was laid out for the long line: shrink it with its pill
+			(gold_label.get_parent() as Container).queue_sort()
+		var over_t := top_bar.get_combined_minimum_size().x - room_t
+		if over_t > 0.5:
+			(class_label.get_parent() as Control).custom_minimum_size.x = maxf(100.0, 140.0 - over_t)
 		return
 	var steps: Array = [potion_label.get_parent(), title_label, event_pill, class_label, dust_label.get_parent(), scrap_label.get_parent(), best_label]
 	for c in steps:
@@ -1897,7 +1931,10 @@ func _fit_top() -> void:
 
 func _refresh_fight() -> void:
 	potion_button.text = "Potion ×%d" % state.potions
-	potion_button.disabled = state.potions <= 0 or state.hero_hp >= state.get_max_hp() or state.leader_down
+	# QA r1 D6: a tap on a Potion you can't drink says why (the tooltip was hover-only)
+	UI.why(potion_button, "No potions left. Buy them in %s or from Snik." % UI.path(["Town", "Shop"]) if state.potions <= 0
+		else ("You're down: your team fights on." if state.leader_down
+		else ("You're at full health." if state.hero_hp >= state.get_max_hp() else "")))
 	auto_potion_button.text = "Auto-heal %s" % ("ON" if state.auto_potion else "OFF")
 	speed_button.text = "Speed %dx" % state.speed
 	floors_button.disabled = state.best_floor <= 1
@@ -2167,8 +2204,8 @@ func _confirm_leave() -> void:
 	o.tree_exiting.connect(func(): timer.paused = false)
 	var finds := Town.dive_finds(state)
 	var worn := state.equipped.size()
-	var lines := "You head back to town and bank everything you carry:\n\n[color=#e8b14a]%d gold[/color] carried and [color=#4ade80]%d new item%s[/color] found this dive%s." % [
-		state.gold, finds, "" if finds == 1 else "s", (", plus the %d piece%s you wear" % [worn, "" if worn == 1 else "s"]) if worn > 0 else ""]
+	var lines := "You head back to town and bank everything you carry:\n\n[color=#e8b14a]%s gold[/color] carried and [color=#4ade80]%d new item%s[/color] found this dive%s." % [
+		UI.commas(state.gold), finds, "" if finds == 1 else "s", (", plus the %d piece%s you wear" % [worn, "" if worn == 1 else "s"]) if worn > 0 else ""]
 	lines += "\n\n[color=%s]Your next dive starts again from a checkpoint.[/color]" % UI.hex(UI.DIM)
 	var body := UI.rich(UI.FONT_BODY)
 	body.text = lines

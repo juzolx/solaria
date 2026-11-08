@@ -19,13 +19,13 @@ func show_for(main_node) -> void:
 	else:
 		open(m, "%s merchant" % who, 640.0, Color(Races.info(who)["color"]))
 	var greet := UI.label(Snik.greeting(state) if who == "" else
-		"\"Friends of the %s get our best prices. Friends get better ones.\" (They see you as %s.)" % [Lineage.race_plural(who), Races.rep_level(Lineage.rep(state, who))[0]], 13, UI.DIM)
+		"\"Friends of the %s get our best prices. Friends get better ones.\" (They see you as %s.)" % [Lineage.race_plural(who), Races.rep_level(Lineage.rep(state, who))[0]], UI.FONT_CAPTION, UI.DIM)   # QA r1 D2: was 13 px
 	greet.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(greet)
 	if who == "":
 		var mood := UI.label("Snik sees you as: %s  (%d purchases)" % [Snik.friendship_name(state), state.codex.stat("merchant_buys")], UI.FONT_CAPTION, Color("#a3e635"))
 		content.add_child(mood)
-	gold_label = UI.label("", UI.FONT_BODY, UI.GOLD)
+	gold_label = UI.wrap("", UI.FONT_BODY, UI.GOLD)   # QA r1 A8: the full-bag line made the popup 942 px wide
 	content.add_child(gold_label)
 	say_label = UI.label("", UI.FONT_BODY, UI.TEXT)
 	say_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -72,22 +72,22 @@ static func rows(main_node, parent: Control, on_change: Callable) -> void:
 		# Say why you can't buy it instead of a button that does nothing
 		var need := int(e["price"]) - st.gold
 		var full: bool = e["kind"] == "item" and st.bag_full()
-		var label := "Sold" if e["sold"] else ("Bag full" if full else ("Need %d more" % need if need > 0 else UI.cost("Buy", int(e["price"]))))
+		var label := "Sold" if e["sold"] else ("Bag full" if full else ("Need %s more" % UI.gold(need) if need > 0 else UI.cost("Buy", int(e["price"]))))
 		var b := UI.primary(label, func():
 			if st.buy_merchant(i):
 				main_node.sfx.play("buy")
 			on_change.call(), UI.GOLD)
 		b.custom_minimum_size = Vector2(120, UI.BUTTON_H)   # Fable r2 #8
-		b.tooltip_text = "%d gold" % int(e["price"])
+		b.tooltip_text = "%s gold" % UI.commas(int(e["price"]))
 		b.disabled = e["sold"] or need > 0 or full
 		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(b)
 
 func _fill() -> void:
 	OnlineUI.clear(grid)
-	gold_label.text = "Gold you carry: %d" % state.gold
+	gold_label.text = "Gold you carry: %s" % UI.gold(state.gold)
 	if state.bag_full():
-		gold_label.text += "    Your bag is full (%d / %d): sell, salvage or stash something to buy gear." % [state.bag.size(), state.bag_capacity()]
+		gold_label.text += "\nYour bag is full (%d / %d): sell, salvage or stash something to buy gear." % [state.bag.size(), state.bag_capacity()]
 	var bought := state.codex.stat("merchant_buys")
 	rows(m, grid, func():
 		if state.codex.stat("merchant_buys") > bought:
@@ -105,11 +105,12 @@ func _fill() -> void:
 			m.refresh())
 		hb.custom_minimum_size = Vector2(0, UI.TAP)
 		hb.tooltip_text = "Once a visit. Win: 20% off everything. Lose: he marks it all up 10%."
-		hb.disabled = not Snik.can_haggle(state)
+		if not Snik.can_haggle(state):   # QA r1 D6: a tap says why (a disabled button's tooltip is hover-only)
+			UI.why(hb, "Once a visit: he'll haggle again next time you meet.", false)
 		hb.add_theme_color_override("font_color", Color("#a3e635"))
 		grid.add_child(hb)
 		var junk := state.goblin_junk()
-		var jb := UI.button("Sell junk to %s: %d item%s for %d gold" % [GameData.GOBLIN_NAME, junk.size(), "" if junk.size() == 1 else "s", state.goblin_junk_value()] if not junk.is_empty() else "No junk to sell (Common and Uncommon, unlocked)", func():
+		var jb := UI.button("Sell junk to %s: %d item%s for %s gold" % [GameData.GOBLIN_NAME, junk.size(), "" if junk.size() == 1 else "s", UI.gold(state.goblin_junk_value())] if not junk.is_empty() else "No junk to sell (Common and Uncommon, unlocked)", func():
 			if state.goblin_buy_junk() > 0:
 				m.sfx.play("buy")
 			_fill()

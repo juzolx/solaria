@@ -256,18 +256,18 @@ func _pick_carry(i: int) -> void:
 func _show_carry() -> void:
 	for i in carry_buttons.size():
 		var b: Button = carry_buttons[i]
-		b.text = "%s\n%d" % [Town.CARRY_NAMES[i], Town.carry_amount(state, i)]
+		b.text = "%s\n%s" % [Town.CARRY_NAMES[i], UI.commas(Town.carry_amount(state, i))]   # QA r1 B1
 		b.set_pressed_no_signal(i == state.carry_pick)
 		b.add_theme_color_override("font_color", UI.GOLD if i == state.carry_pick else UI.TEXT)
 	var c := Town.carry_amount(state, state.carry_pick)
-	carry_note.text = "You take %d gold down; %d stays safe in the Bank. Carried gold is banked when you come home." % [c, state.total_gold() - c]
+	carry_note.text = "You take %s gold down; %s stays safe in the bank. Carried gold is banked when you come home." % [UI.commas(c), UI.commas(state.total_gold() - c)]
 	if risk_note:
 		var worn := 0
 		for s in state.equipped:
 			if not GameState.is_bound(state.equipped[s]):
 				worn += 1
 		var packed := state.bag.filter(func(it): return not GameState.is_bound(it)).size()
-		risk_note.text = "At risk: %d gold, %d worn item%s, %d in your bag" % [c, worn, "" if worn == 1 else "s", packed]
+		risk_note.text = "At risk: %s gold, %d worn item%s, %d in your bag" % [UI.commas(c), worn, "" if worn == 1 else "s", packed]
 	if carry_head:
 		UI.tip(carry_head, carry_note.text)
 	_show_dive()

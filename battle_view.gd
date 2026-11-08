@@ -909,9 +909,12 @@ func _loot_pop(e: Dictionary) -> void:
 	var pos := _enemy_center() + Vector2(0, 20)
 	# Only Epic and better get their name in the air (the log lists everything);
 	# the rest just sparkle in their rarity color
-	if r >= 3:
+	var bannered: bool = r >= GameData.LEGENDARY and r != GameData.SIGNATURE and r != GameData.SET_RARITY
+	if r >= 3 and not bannered:   # QA r1 A16: a bannered drop is named by the banner's line (not twice)
 		var lp := _lane_for(pos, 14 + mini(r, 5) * 2, true)
-		floaters.append({"text": e["name"], "pos": lp[0], "base": lp[0], "t": 0.0, "lane": lp[1], "color": color, "size": 14 + mini(r, 5) * 2, "life": 1.8, "keep": true})
+		floaters.append({"text": e["name"], "pos": lp[0], "base": lp[0], "t": 0.0, "lane": lp[1], "color": color, "size": 14 + mini(r, 5) * 2, "life": 1.8, "keep": true, "loot": true})
+		if banner_alpha > 0.0:
+			_clear_banner()
 	_burst(pos, color, 8 + r * 6, 140.0 + r * 50.0)
 	# A beam of light marks good drops; the rarer, the wider and longer
 	if r >= 2:
@@ -925,14 +928,26 @@ func _loot_pop(e: Dictionary) -> void:
 		var txt := "UPGRADE!" if up >= 99.0 else "UPGRADE +%d%%" % maxi(1, int(round(up)))
 		var hp := _hero_center() + Vector2(0, -52)
 		floaters.append({"text": txt, "pos": hp, "base": hp, "t": 0.0, "lane": 0, "color": Color("#4ade80"), "size": 15, "life": 1.6, "keep": true})
-	if r >= GameData.LEGENDARY and r != GameData.SIGNATURE and r != GameData.SET_RARITY:
+	if bannered:
 		shake = 9.0
 		banner_color = Color("#fbbf24")
 		banner_text = "UNIQUE DROP!" if r == GameData.UNIQUE else "LEGENDARY DROP!"
 		banner_sub = e["name"]
 		banner_alpha = 2.2
+		_clear_banner()
 		_burst(pos, Color("#fbbf24"), 30, 380.0)
 		_hit_stop(0.1)
+
+## QA r1 A16: loot names that pop with a banner start under it (they rise about 70 px as they
+## fade), so they never run through the banner's words.
+func _clear_banner() -> void:
+	var bl := _banner_line()
+	var bottom := bl.position.y + 17.0 + 2.0 * (UI.MIN_FONT + 2.0) + 72.0
+	for f in floaters:
+		if f.get("loot", false) and float(f["t"]) < 0.3 and (f["base"] as Vector2).y < bottom:
+			var fs := float(f["size"])
+			f["base"] = Vector2((f["base"] as Vector2).x, bottom + int(f.get("lane", 0)) * (fs + 3.0))
+			f["pos"] = f["base"]
 
 ## The item itself falls out: it arcs to the ground, bounces, lies there glowing in its
 ## rarity color (longer for rarer finds), then flies to your hero.
@@ -1287,6 +1302,12 @@ func _process(delta: float) -> void:
 		toast_life -= delta
 	elif not toasts.is_empty():
 		toast_text = toasts.pop_front()
+		# QA r1 A12: a tip longer than the strip's two lines shows in parts (it was cut mid-sentence;
+		# a third line would lift the hero plate into the monster)
+		var parts := _toast_split(toast_text)
+		if parts.size() > 1:
+			toast_text = parts[0]
+			toasts.push_front(parts[1])
 		toast_life = 6.0
 	# Fable r2 #17: with Reduce motion on nothing breathes, so a still scene is redrawn 4 times a
 	# second (HP and state changes still show) instead of every frame; anything moving draws every frame
@@ -2059,11 +2080,11 @@ func _draw() -> void:
 			bfs -= 1
 		draw_string_outline(font, bl.position + Vector2(slide, 0), banner_text, HORIZONTAL_ALIGNMENT_CENTER, bl.size.x, bfs, 6, Color(0, 0, 0, a))
 		draw_string(font, bl.position + Vector2(slide, 0), banner_text, HORIZONTAL_ALIGNMENT_CENTER, bl.size.x, bfs, Color(big_color, a))
-		var sfs := 13  # the line under it shrinks to fit too
-		while sfs > 9 and font.get_string_size(banner_sub, HORIZONTAL_ALIGNMENT_LEFT, -1, sfs).x > bl.size.x - 12.0:
-			sfs -= 1
-		draw_string_outline(font, bl.position + Vector2(-slide, 17), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, bl.size.x, sfs, 3, Color(0, 0, 0, 0.8 * a))
-		draw_string(font, bl.position + Vector2(-slide, 17), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, bl.size.x, sfs, Color(1, 1, 1, 0.85 * a))
+		# QA r1 D1: the line under it keeps the smallest readable size (it shrank to 9 px) and wraps
+		# onto a second line instead
+		var sfs := UI.MIN_FONT
+		draw_multiline_string_outline(font, bl.position + Vector2(-slide, 19), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, bl.size.x, sfs, 2, 3, Color(0, 0, 0, 0.8 * a))
+		draw_multiline_string(font, bl.position + Vector2(-slide, 19), banner_sub, HORIZONTAL_ALIGNMENT_CENTER, bl.size.x, sfs, 2, Color(1, 1, 1, 0.85 * a))
 
 	_draw_team_strip(font)
 	_draw_intro(font, w, h)
@@ -2082,6 +2103,29 @@ func _draw() -> void:
 		draw_rect(box, Color(0.04, 0.05, 0.10, 0.92 * ta))
 		draw_rect(Rect2(box.position, Vector2(3, box.size.y)), Color(0.91, 0.69, 0.29, ta))
 		draw_multiline_string(font, Vector2(box.position.x + 12, roundf(box.position.y + 5 + font.get_ascent(fs))), toast_text, HORIZONTAL_ALIGNMENT_CENTER, tw - 24, fs, 2, Color(UI.TEXT, ta))
+
+## [the first two lines' worth, the rest] of a tip, split at a sentence end when one fits (else a word).
+func _toast_split(text: String) -> Array:
+	var font := UI.game_font()
+	var fs := UI.FONT_BODY
+	var width := size.x - 16.0 - 24.0
+	if width <= 0.0 or font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, width, fs).y <= 2.0 * font.get_height(fs) + 0.5:
+		return [text]
+	var words := text.split(" ")
+	var best := -1
+	var best_sentence := -1
+	for i in range(1, words.size()):
+		var head := " ".join(words.slice(0, i))
+		if font.get_multiline_string_size(head + "...", HORIZONTAL_ALIGNMENT_CENTER, width, fs).y > 2.0 * font.get_height(fs) + 0.5:
+			break
+		best = i
+		if head.ends_with(".") or head.ends_with("!") or head.ends_with("?") or head.ends_with(":"):
+			best_sentence = i
+	var cut := best_sentence if best_sentence > 0 else best
+	if cut <= 0:
+		return [text]
+	var first := " ".join(words.slice(0, cut))
+	return [first if best_sentence > 0 else first + "...", ("..." if best_sentence <= 0 else "") + " ".join(words.slice(cut))]
 
 ## Draws the hero picture and the weapon (rotated around the hand for swings).
 func _draw_hero() -> void:
@@ -2496,6 +2540,7 @@ func _draw_bar(r: Rect2, label: String, value: int, max_value: int, fill: Color,
 		var bt := _pack_badge(pack)
 		var bw := font.get_string_size(bt, HORIZONTAL_ALIGNMENT_LEFT, -1, PACK_FS).x + 10.0
 		var box := Rect2(tx + tw + 8.0, ny - PACK_FS - 3.0, bw, PACK_FS + 6.0)
+		box.position.y -= maxf(0.0, box.end.y - (plate.end.y - 5.0))   # QA r1 E3: inside the plate, clear of its border
 		var bc := Color("#fca5a5")
 		draw_rect(box, Color(0.03, 0.04, 0.08, 0.85 * a))
 		draw_rect(box, Color(bc, 0.85 * a), false, 1.0)

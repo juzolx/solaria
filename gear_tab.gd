@@ -289,7 +289,7 @@ func refresh() -> void:
 	else:
 		slot_detail.text = "[color=%s]%s[/color] · [color=%s]Empty[/color]%s" % [UI.hex(UI.GOLD), slot, UI.hex(UI.DIM), extra]
 	equip_best_button.text = "Equip Best (%d)" % ups if ups > 0 else "Equip Best"
-	equip_best_button.disabled = ups == 0
+	UI.why(equip_best_button, "You already wear your best gear." if ups == 0 else "")   # QA r1 D6
 
 	(pills["ATK"] as Label).text = UI.short(state.get_attack())
 	(pills["DEF"] as Label).text = UI.short(state.get_defense())

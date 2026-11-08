@@ -118,7 +118,7 @@ func _row(a: Dictionary) -> PanelContainer:
 	for e in Cosmetics.FRAMES:
 		if e["need"] == a["id"]:
 			reward += ", frame \"%s\"" % e["name"]
-	var dl := UI.label("%s  -  Reward: %s" % [a["text"], reward], UI.FONT_BODY, UI.DIM)
+	var dl := UI.label("%s · Reward: %s" % [a["text"], reward], UI.FONT_BODY, UI.DIM)   # QA r1 B5: one separator, "·"
 	dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	dl.custom_minimum_size = Vector2(120, 0)
 	v.add_child(dl)
@@ -126,7 +126,7 @@ func _row(a: Dictionary) -> PanelContainer:
 	right.custom_minimum_size = Vector2(96, 0)
 	h.add_child(right)
 	if have:
-		right.add_child(UI.label(str(codex.achievements[a["id"]]), UI.FONT_BODY, UI.DIM))
+		right.add_child(UI.label(_when(codex.achievements[a["id"]]), UI.FONT_BODY, UI.DIM))
 	else:
 		var val := mini(codex.value(a["key"], main.state), int(a["target"]))
 		var bar := UI.bar(UI.GOLD, 6)
@@ -135,6 +135,15 @@ func _row(a: Dictionary) -> PanelContainer:
 		right.add_child(bar)
 		right.add_child(UI.label("%d / %d" % [val, int(a["target"])], UI.FONT_BODY, UI.DIM))
 	return card
+
+## QA r1 B4: a deed's date reads like the Mailbox's ("today", "3 days ago"), not "2026-11-07".
+static func _when(v) -> String:
+	if v is int or v is float:
+		return UI.when(int(v))
+	var s := str(v)
+	if s.length() >= 10 and s[4] == "-" and s[7] == "-":
+		return UI.when(Time.get_unix_time_from_datetime_string(s.left(10)))
+	return s
 
 func _claim_row(a: Dictionary) -> PanelContainer:
 	var card := UI.panel(Color("#1d1708"), UI.GOLD, 6, 10, 2)
@@ -148,7 +157,7 @@ func _claim_row(a: Dictionary) -> PanelContainer:
 	v.add_child(cn)
 	var rw := UI.rich(UI.FONT_BODY)
 	rw.custom_minimum_size = Vector2(120, 0)
-	rw.text = "%s  -  [color=#f6d88f]%s[/color]" % [a["text"], Town.reward_text(Town.deed_reward(a), main.state)]
+	rw.text = "%s · [color=#f6d88f]%s[/color]" % [a["text"], Town.reward_text(Town.deed_reward(a), main.state)]
 	v.add_child(rw)
 	var id: String = a["id"]
 	var b := UI.primary("Claim", func():
@@ -180,7 +189,7 @@ func _looks_shop() -> void:
 	for p in list:
 		if Cosmetics.has(codex, p[1]):
 			owned += 1
-	var b := UI.button("%s Looks shop  -  %d / %d owned" % ["▾" if shop_open else "▸", owned, list.size()], func():
+	var b := UI.button("%s Looks shop · %d / %d owned" % ["▾" if shop_open else "▸", owned, list.size()], func():
 		shop_open = not shop_open
 		refresh())
 	b.custom_minimum_size = Vector2(0, UI.TAP)

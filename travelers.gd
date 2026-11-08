@@ -42,7 +42,7 @@ static func price(g: GameState, o: Dictionary) -> int:
 static func cost_text(g: GameState, o: Dictionary) -> String:
 	match String(o.get("cost", "")):
 		"gold":
-			return "%d gold" % price(g, o)
+			return "%s gold" % UI.commas(price(g, o))   # QA r1 B1
 		"scrap":
 			return "%d scrap" % price(g, o)
 		"potion":

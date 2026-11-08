@@ -76,6 +76,13 @@ static func cell(item: Dictionary, on_press: Callable, selected := false, px := 
 		dot.tooltip_text = badge
 		b.add_child(dot)
 	elif badge != "":
+		# QA r1 C6: the odds sit on a dark strip along the cell's foot, not on the icon itself
+		var strip := ColorRect.new()
+		strip.color = Color(UiSkin.SOOT, 0.85)
+		strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		strip.position = Vector2(2, px - 20)
+		strip.size = Vector2(px - 4, 18)
+		b.add_child(strip)
 		var l := UI.label(badge, UI.FONT_CAPTION, UI.GREEN)
 		l.add_theme_constant_override("outline_size", 4)
 		l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))

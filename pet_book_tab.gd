@@ -41,7 +41,7 @@ func refresh() -> void:
 		for s in z["subs"]:
 			mons.append(s["monster"]["id"])
 		box.add_child(UI.heading(str(z["name"])))
-		box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text(String(z["id"])), UI.FONT_BODY, UI.TEXT))
+		box.add_child(UI.wrap(_sig(String(z["id"])), UI.FONT_BODY, UI.TEXT))
 		var flow := HFlowContainer.new()
 		flow.add_theme_constant_override("h_separation", 4)
 		flow.add_theme_constant_override("v_separation", 6)
@@ -50,7 +50,7 @@ func refresh() -> void:
 			flow.add_child(_cell(str(n)))
 	# Fable pets R2: the ten Calamity pets (the rarest; a slain Calamity leaves its pet)
 	box.add_child(UI.heading("Calamities"))
-	box.add_child(UI.wrap("Mythic signature: " + PetAbilities.region_signature_text("calamity"), UI.FONT_BODY, UI.TEXT))
+	box.add_child(UI.wrap(_sig("calamity"), UI.FONT_BODY, UI.TEXT))
 	var cflow := HFlowContainer.new()
 	cflow.add_theme_constant_override("h_separation", 4)
 	cflow.add_theme_constant_override("v_separation", 6)
@@ -172,3 +172,8 @@ func _ability_text(to: Control) -> void:
 			continue
 		to.add_child(UI.wrap("Passive, %s" % PetAbilities.family_passive_range(f), UI.FONT_BODY, UI.TEXT))
 		to.add_child(UI.wrap("Epic trick, %s" % PetAbilities.family_trick_text(f, PetAbilities.TRICK_RANK), UI.FONT_BODY, UI.TEXT))
+
+## QA r1 B10: "Mythic signature · Bramble Snare: roots hold it still for a turn." (one colon, a full stop)
+static func _sig(region: String) -> String:
+	var t := PetAbilities.region_signature_text(region)
+	return "Mythic signature · " + t + ("" if t.ends_with(".") or t.ends_with("!") else ".")
