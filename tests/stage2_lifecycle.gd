@@ -44,7 +44,7 @@ func _initialize() -> void:
 	main.profile.battery_saver = false
 	main.profile.low_graphics = false
 	main.apply_settings()
-	check(Engine.max_fps == 0 and not HallsScene.low, "both settings turn off again")
+	check(Engine.max_fps == 60 and not HallsScene.low, "both settings turn off again")
 
 	# Reduce motion and high-contrast text
 	main.profile.reduce_motion = true

@@ -49,7 +49,7 @@ func _initialize() -> void:
 	check(rep.contains("Solaria " + PatchNotes.VERSION) and rep.contains("after restart"), "report has the version and the log")
 	DebugLog.clear()
 	check(DebugLog.lines.is_empty() and FileAccess.get_file_as_string(DebugLog.PATH) == "", "clear empties the log and its file")
-	check(SettingsMenu.new().has_method("_show_debug_info"), "Menu has Copy debug info")
+	check(SettingsMenu.new().has_method("_show_debug_info"), "Menu has Copy report info")
 
 	# --- Effects follow the settings ---
 	var prof := Profile.new()

@@ -9,8 +9,8 @@ static func not_setup_card() -> PanelContainer:
 	# Fable r2 #1: players (and every picture of the game) see the plain line; the setup steps
 	# for whoever builds the game are one quiet line under it in a debug build only
 	var t := UI.rich(UI.FONT_BODY)
-	v.add_child(UI.heading("Coming soon"))
-	t.text = "Online play arrives in a later update: leaderboards, guilds and weekly raids. Everything else works now."
+	v.add_child(UI.heading("Online"))
+	t.text = "Online play is not available in this version. Everything else works."
 	v.add_child(t)
 	if OS.is_debug_build():
 		v.add_child(UI.wrap("Builders: see ONLINE_SETUP.md.", UI.FONT_BODY, UI.DIM))

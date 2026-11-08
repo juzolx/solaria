@@ -45,7 +45,7 @@ func _details() -> void:
 	var lvl := Buildings.level(id)
 	var o := Overlay.new().open(main, Buildings.name_of(id), 480.0)
 	if lvl == 0:
-		o.content.add_child(UI.wrap("An empty lot with a sign: \"Coming soon: a %s.\"" % Buildings.name_of(id), UI.FONT_BODY, UI.DIM))
+		o.content.add_child(UI.wrap("An empty lot with a sign: \"Room for a %s.\"" % Buildings.name_of(id), UI.FONT_BODY, UI.DIM))
 		o.content.add_child(UI.wrap("Built: %s" % Buildings.benefit(id, 1), UI.FONT_BODY, UI.TEXT))
 	else:
 		o.content.add_child(UI.heading("Level %d now" % lvl))

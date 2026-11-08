@@ -132,7 +132,7 @@ var online: Online
 var fallen_shown := false
 
 func _ready() -> void:
-	DebugLog.start()  # R6: local error log for "Copy debug info" (never sent anywhere)
+	DebugLog.start()  # R6: local error log for "Copy report info" (never sent anywhere)
 	UI.adopt_default_theme()   # Fable r4 #2: one theme for every Control, also those outside ui_root (coach, toast, moments)
 	# Let the layout stretch when the window is resized (and on phones later)
 	get_tree().root.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
@@ -347,7 +347,7 @@ func _flush_saves() -> void:
 func _notification(what: int) -> void:
 	match what:
 		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST, \
-				NOTIFICATION_WM_GO_BACK_REQUEST:
+				NOTIFICATION_WM_GO_BACK_REQUEST, NOTIFICATION_OS_MEMORY_WARNING:  # memory warning: iOS may jettison us next
 			if started and state.run_over and state.hardcore and state.hero_hp <= 0:
 				_record_hardcore_death()  # a fallen Hardcore hero is never left on disk
 			save_everything()
@@ -1580,7 +1580,7 @@ func apply_settings() -> void:
 	UI.calm = profile.reduce_motion  # next update: no page fades with Reduce motion on
 	UI.high_contrast = profile.high_contrast
 	DarkGrade.set_enabled(profile.dark_art)
-	Engine.max_fps = 30 if profile.battery_saver else 0
+	Engine.max_fps = 30 if profile.battery_saver else 60
 	HallsScene.low = profile.low_graphics
 	profile.save()
 

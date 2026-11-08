@@ -134,7 +134,7 @@ func show_for(m) -> void:
 	cr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_child(cr)
 	# R6: errors kept on this phone only; the player copies them into a bug report
-	var dbg := UI.button("Copy debug info", _show_debug_info)
+	var dbg := UI.button("Copy report info", _show_debug_info)
 	dbg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_child(dbg)
 
@@ -144,19 +144,19 @@ func show_for(m) -> void:
 		sb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		content.add_child(sb)
 
-	content.add_child(UI.heading("Cloud backup"))
-	var crow := UI.hbox(8)
-	content.add_child(crow)
-	var up := UI.button("Back up all heroes", _cloud_backup)
-	var down := UI.button("Restore from cloud", _restore_popup)
-	for b in [up, down]:
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.disabled = not main.online.is_configured()
-		crow.add_child(b)
-	var off_text := "Online isn't set up yet (see ONLINE_SETUP.md)." if OS.is_debug_build() else "Cloud backup arrives with online features in a later update."
-	cloud_label = UI.label(off_text if not main.online.is_configured() else "Saves your heroes to your online account, so you can get them back on a new device.", UI.FONT_BODY, UI.DIM)
-	cloud_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	content.add_child(cloud_label)
+	# The whole Cloud block only exists when online is set up: nothing unfinished ships
+	if main.online.is_configured():
+		content.add_child(UI.heading("Cloud backup"))
+		var crow := UI.hbox(8)
+		content.add_child(crow)
+		var up := UI.button("Back up all heroes", _cloud_backup)
+		var down := UI.button("Restore from cloud", _restore_popup)
+		for b in [up, down]:
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			crow.add_child(b)
+		cloud_label = UI.label("Saves your heroes to your online account, so you can get them back on a new device.", UI.FONT_BODY, UI.DIM)
+		cloud_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		content.add_child(cloud_label)
 	# Apple rule: the online account can be deleted from inside the game
 	if main.online.is_configured() and main.online.user_id() != "":
 		var del := UI.button("Delete my online account...", func():
@@ -292,7 +292,7 @@ func _show_debug_info() -> void:
 	DebugLog.flush()
 	var text := DebugLog.report()
 	DisplayServer.clipboard_set(text)
-	var o := Overlay.new().open(main, "Debug info (copied)", 420.0, UI.GOLD)
+	var o := Overlay.new().open(main, "Report info (copied)", 420.0, UI.GOLD)
 	o.content.add_child(UI.wrap("Copied. Paste it into your TestFlight feedback or a message to the developer. It never leaves your phone on its own.", UI.FONT_BODY, UI.DIM))
 	var box := UI.wrap(text, UI.FONT_BODY, UI.TEXT)
 	o.content.add_child(box)
