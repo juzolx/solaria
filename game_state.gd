@@ -59,6 +59,7 @@ var respec_tomes := 0   # Tomes of Forgetting: a free respec each
 var builds: Array = [{}, {}, {}, {}]  # 2.1: the presets (presets.gd): stats, skills, gear, team, supplies
 # ---------- Skills (ability stones) ----------
 var skill_book := {}    # skill id -> rank (1-5): every skill you own
+var book_shared := false  # QA r2 #1: this hero's book was merged into the shared one (join_book)
 var dust := 0           # 2.1: one of the three currencies (economy.gd): crafts skills, sets, top upgrades
 var active_slots: Array = ["", "", ""]          # equipped active skills
 var passive_slots: Array = ["", "", "", "", ""] # equipped passive skills
@@ -247,7 +248,7 @@ var goblin_turns := 0
 
 # ---------- Zones, events and the codex ----------
 var hero_name := ""
-var slot := 1               # which hero save slot (1-3)
+var slot := 1               # which hero save slot (1-GameData.MAX_HEROES, per town)
 var boss_ready_at := {}     # boss floor (as text) -> unix time it can be fought again by travel
 var floors_since_event := 0
 var deaths_here := 0        # deaths in a row on this floor (3 = step back a floor to get stronger)
@@ -399,17 +400,6 @@ func race() -> String:
 func race_info() -> Dictionary:
 	return GameData.RACE_INFO[race()]
 
-## The stat your specialization is based on: your highest, ties go to your class's natural stat.
-func spec_stat() -> String:
-	if hero_class == "":
-		return ""
-	var order: Array = Classes.stat_order(hero_class)
-	var best: String = order[0]
-	for st in order:
-		if stat(st) > stat(best):
-			best = st
-	return best
-
 # ---------- Paths: faith, the Wanderer's two roads, Mage schools ----------
 
 ## Special stats this hero has (only special classes get them).
@@ -428,11 +418,6 @@ func unique_stats() -> Array:
 func unique_value(n: String) -> float:
 	var raw := float(unique.get(n, 0.0))
 	return UNIQUE_CAP * (1.0 - exp(-raw / UNIQUE_SOFT))
-
-func _grow_unique(n: String, amount: float) -> void:
-	if not n in unique_stats() or amount <= 0.0:
-		return
-	unique[n] = float(unique.get(n, 0.0)) + amount
 
 ## Good vs Evil. Every hero has it: it decides which classes you can take.
 func _faith(amount: float) -> void:
@@ -825,6 +810,7 @@ func effect_value(effect: String) -> float:
 	elif effect == "crit":
 		total += dim("DEX", GameData.DEX_CRIT)
 		total += _buff("crit", 0.0)
+		total += Synergies.crit_bonus(self)  # QA r2 #17: inside the cap, so swings and skills agree
 	elif effect == "double_strike":
 		total += dim("DEX", GameData.DEX_DOUBLE)
 	elif effect == "gold_find":
@@ -985,11 +971,6 @@ func choose_class(class_name_picked: String) -> void:
 	_page("abilities")
 	save_game()
 
-## Kept for older code: is the first equipped skill ready?
-func ability_ready(_id := "main") -> bool:
-	var acts := equipped_actives()
-	return not acts.is_empty() and skill_ready(acts[0])
-
 ## Fires a skill right away. Returns false if it isn't ready.
 func use_skill(id: String) -> bool:
 	if not skill_ready(id) or enemy_hp <= 0 or hero_hp <= 0 or run_over:
@@ -1076,7 +1057,7 @@ func use_skill(id: String) -> bool:
 	if s.has("steal"):
 		var g := int((2 + floor_num) * float(s["steal"]) * rk * (1.0 + effect_value("gold_find") / 100.0))
 		_add_gold(g)
-		parts.append("stole %d gold" % g)
+		parts.append("stole %s gold" % UI._commas(g))
 		if randf() < 0.1:
 			_give_item(GameData.make_item(_drop_slot(enemy_species), _rarity(_loot_bonus(), GameData.LEGENDARY_CHANCE_NORMAL), floor_num, _new_id()))
 	if s.get("reset", false):
@@ -1448,7 +1429,7 @@ func _setup_fight() -> void:
 ## Makes the current monster a tier: tougher, with modifiers. Call right after spawning.
 func _apply_tier(tier: int) -> void:
 	enemy_tier = tier
-	if tier <= 0 or enemy_is_boss or enemy_goblin:
+	if tier <= 0 or enemy_is_boss or enemy_goblin or enemy_calamity > 0:  # QA r2 #20: a Calamity is never re-tiered
 		return
 	var t: Dictionary = Monsters.TIERS[tier]
 	enemy_mods = Monsters.roll_mods(int(t["mods"]))
@@ -1505,7 +1486,11 @@ func take_turn() -> void:
 		if int(skill_cds[id]) > 0:
 			skill_cds[id] = int(skill_cds[id]) - 1
 	if auto_ability:
+		var kills_before := codex.stat("kills")
+		var fight_before := fight
 		_auto_skill()
+		if codex.stat("kills") != kills_before or fight != fight_before:
+			return  # QA r2 #15: the skill finished the monster: the next one gets its own turn
 	# Auto: a telegraphed blow lands this turn and would finish you: drink first
 	if auto_potion and potions > 0 and Combat.winding(self) and not Combat.charging(self) and not (trial_active and trial_data.get("no_potions", false)):
 		if hero_hp <= int(damage_taken() * float(cfight.get("windup_mult", Combat.HEAVY_MULT)) * 1.1):
@@ -1740,7 +1725,7 @@ func _basic_attack() -> Dictionary:
 	var crit := false
 	for _h in hits:
 		var dmg := float(get_attack())
-		if randf() * 100.0 < effect_total("crit") + Synergies.crit_bonus(self) or _frozen_crit():
+		if randf() * 100.0 < effect_total("crit") or _frozen_crit():
 			dmg *= crit_mult()
 			crit = true
 			Lineage.gain(self, "crit")
@@ -1869,7 +1854,7 @@ func _enemy_defeated() -> void:
 		_faith(Classes.FAITH["goblin"])
 
 	if was_boss:
-		say("[color=#fbbf24]You defeated %s![/color] +%d gold" % [enemy_name, gold_gain])
+		say("[color=#fbbf24]You defeated %s![/color] +%s gold" % [enemy_name, UI._commas(gold_gain)])
 		if not was_calamity:  # a Calamity has its own trophy
 			Trophies.on_boss(self, species)  # 2.1: the Trophy Cabin
 		Economy.give_dust(self, randi_range(Economy.BOSS_DUST[0], Economy.BOSS_DUST[1]))
@@ -1893,7 +1878,7 @@ func _enemy_defeated() -> void:
 		codex.bounty_progress("boss")
 		_page("uniques")
 	elif was_goblin:
-		say("[color=#fbbf24]You caught the treasure goblin![/color] +%d gold" % gold_gain)
+		say("[color=#fbbf24]You caught the treasure goblin![/color] +%s gold" % UI._commas(gold_gain))
 		for _i in GameData.GOBLIN_ITEMS:
 			var r := maxi(2, _rarity(GameData.GOBLIN_RARITY + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS))
 			_give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, floor_num, _new_id()))
@@ -1903,7 +1888,7 @@ func _enemy_defeated() -> void:
 		events.append({"type": "treasure"})
 	else:
 		var tier_txt := "" if tier == 0 else "[color=%s]%s[/color] " % [Monsters.tier_color(tier), Monsters.tier_name(tier)]
-		say("[color=#4ade80]Defeated the[/color] %s[color=#4ade80]%s.[/color] +%d gold" % [tier_txt, enemy_name, gold_gain])
+		say("[color=#4ade80]Defeated the[/color] %s[color=#4ade80]%s.[/color] +%s gold" % [tier_txt, enemy_name, UI._commas(gold_gain)])
 		var drops := 1 + int(t["extra"])
 		var leg := GameData.LEGENDARY_CHANCE_NORMAL if tier < Monsters.EPIC else GameData.LEGENDARY_CHANCE_BOSS
 		for i in drops:
@@ -2028,11 +2013,11 @@ func _finish_horde() -> void:
 		horde_pack = false
 		var pg := (2 + floor_num) * 3
 		_add_gold(pg)
-		say("[color=#fbbf24]The pack is beaten.[/color] +%d gold" % pg)
+		say("[color=#fbbf24]The pack is beaten.[/color] +%s gold" % UI._commas(pg))
 		return
 	var g := (5 + floor_num * 6) * GameData.HORDE_CHEST_GOLD
 	_add_gold(g)
-	say("[color=#fbbf24]The horde is beaten! You find their chest.[/color] +%d gold" % g)
+	say("[color=#fbbf24]The horde is beaten! You find their chest.[/color] +%s gold" % UI._commas(g))
 	var r := maxi(2, _rarity(GameData.HORDE_RARITY + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS))
 	_give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), r, floor_num, _new_id()))
 	Economy.give_scrap(self, Economy.chest_scrap())
@@ -2100,7 +2085,7 @@ func _next_floor() -> void:
 		_page("wheel")
 	WheelTables.on_floor(self)  # 2.1: the Legendary table opens at floor 250
 	Trophies.on_floor(self)  # 2.1: depth trophies for the cabin
-	if best_floor >= 10:  # Heroes and Party pages (all 9 hero slots are open for now)
+	if best_floor >= 10:  # Heroes and Party pages (a town holds up to GameData.MAX_HEROES heroes; slots open with depth)
 		_page("heroes")
 		_page("party")
 	Realms.on_floor(self)
@@ -2346,6 +2331,10 @@ func boss_cooldown(f: int) -> int:
 ## Returns false if you can't go (a boss is still resting).
 func go_to_floor(target: int) -> bool:
 	target = clampi(target, 1, best_floor)
+	# QA r2 #4: Floors travel can't leave a rift or trial open, or escape a Calamity
+	if Portals.inside(self) or calamity_pending or enemy_calamity > 0:
+		say(Portals.hold_text(self) if Portals.inside(self) else "There's no running now.")
+		return false
 	if target == floor_num and fight == 1:
 		return true
 	if GameData.is_boss_floor(target) and boss_cooldown(target) > 0:
@@ -2356,6 +2345,7 @@ func go_to_floor(target: int) -> bool:
 	pierce_carry = 0
 	horde_left = 0
 	enemy_goblin = false
+	get_up(Party.REVIVE_HP)  # QA r2 #4: a knocked-out leader doesn't stay down on the new floor
 	path_offer = []
 	spawn_enemy()
 	Realms.note_seen(self)
@@ -2489,7 +2479,7 @@ func give_reward(r: Dictionary) -> String:
 	if r.has("gold"):
 		var g := reward_gold(int(r["gold"]))
 		_add_gold(g)
-		parts.append("+%d gold" % g)
+		parts.append("+%s gold" % UI._commas(g))
 	if r.has("potions"):
 		potions += int(r["potions"])
 		parts.append("+%d potions" % int(r["potions"]))
@@ -2588,7 +2578,7 @@ func sell(id: int) -> void:
 	ClassTree.count(self, "sold")
 	bag.remove_at(int(found["index"]))
 	bag_version += 1
-	say("Sold %s for %d gold." % [_tag(item), value])
+	say("Sold %s for %s gold." % [_tag(item), UI._commas(value)])
 	save_game()
 
 ## Salvaging bonus: Dwarves, and the dwarven forge's heat.
@@ -2806,7 +2796,7 @@ func buy_featured() -> bool:
 	bag.append(item)
 	bag_version += 1
 	shop_version += 1
-	say("Bought the featured %s for %d gold!" % [_tag(item), price])
+	say("Bought the featured %s for %s gold!" % [_tag(item), UI._commas(price)])
 	events.append({"type": "loot", "name": item["name"], "rarity": int(item["rarity"])})
 	save_game()
 	return true
@@ -2938,7 +2928,7 @@ func sell_all(rarity: int) -> void:
 	gold += total
 	ClassTree.count(self, "sold", count)
 	bag_version += 1
-	say("Sold %d %s items for %d gold." % [count, GameData.RARITY_NAMES[rarity], total])
+	say("Sold %d %s items for %s gold." % [count, GameData.RARITY_NAMES[rarity], UI._commas(total)])
 	save_game()
 
 func paid_restock() -> void:
@@ -2968,7 +2958,7 @@ func buy_shop(index: int) -> bool:
 	add_to_wardrobe(item)
 	bag.append(item)
 	bag_version += 1
-	say("Bought %s for %d gold." % [_tag(item), price])
+	say("Bought %s for %s gold." % [_tag(item), UI._commas(price)])
 	save_game()
 	return true
 
@@ -3279,6 +3269,7 @@ func save_game(force := false) -> void:
 		"respec_tomes": respec_tomes,
 		"builds": builds,
 		"skill_book": skill_book,
+		"book_shared": book_shared,
 		"dust": dust,
 		"active_slots": active_slots,
 		"sig_slot": sig_slot,
@@ -3318,6 +3309,7 @@ func save_game(force := false) -> void:
 		"room_trap": room_trap,
 		"room_count": room_count,
 		"room_props": room_props,
+		"exploring": exploring,
 		"room_kind": room_kind,
 		"portal": portal,
 		"trial_open": {"return": trial_return, "gate": bool(trial_data.get("gate", false))} if trial_active else {},
@@ -3536,6 +3528,7 @@ func load_game() -> bool:
 	# Saves from before stat points get the points for the levels they already earned
 	stat_points = int(data.get("stat_points", (level - 1) * GameData.STAT_POINTS_PER_LEVEL))
 	skill_book = data.get("skill_book", {})
+	book_shared = bool(data.get("book_shared", false))
 	dust = int(data.get("dust", 0))
 	var sa: Array = data.get("active_slots", ["", "", ""])
 	var sp_slots: Array = data.get("passive_slots", ["", "", "", "", ""])
@@ -3664,7 +3657,15 @@ func load_game() -> bool:
 	hero_hp = int(data.get("hero_hp", get_max_hp()))
 	if hero_hp <= 0 or hero_hp > get_max_hp():
 		hero_hp = get_max_hp()
-	spawn_enemy()
+	# QA r2 #22: closed at the three doors or in an untouched event room: you come back to them
+	# (a monster used to spawn on the cleared floor, and killing it rolled new doors)
+	if not in_town and not doors.is_empty() and portal.is_empty():
+		path_offer = DOOR_KEYS.duplicate()
+	elif not in_town and bool(data.get("exploring", false)) and not room_kind in Portals.DOOR_KINDS and portal.is_empty() and not room_props.is_empty() and not bool((room_props[0] as Dictionary).get("used", false)):
+		exploring = true
+		explore_wait = 0
+	else:
+		spawn_enemy()
 	Portals.resume(self)  # back in a rift's fight, or a portal choice you hadn't made
 	if pets_migrated and autosave:
 		save_game()   # Fable pets R5: the pet notes show once, not on every launch until something saves
@@ -3763,7 +3764,7 @@ func _convert_old_save(data: Dictionary) -> void:
 	restock_shop()
 	spawn_enemy()
 	bag_version += 1
-	say("Your old save was converted. Extra items that didn't fit in the bag were sold for %d gold." % sold_gold)
+	say("Your old save was converted. Extra items that didn't fit in the bag were sold for %s gold." % UI._commas(sold_gold))
 	save_game()
 
 # =====================================================================
@@ -3836,31 +3837,6 @@ func raid_reward() -> String:
 # =====================================================================
 # Path rooms: sometimes you choose what the next room is
 # =====================================================================
-
-func _maybe_offer_path() -> void:
-	if not path_rooms_on or GameData.is_boss_floor(floor_num) or floor_num < 4:
-		return
-	if randf() * 100.0 >= GameData.PATH_CHANCE * GameData.event_bonus("elite"):
-		return
-	var others := ["treasure", "rest", "elite"]
-	others.shuffle()
-	path_offer = ["fight", others[0], others[1]]
-	# Snik the goblin roams the deep: the deeper you are, the likelier he's at a fork
-	if randf() * 100.0 < minf(20.0, floor_num * GameData.GOBLIN_ROAM_PER_FLOOR):
-		path_offer[2] = "merchant"
-	path_wait = 0
-	path_hold = false
-	tip("paths", "A fork in the dungeon! Pick the next room, or it picks Fight on by itself in a few seconds.")
-
-## After every boss the fork has the wandering merchant in it.
-func _offer_merchant() -> void:
-	if not path_rooms_on:
-		return
-	var others := ["treasure", "rest"]
-	others.shuffle()
-	path_offer = ["fight", "merchant", others[0]]
-	path_wait = 0
-	_page("merchant")
 
 ## Every so often something unusual happens on a new floor.
 func _maybe_start_event() -> void:
@@ -3950,17 +3926,20 @@ func roll_doors(was_boss := false) -> Array:
 	var out: Array = []
 	if GameData.is_boss_floor(floor_num + 1):
 		return ["fight", "fight", "fight"]
+	# QA r2 #12: an event that makes elite rooms likelier (Blood Moon) weights the elite door
+	var weights := {}
 	var total := 0
 	for k in DOOR_WEIGHTS:
-		total += int(DOOR_WEIGHTS[k])
+		weights[k] = int(round(float(DOOR_WEIGHTS[k]) * (GameData.event_bonus("elite") if String(k) == "elite" else 1.0)))
+		total += int(weights[k])
 	for i in 3:
 		var kind := "fight"
 		if randf() * 100.0 < minf(6.0, floor_num * GameData.GOBLIN_ROAM_PER_FLOOR * 0.3):  # 0.13+: Snik is rarer (was x0.6, max 12%)
 			kind = "merchant"
 		else:
 			var r := randi() % total
-			for k in DOOR_WEIGHTS:
-				r -= int(DOOR_WEIGHTS[k])
+			for k in weights:
+				r -= int(weights[k])
 				if r < 0:
 					kind = String(k)
 					break
@@ -4027,7 +4006,7 @@ func path_info(kind: String) -> Dictionary:
 	if World.EVENT_PATHS.has(kind):
 		var d: Dictionary = World.EVENT_PATHS[kind].duplicate()
 		if kind == "bet":
-			d["text"] = "Flip a coin for %d gold. Luck and Charisma tilt the coin." % World.bet_amount(self)
+			d["text"] = "Flip a coin for %s gold. Luck and Charisma tilt the coin." % UI._commas(World.bet_amount(self))
 		return d
 	return GameData.PATHS[kind] if GameData.PATHS.has(kind) else Realms.path_info(self, kind)
 
@@ -4061,7 +4040,7 @@ func _apply_path(kind: String) -> void:
 			var g := (5 + floor_num * 6) * 3
 			_add_gold(g)
 			var item := GameData.make_item(GameData.SLOT_ORDER.pick_random(), _rarity(20 + _loot_bonus(), GameData.LEGENDARY_CHANCE_BOSS), floor_num, _new_id())
-			say("[color=#fbbf24]Treasure![/color] +%d gold" % g)
+			say("[color=#fbbf24]Treasure![/color] +%s gold" % UI._commas(g))
 			_give_item(item)
 			events.append({"type": "treasure"})
 		"rest":
@@ -4176,7 +4155,7 @@ func goblin_buy_junk() -> int:
 		bag.erase(it)
 	bag_version += 1
 	_add_gold(paid)
-	say("[color=#a3e635]%s takes your junk[/color] (%d items) for %d gold." % [GameData.GOBLIN_NAME, junk.size(), paid])
+	say("[color=#a3e635]%s takes your junk[/color] (%d items) for %s gold." % [GameData.GOBLIN_NAME, junk.size(), UI._commas(paid)])
 	save_game()
 	return paid
 
@@ -4198,6 +4177,8 @@ func buy_merchant(i: int) -> bool:
 	if m["kind"] == "item":
 		var item: Dictionary = m["item"]
 		item["bought"] = true  # salvages for scrap only (Economy.salvage_dust)
+		if int(item.get("rarity", 0)) in [GameData.UNIQUE, GameData.SIGNATURE] and not Church.is_cursed(item):
+			item["locked"] = true  # QA r2 #25: never lose a unique by accident (like every other Unique)
 		add_to_wardrobe(item)
 		_note_find(item)
 		bag.append(item)
@@ -4256,7 +4237,7 @@ func _open_box() -> String:
 	if roll < 90.0:
 		var g := _gold_scale() * 12
 		_add_gold(g)
-		return "Mystery Box: +%d gold!" % g
+		return "Mystery Box: +%s gold!" % UI._commas(g)
 	dust += Economy.BOX_DUST
 	return "Mystery Box: +%d dust!" % Economy.BOX_DUST
 
@@ -4528,7 +4509,9 @@ func _convert_old_skills(data: Dictionary) -> void:
 # =====================================================================
 
 ## Sets who fights with you (other Regular heroes' slots) and loads them.
-func set_party(slots: Array) -> void:
+## QA r2 #3: in the dungeon the current fight stays (a boss, rift keeper, trial champion or Calamity
+## was replaced by a fresh monster); fresh_fight: the caller just spawned this fight itself (a load).
+func set_party(slots: Array, fresh_fight := false) -> void:
 	if party != null:
 		party.flush()  # companions leaving write any held-back save first
 	if hardcore:
@@ -4541,7 +4524,8 @@ func set_party(slots: Array) -> void:
 	GameData.realm_order = realm_order  # Fable code r1 #1: each companion's load_game set the static to its own order
 	party_slots = party.members.map(func(m): return m.slot)
 	Bench.refresh(self)
-	spawn_enemy()
+	if in_town or (fresh_fight and not door_pending() and not exploring and enemy_calamity <= 0 and not calamity_pending and not Portals.inside(self)):
+		spawn_enemy()
 	save_game()
 
 ## Auto's door: only what your door reader can tell you (no reader: a blind pick, like yours).
@@ -4675,8 +4659,23 @@ func sell_skill(id: String) -> int:
 	dust += paid
 	codex.add("skills_sold")
 	say("Broke %s down into %d dust." % [nm, paid])
-	save_game()
+	save_game(true)
+	if profile_ref != null and book_shared and is_same(profile_ref.skill_book, skill_book):
+		profile_ref.save()  # QA r2 #1: the shared book is the profile's: write the sale through at once
 	return paid
+
+## QA r2 #1: Regular heroes share one skill book (the profile's, or the leader's for a companion).
+## A hero's own saved copy is merged in only the first time (keeping the higher rank); after that
+## the shared book is the truth, so a stale copy in another hero's file can't bring a sold skill
+## back. Returns true when this hero's copy was merged (the caller saves the flag).
+func join_book(book: Dictionary) -> bool:
+	var merge := not book_shared or book.is_empty()
+	if merge:
+		for id in skill_book:
+			book[id] = maxi(int(book.get(id, 0)), int(skill_book[id]))
+	skill_book = book
+	book_shared = true
+	return merge
 
 ## Next update (Juzo): the first Unique or Set piece of its name you ever find gets a fanfare.
 func _note_find(item: Dictionary) -> void:

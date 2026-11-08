@@ -161,7 +161,10 @@ const EVENT_PATHS := {
 
 ## A new event: an altar, a cursed chest, a gambler, a wishing well.
 static func start_event(g: GameState) -> void:
-	var kind: String = ["altar", "chest", "gambler", "well", "pilgrim", "prisoner", "smuggler", "bard", "scout"].pick_random()
+	var kinds: Array = ["altar", "chest", "gambler", "well", "pilgrim", "prisoner", "smuggler", "bard", "scout"]
+	if GameData.is_boss_floor(g.floor_num + 1):  # QA r2 #5: no shortcut past a boss floor
+		kinds.erase("scout")
+	var kind: String = kinds.pick_random()
 	g.path_wait = 0
 	match kind:
 		"altar":
@@ -239,12 +242,13 @@ static func choose(g: GameState, kind: String) -> void:
 				g.events.append({"type": "buff", "name": "Pilgrim's blessing"})
 		"free_prisoner":
 			g.spawn_enemy()
-			g.horde_left = 0
-			g.horde_pack = false
-			g.enemy_name = "Jailer " + Monsters.name_of(g.enemy_species)
-			g._apply_tier(maxi(g.enemy_tier, Monsters.EPIC))
-			g.cfight["prisoner"] = true
-			g.say("[color=#f59e0b]You break the chains. The jailer comes running![/color]")
+			if g.enemy_calamity <= 0:  # QA r2 #21: a Calamity that took the slot stays itself
+				g.horde_left = 0
+				g.horde_pack = false
+				g.enemy_name = "Jailer " + Monsters.name_of(g.enemy_species)
+				g._apply_tier(maxi(g.enemy_tier, Monsters.EPIC))
+				g.cfight["prisoner"] = true
+				g.say("[color=#f59e0b]You break the chains. The jailer comes running![/color]")
 		"buy_bundle":
 			var bp := bundle_price(g)
 			if g.gold < bp:
@@ -274,6 +278,7 @@ static func choose(g: GameState, kind: String) -> void:
 			g._give_item(GameData.make_item(GameData.SLOT_ORDER.pick_random(), 2, g.floor_num, g._new_id()))
 			g._next_floor()
 			g.fight = 1
+			g.spawn_enemy()  # QA r2 #5: the new floor's own monster (it used to be the old floor's)
 			g.say("[color=#4ade80]You squeeze through the crack after the scout.[/color] One floor down, and they share what they found (+%d gold)." % sg)
 		"altar":
 			var cost := int(g.get_max_hp() * 0.2)

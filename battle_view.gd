@@ -610,7 +610,9 @@ func _later(delay: float, fn: Callable) -> void:
 	if delay <= 0.0:
 		fn.call()
 	else:
-		get_tree().create_timer(delay).timeout.connect(fn)
+		get_tree().create_timer(delay).timeout.connect(func():
+			if is_instance_valid(self) and is_inside_tree():  # QA r2 #35: the view may be gone after a scene reload
+				fn.call())
 
 ## A treasure chest pops up, rattles, and bursts open in a shower of gold.
 func _open_chest() -> void:
@@ -1831,8 +1833,8 @@ func _draw() -> void:
 		draw_texture_rect(frame, dr, false, Color(1, 1, 1, minf(1.0, float(dying["alpha"]) * 3.0)))
 
 	# A pack shows only the one you fight; the rest wait off stage, counted by its name (Juzo, Oct 26)
-	# Current enemy
-	if enemy_alpha > 0.0:
+	# Current enemy (none yet after a relaunch at the doors or in an event room: QA r2 #22)
+	if enemy_alpha > 0.0 and state.enemy_species != "":
 		var boss := state.enemy_is_boss
 		var er := _enemy_rect(boss)
 		var art := _enemy_art(boss)

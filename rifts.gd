@@ -59,6 +59,8 @@ static func _next(g: GameState) -> void:
 	var last := int(g.portal.get("left", 0)) <= 1 and int(g.portal.get("floor", 1)) >= depth(g)
 	g.exploring = false
 	g.spawn_enemy()
+	if g.enemy_calamity > 0:
+		return  # QA r2 #21: a Calamity took the slot: it stays itself
 	g.horde_left = 0
 	g.horde_pack = false
 	g.enemy_wanderer = false

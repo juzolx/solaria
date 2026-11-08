@@ -24,8 +24,8 @@ const ACHIEVEMENTS := [
 	{"id": "lv25", "name": "Seasoned", "text": "Reach level 25", "key": "best_level", "target": 25, "reward": {"gold": 500}},
 	{"id": "lv50", "name": "Veteran", "text": "Reach level 50", "key": "best_level", "target": 50, "reward": {"gold": 1500}, "title": "Veteran"},
 	{"id": "lv100", "name": "Living Legend", "text": "Reach level 100", "key": "best_level", "target": 100, "reward": {"gold": 5000}, "title": "Legend"},
-	{"id": "spec", "name": "Specialist", "text": "Get a specialization", "key": "specs", "target": 1, "reward": {"scrap": 50}},
-	{"id": "evo", "name": "Evolved", "text": "Evolve your class", "key": "evos", "target": 1, "reward": {"scrap": 150}, "title": "Ascendant"},
+	{"id": "spec", "name": "Specialist", "text": "Get a specialization", "key": "class_picks", "target": 1, "reward": {"scrap": 50}},
+	{"id": "evo", "name": "Evolved", "text": "Evolve your class", "key": "class_picks", "target": 2, "reward": {"scrap": 150}, "title": "Ascendant"},
 	# Killing
 	{"id": "k100", "name": "Monster Hunter", "text": "Defeat 100 monsters", "key": "kills", "target": 100, "reward": {"potions": 2}},
 	{"id": "k1000", "name": "Seasoned Hunter", "text": "Defeat 1,000 monsters", "key": "kills", "target": 1000, "reward": {"gold": 800}},
@@ -80,7 +80,7 @@ const ACHIEVEMENTS := [
 	{"id": "hc50", "name": "Brave", "text": "Reach floor 50 with a Hardcore hero", "key": "hc_floor", "target": 50, "reward": {"gold": 1500}},
 	{"id": "hc100", "name": "Deathless", "text": "Reach floor 100 with a Hardcore hero", "key": "hc_floor", "target": 100, "reward": {"gold": 4000}, "title": "Deathless"},
 	{"id": "party", "name": "Full Party", "text": "Have 3 heroes at once", "key": "heroes", "target": 3, "reward": {"gold": 1000}},
-	{"id": "roster9", "name": "Full Roster", "text": "Have 9 heroes at once", "key": "heroes", "target": 9, "reward": {"gold": 6000}, "title": "Guildmaster"},
+	{"id": "roster9", "name": "Full Roster", "text": "Have all 5 heroes at once", "key": "heroes", "target": 5, "reward": {"gold": 6000}, "title": "Guildmaster"},
 	# Realms, races and hidden classes (0.9)
 	{"id": "f350", "name": "Halfway to Nowhere", "text": "Reach floor 350", "key": "best_floor", "target": 350, "reward": {"gold": 4000}},
 	{"id": "f500", "name": "The Bottom of the World", "text": "Reach floor 500", "key": "best_floor", "target": 500, "reward": {"gold": 8000}, "title": "Rootbreaker"},
@@ -98,7 +98,6 @@ const ACHIEVEMENTS := [
 	{"id": "hid5", "name": "Many Faces", "text": "Unlock 5 hidden classes (any heroes)", "key": "hidden_classes", "target": 5, "reward": {"gold": 5000}, "title": "The Unseen"},
 	{"id": "branch1", "name": "A New Branch", "text": "Choose your first class branch", "key": "class_picks", "target": 1, "reward": {"gold": 500}},
 	{"id": "unique1", "name": "One of a Kind", "text": "Become a unique class", "key": "unique_classes", "target": 1, "reward": {"gold": 5000}, "title": "The Unique"},
-	{"id": "branchoff1", "name": "Off the Beaten Path", "text": "Take a branch-off class", "key": "branch_offs", "target": 1, "reward": {"gold": 5000}, "title": "The Wayward"},
 	{"id": "god1", "name": "Godhood", "text": "Become a God rank class", "key": "gods", "target": 1, "reward": {"gold": 20000}, "title": "Godlike"},
 	{"id": "spare50", "name": "Mercy", "text": "Spare 50 monsters", "key": "spared", "target": 50, "reward": {"gold": 1500}, "title": "The Merciful"},
 	{"id": "run25", "name": "Live to Fight Another Day", "text": "Escape 25 fights", "key": "escapes", "target": 25, "reward": {"potions": 5}},
@@ -376,17 +375,41 @@ static func week_id(unix: float) -> String:
 
 ## Makes new bounties when a new day or week starts. zone_i: where the hero is.
 func refresh_bounties(state: GameState) -> void:
-	var now := Time.get_unix_time_from_system()
+	refresh_bounties_at(state, Time.get_unix_time_from_system())
+
+## QA r2 #13: a clock moved back never rolls a new day, and a new day only replaces the bounties
+## you claimed or never started (progress you made is kept, so changing the date can't wipe or reroll it).
+func refresh_bounties_at(state: GameState, now: float) -> void:
+	if clock_went_back(int(bounties.get("unix", 0)), now):
+		return
+	bounties["unix"] = maxi(int(bounties.get("unix", 0)), int(now))
 	var today := Time.get_date_string_from_unix_time(int(now))
 	var week := week_id(now)
 	if bounties.get("day", "") != today:
 		bounties["day"] = today
-		bounties["daily"] = _make_bounties(state, DAILY_BOUNTIES, 1)
+		bounties["daily"] = _renew(state, bounties.get("daily", []), DAILY_BOUNTIES, 1)
 		dirty = true
 	if bounties.get("week", "") != week:
 		bounties["week"] = week
-		bounties["weekly"] = _make_bounties(state, WEEKLY_BOUNTIES, WEEKLY_MULT)
+		bounties["weekly"] = _renew(state, bounties.get("weekly", []), WEEKLY_BOUNTIES, WEEKLY_MULT)
 		dirty = true
+
+## QA r2 #13: the device clock is earlier than the last time we saw (a little slack for time zones).
+const CLOCK_SLACK := 3 * 3600
+static func clock_went_back(last_unix: int, now: float) -> bool:
+	return last_unix > 0 and int(now) < last_unix - CLOCK_SLACK
+
+## Keeps the bounties with progress that aren't claimed yet; fresh ones fill the rest.
+func _renew(state: GameState, old: Array, count: int, mult: int) -> Array:
+	var kept: Array = old.filter(func(b): return not bool(b.get("claimed", false)) and int(b.get("have", 0)) > 0)
+	var fresh := _make_bounties(state, count + old.size(), mult)
+	var out: Array = kept.slice(0, count)
+	for b in fresh:
+		if out.size() >= count:
+			break
+		if not out.any(func(o): return str(o.get("kind", "")) == str(b.get("kind", ""))):
+			out.append(b)
+	return out
 
 func _make_bounties(state: GameState, count: int, mult: int) -> Array:
 	var kinds := BOUNTY_KINDS.duplicate()
@@ -460,7 +483,12 @@ func bounties_ready() -> int:
 
 ## Call once when the game starts. Returns the streak day (1-7) to reward, or 0 if already rewarded today.
 func check_login() -> int:
-	var now := Time.get_unix_time_from_system()
+	return check_login_at(Time.get_unix_time_from_system())
+
+## QA r2 #13: a clock moved back to before the last login gives nothing (and isn't remembered).
+func check_login_at(now: float) -> int:
+	if clock_went_back(int(login.get("unix", 0)), now):
+		return 0
 	var today := Time.get_date_string_from_unix_time(int(now))
 	if login.get("last", "") == today:
 		return 0
@@ -470,6 +498,7 @@ func check_login() -> int:
 	else:
 		login["streak"] = 1
 	login["last"] = today
+	login["unix"] = int(now)
 	at_least("streak_best", int(login["streak"]))
 	dirty = true
 	return ((int(login["streak"]) - 1) % LOGIN_REWARDS.size()) + 1

@@ -178,10 +178,6 @@ static func zone_race(zone_i: int) -> String:
 	var id := id_for_zone(zone_i)
 	return info(id).get("race", "") if id != "" else ""
 
-## Is this monster one of the realm race's people?
-static func is_people(monster: Dictionary) -> bool:
-	return monster.get("people", false)
-
 # =====================================================================
 # Realm mechanics (each realm plays a little differently)
 # =====================================================================
@@ -586,6 +582,8 @@ static func _ambush(g: GameState, race: String, rival: String) -> void:
 	if people.is_empty():
 		return
 	g.spawn_enemy()
+	if g.enemy_calamity > 0:
+		return  # QA r2 #21: a Calamity took the slot: it stays itself
 	var def: Dictionary = people.pick_random()
 	if rival != "":
 		for r in RIVALS:

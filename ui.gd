@@ -71,13 +71,15 @@ static var high_contrast := false  # set from the settings: secondary (DIM) text
 static var calm := false  # set from the settings (Reduce motion): no page fades
 const DIM_CONTRAST := Color("#c0cbdc")  # DIM in high-contrast mode
 
-## 9680 -> "9680", 12400 -> "12.4k", 3500000 -> "3.5M": short numbers for tight spots.
+## 9680 -> "9680", 12400 -> "12.4k", 3500000 -> "3.5M", 2.1e9 -> "2.1B": short numbers for tight spots.
 static func short(n: int) -> String:
 	if absi(n) < 10000:
 		return str(n)
 	if absi(n) < 1000000:
 		return "%.1fk" % (n / 1000.0)
-	return "%.1fM" % (n / 1000000.0)
+	if absi(n) < 1000000000:
+		return "%.1fM" % (n / 1000000.0)
+	return "%.1fB" % (n / 1000000000.0)  # QA r2 #39 (was "1234.5M")
 
 ## Fable r3 #9: every button that spends says it one way: "Buy · 1,899 gold", "Build · 12.4k gold
 ## + 60 scrap". Never "g", never brackets.
@@ -415,11 +417,6 @@ static func pill(text_color: Color, font_size := FONT_CAPTION) -> Array:
 	p.add_child(l)
 	return [p, l]
 
-## Text colored green if you have enough, red if not: "7 / 3".
-static func have_need(have: int, need: int) -> String:
-	var c := GREEN if have >= need else RED
-	return "[color=%s]%d[/color][color=%s] / %d[/color]" % [hex(c), have, hex(DIM), need]
-
 ## A label that wraps onto more lines instead of stretching the screen.
 static func wrap(text: String, font_size := FONT_BODY, color := TEXT) -> Label:
 	var l := label(text, font_size, color)
@@ -502,10 +499,6 @@ static func seat_hero(pic: Control, pl: TextureRect, k: int, cx: float, ground_y
 static func seat_ground(h: float, pl: TextureRect) -> float:
 	return h - roundf(pl.texture.get_height() / 2.0) - 2.0
 
-## A short phone (the SE: 896 design px tall): pages drop their roomy extras.
-static func short_screen() -> bool:
-	return (Engine.get_main_loop() as SceneTree).root.get_visible_rect().size.y < 1000.0
-
 ## Pops a small explanation next to a control; it fades by itself.
 static func show_tip(near: Control, text: String) -> void:
 	if tip_layer == null or text == "":
@@ -538,32 +531,6 @@ static func show_tip(near: Control, text: String) -> void:
 	tw.tween_interval(3.5)
 	tw.tween_property(p, "modulate:a", 0.0, 0.4)
 	tw.tween_callback(p.queue_free)
-
-## A big, phone-friendly button with a title and a small line under it.
-static func big_button(title: String, sub: String, on_press: Callable, color := GOLD) -> Button:
-	color = role_color(color)
-	var b := button("", on_press)
-	b.custom_minimum_size = Vector2(0, 54)
-	b.add_theme_stylebox_override("normal", style(Color(color, 0.12), Color(color, 0.7), 8, 8, 1))
-	b.add_theme_stylebox_override("hover", style(Color(color, 0.2), color, 8, 8, 1))
-	b.add_theme_stylebox_override("pressed", style(Color(color, 0.32), color.lightened(0.2), 8, 8, 2))
-	var v := vbox(0)
-	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	v.alignment = BoxContainer.ALIGNMENT_CENTER
-	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	b.add_child(v)
-	var t := label(title, 15, color.lightened(0.4))
-	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	v.add_child(t)
-	if sub != "":
-		var s := label(sub, 11, DIM)
-		s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		s.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		s.name = "Sub"
-		v.add_child(s)
-	t.name = "Title"
-	return b
 
 ## The game font: Pixelify Sans (OFL, art/ui/fonts), SemiBold, no subpixel blur.
 static var _font: Font

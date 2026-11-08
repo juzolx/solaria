@@ -59,6 +59,7 @@ static func on_engage(g: GameState) -> void:
 	if tr.get("spotted", false):
 		g.say("You step around the %s." % String(TRAPS[tr["kind"]]["name"]).to_lower())
 		g.xp += maxi(1, int(GameData.xp_for_kill(g.floor_num, false) * 0.3))
+		g.gain_xp(0)  # QA r2 #26: a full bar levels up now, not at the next kill
 		return
 	trigger(g, String(tr["kind"]))
 
@@ -312,6 +313,8 @@ static func interact(g: GameState, i: int) -> String:
 static func _monster(g: GameState, id: String, art: String, line: String) -> void:
 	g.exploring = false
 	g.spawn_enemy()
+	if g.enemy_calamity > 0:
+		return  # QA r2 #21: a Calamity took the slot: it stays itself
 	# A room's own monster (a mimic) comes alone: spawn_enemy can
 	# roll a pack, which left ordinary monsters stepping out of a treasure room after it
 	g.horde_left = 0

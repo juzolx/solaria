@@ -311,10 +311,6 @@ static func race_plural(race: String) -> String:
 			return race
 	return race + "s"
 
-## The race whose people the current monster is ("" if it isn't anyone's).
-static func enemy_race(g: GameState) -> String:
-	return g.enemy_people
-
 static func on_kill(g: GameState, species: String, tier: int, boss_kind: String, was_goblin: bool) -> void:
 	gain(g, "kill")
 	if tier >= Monsters.RARE:
@@ -417,6 +413,7 @@ static func spare(g: GameState) -> bool:
 	if g.enemy_people != "":
 		change_rep(g, g.enemy_people, Races.REP_SPARE)
 	g.xp += int(GameData.xp_for_kill(g.floor_num, false) * 0.5)
+	g.gain_xp(0)  # QA r2 #26: a full bar levels up now, not at the next kill
 	_move_on(g)
 	return true
 

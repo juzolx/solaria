@@ -29,9 +29,6 @@ var last_error := ""
 func setup(p: Profile) -> void:
 	profile = p
 
-static func configured() -> bool:
-	return OnlineConfig.SUPABASE_URL != "" and OnlineConfig.ANON_KEY != ""
-
 func is_configured() -> bool:
 	return url != "" and key != ""
 
@@ -398,9 +395,6 @@ static func bundle_error(bundle: Dictionary) -> String:
 	if bundle.has("hc_runs") and typeof(bundle["hc_runs"]) != TYPE_ARRAY:
 		return BAD_BACKUP
 	return ""
-
-static func bundle_ok(bundle: Dictionary) -> bool:
-	return bundle_error(bundle) == ""
 
 ## Writes a packed backup into the same towns it came from. Towns that aren't
 ## in the backup are never touched. Every hero is first written to a staging

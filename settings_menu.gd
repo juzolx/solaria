@@ -332,6 +332,8 @@ func _cloud_backup() -> void:
 	if main.started:
 		state.save_game()
 	var r: Dictionary = await main.online.cloud_backup()
+	if not is_instance_valid(cloud_label):
+		return  # QA r2 #37: the menu closed while it worked
 	cloud_label.text = ("Backed up! Your backup code is %s. Write it down to restore on another device." % r["code"]) if r["ok"] else "Backup failed: " + str(r["error"])
 
 func _restore_popup() -> void:
@@ -353,6 +355,8 @@ func _cloud_restore(code: String) -> void:
 		main.state.run_over = true  # don't save over what was just restored
 		main.get_tree().reload_current_scene()
 	else:
+		if not is_instance_valid(cloud_label):
+			return  # QA r2 #37: the menu closed while it worked
 		cloud_label.text = "Restore failed: " + str(r["error"])
 
 func _update() -> void:

@@ -303,7 +303,7 @@ func _initialize() -> void:
 	hc.slot = 2
 	hc.best_floor = 500
 	Hidden.check(hc)
-	check(hc.hidden.has("chosen_hero") and hc.codex.stat("legend_chosen_hero") == 2, "Chosen Hero at floor 500 on Hardcore")
+	check(hc.hidden.has("chosen_hero") and hc.codex.stat("legend_chosen_hero") == Hidden.legend_key(hc), "Chosen Hero at floor 500 on Hardcore")
 
 	# ---------- Saving ----------
 	var s := hero("Demon")

@@ -56,10 +56,11 @@ func load_members(slots: Array, leader: GameState) -> void:
 		g.codex.path = ""
 		if not g.load_game() or g.hardcore or g.hero_class == "":
 			continue
-		# The party shares one skill book: merge in this hero's skills
-		for id in g.skill_book:
-			leader.skill_book[id] = maxi(int(leader.skill_book.get(id, 0)), int(g.skill_book[id]))
-		g.skill_book = leader.skill_book
+		# The party shares one skill book: this hero's own copy is merged in only once (QA r2 #1)
+		if g.join_book(leader.skill_book):
+			g.save_game(true)
+			if leader.profile_ref != null and is_same(leader.profile_ref.skill_book, leader.skill_book):
+				leader.profile_ref.save()
 		var m := Member.new()
 		m.slot = int(n)
 		m.hero = g
@@ -157,7 +158,7 @@ func act(leader: GameState) -> String:
 		var crit := false
 		for _h in hits:
 			var d := float(g.get_attack()) * leader.party_mult()
-			if randf() * 100.0 < g.effect_value("crit") + Synergies.crit_bonus(leader):
+			if randf() * 100.0 < minf(g.effect_value("crit") + Synergies.crit_bonus(leader), GameData.CRIT_CAP):  # QA r2 #17: capped like the leader
 				d *= g.crit_mult()
 				crit = true
 			total += int(d)
