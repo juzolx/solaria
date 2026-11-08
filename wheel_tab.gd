@@ -84,6 +84,11 @@ class Wheel:
 		var font := UI.game_font()   # interface pass: the game font everywhere
 		if chance > 0:   # Fable r5 #14: no "0% win" before an item is picked
 			draw_string(font, Vector2(0, size.y - 4), "%d%% win" % chance, HORIZONTAL_ALIGNMENT_CENTER, size.x, UI.MIN_FONT, UI.GREEN)
+		if UI.colorblind and chance > 0:   # QA r2 #44: the winning slice says so, not just its green
+			var mid := -PI / 2.0 + TAU * float(chance) / 200.0
+			var at := c + Vector2(cos(mid), sin(mid)) * r * 0.6
+			draw_string_outline(font, at + Vector2(-40, 6), "WIN", HORIZONTAL_ALIGNMENT_CENTER, 80, UI.MIN_FONT, 4, UiSkin.SOOT)
+			draw_string(font, at + Vector2(-40, 6), "WIN", HORIZONTAL_ALIGNMENT_CENTER, 80, UI.MIN_FONT, Color.WHITE)
 
 func setup(m) -> void:
 	main = m
@@ -315,6 +320,8 @@ func _spin() -> void:
 		t.tween_property(wheel, "angle", target, 2.6).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 		t.parallel().tween_method(func(_v): wheel.queue_redraw(), 0.0, 1.0, 2.6)
 		await t.finished
+		if not is_instance_valid(self) or not is_inside_tree():
+			return  # QA r2 #36: the screen closed (Heroes, Delete) while it spun: the result is already saved
 		spinning = false
 		var it: Dictionary = res["item"]
 		if res["win"]:
@@ -440,6 +447,8 @@ func _spin_all() -> void:
 			t.tween_property(w, "angle", TAU * (3.0 + i * 0.5) + TAU * pct / 100.0, dur + i * 0.08).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 			t.tween_method(func(_v): w.queue_redraw(), 0.0, 1.0, dur + i * 0.08)
 		await t.finished
+		if not is_instance_valid(self) or not is_inside_tree():
+			return  # QA r2 #36: the screen closed (Heroes, Delete) while it spun: the result is already saved
 		var wins := 0
 		var played := 0
 		for i in results.size():
