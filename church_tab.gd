@@ -86,10 +86,10 @@ func _fill(g: GameState, it: Dictionary, curse: bool) -> void:
 		return
 	(row["text"] as RichTextLabel).text = "[color=%s]%s[/color]%s" % [GameData.color_of(int(it["rarity"])), GameData.display_name(it), Church.describe(it)]
 	if curse:
-		(row["cost"] as Label).text = "Works %d%% of the time  ·  %d gold + %d dust" % [Church.cleanse_chance(it), Church.cleanse_gold(it), Church.cleanse_dust(it)]
+		(row["cost"] as Label).text = "Works %d%% of the time  ·  %s gold + %d dust" % [Church.cleanse_chance(it), UI.gold(Church.cleanse_gold(it)), Church.cleanse_dust(it)]
 		(row["button"] as Button).disabled = Church.cleanse_short(g, it) != ""
 	else:
-		(row["cost"] as Label).text = "%d gold + %d dust" % [Church.bless_gold(it), Church.bless_dust()]
+		(row["cost"] as Label).text = "%s gold + %d dust" % [UI.gold(Church.bless_gold(it)), Church.bless_dust()]
 		(row["button"] as Button).disabled = Church.bless_short(g, it) != ""
 
 func _act(id: int, curse: bool) -> void:

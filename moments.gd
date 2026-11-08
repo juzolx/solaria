@@ -191,8 +191,8 @@ func _build_evolve(d: Dictionary) -> void:
 		p.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		p.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		p.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		p.size = Vector2(190, 190)
-		p.pivot_offset = Vector2(95, 95)
+		p.size = Vector2(Sprites.PORTRAIT * 3, Sprites.PORTRAIT * 3)   # QA r1 C1: 3x, like the box (190 was x2.64)
+		p.pivot_offset = p.size / 2.0
 		p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		pic_box.add_child(p)
 	before.texture = d.get("before")

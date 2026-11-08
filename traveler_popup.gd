@@ -13,12 +13,8 @@ func show_for(main_node, p: Dictionary) -> void:
 	open(m, String(who["name"]), 520.0, Color(who["color"]))
 	var h := UI.hbox(12)
 	content.add_child(h)
-	var pic := TextureRect.new()
-	pic.texture = Travelers.portrait(String(p.get("who", "")))
-	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pic.custom_minimum_size = Vector2(72, 72)
-	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	# QA r1 C1: whole screen pixels (PixelPic), not 64 px art stretched into a 72 box
+	var pic := PixelPic.make(Travelers.portrait(String(p.get("who", ""))), 0, 72.0 / 64.0)
 	pic.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	h.add_child(pic)
 	var v := UI.vbox(6)
@@ -31,7 +27,8 @@ func show_for(main_node, p: Dictionary) -> void:
 	for n in 2:
 		var o: Dictionary = who["offers"][n]
 		var cost := Travelers.cost_text(st, o)
-		var b := UI.primary(String(o["text"]) + (("  (%s)" % cost) if cost != "" else ""), _choose.bind(n), UI.GOLD if n == 0 else UI.BORDER)
+		# QA r1 B1: "Buy the map · 3,660 gold", the house way
+		var b := UI.primary(String(o["text"]) + ((" · %s" % cost) if cost != "" else ""), _choose.bind(n), UI.GOLD if n == 0 else UI.BORDER)
 		b.custom_minimum_size = Vector2(0, UI.TAP)
 		UI.why(b, "" if Travelers.can_pay(st, o) else "You can't pay for that.")
 		content.add_child(b)

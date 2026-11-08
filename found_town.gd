@@ -18,7 +18,8 @@ func show_for(main_node, town_n: int) -> void:
 		var ct := UI.rich(17)
 		ct.text = "[color=#e8b14a]%s[/color]" % coach
 		content.add_child(ct)
-	content.add_child(UI.wrap("Name your town, then choose how it plays. You can't change Regular or Hardcore later.", UI.FONT_BODY, UI.DIM))
+	# QA r1 B7: the first-time line already says "Name your town"
+	content.add_child(UI.wrap(("Choose how it plays." if coach != "" else "Name your town, then choose how it plays.") + " You can't change Regular or Hardcore later.", UI.FONT_BODY, UI.DIM))
 	name_edit = LineEdit.new()
 	name_edit.placeholder_text = p.town_name(t)
 	name_edit.max_length = Profile.TOWN_NAME_MAX
@@ -38,6 +39,8 @@ func show_for(main_node, town_n: int) -> void:
 func _card(hc: bool, title: String, color: Color, text: String) -> PanelContainer:
 	var card := UI.panel(UI.INSET, color, 10, 14, 2)
 	card.custom_minimum_size = Vector2(minf(330.0, get_viewport().get_visible_rect().size.x - 72.0), 0)
+	if is_narrow():
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL   # QA r1 A18: no empty strip on the right
 	var v := UI.vbox(10)
 	card.add_child(v)
 	v.add_child(UI.label(title, 20, color.lightened(0.2)))

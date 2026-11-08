@@ -27,6 +27,10 @@ static var key_art_path := ""
 var halls: HallsScene
 var room_state: GameState
 var room_h := 0.0     # the scene's height: from the top of the screen down to the menu
+var col: VBoxContainer
+var gap: Control
+var sub_label: Label
+var ver_label: Label
 var key_tex: Texture2D
 
 func show_for(main_node) -> void:
@@ -206,6 +210,11 @@ func _draw_scene(vs: Vector2) -> void:
 			var floor_y := minf(halls.proj(0.0, HallsScene.FLOOR_Y, 2.1).y, sz.y - 6.0)
 			var feet := float(Sprites.PORTRAIT_FOOT + 1) * u   # the boots' bottom edge on the shadow's centre line
 			var bob := roundf(sin(t * 2.2) * 0.6) * u
+			# QA r1 A10: the subtitle never crosses the hero's head: the hero steps down (toward you)
+			if sub_label != null and is_instance_valid(sub_label):
+				var head_room := sub_label.get_global_rect().end.y - global_position.y + 4.0 - (floor_y - feet - u)
+				# ...but the boots stay clear of the menu panel and its fade (room_h is the panel top + 30)
+				floor_y += clampf(head_room, 0.0, maxf(0.0, minf(sz.y - 6.0, room_h - 80.0) - floor_y))
 			var pos := Vector2(roundf(vs.x * 0.5 - hs.x / 2.0 - 40.0), roundf(floor_y - feet + bob))
 			draw_set_transform(Vector2(pos.x + hs.x / 2.0, floor_y), 0.0, Vector2(1.0, 0.25))
 			draw_circle(Vector2.ZERO, hs.x * 0.22, Color(0, 0, 0, 0.45))
@@ -236,7 +245,7 @@ func _build() -> void:
 	margin.add_theme_constant_override("margin_top", 22 + int(UI.safe_top))   # Fable r2 #13
 	margin.add_theme_constant_override("margin_bottom", 22 + int(UI.safe_bottom))
 	add_child(margin)
-	var col := UI.vbox(10)
+	col = UI.vbox(10)
 	margin.add_child(col)
 	var mark := Control.new()   # interface pass (approved mockup 17): the sun-disc mark above the name
 	mark.custom_minimum_size = Vector2(0, 76)
@@ -252,7 +261,8 @@ func _build() -> void:
 	sub.add_theme_constant_override("outline_size", 6)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(sub)
-	var gap := Control.new()
+	sub_label = sub
+	gap = Control.new()
 	gap.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	gap.custom_minimum_size = Vector2(0, 150)   # room for the hero standing in the scene
 	col.add_child(gap)
@@ -280,7 +290,32 @@ func _build() -> void:
 	_fill_side()
 	var ver := UI.label("v" + PatchNotes.VERSION, UI.FONT_BODY, UI.DIM)
 	ver.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	ver.set_meta("fit_drop", 0)   # the "What's new in v…" button says it too
 	col.add_child(ver)
+	ver_label = ver
+	_fit_tall()
+
+## QA r1 A9: on a phone the lower panels ran off the bottom of the screen (the SE lost "What's
+## new", "Event now" and the version). What doesn't fit gives way, least needed first: the version
+## line, the event, the realm of the week, the update banner; then the scene's gap shrinks.
+func _fit_tall() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame   # wrapped rich text knows its height a frame after it has a width
+	if not is_inside_tree() or layout == null or not layout.vertical:
+		return
+	var room := size.y - 44.0 - UI.safe_top - UI.safe_bottom
+	var drops: Array = [ver_label]
+	for c in side_box.get_children():
+		if c.has_meta("fit_drop"):
+			drops.append(c)
+	drops.sort_custom(func(a, b): return int(a.get_meta("fit_drop")) < int(b.get_meta("fit_drop")))
+	for c in drops:
+		if col.get_combined_minimum_size().y <= room:
+			break
+		(c as Control).visible = false
+	var over := col.get_combined_minimum_size().y - room
+	if over > 0.0:
+		gap.custom_minimum_size.y = maxf(40.0, gap.custom_minimum_size.y - over)
 
 func _fill_menu() -> void:
 	OnlineUI.clear(menu_box)
@@ -343,6 +378,7 @@ func _fill_side() -> void:
 	# The new update's banner
 	if m.profile.notes_seen != PatchNotes.VERSION:
 		var up := UI.panel(UI.PANEL, UI.GOLD, 8, 10, 2)
+		up.set_meta("fit_drop", 3)
 		side_box.add_child(up)
 		var ut := UI.rich(UI.FONT_BODY)
 		ut.text = "[color=#e8b14a][b]%s[/b][/color]  [color=%s]v%s[/color]\nNew class rules with God classes, pets from region nests, three currencies, the Legendary Wheel and safer saves." % [String(PatchNotes.NOTES[0]["name"]), UI.hex(UI.DIM), PatchNotes.VERSION]
@@ -356,6 +392,7 @@ func _fill_side() -> void:
 	var week := Realms.realm_of_week()
 	var wk := UI.rich(UI.FONT_BODY)
 	wk.text = "[color=%s]Realm of the week[/color]\n[color=%s][b]%s[/b][/color]: double reputation and better loot." % [UI.hex(UI.GOLD), Realms.info(week)["color"], Realms.realm_name(week)]
+	wk.set_meta("fit_drop", 2)
 	side_box.add_child(wk)
 	var ev := GameData.active_events()
 	if not ev.is_empty():
@@ -364,6 +401,7 @@ func _fill_side() -> void:
 			names.append("[b]%s[/b]: %s" % [GameData.EVENTS[id]["name"], GameData.EVENTS[id]["text"]])
 		var banner := UI.rich(UI.FONT_BODY)
 		banner.text = "[color=%s]Event now[/color]\n" % UI.hex(UI.GOLD) + "\n".join(names)
+		banner.set_meta("fit_drop", 1)
 		side_box.add_child(banner)
 	m.profile.notes_seen = PatchNotes.VERSION
 	if size.x < size.y * 0.95:

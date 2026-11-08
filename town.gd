@@ -158,7 +158,7 @@ static func leave(g: GameState) -> void:
 	g.fight = 1
 	g.spawn_enemy()
 	start_dive(g)
-	g.say("[color=#e8b14a]Back into the dungeon: floor %d.[/color] You carry %d gold; %d stays safe in the Bank." % [g.floor_num, g.gold, g.bank])
+	g.say("[color=#e8b14a]Back into the dungeon: floor %d.[/color] You carry %s gold; %s stays safe in the bank." % [g.floor_num, UI.commas(g.gold), UI.commas(g.bank)])   # QA r1 B1 (text only)
 	g.tip("bank", "Gold you carry into the dungeon can be lost if you fall. Gold in the Bank is always safe. Everything you carry home is banked for you.")
 	g.events.append({"type": "town", "in": false})
 	Portals.resume(g)  # a realm gate you walked away from opens again
@@ -384,7 +384,7 @@ static func on_kill(g: GameState, species: String, tier: int, was_boss: bool, zo
 static func reward_text(r: Dictionary, g: GameState) -> String:
 	var parts: Array = []
 	if r.has("gold"):
-		parts.append("%d gold" % int(float(r["gold"]) * (1.0 + g.best_floor / 25.0)))
+		parts.append("%s gold" % UI.commas(int(float(r["gold"]) * (1.0 + g.best_floor / 25.0))))   # QA r1 B1 (text only)
 	if r.has("item"):
 		var it: Dictionary = r["item"]
 		var slot := String(it["slot"])

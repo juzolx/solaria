@@ -47,11 +47,26 @@ func _card(n: int, open_slot: bool) -> PanelContainer:
 	var active: bool = m.profile.active_slot == n and not meta.is_empty()
 	var card := UI.panel(UI.INSET, UI.GOLD if active else UI.BORDER, 10, 10, 2 if active else 1)
 	card.custom_minimum_size = Vector2(minf(400.0, get_viewport().get_visible_rect().size.x - 64.0), 0)
+	if is_narrow():
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL   # QA r1 A18: a phone's card fills the row
 	var h := UI.hbox(10)
 	card.add_child(h)
 	if meta.is_empty():
-		var one := UI.wrap("Slot %d · %s" % [n, "empty: recruit a hero at the Inn" if open_slot else "locked: " + m.profile.slot_lock_note(n)], UI.FONT_BODY, UI.DIM)
+		# QA r1 B8: before the town exists there is no Inn: say how the first hero comes, and do it here
+		var unfounded: bool = open_slot and not m.profile.town_founded(m.profile.town)
+		var one := UI.wrap("Slot %d · %s" % [n, "empty: found your town to make your first hero" if unfounded else ("empty: recruit a hero at the Inn" if open_slot else "locked: " + m.profile.slot_lock_note(n))], UI.FONT_BODY, UI.DIM)
 		one.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if unfounded:
+			var hv := UI.vbox(8)
+			hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			h.add_child(hv)
+			hv.add_child(one)
+			var fb := UI.primary("Found your town", func():
+				close()
+				FoundTown.new().show_for(m, m.profile.town), UI.GREEN)
+			fb.custom_minimum_size = Vector2(0, UI.TAP)
+			hv.add_child(fb)
+			return card
 		h.add_child(one)
 		return card
 	var pic := TextureRect.new()

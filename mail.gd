@@ -88,7 +88,7 @@ static func find(g: GameState, id: String) -> Dictionary:
 static func summary(l: Dictionary) -> String:
 	var parts: Array = []
 	if int(l["gold"]) > 0:
-		parts.append("%d gold" % int(l["gold"]))
+		parts.append("%s gold" % UI.commas(int(l["gold"])))
 	if int(l["potions"]) > 0:
 		parts.append("%d potions" % int(l["potions"]))
 	if int(l["scrap"]) > 0:
@@ -115,10 +115,12 @@ static func collect(g: GameState, id: String) -> String:
 	if l.is_empty():
 		return ""
 	l["read"] = true
+	if not is_empty(l):
+		l["collected"] = true   # QA r1 B3: only a letter that held something says "Collected."
 	var parts: Array = []
 	if int(l["gold"]) > 0:
 		g._add_gold(int(l["gold"]))
-		parts.append("+%d gold" % int(l["gold"]))
+		parts.append("+%s gold" % UI.commas(int(l["gold"])))
 		l["gold"] = 0
 	if int(l["scrap"]) > 0:
 		g.scrap += int(l["scrap"])

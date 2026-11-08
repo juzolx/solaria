@@ -71,21 +71,32 @@ static var high_contrast := false  # set from the settings: secondary (DIM) text
 static var calm := false  # set from the settings (Reduce motion): no page fades
 const DIM_CONTRAST := Color("#c0cbdc")  # DIM in high-contrast mode
 
-## 9680 -> "9680", 12400 -> "12.4k", 3500000 -> "3.5M", 2.1e9 -> "2.1B": short numbers for tight spots.
+## 9680 -> "9680", 12400 -> "12.4k", 250000 -> "250k", 3500000 -> "3.5M", 2.1e9 -> "2.1B": short
+## numbers for tight spots (QA r1 A1: no ".0", so "bank 250k" is narrower; QA r2 #39: a B step).
 static func short(n: int) -> String:
 	if absi(n) < 10000:
 		return str(n)
+	var t: String
 	if absi(n) < 1000000:
-		return "%.1fk" % (n / 1000.0)
-	if absi(n) < 1000000000:
-		return "%.1fM" % (n / 1000000.0)
-	return "%.1fB" % (n / 1000000000.0)  # QA r2 #39 (was "1234.5M")
+		t = "%.1fk" % (n / 1000.0)
+	elif absi(n) < 1000000000:
+		t = "%.1fM" % (n / 1000000.0)
+	else:
+		t = "%.1fB" % (n / 1000000000.0)
+	return t.replace(".0k", "k").replace(".0M", "M").replace(".0B", "B")
+
+## QA r1 B1: the one way an amount of gold reads in a sentence: "4,743", "12.4k" from 10,000 up
+## (the same rule as UI.cost). UI.commas when the exact figure matters ("124,359 stays safe").
+static func gold(n: int) -> String:
+	return short(n) if absi(n) >= 10000 else _commas(n)
+
+static func commas(n: int) -> String:
+	return _commas(n)
 
 ## Fable r3 #9: every button that spends says it one way: "Buy · 1,899 gold", "Build · 12.4k gold
 ## + 60 scrap". Never "g", never brackets.
-static func cost(verb: String, gold: int, extra := "") -> String:
-	var g := short(gold) if absi(gold) >= 10000 else _commas(gold)
-	return "%s · %s gold%s" % [verb, g, (" + " + extra) if extra != "" else ""]
+static func cost(verb: String, amount: int, extra := "") -> String:
+	return "%s · %s gold%s" % [verb, UI.gold(amount), (" + " + extra) if extra != "" else ""]
 
 static func _commas(n: int) -> String:
 	var s := str(absi(n))
@@ -589,11 +600,17 @@ static func make_theme() -> Theme:
 	ring.expand_margin_right = 2
 	ring.expand_margin_top = 2
 	ring.expand_margin_bottom = 2
-	t.set_stylebox("focus", "Button", ring)
-	t.set_stylebox("focus", "OptionButton", ring)
-	t.set_stylebox("focus", "LineEdit", ring)
+	# QA r1 C7: a phone has no keyboard focus or hover; the last-added (focused) or last-tapped
+	# (sticky hover) button wore a lighter face. Touch screens get the plain face; PC keeps the ring.
+	var touch := OS.has_feature("mobile") or OS.has_feature("web_ios") or OS.has_feature("web_android")
+	var button_focus: StyleBox = StyleBoxEmpty.new() if touch else ring
+	t.set_stylebox("focus", "Button", button_focus)
+	t.set_stylebox("focus", "OptionButton", button_focus)
+	t.set_stylebox("focus", "LineEdit", ring)   # typing still shows where the text goes
+	if touch:
+		t.set_stylebox("hover", "Button", UiSkin.bevel(UiSkin.SLATE, EDGE, 6))
 	t.set_color("font_color", "Button", TEXT)
-	t.set_color("font_hover_color", "Button", GOLD)
+	t.set_color("font_hover_color", "Button", TEXT if touch else GOLD)
 	t.set_color("font_pressed_color", "Button", Color("#f4e6c4"))
 	t.set_color("font_disabled_color", "Button", Color("#5a6988"))
 

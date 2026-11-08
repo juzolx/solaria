@@ -129,7 +129,7 @@ func _guild_row(g: Dictionary, joinable: bool) -> HBoxContainer:
 	var row := UI.hbox(8)
 	var t := UI.rich(UI.FONT_BODY)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	t.text = "[color=#e8b14a][%s][/color] %s  [color=%s]%d/%d members  -  power %d[/color]" % [
+	t.text = "[color=#e8b14a][%s][/color] %s  [color=%s]%d/%d members · power %d[/color]" % [
 		g["tag"], g["name"], UI.hex(UI.DIM), int(g["members"]), Online.GUILD_MAX, int(g["power"])]
 	row.add_child(t)
 	if joinable:

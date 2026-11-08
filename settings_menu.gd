@@ -60,7 +60,9 @@ func show_for(m) -> void:
 	content.add_child(_slider("Music", profile.music_volume, func(v: float): profile.music_volume = v; main.apply_settings()))
 
 	content.add_child(UI.heading("Game"))
-	var grow := UI.hbox(8)
+	var grow := BoxContainer.new()   # a narrow screen stacks the two toggles (side by side they were 497 px)
+	grow.add_theme_constant_override("separation", 8)
+	grow.vertical = is_narrow()
 	content.add_child(grow)
 	path_toggle = UI.button("", func():
 		profile.path_choice = "fight" if profile.path_choice == "ask" else "ask"
@@ -106,7 +108,7 @@ func show_for(m) -> void:
 
 	content.add_child(UI.heading("Accessibility"))
 	var arow := GridContainer.new()
-	arow.columns = 2
+	arow.columns = 1 if is_narrow() else 2   # QA r1 A6: two columns were 567 px wide on a phone
 	arow.add_theme_constant_override("h_separation", 8)
 	arow.add_theme_constant_override("v_separation", 6)
 	content.add_child(arow)

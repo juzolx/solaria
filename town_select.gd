@@ -28,7 +28,9 @@ func _card(t: int) -> PanelContainer:
 	var v := UI.vbox(4)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
-	var top := UI.hbox(6)
+	var top := HFlowContainer.new()   # QA r1 A7: the name and its chips wrap on a phone (an hbox was 515 px)
+	top.add_theme_constant_override("h_separation", 6)
+	top.add_theme_constant_override("v_separation", 4)
 	v.add_child(top)
 	top.add_child(UI.label(p.town_name(t) if founded else "Town %d" % t, UI.FONT_BODY, UI.GOLD if founded else UI.DIM))
 	if founded:

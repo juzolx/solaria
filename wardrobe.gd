@@ -12,10 +12,14 @@ func show_for(m) -> void:
 	main = m
 	state = m.state
 	open(m, "Wardrobe", 760.0)
-	content.add_child(UI.label("Wear the look of anything you've found. Your stats still come from the gear you really wear.", UI.FONT_BODY, UI.DIM))
-	var body := UI.hbox(16)
+	# QA r1 A3: the words wrap and a phone stacks the preview over the slots (it was 952 px wide)
+	content.add_child(UI.wrap("Wear the look of anything you've found. Your stats still come from the gear you really wear.", UI.FONT_BODY, UI.DIM))
+	var body := BoxContainer.new()
+	body.add_theme_constant_override("separation", 16)
+	body.vertical = is_narrow()
 	content.add_child(body)
 	var left := UI.panel(UI.INSET, UI.BORDER, 10, 10, 1)
+	left.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	body.add_child(left)
 	preview = TextureRect.new()
 	preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -36,6 +40,8 @@ func show_for(m) -> void:
 		var ob := OptionButton.new()
 		ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		ob.fit_to_longest_item = false
+		ob.clip_text = true   # a long look name ends in "…" instead of widening the popup
+		ob.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		var keys := ["", "hide"]
 		ob.add_item("Show what I'm wearing")
 		ob.add_item("Hide this slot")
@@ -54,7 +60,7 @@ func show_for(m) -> void:
 		ob.item_selected.connect(func(i: int): state.set_transmog(slot, keys[i]); _update())
 		grid.add_child(ob)
 		pickers[slot] = [ob, keys]
-	content.add_child(UI.label("You've found %d looks. New ones are added as you find gear." % state.wardrobe.size(), UI.FONT_BODY, UI.DIM))
+	content.add_child(UI.wrap("You've found %d looks. New ones are added as you find gear." % state.wardrobe.size(), UI.FONT_BODY, UI.DIM))
 	_update()
 	tree_exiting.connect(func(): main.refresh())
 

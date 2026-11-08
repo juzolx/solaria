@@ -83,12 +83,12 @@ static func compare(state: GameState, item: Dictionary) -> String:
 	return "Wearing it (instead of %s): %s %d -> [color=%s]%d (%s%d)[/color]%s" % [
 		current_name, item["stat"], total, c, new_total, plus, diff, verdict]
 
-## Fable r1 #9/#14: one compare line, "HP 989 » 1089 (+100)", green or red.
+## Fable r1 #9/#14: one compare line, "HP 989 → 1089 (+100)", green or red.
 static func short_compare(state: GameState, item: Dictionary) -> String:
 	var total := int(state.stat_value(item["stat"]))
 	var new_total := int(state.stat_if_equipped(item))
 	var diff := new_total - total
-	return "%s %d » [color=%s]%d (%s%d)[/color]" % [item["stat"], total, UI.hex(UI.GREEN if diff >= 0 else UI.RED), new_total, "+" if diff >= 0 else "", diff]
+	return "%s %d → [color=%s]%d (%s%d)[/color]" % [item["stat"], total, UI.hex(UI.GREEN if diff >= 0 else UI.RED), new_total, "+" if diff >= 0 else "", diff]
 
 ## Name in its rarity colour over "+81 HP · Score 361".
 static func headline(item: Dictionary) -> String:

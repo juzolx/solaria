@@ -7,8 +7,8 @@ extends RefCounted
 const RULES := {
 	"stop_boss": "Before a boss fight",
 	"stop_full": "When your bag is full",
-	"stop_low": "When HP is low and you're out of potions",
-	"stop_rare": "For an Epic or tougher monster, or a wanderer",
+	"stop_low": "HP is low and no potions left",   # QA r1 A4: short enough for a phone button
+	"stop_rare": "An Epic+ monster or a wanderer",
 }
 
 static func on(g: GameState, id: String) -> bool:

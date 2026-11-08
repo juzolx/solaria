@@ -83,12 +83,13 @@ func refresh(page: int) -> void:
 		return
 	shown = key
 	var ready := Buildings.blocked(g, main.profile, id) == ""
+	var two: bool = Buildings.name_of(id).length() > 10 or main.is_tall   # QA r1 A19: phones always take two lines
 	if lvl == 0:  # an empty lot (Church, Trophy Cabin): build it first
-		title.text = ("%s\nnot built" if Buildings.name_of(id).length() > 10 else "%s · not built") % Buildings.name_of(id)
+		title.text = ("%s\nnot built" if two else "%s · not built") % Buildings.name_of(id)
 		build.text = "Build ›"
 	else:
 		var nm := Buildings.name_of(id)
-		title.text = ("%s\nLv %d / %d" if nm.length() > 10 else "%s · Lv %d / %d") % [nm, lvl, Economy.BUILDING_MAX]
+		title.text = ("%s\nLv %d / %d" if two else "%s · Lv %d / %d") % [nm, lvl, Economy.BUILDING_MAX]
 		build.text = "Upgrade ›"
 	build.visible = lvl < Economy.BUILDING_MAX
 	build.add_theme_color_override("font_color", UI.GOLD if ready else UI.TEXT)   # gold = you can afford it now

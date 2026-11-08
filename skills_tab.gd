@@ -74,6 +74,7 @@ func setup(m) -> void:
 			shown = ""
 			refresh())
 		c.focus_mode = Control.FOCUS_NONE
+		c.custom_minimum_size.x = UI.TAP   # QA r1 D4: "All" was a 34 px target
 		filter_chips.add_child(c)
 	# 0.13+ (Juzo): the skill book as cards, like the bag: icon, name, rank pips, rarity frame
 	book.add_child(UI.heading("Skill book"))
@@ -387,12 +388,13 @@ static func _fill_auto(m, o: Overlay, st: GameState) -> void:
 	var note := UI.label("With Autoplay off, nothing happens until you act: tap Attack (or the enemy) to take a turn, and use your skills when you choose.", UI.FONT_BODY, UI.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	o.content.add_child(note)
-	UI.section(o.content, "What runs by itself", "Each of these works in both modes.")
+	UI.section(o.content, "What runs by itself", "Each of these works in both modes. Easy fights are monsters far below you: they fall in one turn.")
 	var toggles: Array = [
 		["Auto skills", st.auto_ability, func(): st.auto_ability = not st.auto_ability],
 		["Pick rooms at forks", st.auto_paths, func(): st.auto_paths = not st.auto_paths],
 		["Spend stat points on your build", st.auto_stats, func(): st.auto_stats = not st.auto_stats],
-		["Skip easy fights (far below you: one turn)", st.skip_easy, func(): st.skip_easy = not st.skip_easy],
+		# QA r1 A5: the "(far below you: one turn)" aside made the popup 516 px wide: it is the tap-tip now
+		["Skip easy fights", st.skip_easy, func(): st.skip_easy = not st.skip_easy, "Monsters far below you fall in one turn."],
 	]
 	for tg in toggles:
 		var cb: Callable = tg[2]
@@ -402,6 +404,8 @@ static func _fill_auto(m, o: Overlay, st: GameState) -> void:
 			m.refresh()
 			_fill_auto(m, o, st))
 		b.custom_minimum_size = Vector2(0, UI.TAP)
+		if tg.size() > 3:
+			UI.tip(b, String(tg[3]))
 		o.content.add_child(b)
 	# 2.1: going home, stopping, potions and the loot filter live in one panel
 	UI.section(o.content, "Auto-dive", "When Auto heads home or stops, potions and elixirs, and the loot filter.")

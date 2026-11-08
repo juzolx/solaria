@@ -85,7 +85,8 @@ func _letter(l: Dictionary) -> PanelContainer:
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(body)
 	if empty:
-		v.add_child(UI.label("Collected.", UI.FONT_BODY, UI.DIM))
+		if l.get("collected", false):   # QA r1 B3: a plain note never held anything to collect
+			v.add_child(UI.label("Collected.", UI.FONT_BODY, UI.DIM))
 		return card
 	# What's inside: gear as pictures, the rest in words
 	var items: Array = l["items"]

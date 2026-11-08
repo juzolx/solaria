@@ -66,7 +66,9 @@ func _power_card() -> void:
 	var nr := Lineage.next_rank(state)
 	var row := UI.hbox(8)
 	v.add_child(row)
-	var pl := UI.label(("%s  %d" if is_equal_approx(pw, roundf(pw)) else "%s  %.1f") % [p["name"], int(pw) if is_equal_approx(pw, roundf(pw)) else pw], UI.FONT_BODY, c)
+	# QA r1 B9: float noise ("Willpower 0.0") reads as a whole number
+	var whole := absf(pw - roundf(pw)) < 0.05
+	var pl := UI.label(("%s  %d" if whole else "%s  %.1f") % [p["name"], int(roundf(pw)) if whole else pw], UI.FONT_BODY, c)
 	pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(pl)
 	# Fable r5 #8: say what the buttons spend; none at all while there are no points

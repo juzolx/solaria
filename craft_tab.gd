@@ -182,7 +182,7 @@ func _fill_wares(force := false) -> void:
 		t.text = ItemText.describe(state, item)
 		h.add_child(t)
 		var need := int(e["price"]) - state.gold
-		var label := "Sold" if e["sold"] else ("Bag full" if state.bag_full() else ("Need %d more" % need if need > 0 else UI.cost("Buy", int(e["price"]))))
+		var label := "Sold" if e["sold"] else ("Bag full" if state.bag_full() else ("Need %s more" % UI.gold(need) if need > 0 else UI.cost("Buy", int(e["price"]))))
 		var b := UI.primary(label, func():
 			if Smith.buy(state, i):
 				main.sfx.play("buy")
@@ -247,7 +247,7 @@ func refresh() -> void:
 		UI.why(bag_button, "Your bag is as big as it gets.")
 		bag_button.remove_theme_color_override("font_color")
 	else:
-		bag_info.text = "[color=%s]%d -> [/color][color=#4ade80]%d slots[/color][color=%s]. Sewn from scrap.[/color]" % [
+		bag_info.text = "[color=%s]%d → [/color][color=#4ade80]%d slots[/color][color=%s]. Sewn from scrap.[/color]" % [
 			UI.hex(UI.DIM), state.bag_capacity(), state.bag_capacity() + GameData.BAG_STEP, UI.hex(UI.DIM)]
 		bag_cost.visible = false
 		bag_button.text = "Craft · %d scrap" % GameData.bag_craft_scrap(state.bag_level)
@@ -278,8 +278,10 @@ func refresh() -> void:
 			b.text = "%s\n%s  +%d %s" % [info["pieces"][slot], slot, GameData.item_power(preview), preview["stat"]]
 			if b.icon == null:
 				b.icon = Sprites.item_icon(preview)
-			b.tooltip_text = "%s (%s)\n+%d %s\nSet bonus: %s" % [info["pieces"][slot], slot, GameData.item_power(preview), preview["stat"], info["text"]]
-			b.disabled = not ok
+			var tip := "%s (%s)\n+%d %s\nSet bonus: %s" % [info["pieces"][slot], slot, GameData.item_power(preview), preview["stat"], info["text"]]
+			b.set_meta("tip0", tip)   # UI.why shows the reason on a tap, this when it can be forged
+			b.tooltip_text = tip
+			UI.why(b, "" if ok else state.set_block_reason(set_name) + ".")   # QA r1 D6: the missing materials on a tap
 
 	mystery_box.visible = state.scrap > 0
 	gear_cost.text = "[color=%s]Items match your best floor (%d).[/color]" % [UI.hex(UI.DIM), state.best_floor]
