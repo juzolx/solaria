@@ -7,6 +7,7 @@ const VERSION := "2.1"
 
 const NOTES := [
 	{"version": "2.1", "name": "Gods and Nests", "lines": [
+		"New weapon art: every weapon was redrawn in dark fantasy, matched to what your hero holds. Each unique and set weapon has its own picture, and Legendary and rarer weapons glow in their rarity colour.",
 		"Your 2.0 heroes come along: every town, hero, pet and item is kept. Old zone materials turn into dust (1 for every 10), and a class picked before level 15, 35 or 75 can be chosen again when your hero gets there.",
 		"Easier to read: bigger text everywhere, calmer colours (gold marks what matters), clearer skill and menu icons, and no more screens cut off at the edge of a phone.",
 		"New class rules: your class evolves at levels 15, 35 and 75, and you pick one of two paths each time. Level 75 classes have a rank from C to SS.",

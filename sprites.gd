@@ -511,11 +511,69 @@ static func consumable_icon(id: String) -> Texture2D:
 	_cache[key] = tex
 	return tex
 
+const WEAPON_TYPES := ["sword", "axe", "dagger", "mace", "spear", "bow", "staff"]
+
+## The dark-fantasy weapon picture (art/icons/weapons, 32x32): the item's own drawing (a unique "u_<id>", a set
+## piece "set_<piece id>") when there is one, else its type's. Null for anything that is not a weapon.
+static func weapon_art(item: Dictionary) -> Image:
+	if String(item.get("slot", "")) != "Weapon":
+		return null
+	var keys: Array = []
+	var art := String(item.get("art", ""))
+	if art != "":
+		keys.append(art)
+	elif String(item.get("set", "")) != "" and item.has("def"):
+		keys.append("set_" + String(item["def"]))
+	keys.append(GameData.item_type(item))
+	for k in keys:
+		var im := _img("icons/weapons/%s.png" % k)
+		if im != null:
+			return im
+	return null
+
+## The weapon in the shared icon frame at 1x (never scaled: UiIcons.big leaves it alone). Legendary and above
+## get a hard-edged halo in the rarity colour, so rarity reads without new art per rarity.
+static func _weapon_frame(art: Image, rarity: int) -> ImageTexture:
+	var side := ArtStyle.ICON_FRAME
+	var sq := Image.create(side, side, false, Image.FORMAT_RGBA8)
+	var off := Vector2i((side - art.get_width()) / 2, (side - art.get_height()) / 2)
+	var glow := rarity >= GameData.LEGENDARY
+	# Every weapon gets a 1 px slate ring (the art is dark on a dark cell: the ring lifts it); Legendary and up a 2 px ring in the rarity colour
+	var col := Color(GameData.color_of(rarity)) if glow else Color("#8b9bb4")
+	var solid := {}
+	for y in art.get_height():
+		for x in art.get_width():
+			if art.get_pixel(x, y).a > 0.5:
+				solid[Vector2i(x, y) + off] = true
+	for y in side:
+		for x in side:
+			var p := Vector2i(x, y)
+			if solid.has(p):
+				continue
+			var d := 9
+			for dy in range(-2, 3):
+				for dx in range(-2, 3):
+					if solid.has(p + Vector2i(dx, dy)):
+						d = mini(d, maxi(absi(dx), absi(dy)))
+			if d == 1:
+				sq.set_pixel(x, y, Color(col.r, col.g, col.b, 0.8 if glow else 0.45))
+			elif d == 2 and glow:
+				sq.set_pixel(x, y, Color(col.r, col.g, col.b, 0.35))
+	sq.blend_rect(art, Rect2i(Vector2i.ZERO, art.get_size()), off)
+	var tex := ImageTexture.create_from_image(sq)
+	tex.set_meta("fixed_icon", true)
+	return tex
+
 static func item_icon(item: Dictionary) -> ImageTexture:
 	var lk := gear_look(item)
-	var key := "i" + str(lk)
+	var key := "i" + str(lk) + String(item.get("art", "")) + String(item.get("def", "")) + str(item.get("rarity", 0))
 	if _cache.has(key):
 		return _cache[key]
+	var wa := weapon_art(item)
+	if wa != null:
+		var wt := _weapon_frame(wa, int(item.get("rarity", 0)))
+		_cache[key] = wt
+		return wt
 	var t: String = lk["type"]
 	var cmap := _char_map({})
 	var path := "gear/%s.png" % t

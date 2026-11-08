@@ -248,7 +248,7 @@ const MONSTER_INFO := {
 	"pale_stag": {"lore": "The elves' sacred deer, still running the old hunting paths with no one left to hunt them.", "drops": ["Feet", "Helmet"],
 		"sig": {"name": "Crown of the Pale Stag", "slot": "Helmet", "type": "crown", "effect": "dodge", "value": 12, "mat": "bone", "trim": "#dfe6f0", "flavor": "Antlers that never shed."}},
 	"rootstrangler": {"lore": "Roots of the dying World Tree, grown hungry. They squeeze anything warm.", "drops": ["Legs", "Weapon"],
-		"sig": {"name": "Strangleroot Whip", "slot": "Weapon", "type": "spear", "effect": "lifesteal", "value": 12, "mat": "hide", "trim": "#5d7a3a", "flavor": "It squeezes back."}},
+		"sig": {"name": "Strangleroot Whip", "slot": "Weapon", "type": "staff", "effect": "lifesteal", "value": 12, "mat": "hide", "trim": "#5d7a3a", "flavor": "It squeezes back."}},
 	"mourning_dryad": {"lore": "The spirit of a tree that watched its elves die. She has been crying for a hundred years.", "drops": ["Chest", "Off Hand"],
 		"sig": {"name": "Dryad's Tear", "slot": "Off Hand", "type": "orb", "effect": "regen", "value": 3, "mat": "sea", "trim": "#8aa878", "flavor": "One drop, a hundred years old. Still falling."}},
 	"owlwraith": {"lore": "An owl that died in the Hushwood and kept watching. It sees you even with its eyes closed.", "drops": ["Helmet", "Feet"],

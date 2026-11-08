@@ -25,7 +25,7 @@ static func picture(px: int) -> TextureRect:
 	var r := TextureRect.new()
 	r.custom_minimum_size = Vector2(px, px)
 	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	r.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	r.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED   # whole pixels: never scaled to the box (a 44 px icon in a 48 px box was uneven)
 	r.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	return r
 

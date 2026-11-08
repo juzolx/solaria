@@ -76,7 +76,7 @@ func setup(m) -> void:
 	UI.tip(featured_box, "")
 	var frow := UI.hbox(12)
 	fcol.add_child(frow)
-	featured_pic = ItemGrid.picture(64)
+	featured_pic = ItemGrid.picture(76)
 	featured_pic.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED   # whole pixels
 	featured_pic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	frow.add_child(featured_pic)
@@ -271,7 +271,7 @@ func refresh() -> void:
 		featured_pic.texture = null
 	else:
 		var f := state.featured
-		featured_pic.texture = UiIcons.big(Sprites.item_icon(f), 64)
+		featured_pic.texture = UiIcons.big(Sprites.item_icon(f), 76)
 		featured_style.border_color = Color(GameData.color_of(f["rarity"]))
 		featured_text.text = ItemText.headline(f)
 		featured_cmp.visible = true
