@@ -944,15 +944,6 @@ static func monster_home(monster: String) -> Dictionary:
 			return {"zone": zi, "sub": 4, "boss": "zone"}
 	return {}
 
-## Sprite name for a creature (art/enemies/<key>.png).
-static func art_key(monster: String) -> String:
-	var out := ""
-	for ch in monster.to_lower():
-		out += ch if (ch >= "a" and ch <= "z") else "_"
-	while out.contains("__"):
-		out = out.replace("__", "_")
-	return out.trim_suffix("_").trim_prefix("_")
-
 static func effect_text(effect: String, value: int) -> String:
 	match effect:
 		"regen":

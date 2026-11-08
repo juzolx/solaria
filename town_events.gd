@@ -36,9 +36,6 @@ static func on_home(g: GameState) -> void:
 	g.events.append({"type": "toast", "text": "%s! %s" % [e["name"], e["text"]]})
 	g.say("[color=%s]%s![/color] %s" % [e["color"], e["name"], e["text"]])
 
-static func is_on(g: GameState, id: String) -> bool:
-	return g.town_event == id
-
 ## Multipliers the rest of the game asks for.
 static func price_mult(g: GameState) -> float:
 	return FAIR_MULT if g.town_event == "fair" else 1.0

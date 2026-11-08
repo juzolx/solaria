@@ -161,18 +161,6 @@ func _claim_row(a: Dictionary) -> PanelContainer:
 	h.add_child(b)
 	return card
 
-static func _reward_text(r: Dictionary) -> String:
-	var parts: Array = []
-	if r.has("gold"):
-		parts.append("gold")
-	if r.has("potions"):
-		parts.append("%d potions" % int(r["potions"]))
-	if r.has("scrap"):
-		parts.append("scrap")
-	if r.has("dust"):
-		parts.append("%d dust" % int(r["dust"]))
-	return ", ".join(parts)
-
 ## Stage 4: titles, name colors and frames for gold (looks only, never power).
 func _looks_shop() -> void:
 	var list := Cosmetics.shop_list()
